@@ -114,7 +114,7 @@ export const JOHTO_TRAINERS = SEEDS.map((t) => ({
   name: { de: t.name },
   title: { de: t.title },
   kind: t.kind,
-  sprite: `/media/trainers/${t.id}.png`,
+  sprite: `/media/trainers/${t.id}.svg`,
   team: t.team,
   badgeId: t.badgeId ?? null,
   rewardGold: t.rewardGold,
