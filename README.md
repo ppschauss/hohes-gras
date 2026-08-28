@@ -52,6 +52,7 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Kampf** | Typentabelle, Status, Stat-Stufen, Mehrfachtreffer, KI in vier Stufen, 26 Orden, Top Vier je Region |
 | **Ereignisse** | Überfälle beim Erkunden: Gold, Gegenstände, Sagenbeeren, selten ein Pokémon mit makellosen Werten |
 | **Legendäre** | 0,1 % Fundchance nach vollständig bezwungener Region; gefangen nur mit Sagenbeeren |
+| **Lockdüfte** | Ein Duft je Typ, 50 Gold für 5 Erkundungen; vervierfacht das Gewicht des gesuchten Typs |
 | **Poké-Center** | Alle 15 Minuten kostenlose Vollheilung, gelegentlich mit Fund, Geschenk oder Tauschangebot |
 | **Poké-Beet** | Beeren, Bonbons oder Gold eingraben; Pflege oder ein Pflanzen-Pokémon heben den Ertrag |
 | **Idle** | Expeditionen (4 Arten × 3 Dauern, bis 6 Pokémon), Ei-Zucht mit IV-Vererbung |

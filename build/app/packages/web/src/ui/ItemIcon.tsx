@@ -4,7 +4,7 @@ import { useState } from 'react'
  *  upstream sprite, and an empty 36px hole reads as a broken image. */
 const GLYPHS: Record<string, string> = {
   ball: '⚪', berry: '🍒', medicine: '💊', xp: '🍬', stone: '💎',
-  material: '🧩', background: '🖼️', gear: '🎽', key: '🔑',
+  material: '🧩', background: '🖼️', gear: '🎽', key: '🔑', lure: '🧪',
 }
 
 interface Props {

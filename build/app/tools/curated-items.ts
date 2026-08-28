@@ -32,7 +32,27 @@ interface Authored {
   stackable?: boolean
 }
 
+/** Der Störsender. Die Regel dahinter steht in `engine/league.ts`; hier steht
+ *  nur, was er kostet und wie er heißt. */
+const BAIT_ITEM_ID = 'rocket-bait'
+const BAIT_CHARGES = 5
+
 export const AUTHORED: Authored[] = [
+  {
+    /*
+     * Ein Überfall auf Bestellung.
+     *
+     * Überfälle sind die einzige Quelle für Sagenbeeren, und mit 4 % je
+     * Erkundung ist das Warten darauf reine Geduld. Der Störsender kauft diese
+     * Geduld ab — teuer genug, dass er eine Entscheidung bleibt: 10.000 Gold
+     * sind mehr als jeder Ausbau der ersten Stufe.
+     */
+    id: BAIT_ITEM_ID, category: 'key', price: 10000, sellPrice: 500,
+    name: 'Störsender',
+    description: 'Funkt auf der Frequenz der Banden. Die nächsten '
+      + `${BAIT_CHARGES} Erkundungen enden in einem Überfall.`,
+    params: { rocketCharges: BAIT_CHARGES },
+  },
   // --- Bälle. catchMultiplier geht direkt in die Fangformel ein. -----------
   { id: 'poke-ball',   category: 'ball', price: 30,   sellPrice: 15,  params: { catchMultiplier: 1.0 },
     description: 'Der Standardball. Günstig, zuverlässig, überall zu haben.' },
@@ -118,6 +138,36 @@ export const AUTHORED: Authored[] = [
 /** Names for stones and trade items come from the API so they match the rest
  *  of the pack; prices are ours. */
 const STONE_PRICE = 1500
+
+/** Preis einer Packung Lockduft und wie viele Anwendungen darin stecken. */
+export const LURE_PRICE = 50
+export const LURE_PACK_SIZE = 5
+
+/**
+ * Ein Lockduft je Typ.
+ *
+ * Wird aus den Typen des Packs erzeugt, nicht von Hand gepflegt: kommt ein Typ
+ * dazu, kommt sein Lockduft mit. Der Preis gilt für die Packung — im Beutel
+ * liegen die fünf Anwendungen einzeln, jede Erkundung verbraucht eine.
+ */
+export function lureItems(types: Array<{ id: string; name: { de: string } }>): ItemOut[] {
+  return types.map((t) => ({
+    id: `lure-${t.id}`,
+    name: { de: `Lockduft-${t.name.de}` },
+    description: {
+      de: `Lockt beim Erkunden ${t.name.de}-Pokémon an. Eine Packung reicht für `
+        + `${LURE_PACK_SIZE} Erkundungen.`,
+    },
+    category: 'lure',
+    price: LURE_PRICE,
+    sellPrice: Math.floor(LURE_PRICE / 5),
+    stackable: true,
+    // SVG statt PNG: die Icons sind erzeugte Vektoren, skalieren verlustfrei
+    // und wiegen zusammen weniger als ein einzelnes PNG in der Groesse.
+    icon: `/media/items/lure-${t.id}.svg`,
+    params: { lureType: t.id, packSize: LURE_PACK_SIZE },
+  }))
+}
 
 export async function buildItems(
   api: PokeApi,

@@ -163,8 +163,11 @@ export const api = {
 
   safari: (ballId: string, berryId: string | null) =>
     request<SafariState>(`/api/safari?ballId=${encodeURIComponent(ballId)}${berryId ? `&berryId=${encodeURIComponent(berryId)}` : ''}`),
-  explore: (ballId: string, berryId: string | null) =>
-    request<ExploreResponse>('/api/safari/explore', { method: 'POST', body: JSON.stringify({ ballId, berryId }) }),
+  explore: (ballId: string, berryId: string | null, lureId: string | null = null) =>
+    request<ExploreResponse>('/api/safari/explore', {
+      method: 'POST', body: JSON.stringify({ ballId, berryId, lureId }),
+    }),
+  useJammer: () => request<{ charges: number }>('/api/safari/jammer', { method: 'POST' }),
   useLegendaryBerry: (ballId: string, berryId: string | null) =>
     request<EncounterView>('/api/safari/berry', { method: 'POST', body: JSON.stringify({ ballId, berryId }) }),
   soften: (action: 'weaken' | 'calm', ballId: string, berryId: string | null) =>
@@ -438,6 +441,8 @@ export interface WorldMap {
 
 export interface EncounterView {
   active: boolean
+  /** Art schon im Dex. */
+  caught: boolean
   areaId: string
   areaName: string
   speciesId: string
@@ -465,12 +470,14 @@ export interface SafariState {
   exploresUsed: number
   energy: EnergyState
   energyCost: number
+  /** Restliche Erkundungen mit garantiertem Überfall. */
+  jammerCharges: number
 }
 
 export type ExploreResponse =
   | { kind: 'encounter'; encounter: EncounterView; legendary: boolean }
   | { kind: 'nothing' }
-  | { kind: 'event'; opponent: { id: string; name: string; title: string; sprite: string; intro: string } }
+  | { kind: 'event'; opponent: { id: string; name: string; title: string; kind: string; sprite: string; intro: string } }
 
 export interface ThrowResult {
   caught: boolean

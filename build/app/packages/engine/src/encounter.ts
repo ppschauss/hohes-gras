@@ -33,6 +33,28 @@ export interface WildEncounter {
   gatedByConditions: boolean
 }
 
+/**
+ * Lockduft: wie stark sich die Gewichte zugunsten eines Typs verschieben.
+ *
+ * Vier statt zehn, und das ist Absicht. Ein Lockduft soll die Suche lenken,
+ * nicht ersetzen: in einem Gebiet, in dem ein Viertel der Tabelle den Typ
+ * traegt, macht der Faktor daraus gut die Haelfte — spuerbar, aber kein
+ * Bestellschein. Und in einem Gebiet ohne diesen Typ bleibt er wirkungslos,
+ * statt heimlich etwas hineinzuzaubern, was dort nicht lebt.
+ */
+export const LURE_WEIGHT_FACTOR = 4
+
+/** Wie viele Erkundungen eine Packung Lockduft traegt. */
+export const LURE_USES = 5
+
+export interface LureEffect {
+  /** Typ, der bevorzugt wird. */
+  typeId: string
+  /** Typen einer Art — die Engine kennt kein Content-Pack. */
+  typesOf: (speciesId: string) => readonly string[]
+  factor?: number
+}
+
 export function rollEncounter(
   area: AreaDef,
   ctx: SpawnContext,
@@ -40,11 +62,16 @@ export function rollEncounter(
   shinyChain = 0,
   /** Levelversatz aus der dynamischen Skalierung; siehe `scaling.ts`. */
   levelOffset = 0,
+  lure: LureEffect | null = null,
 ): WildEncounter | null {
   const pool = availableSpawns(area, ctx)
   if (pool.length === 0) return null
 
-  const entry = rng.weighted(pool, (s) => s.weight)
+  const factor = lure?.factor ?? LURE_WEIGHT_FACTOR
+  const weightOf = (s: { speciesId: string; weight: number }): number =>
+    lure && lure.typesOf(s.speciesId).includes(lure.typeId) ? s.weight * factor : s.weight
+
+  const entry = rng.weighted(pool, weightOf)
   // Der Wurf passiert im entworfenen Band und wird danach verschoben: so
   // bleibt die relative Verteilung innerhalb des Gebiets erhalten.
   const level = shiftLevel(rng.int(entry.minLevel, entry.maxLevel), levelOffset)

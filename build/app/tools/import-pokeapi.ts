@@ -15,7 +15,7 @@ import { PokeApi } from './pokeapi-client.ts'
 import { importTypes } from './import-types.ts'
 import { importSpecies } from './import-species.ts'
 import { importMoves } from './import-moves.ts'
-import { buildItems } from './curated-items.ts'
+import { buildItems, lureItems } from './curated-items.ts'
 import { mirrorItemIcons, mirrorSprites } from './import-sprites.ts'
 import { AREAS, BADGES, REGIONS, TRAINERS } from './curated-kanto.ts'
 import { CHAPTERS } from './curated-story.ts'
@@ -97,7 +97,11 @@ async function main(): Promise<void> {
       if (e.heldItemId) heldItemIds.add(e.heldItemId)
     }
   }
-  const items = await buildItems(api, new Set([...stoneItemIds, ...heldItemIds]), log)
+  const items = [
+    ...await buildItems(api, new Set([...stoneItemIds, ...heldItemIds]), log),
+    // Ein Lockduft je Typ — aus den Typen des Packs erzeugt.
+    ...lureItems(types),
+  ]
 
   step('Sprites spiegeln')
   const sprites = await mirrorSprites(species, MEDIA_DIR, log)

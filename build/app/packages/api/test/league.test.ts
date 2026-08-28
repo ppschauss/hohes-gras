@@ -123,8 +123,9 @@ describe('Überfall', () => {
     expect(reward.event.gold).toBeGreaterThan(0)
     expect(reward.event.items.length).toBeGreaterThan(0)
     for (const item of reward.event.items) {
-      // Die Sagenbeere faellt einzeln, alles andere im Stapel.
-      const min = item.itemId === 'legendary-berry' ? 1 : 2
+      // Sagenbeere und Lockduefte fallen einzeln, alles andere im Stapel.
+      const single = item.itemId === 'legendary-berry' || item.itemId.startsWith('lure-')
+      const min = single ? 1 : 2
       expect(item.quantity).toBeGreaterThanOrEqual(min)
     }
     // Das Gold ist auch wirklich eingebucht.
@@ -226,5 +227,100 @@ describe('Legendäre fangen', () => {
     await h.post('/api/safari/throw', { ballId: 'poke-ball', berryId: 'razz-berry' }, token)
     const bag = (await h.get('/api/bag', token)).body.items
     expect(bag.find((i: any) => i.id === 'razz-berry').quantity).toBe(5)
+  })
+})
+
+describe('Überfall auf Augenhöhe', () => {
+  const pendEvent = () =>
+    h.ctx.db.prepare('UPDATE trainers SET pending_event_id = ?, pending_event_area = ? WHERE id = ?')
+      .run('event-rocket-anderswo', 'test-route', trainerId)
+
+  const setTeamLevel = (level: number) =>
+    h.ctx.db.prepare('UPDATE creatures SET level = ? WHERE owner_id = ? AND team_slot IS NOT NULL')
+      .run(level, trainerId)
+
+  it('richtet das Ueberfallteam am eigenen Median aus', async () => {
+    // Der Ruepel ist im Entwurf Level 5. Ein Team auf 40 traefe ihn sonst als
+    // Uebung — und dasselbe Team auf 5 traefe den Hoenn-Ueberfall als Wand.
+    setTeamLevel(40)
+    pendEvent()
+    h.resetRateLimits()
+    const r = await h.post('/api/battle/event', {}, token)
+    expect(r.status).toBe(200)
+    expect(r.body.foe.active.level).toBe(40)
+  })
+
+  it('folgt dem Team auch nach unten', async () => {
+    setTeamLevel(12)
+    pendEvent()
+    h.resetRateLimits()
+    const r = await h.post('/api/battle/event', {}, token)
+    expect(r.body.foe.active.level).toBe(12)
+  })
+
+  it('laesst die Entwurfswerte stehen, wenn die Skalierung aus ist', async () => {
+    // Wer die Skalierung abschaltet, will die Zahlen des Entwurfs — ueberall.
+    h.ctx.db.prepare('UPDATE trainers SET level_scaling = 0 WHERE id = ?').run(trainerId)
+    setTeamLevel(40)
+    pendEvent()
+    h.resetRateLimits()
+    const r = await h.post('/api/battle/event', {}, token)
+    expect(r.body.foe.active.level).toBe(5)
+  })
+})
+
+describe('Störsender', () => {
+  const give = (itemId: string, n: number) =>
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)')
+      .run(trainerId, itemId, n)
+
+  it('braucht einen im Beutel', async () => {
+    h.resetRateLimits()
+    const r = await h.post('/api/safari/jammer', {}, token)
+    expect(r.status).toBe(409)
+    expect(r.body.error).toBe('insufficient_items')
+  })
+
+  it('setzt fuenf Ladungen und verbraucht das Geraet', async () => {
+    give('rocket-bait', 1)
+    h.resetRateLimits()
+    const r = await h.post('/api/safari/jammer', {}, token)
+    expect(r.status).toBe(200)
+    expect(r.body.charges).toBe(5)
+
+    const left = h.ctx.db.prepare('SELECT quantity FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, 'rocket-bait') as { quantity: number }
+    expect(left.quantity).toBe(0)
+  })
+
+  it('addiert statt zu ueberschreiben', async () => {
+    give('rocket-bait', 2)
+    h.resetRateLimits(); await h.post('/api/safari/jammer', {}, token)
+    h.resetRateLimits()
+    expect((await h.post('/api/safari/jammer', {}, token)).body.charges).toBe(10)
+  })
+
+  it('macht aus den naechsten Erkundungen Ueberfaelle', async () => {
+    // Der Ereignisgegner der Fixture haengt bewusst an keiner Region, damit
+    // Safari-Tests nicht zufaellig werden — fuer diesen Test muss er greifen.
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ?, energy = 9000 WHERE id = ?')
+      .run('test-route', trainerId)
+    give('rocket-bait', 1)
+    h.resetRateLimits()
+    await h.post('/api/safari/jammer', {}, token)
+
+    let events = 0
+    for (let i = 0; i < 5; i++) {
+      h.resetRateLimits(); h.resetPacing()
+      const r = await h.post('/api/safari/explore', { ballId: 'poke-ball' }, token)
+      if (r.body.kind === 'event') events++
+      h.resetRateLimits()
+      await h.post('/api/battle/forfeit', {}, token)
+    }
+    expect(events).toBe(5)
+
+    // Danach ist der Sender leer.
+    h.resetRateLimits()
+    expect((await h.get('/api/safari?ballId=poke-ball', token)).body.jammerCharges).toBe(0)
   })
 })

@@ -1,5 +1,6 @@
 import type { CreatureView } from '@game/shared'
 import { t } from '../i18n'
+import { EvolveChip } from './EvolveChip'
 
 export interface CardAction {
   label: string
@@ -10,6 +11,8 @@ export interface CardAction {
 interface Props {
   creature: CreatureView
   onClick?: () => void
+  /** Wird nach einer Entwicklung gerufen, damit der Bildschirm neu laedt. */
+  onChanged?: () => void
   /** Knoepfe am unteren Rand der Karte. Mehrere stehen nebeneinander. */
   actions?: CardAction[]
 }
@@ -18,7 +21,7 @@ interface Props {
  *  next level, so the XP bar would divide by zero). */
 const ratio = (value: number, max: number): number => (max <= 0 ? 100 : Math.round((value / max) * 100))
 
-export function CreatureCard({ creature: c, onClick, actions }: Props) {
+export function CreatureCard({ creature: c, onClick, onChanged, actions }: Props) {
   const hpPercent = ratio(c.hpCurrent, c.hpMax)
 
   return (
@@ -47,7 +50,7 @@ export function CreatureCard({ creature: c, onClick, actions }: Props) {
                 {type.name}
               </span>
             ))}
-            {c.canEvolveTo.length > 0 && <span className="chip chip--evo">{t('creature.canEvolve')}</span>}
+            {c.canEvolveTo.length > 0 && <EvolveChip creature={c} onDone={onChanged} />}
           </span>
 
           <span className="bars">

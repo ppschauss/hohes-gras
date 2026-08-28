@@ -17,6 +17,8 @@ const TravelSchema = z.object({ areaId: z.string() })
 const SafariSelectionSchema = z.object({
   ballId: z.string().default('poke-ball'),
   berryId: z.string().nullable().default(null),
+  /** Lockduft fuer diese eine Erkundung; verbraucht eine Anwendung. */
+  lureId: z.string().nullable().default(null),
 })
 const SoftenSchema = SafariSelectionSchema.extend({ action: z.enum(['weaken', 'calm']) })
 const StartExpeditionSchema = z.object({
@@ -50,6 +52,7 @@ export function registerWorldRoutes(app: FastifyInstance, ctx: AppContext): void
     const trainer = req.trainer!
     return {
       encounter: safari.currentEncounter(ctx, trainer, q.ballId, q.berryId),
+      jammerCharges: safari.jammerCharges(ctx, trainer),
       exploresUsed: counterValue(ctx.db, trainer.id, safari.EXPLORE_COUNTER),
       energy: energy.state(ctx, trainer.id),
       energyCost: ENERGY_COSTS.explore,
@@ -57,9 +60,12 @@ export function registerWorldRoutes(app: FastifyInstance, ctx: AppContext): void
   })
 
   app.post('/api/safari/explore', write, async (req) => {
-    const { ballId, berryId } = SafariSelectionSchema.parse(req.body ?? {})
-    return withEnergy(ctx, req.trainer!.id, safari.explore(ctx, req.trainer!, ballId, berryId))
+    const { ballId, berryId, lureId } = SafariSelectionSchema.parse(req.body ?? {})
+    return withEnergy(ctx, req.trainer!.id, safari.explore(ctx, req.trainer!, ballId, berryId, lureId))
   })
+
+  app.post('/api/safari/jammer', write, async (req) =>
+    withEnergy(ctx, req.trainer!.id, safari.useJammer(ctx, req.trainer!)))
 
   app.post('/api/safari/berry', write, async (req) => {
     const { ballId, berryId } = SafariSelectionSchema.parse(req.body ?? {})

@@ -95,6 +95,9 @@ function writeMinimalPack(dataDir: string): void {
     { id: 'razz-berry', name: { de: 'Himmihbeere' }, description: { de: 'Lenkt ab.' }, category: 'berry', price: 40, sellPrice: 20, icon: '/media/berry2.png', params: { catchBonus: 1.5 } },
     { id: 'potion', name: { de: 'Trank' }, description: { de: 'Heilt.' }, category: 'medicine', price: 100, sellPrice: 50, icon: '/media/potion.png', params: { heal: 20 } },
     { id: 'bg-classic', name: { de: 'Klassisch' }, description: { de: 'Wiese.' }, category: 'background', price: 0, sellPrice: null, stackable: false, icon: '/media/bg.png' },
+    // Lockduft als Packung: der Preis gilt fuer fuenf Anwendungen.
+    { id: 'rocket-bait', name: { de: 'Störsender' }, description: { de: 'Ruft die Bande.' }, category: 'key', price: 10000, sellPrice: 500, icon: '/media/bait.png', params: { rocketCharges: 5 } },
+    { id: 'lure-grass', name: { de: 'Lockduft-Pflanze' }, description: { de: 'Lockt Pflanzen an.' }, category: 'lure', price: 50, sellPrice: 10, icon: '/media/lure.png', params: { lureType: 'grass', packSize: 5 } },
   ])
   put('regions.json', [
     { id: 'testland', order: 1, name: { de: 'Testland' }, tagline: { de: 'Test' } },
@@ -117,6 +120,10 @@ function writeMinimalPack(dataDir: string): void {
         { speciesId: 'wildmon', weight: 70, minLevel: 2, maxLevel: 5 },
         { speciesId: 'einzelmon', weight: 20, minLevel: 2, maxLevel: 5 },
         { speciesId: 'nachtmon', weight: 10, minLevel: 3, maxLevel: 6, timeOfDay: ['night'] },
+        // Bewusst klein gehalten: gross genug, dass sich der Unterschied mit
+        // und ohne Lockduft in wenigen Dutzend Wuerfen zeigt, klein genug,
+        // dass der Lockduft ihn ueberhaupt machen muss.
+        { speciesId: 'blattmon', weight: 10, minLevel: 2, maxLevel: 5 },
       ],
       trainerIds: ['test-rival', 'elite-eins', 'elite-zwei'],
       gymId: 'test-gym',

@@ -3,7 +3,7 @@ import type { AreaDef, ItemDef, SpeciesDef } from '@game/content'
 import { createRng } from './rng.js'
 import {
   attemptCatch, availableSpawns, ballMultiplier, catchProbability, catchReward,
-  rollEncounter, MAX_CALM_STACKS, type CatchModifiers,
+  rollEncounter, MAX_CALM_STACKS, type CatchModifiers, type SpawnContext,
 } from './encounter.js'
 
 const area = {
@@ -179,3 +179,46 @@ describe('catchReward', () => {
     expect(catchReward(species(), 20, true).gold).toBeGreaterThan(catchReward(species(), 20, false).gold * 3)
   })
 })
+
+describe('Lockduft', () => {
+  const area = {
+    id: 'a', regionId: 'r', order: 1,
+    spawns: [
+      { speciesId: 'feuermon', weight: 90, minLevel: 5, maxLevel: 5 },
+      { speciesId: 'blattmon', weight: 10, minLevel: 5, maxLevel: 5 },
+    ],
+  } as unknown as AreaDef
+  const clock = { timeOfDay: 'day', weather: 'clear' } as SpawnContext
+  const typesOf = (id: string) => (id === 'blattmon' ? ['grass'] : ['fire'])
+
+  const share = (lure: boolean): number => {
+    let hits = 0
+    for (let i = 0; i < 2000; i++) {
+      const rng = createRng(`lure-${lure}-${i}`)
+      const e = rollEncounter(area, clock, rng, 0, 0, lure ? { typeId: 'grass', typesOf } : null)
+      if (e?.speciesId === 'blattmon') hits++
+    }
+    return hits / 2000
+  }
+
+  it('vervierfacht das Gewicht des gesuchten Typs', () => {
+    // 10 von 100 ohne, 40 von 130 mit — die Formel, nicht das Gefuehl.
+    expect(share(false)).toBeGreaterThan(0.06)
+    expect(share(false)).toBeLessThan(0.14)
+    expect(share(true)).toBeGreaterThan(0.24)
+    expect(share(true)).toBeLessThan(0.38)
+  })
+
+  it('bleibt wirkungslos, wo der Typ nicht vorkommt', () => {
+    let hits = 0
+    for (let i = 0; i < 200; i++) {
+      const rng = createRng(`none-${i}`)
+      const e = rollEncounter(area, clock, rng, 0, 0, { typeId: 'ice', typesOf })
+      if (e?.speciesId === 'blattmon') hits++
+    }
+    // Dieselbe Verteilung wie ohne Lockduft: er zaubert nichts herbei, was
+    // hier nicht lebt.
+    expect(hits / 200).toBeLessThan(0.2)
+  })
+})
+

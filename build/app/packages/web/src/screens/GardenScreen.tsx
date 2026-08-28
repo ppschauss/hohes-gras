@@ -129,6 +129,7 @@ export function GardenScreen({ onBack, onOpenBox, onOpenDex }: Props) {
                   <div key={c.id}>
                     <CreatureCard
                       creature={c}
+                      onChanged={garden.reload}
                       actions={[{
                         label: openMoves === c.id ? t('moves.close') : t('moves.edit'),
                         onClick: () => setOpenMoves(openMoves === c.id ? null : c.id),

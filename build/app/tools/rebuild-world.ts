@@ -15,7 +15,7 @@
  */
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { AUTHORED } from './curated-items.ts'
+import { AUTHORED, lureItems } from './curated-items.ts'
 import { AREAS, BADGES, REGIONS, TRAINERS } from './curated-kanto.ts'
 import { CHAPTERS } from './curated-story.ts'
 import { JOHTO_AREAS, JOHTO_BADGES, JOHTO_CHAPTERS, JOHTO_REGION, JOHTO_TRAINERS } from './curated-johto.ts'
@@ -135,6 +135,14 @@ async function main(): Promise<void> {
       stackable: true,
     })
   }
+  // Lockduefte folgen den Typen des Packs; ein neuer Typ bringt seinen mit.
+  const types = JSON.parse(await readFile(join(OUT, 'types.json'), 'utf8')) as Array<{ id: string; name: { de: string } }>
+  for (const lure of lureItems(types)) {
+    const before = byId.get(lure.id)
+    if (!before) added++
+    byId.set(lure.id, { ...before, ...lure })
+  }
+
   const mergedItems = [...byId.values()].sort((x, y) => x.id.localeCompare(y.id))
   if (added) log(`${added} neue Gegenstände`)
 

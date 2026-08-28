@@ -59,6 +59,7 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
               <div key={c.id}>
                 <CreatureCard
                   creature={c}
+                  onChanged={reloadBoth}
                   actions={[
                     movesAction(c.id),
                     {
@@ -84,6 +85,7 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
                   <div key={c.id}>
                     <CreatureCard
                       creature={c}
+                      onChanged={reloadBoth}
                       actions={[
                         movesAction(c.id),
                         {

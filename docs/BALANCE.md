@@ -118,6 +118,34 @@ alle ~1.000 Erkundungen, drei Beeren aus ~6 gewonnenen Überfällen, also
 ~150 Erkundungen. Wer vorbereitet ist, hat die Beeren längst; wer unvorbereitet
 darauf trifft, verliert es vermutlich.
 
+## Lockdüfte und Störsender
+
+| | Wert |
+|---|---|
+| Lockduft je Typ | 50 Gold für 5 Erkundungen |
+| Gewicht des gesuchten Typs | ×4 |
+| Störsender | 10.000 Gold, 5 Erkundungen mit garantiertem Überfall |
+| Überfall wirft Lockdüfte ab | 70 %, dann 2–5 Stück verschiedener Arten |
+
+Der Faktor 4 ist bewusst kein Bestellschein: in einem Gebiet, in dem ein Viertel
+der Spawn-Tabelle den Typ trägt, macht er daraus gut die Hälfte. Wo der Typ gar
+nicht vorkommt, bleibt der Duft wirkungslos — er zaubert nichts herbei, was dort
+nicht lebt. Verbraucht wird er **vor** dem Wurf, sonst wäre er ein Wunschautomat:
+fände man nichts Passendes, bliebe die Anwendung erhalten.
+
+Der Störsender kauft Geduld ab. Überfälle sind die einzige Quelle für
+Sagenbeeren und kommen mit 4 % je Erkundung — im Schnitt also alle 25. Die
+Ladung wird nur verbraucht, wenn wirklich ein Gegner zustande kommt.
+
+## Ereignisgegner treten auf Augenhöhe an
+
+Ein Überfall hat keinen Ort im Entwurf — er passiert dort, wo man gerade
+erkundet, quer durch alle Regionen. Feste Level wären deshalb immer für
+jemanden falsch: dieselbe Truppe träfe den einen als Wand und den anderen als
+Übung. Das Team richtet sich am **Median des eigenen Teams ±3** aus, der
+Schwächste drei darunter, der Stärkste drei darüber. Wer die Skalierung
+abschaltet, bekommt auch hier die Entwurfswerte.
+
 ## Skalierung
 
 Gebiete und Trainer treffen den **Median** des aktiven Teams. Der Median, nicht

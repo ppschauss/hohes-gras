@@ -592,6 +592,43 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .region__name { font-size: var(--t-xl); font-weight: 700; }
 .region__tagline { font-size: var(--t-sm); color: var(--ink-muted); line-height: 1.4; }
 .region__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+
+/* Der Ball neben dem Level einer Begegnung. Gedeckt, nicht bunt: er beantwortet
+   eine Nebenfrage und soll dem Pokemon nicht die Aufmerksamkeit nehmen. */
+.stage__caught { display: inline-flex; align-items: center; color: var(--ink-faint); }
+
+.jammer {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.jammer__text { font-size: var(--t-sm); color: var(--ink-muted); }
+
+/* Die Rueckfrage vor einer Entwicklung. Sie sprengt die Zeile der Typen-Chips
+   bewusst: eine unumkehrbare Handlung soll kurz im Weg stehen. */
+.chip--action { cursor: pointer; border: 0; font: inherit; font-size: var(--t-xs); }
+.evoAsk {
+  display: flex; flex-direction: column; gap: var(--s2);
+  width: 100%; margin-top: var(--s1);
+  padding: var(--s2) var(--s3);
+  background: var(--surface-raised); border: 1px solid var(--accent);
+  border-radius: var(--radius);
+}
+.evoAsk__text { font-size: var(--t-sm); font-weight: 600; }
+.evoAsk__error { font-size: var(--t-xs); color: var(--danger); }
+.evoAsk__buttons { display: flex; gap: var(--s2); }
+
+/* Ersatz fuer ein fehlendes Trainerbild. Kein grauer Kasten: ein Emblem, dessen
+   Farbe die Art des Gegners traegt. */
+.avatar {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--avatar-tint) 18%, var(--surface));
+  border: 2px solid color-mix(in oklab, var(--avatar-tint) 55%, transparent);
+  color: var(--avatar-tint);
+  font-weight: 700; line-height: 1;
+}
+.avatar__initial { transform: translateY(-2%); }
 .region__starters { display: flex; gap: var(--s1); margin-top: var(--s1); }
 .region__starter {
   width: 48px; height: 48px;

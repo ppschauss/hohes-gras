@@ -110,7 +110,7 @@ export const ItemDefSchema = z.object({
   id: Id,
   name: LocalizedText,
   description: LocalizedText,
-  category: z.enum(['ball', 'berry', 'medicine', 'xp', 'stone', 'material', 'background', 'gear', 'key']),
+  category: z.enum(['ball', 'berry', 'medicine', 'xp', 'stone', 'lure', 'material', 'background', 'gear', 'key']),
   price: z.number().int().min(0).nullable(),
   sellPrice: z.number().int().min(0).nullable(),
   stackable: z.boolean().default(true),

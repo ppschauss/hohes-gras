@@ -13,6 +13,7 @@ export type IconName =
   | 'shop' | 'energy' | 'gold' | 'dex' | 'back' | 'chevron' | 'check'
   | 'weather' | 'clock' | 'spark'
   | 'feed' | 'play' | 'wash' | 'rest'
+  | 'caught'
 
 interface Props {
   name: IconName
@@ -53,6 +54,9 @@ const PATHS: Record<IconName, string> = {
   gold: 'M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17ZM12 7.8v8.4M14.4 9.6c-.6-.7-1.5-1-2.4-1-1.4 0-2.4.7-2.4 1.8 0 2.4 4.8 1.2 4.8 3.6 0 1.1-1 1.9-2.4 1.9-1 0-1.9-.4-2.4-1.1',
   // Aufgeschlagenes Buch.
   dex: 'M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 15.5ZM20 5.5A1.5 1.5 0 0 0 18.5 4H14a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h4.5a1.5 1.5 0 0 0 1.5-1.5Z',
+  /* Poke-Ball: Kreis, Band, Knopf. Steht neben dem Level einer Begegnung und
+     sagt: die Art liegt schon im Dex. */
+  caught: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM4 12h16M12 14.3a2.3 2.3 0 1 0 0-4.6 2.3 2.3 0 0 0 0 4.6Z',
   back: 'M14.5 5 8 12l6.5 7',
   chevron: 'M9.5 5 16 12l-6.5 7',
   check: 'M5 12.5 9.5 17 19 7',

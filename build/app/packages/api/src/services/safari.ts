@@ -4,7 +4,8 @@ import {
   ENERGY_REWARDS, LEGENDARY_CATCH_RATE, LEGENDARY_LEVEL_BONUS, randomIvs, rollEncounter,
   isEventTrainer, LEGENDARY_BERRY_ID, LEGENDARY_MAX_BERRIES, isLegendaryCatchRate,
   legendaryCatchChance, rollEvent, rollLegendary, xpForLevel, type Rng,
-  MAX_CALM_STACKS, MAX_WEAKEN_STACKS, type CatchModifiers,
+  MAX_CALM_STACKS, MAX_WEAKEN_STACKS, ROCKET_BAIT_ID, ROCKET_BAIT_CHARGES,
+  type CatchModifiers, type LureEffect,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
@@ -37,6 +38,8 @@ export const EXPLORE_COUNTER = 'explore'
 export const BOX_LIMIT = 300
 
 export interface EncounterView {
+  /** Art schon im Dex — die Safari zeigt dann einen Ball neben dem Level. */
+  caught: boolean
   active: boolean
   areaId: string
   areaName: string
@@ -87,6 +90,8 @@ export function encounterView(
     }),
     level: e.level,
     shiny: e.shiny,
+    // Schon im Dex? Dann muss man nicht ueberlegen, ob sich der Ball lohnt.
+    caught: dex.isCaught(ctx.db, trainer.id, e.speciesId),
     rarity: species.rarity,
     turn: e.turn,
     weakenStacks: e.weakenStacks,
@@ -149,7 +154,10 @@ export type ExploreResult =
       opponent: { id: string; name: string; title: string; sprite: string; intro: string }
     }
 
-export function explore(ctx: AppContext, trainer: Trainer, ballId: string, berryId: string | null): ExploreResult {
+export function explore(
+  ctx: AppContext, trainer: Trainer, ballId: string, berryId: string | null,
+  lureId: string | null = null,
+): ExploreResult {
   // Erkunden bleibt unbegrenzt; geprueft wird nur, ob ein Mensch klickt.
   // Ausserhalb der Transaktion, damit die Zwangspause den Abbruch ueberlebt.
   assertPace(ctx, trainer, 'explore')
@@ -169,9 +177,16 @@ export function explore(ctx: AppContext, trainer: Trainer, ballId: string, berry
       .prepare('SELECT species_id AS s, streak FROM catch_chains WHERE trainer_id = ? ORDER BY streak DESC LIMIT 1')
       .get(trainer.id) as { s: string; streak: number } | undefined
 
-    // Das Gebiet hebt sich auf die Staerke des Teams, wenn es darunter liegt.
+    /*
+     * Lockduft: verschiebt die Gewichte zugunsten eines Typs.
+     *
+     * Verbraucht wird er *vor* dem Wurf und unabhaengig vom Ergebnis — sonst
+     * waere er ein Wunschautomat: fand man nichts Passendes, bliebe die
+     * Anwendung erhalten und man wuerfelte gratis weiter.
+     */
+    const lure = useLure(ctx, trainer, lureId)
     const rolled = rollEncounter(
-      area, clock, rng, chainSpecies?.streak ?? 0, areaOffset(ctx, trainer, area),
+      area, clock, rng, chainSpecies?.streak ?? 0, areaOffset(ctx, trainer, area), lure,
     )
     bumpCounter(ctx.db, trainer.id, EXPLORE_COUNTER)
     recordPace(ctx, trainer, 'explore')
@@ -198,14 +213,24 @@ export function explore(ctx: AppContext, trainer: Trainer, ballId: string, berry
       }
     }
 
-    // Dann der Ueberfall. Er verdraengt die Begegnung: beides gleichzeitig
-    // waere ein Zustand, in dem der Spieler zwei Dinge offen haette.
-    if (rollEvent(rng)) {
-      const opponent = pickEvent(ctx, trainer, area.regionId)
+    /*
+     * Dann der Ueberfall. Er verdraengt die Begegnung: beides gleichzeitig
+     * waere ein Zustand, in dem der Spieler zwei Dinge offen haette.
+     *
+     * Ein laufender Stoersender ersetzt den Wurf durch eine Zusage. Die Ladung
+     * wird nur verbraucht, wenn wirklich ein Gegner zustande kommt — sonst
+     * zahlte man fuer eine Region, in der gar keine Bande unterwegs ist.
+     */
+    const jammed = jammerCharges(ctx, trainer) > 0
+    if (jammed || rollEvent(rng)) {
+      const opponent = pickEvent(ctx, trainer, area.regionId, jammed)
       if (opponent) {
         ctx.db.prepare('UPDATE trainers SET pending_event_id = ?, pending_event_area = ? WHERE id = ?')
           .run(opponent.id, area.id, trainer.id)
-        logEvent(ctx.db, trainer.id, 'safari.event', { areaId: area.id, opponentId: opponent.id })
+        if (jammed) spendJammerCharge(ctx, trainer)
+        logEvent(ctx.db, trainer.id, 'safari.event', {
+          areaId: area.id, opponentId: opponent.id, jammed,
+        })
         return { kind: 'event' as const, opponent }
       }
     }
@@ -262,18 +287,80 @@ function pickLegendary(ctx: AppContext, regionId: string, rng: Rng): string | nu
 }
 
 /** Der Ereignis-Gegner der Region, falls das Pack einen mitbringt. */
-function pickEvent(ctx: AppContext, trainer: Trainer, regionId: string) {
-  const def = ctx.registry.allTrainers.find(
-    (t) => isEventTrainer(t.id) && t.id.endsWith(regionId),
-  )
+/**
+ * Wer hier ueberfaellt.
+ *
+ * Normalerweise die Bande der Region. Mit laufendem Stoersender notfalls
+ * irgendeine: wer zehntausend Gold ausgibt, soll nicht deshalb leer ausgehen,
+ * weil ausgerechnet in dieser Region keine eigene Bande entworfen ist.
+ */
+function pickEvent(ctx: AppContext, trainer: Trainer, regionId: string, anyGang = false) {
+  const events = ctx.registry.allTrainers.filter((t) => isEventTrainer(t.id))
+  const def = events.find((t) => t.id.endsWith(regionId)) ?? (anyGang ? events[0] : undefined)
   if (!def) return null
   return {
     id: def.id,
     name: ctx.registry.localized(def.name, trainer.locale),
     title: ctx.registry.localized(def.title, trainer.locale),
+    kind: def.kind,
     sprite: def.sprite,
     intro: ctx.registry.localized(def.dialogue.intro, trainer.locale),
   }
+}
+
+/* ------------------------------------------------------------ Störsender */
+
+export function jammerCharges(ctx: AppContext, trainer: Trainer): number {
+  const row = ctx.db.prepare('SELECT rocket_charges AS n FROM trainers WHERE id = ?')
+    .get(trainer.id) as { n: number } | undefined
+  return row?.n ?? 0
+}
+
+function spendJammerCharge(ctx: AppContext, trainer: Trainer): void {
+  ctx.db.prepare('UPDATE trainers SET rocket_charges = MAX(0, rocket_charges - 1) WHERE id = ?')
+    .run(trainer.id)
+}
+
+/**
+ * Störsender einschalten.
+ *
+ * Die Ladungen addieren sich statt sich zu überschreiben: wer zwei kauft, hat
+ * zehn Erkundungen — alles andere wäre ein stiller Verlust.
+ */
+export function useJammer(ctx: AppContext, trainer: Trainer): { charges: number } {
+  return tx(ctx.db, () => {
+    const item = ctx.registry.tryItem(ROCKET_BAIT_ID)
+    if (!item) throw new GameError('content_unavailable', { itemId: ROCKET_BAIT_ID }, 409)
+    if (inventory.quantityOf(ctx.db, trainer.id, ROCKET_BAIT_ID) < 1) {
+      throw new GameError('insufficient_items', { itemId: ROCKET_BAIT_ID }, 409)
+    }
+    inventory.consume(ctx.db, trainer.id, ROCKET_BAIT_ID, 1)
+    const add = Math.max(1, Math.floor(Number(item.params.rocketCharges ?? ROCKET_BAIT_CHARGES)))
+    ctx.db.prepare('UPDATE trainers SET rocket_charges = rocket_charges + ? WHERE id = ?')
+      .run(add, trainer.id)
+    logEvent(ctx.db, trainer.id, 'safari.jammer', { charges: add })
+    return { charges: jammerCharges(ctx, trainer) }
+  })
+}
+
+/**
+ * Eine Anwendung Lockduft verbrauchen und den Effekt zurückgeben.
+ *
+ * Kein Fehler, wenn keiner da ist: der Client kann eine leere Auswahl
+ * mitschicken, und eine Erkundung soll nicht daran scheitern, dass die Packung
+ * gerade leer geworden ist.
+ */
+function useLure(ctx: AppContext, trainer: Trainer, lureId: string | null): LureEffect | null {
+  if (!lureId) return null
+  const item = ctx.registry.tryItem(lureId)
+  if (!item || item.category !== 'lure') return null
+  const typeId = String(item.params.lureType ?? '')
+  if (!typeId) return null
+  if (inventory.quantityOf(ctx.db, trainer.id, lureId) <= 0) return null
+
+  inventory.consume(ctx.db, trainer.id, lureId, 1)
+  logEvent(ctx.db, trainer.id, 'safari.lure', { itemId: lureId, typeId })
+  return { typeId, typesOf: (speciesId) => ctx.registry.species(speciesId).types }
 }
 
 /**

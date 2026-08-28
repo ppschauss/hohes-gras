@@ -12,6 +12,10 @@ const SECTIONS: Array<{ category: string; title: string }> = [
   { category: 'medicine', title: 'shop.section.medicine' },
   { category: 'xp', title: 'shop.section.xp' },
   { category: 'stone', title: 'shop.section.stones' },
+  { category: 'lure', title: 'shop.section.lures' },
+  // Schluesselgegenstaende: bislang gab es keine kaeuflichen. Der Stoersender
+  // ist der erste, und ohne diesen Abschnitt stuende er im Laden nicht.
+  { category: 'key', title: 'shop.section.key' },
   { category: 'background', title: 'shop.section.backgrounds' },
 ]
 
@@ -61,11 +65,15 @@ export function buy(ctx: AppContext, trainer: Trainer, itemId: string, quantity:
       throw new GameError('invalid_state', { reason: 'already_owned', itemId }, 409)
     }
     const cost = item.price! * amount
+    // Manche Gegenstaende werden als Packung verkauft: ein Lockduft kostet
+    // 50 Gold und reicht fuer fuenf Erkundungen. Der Preis gilt fuer die
+    // Packung, im Beutel liegen die einzelnen Anwendungen.
+    const perUnit = Math.max(1, Math.floor(Number(item.params.packSize ?? 1)))
     // spendGold refuses rather than going negative, so two concurrent buys
     // cannot both succeed on the same coins.
     inventory.spendGold(ctx.db, trainer.id, cost)
-    inventory.grant(ctx.db, trainer.id, itemId, amount)
-    logEvent(ctx.db, trainer.id, 'shop.buy', { itemId, quantity: amount, cost })
+    inventory.grant(ctx.db, trainer.id, itemId, amount * perUnit)
+    logEvent(ctx.db, trainer.id, 'shop.buy', { itemId, quantity: amount * perUnit, cost })
   })
 }
 

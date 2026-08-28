@@ -7,11 +7,13 @@ import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
 import { percent } from '../lib/format'
 import { Screen } from '../ui/Screen'
+import { Icon } from '../ui/Icon'
+import { TrainerAvatar } from '../ui/TrainerAvatar'
 import { ItemIcon } from '../ui/ItemIcon'
 
 type Phase =
   | { kind: 'idle' }
-  | { kind: 'event'; opponent: { name: string; title: string; sprite: string; intro: string } }
+  | { kind: 'event'; opponent: { name: string; title: string; kind: string; sprite: string; intro: string } }
   | { kind: 'encounter'; encounter: EncounterView; legendary?: boolean }
   | { kind: 'throwing'; encounter: EncounterView; shakes: number }
   | { kind: 'caught'; result: ThrowResult }
@@ -24,6 +26,9 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
   const bag = useAsync(() => api.bag(), [])
   const [ballId, setBallId] = useState('poke-ball')
   const [berryId, setBerryId] = useState<string | null>(null)
+  // Der Lockduft gilt genau fuer die naechste Erkundung und wird dabei
+  // verbraucht — deshalb steht er neben Ball und Beere, nicht in der Tasche.
+  const [lureId, setLureId] = useState<string | null>(null)
   const safari = useAsync(() => api.safari(ballId, berryId), [ballId, berryId])
   const action = useAction()
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' })
@@ -41,11 +46,14 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
 
   const balls = (bag.data?.items ?? []).filter((i) => i.category === 'ball' && i.quantity > 0)
   const berries = (bag.data?.items ?? []).filter((i) => i.category === 'berry' && i.quantity > 0)
+  const lures = (bag.data?.items ?? []).filter((i) => i.category === 'lure' && i.quantity > 0)
+  const jammers = (bag.data?.items ?? []).find((i) => i.id === 'rocket-bait')?.quantity ?? 0
+  const charges = safari.data?.jammerCharges ?? 0
   const ballCount = balls.find((b) => b.id === ballId)?.quantity ?? 0
 
   const explore = () => {
     haptic.tap()
-    void action.run(() => api.explore(ballId, berryId), (res) => {
+    void action.run(() => api.explore(ballId, berryId, lureId), (res) => {
       if (res.kind === 'encounter') {
         setPhase({ kind: 'encounter', encounter: res.encounter, legendary: res.legendary })
         if (res.legendary) haptic.success(); else haptic.select()
@@ -175,7 +183,32 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
             onChange={setBerryId}
             emptyLabel={t('safari.noBerry')}
           />
+          {lures.length > 0 && (
+            <Picker
+              label={t('safari.lure')}
+              options={lures.map((b) => ({ id: b.id, name: b.name, icon: b.icon, category: b.category, quantity: b.quantity }))}
+              value={lureId}
+              onChange={setLureId}
+              emptyLabel={t('safari.noLure')}
+            />
+          )}
         </div>
+
+        {(charges > 0 || jammers > 0) && (
+          <div className="jammer">
+            <span className="jammer__text">
+              {charges > 0 ? t('safari.jammer.active', { n: charges }) : t('safari.jammer.idle')}
+            </span>
+            {jammers > 0 && (
+              <button
+                type="button" className="btn btn--ghost btn--sm" disabled={action.busy}
+                onClick={() => { haptic.tap(); void action.run(() => api.useJammer(), () => { safari.reload(); haptic.success() }) }}
+              >
+                {t('safari.jammer.use', { n: jammers })}
+              </button>
+            )}
+          </div>
+        )}
 
         <div className="actionRow">
           <button type="button" className="btn btn--ghost btn--block" onClick={explore}
@@ -210,7 +243,10 @@ function Stage({ phase, busy, onFight }: { phase: Phase; busy: boolean; onFight:
     case 'event':
       return (
         <section className="stage stage--event">
-          <img className="stage__mon" src={phase.opponent.sprite} alt="" width={96} height={96} />
+          <TrainerAvatar
+            className="stage__mon" src={phase.opponent.sprite}
+            name={phase.opponent.name} kind={phase.opponent.kind} size={96}
+          />
           <h2>{phase.opponent.name}</h2>
           <p className="center__body">{phase.opponent.intro}</p>
           <button type="button" className="btn btn--primary" disabled={busy} onClick={onFight}>
@@ -264,6 +300,15 @@ function Stage({ phase, busy, onFight }: { phase: Phase; busy: boolean; onFight:
           <img className="stage__mon" src={e.sprite} alt="" width={96} height={96} />
           <h2>{t('safari.appears', { name: e.speciesName })}</h2>
           <div className="stage__meta">
+            {/* Ball vor dem Level: schon gefangen, der naechste ist ein
+                Doppelter. Steht bewusst links davon — die Frage "brauche ich
+                das noch" kommt vor der Frage "wie stark ist es". */}
+            {e.caught && (
+              <span className="stage__caught" title={t('safari.alreadyCaught')}>
+                <Icon name="caught" size={15} />
+                <span className="sr-only">{t('safari.alreadyCaught')}</span>
+              </span>
+            )}
             <span className="num">{t('creature.level', { n: e.level })}</span>
             {e.types.map((ty) => (
               <span key={ty.id} className="chip" style={{ '--chip': ty.color } as React.CSSProperties}>{ty.name}</span>

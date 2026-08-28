@@ -28,6 +28,15 @@ export function markCaught(db: Db, trainerId: string, speciesId: string, now = D
   return !before?.caught_at
 }
 
+/** Liegt die Art schon im Dex? Eine Zeile, weil die Safari sie fuer jede
+ *  Begegnung braucht und der ganze Dex dafuer zu viel waere. */
+export function isCaught(db: Db, trainerId: string, speciesId: string): boolean {
+  const row = db
+    .prepare('SELECT caught_at AS caughtAt FROM dex_entries WHERE trainer_id = ? AND species_id = ?')
+    .get(trainerId, speciesId) as { caughtAt: number | null } | undefined
+  return Boolean(row?.caughtAt)
+}
+
 export function dexOf(db: Db, trainerId: string): Map<string, DexEntry> {
   const rows = db
     .prepare('SELECT species_id AS speciesId, seen_at AS seenAt, caught_at AS caughtAt FROM dex_entries WHERE trainer_id = ?')

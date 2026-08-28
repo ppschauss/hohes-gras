@@ -95,6 +95,16 @@ export const isLegendaryCatchRate = (catchRate: number): boolean =>
 
 /* ------------------------------------------------------------ Ereignisse */
 
+/**
+ * Der Störsender: fünf Erkundungen mit garantiertem Überfall.
+ *
+ * Die Kennung steht hier und nicht nur im Content-Pack, weil die Spiellogik
+ * sie kennen muss — anders als ein Ball oder eine Beere wirkt dieser
+ * Gegenstand nicht über Zahlen, sondern über eine Regel.
+ */
+export const ROCKET_BAIT_ID = 'rocket-bait'
+export const ROCKET_BAIT_CHARGES = 5
+
 /** Wahrscheinlichkeit je Erkundung, dass ein Überfall stattfindet. */
 export const EVENT_ODDS = 0.04
 
@@ -121,6 +131,32 @@ export function eventGold(areaLevel: number, rng: Rng): number {
   return Math.round((120 + areaLevel * 26) * (0.85 + rng.next() * 0.4))
 }
 
+/**
+ * Lockdüfte als Beute eines Überfalls.
+ *
+ * Die Banden führen Köder mit sich — inhaltlich naheliegend, und spielerisch
+ * schließt es einen Kreis: der Überfall wirft ab, was den nächsten Fang lenkt.
+ * Verschiedene Arten statt eines Stapels, weil ein Stapel nur die eine Suche
+ * verbilligt und ein Fächer die Wahl eröffnet.
+ */
+export const LURE_DROP_CHANCE = 0.7
+export const LURE_DROP_MIN = 2
+export const LURE_DROP_MAX = 5
+
+/** Welche Lockduft-Typen ein besiegter Überfall abwirft — je einer je Art. */
+export function rollLureDrop(rng: Rng, typeIds: readonly string[]): string[] {
+  if (typeIds.length === 0 || rng.next() >= LURE_DROP_CHANCE) return []
+  const pool = [...typeIds]
+  const count = Math.min(pool.length, rng.int(LURE_DROP_MIN, LURE_DROP_MAX))
+  const picked: string[] = []
+  for (let i = 0; i < count; i++) {
+    const idx = rng.int(0, pool.length - 1)
+    picked.push(pool[idx]!)
+    pool.splice(idx, 1)
+  }
+  return picked
+}
+
 /** Wie viele Stück eines Gegenstands ein Überfall abwirft. */
 export function eventLoot(rng: Rng): number {
   return rng.int(2, 6)
@@ -131,3 +167,27 @@ export function eventLoot(rng: Rng): number {
  *  Content-Pack zu brauchen. */
 export const EVENT_TRAINER_PREFIX = 'event-'
 export const isEventTrainer = (id: string): boolean => id.startsWith(EVENT_TRAINER_PREFIX)
+
+/** Wie weit ein Ueberfallteam um das eigene Niveau streut. */
+export const EVENT_LEVEL_SPREAD = 3
+
+/**
+ * Die Level eines Ueberfallteams, gemessen am eigenen Team.
+ *
+ * Ein Ueberfall hat keinen Ort im Entwurf — er passiert dort, wo man gerade
+ * erkundet. Feste Level waeren deshalb immer falsch: dieselbe Rocket-Truppe
+ * traefe den einen als Wand und den anderen als Uebung. Gemessen wird am
+ * Median des eigenen Teams, und die Mitglieder verteilen sich gleichmaessig
+ * ueber ±3 — der Schwaechste liegt drei darunter, der Staerkste drei darueber.
+ *
+ * Die innere Reihenfolge des Entwurfs bleibt damit erhalten: der letzte im
+ * Team ist weiterhin der haerteste.
+ */
+export function eventLevels(size: number, reference: number, spread = EVENT_LEVEL_SPREAD): number[] {
+  const n = Math.max(0, Math.floor(size))
+  if (n === 0) return []
+  const ref = Math.max(1, Math.floor(reference))
+  if (n === 1) return [ref]
+  return Array.from({ length: n }, (_, i) =>
+    Math.max(1, ref - spread + Math.round((2 * spread * i) / (n - 1))))
+}

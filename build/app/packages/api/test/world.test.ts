@@ -76,10 +76,10 @@ describe('Weltkarte', () => {
   it('meldet, was gerade spawnen kann', async () => {
     const r = await h.get('/api/world', token)
     const route = r.body.regions[0].areas[0]
-    expect(route.speciesHere).toBe(3)
-    // Nachts alle drei, sonst zwei — in jedem Fall mindestens zwei.
-    expect(route.spawnableNow).toBeGreaterThanOrEqual(2)
-    expect(route.spawnableNow).toBeLessThanOrEqual(3)
+    expect(route.speciesHere).toBe(4)
+    // Nachtmon nur nachts; die anderen drei immer.
+    expect(route.spawnableNow).toBeGreaterThanOrEqual(3)
+    expect(route.spawnableNow).toBeLessThanOrEqual(4)
   })
 })
 
@@ -213,5 +213,96 @@ describe('Safari', () => {
     const r = await h.post('/api/safari/throw', { ballId: 'oran-berry' }, token)
     expect(r.status).toBe(400)
     expect(r.body.detail.field).toBe('ballId')
+  })
+})
+
+describe('Schon gefangen', () => {
+  it('markiert eine Begegnung, deren Art bereits im Dex liegt', async () => {
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ?, energy = 9000 WHERE id = ?')
+      .run('test-route', trainerId)
+    h.ctx.db.prepare(
+      `INSERT OR REPLACE INTO active_encounter
+         (trainer_id, area_id, species_id, level, shiny, turn, weaken_stacks, calm_stacks,
+          seed, started_at, legendary_berries)
+       VALUES (?, 'test-route', 'wildmon', 5, 0, 0, 0, 0, 'seed', ?, 0)`,
+    ).run(trainerId, Date.now())
+
+    h.resetRateLimits()
+    expect((await h.get('/api/safari?ballId=poke-ball', token)).body.encounter.caught).toBe(false)
+
+    h.ctx.db.prepare(
+      'INSERT OR REPLACE INTO dex_entries (trainer_id, species_id, seen_at, caught_at) VALUES (?, ?, ?, ?)',
+    ).run(trainerId, 'wildmon', Date.now(), Date.now())
+
+    h.resetRateLimits()
+    expect((await h.get('/api/safari?ballId=poke-ball', token)).body.encounter.caught).toBe(true)
+  })
+})
+
+
+describe('Lockduft', () => {
+  const give = (itemId: string, n: number) =>
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)')
+      .run(trainerId, itemId, n)
+
+  beforeEach(() => {
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ?, energy = 9000 WHERE id = ?')
+      .run('test-route', trainerId)
+  })
+
+  it('verbraucht je Erkundung genau eine Anwendung', async () => {
+    give('lure-grass', 3)
+    h.resetRateLimits(); h.resetPacing()
+    expect((await h.post('/api/safari/explore', { ballId: 'poke-ball', lureId: 'lure-grass' }, token)).status).toBe(200)
+
+    const left = h.ctx.db
+      .prepare('SELECT quantity FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, 'lure-grass') as { quantity: number }
+    expect(left.quantity).toBe(2)
+  })
+
+  it('verbraucht nichts, wenn keiner gewaehlt ist', async () => {
+    give('lure-grass', 3)
+    h.resetRateLimits(); h.resetPacing()
+    await h.post('/api/safari/explore', { ballId: 'poke-ball' }, token)
+    const left = h.ctx.db
+      .prepare('SELECT quantity FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, 'lure-grass') as { quantity: number }
+    expect(left.quantity).toBe(3)
+  })
+
+  it('scheitert nicht an einer leeren Packung', async () => {
+    give('lure-grass', 0)
+    h.resetRateLimits(); h.resetPacing()
+    const r = await h.post('/api/safari/explore', { ballId: 'poke-ball', lureId: 'lure-grass' }, token)
+    // Eine Erkundung soll nicht daran scheitern, dass der Duft gerade alle ist.
+    expect(r.status).toBe(200)
+  })
+
+  it('verschiebt die Begegnungen sichtbar zum gewaehlten Typ', async () => {
+    // Blattmon ist die einzige Pflanzen-Art auf der Testroute und mit Gewicht
+    // 1 gegen 70/20/10 praktisch unsichtbar. Mit Lockduft muss es auftauchen.
+    h.ctx.db.prepare('UPDATE trainers SET energy = 90000 WHERE id = ?').run(trainerId)
+    give('lure-grass', 200)
+
+    let withLure = 0
+    for (let i = 0; i < 60; i++) {
+      h.resetRateLimits(); h.resetPacing()
+      const r = await h.post('/api/safari/explore', { ballId: 'poke-ball', lureId: 'lure-grass' }, token)
+      if (r.body.encounter?.speciesId === 'blattmon') withLure++
+      h.resetRateLimits()
+      await h.post('/api/safari/flee', {}, token)
+    }
+
+    let without = 0
+    for (let i = 0; i < 60; i++) {
+      h.resetRateLimits(); h.resetPacing()
+      const r = await h.post('/api/safari/explore', { ballId: 'poke-ball' }, token)
+      if (r.body.encounter?.speciesId === 'blattmon') without++
+      h.resetRateLimits()
+      await h.post('/api/safari/flee', {}, token)
+    }
+
+    expect(withLure).toBeGreaterThan(without)
   })
 })
