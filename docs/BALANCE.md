@@ -119,11 +119,23 @@ Kampf, nicht auf Expedition, und nie das letzte Pokémon.
 
 ## Fangserie und Shinys
 
-| | Wert |
+| Fangserie | Shiny-Chance |
 |---|---|
-| Grundchance | 1 : 512 (0,20 %) |
-| je Stufe der Serie | +25 % der Grundchance |
-| Höchststufe | 40 → 2,15 % |
+| 0 | 0,20 % (1 : 512) |
+| 10 | 1,8 % |
+| 20 | **10 %** |
+| 30 | 28 % |
+| 40 | 59 % |
+| 48 | 95 % |
+| **49** | **100 % — der fünfzigste Fang glänzt sicher** |
+
+Die Kurve ist kein Geschmackswert: sie hängt an zwei Zusagen — zehn Prozent bei
+zwanzig Fängen, Sicherheit beim fünfzigsten. Der Exponent dazwischen folgt aus
+beiden und steht als Rechnung im Code, nicht als Zahl. Geändert wird an den
+Ankern.
+
+Sie steigt spät und dann steil, und auch das ist Absicht: eine flache Kurve
+wäre ein Rabatt, diese hier ist ein Ziel.
 
 Die Serie zählt **nur für die Art, die man jagt**. Vorher galt der Zuschlag für
 jede Begegnung: wer Abra 45-mal hintereinander fing, traf auch überall sonst

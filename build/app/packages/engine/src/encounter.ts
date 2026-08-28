@@ -5,25 +5,48 @@ import { clamp } from './stats.js'
 import { shiftLevel } from './scaling.js'
 
 export const SHINY_BASE_ODDS = 1 / 512
-/** Consecutive catches of the same species raise shiny odds, capped so the
- *  hunt stays a hunt. Mirrors the "catch combo" idea, which rewards commitment
- *  without ever guaranteeing anything. */
-export const SHINY_CHAIN_CAP = 40
-/** Wie viel eine Stufe der Serie zur Grundchance dazulegt. */
-export const SHINY_CHAIN_STEP = 0.25
+
+/**
+ * Bei so vielen Fängen derselben Art ist der nächste sicher schillernd.
+ *
+ * Neunundvierzig gefangen, das fünfzigste glänzt. Die Zahl ist die Zusage, auf
+ * die man hinarbeitet — und der Punkt, an dem die Kurve genau 1 erreicht,
+ * nicht bloß fast.
+ */
+export const SHINY_CHAIN_GUARANTEE = 49
+
+/** Beibehalten unter altem Namen: die Serie zählt bis zur Zusage. */
+export const SHINY_CHAIN_CAP = SHINY_CHAIN_GUARANTEE
+
+/**
+ * Krümmung der Serienkurve.
+ *
+ * Kein gewählter Geschmackswert, sondern die Lösung: die Kurve soll bei zwanzig
+ * Fängen zehn Prozent treffen und bei neunundvierzig auf eins landen. Aus
+ * beiden Bedingungen folgt der Exponent — geändert wird an den *Ankern*, nicht
+ * hier.
+ */
+export const SHINY_CHAIN_EXPONENT = Math.log((0.10 - SHINY_BASE_ODDS) / (1 - SHINY_BASE_ODDS))
+  / Math.log(20 / SHINY_CHAIN_GUARANTEE)
 
 /**
  * Die Shiny-Chance für eine bestimmte Art, gegeben die laufende Fangserie.
  *
- * Die Serie zählt **nur für die Art, die man jagt**. Vorher galt der Zuschlag
- * für jede Begegnung: wer Abra vierzigmal hintereinander fing, traf auch überall
- * sonst elfmal häufiger auf Schillernde — und musste sie wegwerfen, weil es die
- * falsche Art war. Genau das ist gemeldet worden: sieben, acht übersprungene
- * Shinys neben einer Serie von 45.
+ * Zwei Eigenschaften, beide gewollt:
+ *
+ *  - Die Serie zählt **nur für die Art, die man jagt**. Vorher galt der
+ *    Zuschlag für jede Begegnung: wer Abra vierzigmal hintereinander fing, traf
+ *    auch überall sonst häufiger auf Schillernde — und musste sie wegwerfen,
+ *    weil es die falsche Art war.
+ *  - Sie steigt spät und dann steil: 1,8 % bei zehn, 10 % bei zwanzig, 28 %
+ *    bei dreißig, 59 % bei vierzig — und beim fünfzigsten Fang ist es sicher.
+ *    Eine flache Kurve wäre ein Rabatt, diese hier ist ein Ziel.
  */
 export function shinyOdds(chainStreak: number): number {
-  const steps = Math.max(0, Math.min(Math.floor(chainStreak), SHINY_CHAIN_CAP))
-  return SHINY_BASE_ODDS * (1 + steps * SHINY_CHAIN_STEP)
+  const streak = Math.max(0, Math.floor(chainStreak))
+  if (streak >= SHINY_CHAIN_GUARANTEE) return 1
+  const progress = streak / SHINY_CHAIN_GUARANTEE
+  return SHINY_BASE_ODDS + (1 - SHINY_BASE_ODDS) * progress ** SHINY_CHAIN_EXPONENT
 }
 
 export interface SpawnContext {

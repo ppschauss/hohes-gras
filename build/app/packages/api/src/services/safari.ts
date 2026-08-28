@@ -5,7 +5,7 @@ import {
   isEventTrainer, LEGENDARY_BERRY_ID, LEGENDARY_MAX_BERRIES, isLegendaryCatchRate,
   legendaryCatchChance, rollEvent, rollLegendary, xpForLevel, type Rng,
   MAX_CALM_STACKS, MAX_WEAKEN_STACKS, ROCKET_BAIT_ID, ROCKET_BAIT_CHARGES,
-  SHINY_BASE_ODDS, SHINY_CHAIN_CAP, shinyOdds,
+  SHINY_BASE_ODDS, SHINY_CHAIN_GUARANTEE, shinyOdds,
   type CatchModifiers, type LureEffect,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
@@ -342,7 +342,7 @@ export function chainOf(ctx: AppContext, trainer: Trainer): ChainView | null {
     speciesName: ctx.registry.localized(species.name, trainer.locale),
     sprite: species.sprite,
     streak: row.streak,
-    cap: SHINY_CHAIN_CAP,
+    cap: SHINY_CHAIN_GUARANTEE,
     odds: shinyOdds(row.streak),
     baseOdds: SHINY_BASE_ODDS,
   }

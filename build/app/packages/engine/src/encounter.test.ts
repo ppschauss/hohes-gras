@@ -3,7 +3,8 @@ import type { AreaDef, ItemDef, SpeciesDef } from '@game/content'
 import { createRng } from './rng.js'
 import {
   attemptCatch, availableSpawns, ballMultiplier, catchProbability, catchReward,
-  rollEncounter, MAX_CALM_STACKS, type CatchModifiers, type SpawnContext,
+  rollEncounter, shinyOdds, SHINY_BASE_ODDS, SHINY_CHAIN_GUARANTEE,
+  MAX_CALM_STACKS, type CatchModifiers, type SpawnContext,
 } from './encounter.js'
 
 const area = {
@@ -245,3 +246,32 @@ describe('Lockduft', () => {
   })
 })
 
+
+describe('Shiny-Kurve der Fangserie', () => {
+  it('trifft die beiden zugesagten Punkte', () => {
+    // Die Anker, an denen die Kurve haengt: zehn Prozent bei zwanzig, sicher
+    // beim fuenfzigsten Fang.
+    expect(shinyOdds(20)).toBeCloseTo(0.10, 4)
+    expect(shinyOdds(SHINY_CHAIN_GUARANTEE)).toBe(1)
+  })
+
+  it('steigt streng monoton und ueberschreitet nie eins', () => {
+    for (let s = 1; s <= 60; s++) {
+      const before = shinyOdds(s - 1)
+      const now = shinyOdds(s)
+      expect(now).toBeGreaterThanOrEqual(before)
+      expect(now).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('bleibt frueh nah an der Grundchance', () => {
+    // Eine flache Kurve waere ein Rabatt statt eines Ziels: nach fuenf Faengen
+    // soll sich noch nichts geschenkt anfuehlen.
+    expect(shinyOdds(0)).toBeCloseTo(SHINY_BASE_ODDS, 6)
+    expect(shinyOdds(5)).toBeLessThan(0.01)
+  })
+
+  it('garantiert den Fang auch ueber die Zusage hinaus', () => {
+    expect(shinyOdds(200)).toBe(1)
+  })
+})
