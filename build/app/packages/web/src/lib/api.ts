@@ -1,0 +1,928 @@
+import type {
+  ApiError, AuthResponse, Bootstrap, CareAction, CareResponse, CenterState, CenterVisit,
+  DexRow, EnergyOverview, EnergyState, GardenState, MoveSet, PlotsState, ShopState,
+  StarterOption, TeamsState, ThemesState,
+} from '@game/shared'
+
+import { looksLikeEnergy, useEnergy } from './energyStore.js'
+
+const TOKEN_KEY = 'poke.session'
+
+export class ApiFailure extends Error {
+  constructor(readonly code: string, readonly detail: Record<string, unknown>, readonly status: number) {
+    super(code)
+    this.name = 'ApiFailure'
+  }
+}
+
+let token: string | null = sessionStorage.getItem(TOKEN_KEY)
+
+export const setToken = (value: string | null): void => {
+  token = value
+  if (value) sessionStorage.setItem(TOKEN_KEY, value)
+  else sessionStorage.removeItem(TOKEN_KEY)
+}
+
+export const hasToken = (): boolean => token !== null
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers)
+  headers.set('accept', 'application/json')
+  if (init.body) headers.set('content-type', 'application/json')
+  if (token) headers.set('authorization', `Bearer ${token}`)
+
+  const res = await fetch(path, { ...init, headers })
+  const text = await res.text()
+  const body: unknown = text ? JSON.parse(text) : {}
+
+  if (!res.ok) {
+    const err = body as ApiError
+    // A dead session is not an error the UI should show; it means log in again.
+    if (res.status === 401) setToken(null)
+    throw new ApiFailure(err.error ?? 'unknown', err.detail ?? {}, res.status)
+  }
+
+  // Jede Antwort, die einen Energiestand mitbringt, aktualisiert die Anzeige in
+  // der Kopfzeile. So bleibt sie aktuell, ohne dass jeder Bildschirm daran
+  // denken muss.
+  if (typeof body === 'object' && body !== null) {
+    const record = body as Record<string, unknown>
+    if (looksLikeEnergy(record.energy)) useEnergy.getState().setEnergy(record.energy)
+    // Gold steht in fast jeder Antwort, die es veraendert — Beutel, Shop,
+    // Beet, Energie. Damit bleibt die Kopfzeile aktuell, ohne dass ein
+    // Bildschirm daran denken muss.
+    if (typeof record.gold === 'number') useEnergy.getState().setGold(record.gold)
+  }
+  return body as T
+}
+
+export const api = {
+  health: () => request<{ ok: boolean; species: number; pack: string }>('/api/health'),
+
+  authenticate: (initData: string, inviteCode?: string) =>
+    request<AuthResponse>('/api/auth/session', {
+      method: 'POST',
+      body: JSON.stringify({ initData, ...(inviteCode ? { inviteCode } : {}) }),
+    }),
+
+  state: () => request<Bootstrap>('/api/state'),
+  today: () => request<TodayView>('/api/today'),
+
+  garden: () => request<GardenState>('/api/garden'),
+  care: (action: CareAction) =>
+    request<CareResponse>('/api/garden/care', { method: 'POST', body: JSON.stringify({ action }) }),
+  setBackground: (itemId: string) =>
+    request<GardenState>('/api/garden/background', { method: 'POST', body: JSON.stringify({ itemId }) }),
+
+  starterInfo: () => request<{ needsStarter: boolean; options: StarterOption[] }>('/api/starter'),
+  chooseStarter: (speciesId: string) =>
+    request<GardenState>('/api/starter', { method: 'POST', body: JSON.stringify({ speciesId }) }),
+
+  box: () => request<{ creatures: CreatureLike[]; teamCapacity: number }>('/api/box'),
+  setTeam: (creatureIds: string[]) =>
+    request<GardenState>('/api/team', { method: 'POST', body: JSON.stringify({ creatureIds }) }),
+
+  teams: () => request<TeamsState>('/api/teams'),
+  createTeam: (name: string) =>
+    request<TeamsState>('/api/teams', { method: 'POST', body: JSON.stringify({ name }) }),
+  renameTeam: (teamId: string, name: string) =>
+    request<TeamsState>(`/api/teams/${teamId}`, { method: 'PATCH', body: JSON.stringify({ name }) }),
+  deleteTeam: (teamId: string) =>
+    request<TeamsState>(`/api/teams/${teamId}`, { method: 'DELETE' }),
+  setTeamMembers: (teamId: string, creatureIds: string[]) =>
+    request<TeamsState>(`/api/teams/${teamId}/members`, { method: 'PUT', body: JSON.stringify({ creatureIds }) }),
+  activateTeam: (teamId: string) =>
+    request<TeamsState>(`/api/teams/${teamId}/activate`, { method: 'POST', body: '{}' }),
+
+  moveSet: (creatureId: string) => request<MoveSet>(`/api/creatures/${creatureId}/moves`),
+  setMoves: (creatureId: string, moveIds: string[]) =>
+    request<MoveSet>(`/api/creatures/${creatureId}/moves`, {
+      method: 'PUT', body: JSON.stringify({ moveIds }),
+    }),
+
+  themes: () => request<ThemesState>('/api/themes'),
+  buyTheme: (themeId: string) =>
+    request<ThemesState>('/api/themes/buy', { method: 'POST', body: JSON.stringify({ themeId }) }),
+  wearTheme: (themeId: string) =>
+    request<ThemesState>('/api/themes/wear', { method: 'POST', body: JSON.stringify({ themeId }) }),
+  setThemeMode: (mode: 'auto' | 'day' | 'night') =>
+    request<ThemesState>('/api/themes/mode', { method: 'POST', body: JSON.stringify({ mode }) }),
+
+  plots: () => request<PlotsState>('/api/plots'),
+  plant: (body: { slot: number; kind: 'item' | 'gold'; itemId?: string; amount: number; tenderId?: string | null }) =>
+    request<PlotsState>('/api/plots/plant', { method: 'POST', body: JSON.stringify(body) }),
+  tendPlot: (slot: number) =>
+    request<{ kind: 'weed' | 'water'; phasesDone: number; bonusPercent: number; state: PlotsState }>(
+      '/api/plots/tend', { method: 'POST', body: JSON.stringify({ slot }) }),
+  harvestPlot: (slot: number) =>
+    request<{
+      kind: 'item' | 'gold'; itemId: string | null; name: string; icon: string
+      staked: number; received: number; bonusPercent: number; state: PlotsState
+    }>('/api/plots/harvest', { method: 'POST', body: JSON.stringify({ slot }) }),
+  setPlotTender: (slot: number, tenderId: string | null) =>
+    request<PlotsState>('/api/plots/tender', { method: 'POST', body: JSON.stringify({ slot, tenderId }) }),
+
+  center: () => request<CenterState>('/api/center'),
+  centerVisit: () => request<CenterVisit>('/api/center/visit', { method: 'POST', body: '{}' }),
+  acceptTrade: (offerId: string, creatureId: string) =>
+    request<{ gaveName: string; received: CreatureLike; newDexEntry: boolean; state: CenterState }>(
+      '/api/center/trade/accept', { method: 'POST', body: JSON.stringify({ offerId, creatureId }) }),
+  declineTrade: (offerId: string) =>
+    request<CenterState>('/api/center/trade/decline', { method: 'POST', body: JSON.stringify({ offerId }) }),
+
+  energy: () => request<EnergyOverview>('/api/energy'),
+  buyEnergy: (packId: string) =>
+    request<EnergyOverview>('/api/energy/buy', { method: 'POST', body: JSON.stringify({ packId }) }),
+  expandEnergy: () => request<EnergyOverview>('/api/energy/expand', { method: 'POST', body: '{}' }),
+
+  dex: () => request<{ rows: DexRow[]; counts: { seen: number; caught: number; total: number } }>('/api/dex'),
+
+  world: () => request<WorldMap>('/api/world'),
+  travel: (areaId: string) =>
+    request<WorldMap>('/api/world/travel', { method: 'POST', body: JSON.stringify({ areaId }) }),
+  setLevelScaling: (enabled: boolean) =>
+    request<WorldMap>('/api/world/scaling', { method: 'POST', body: JSON.stringify({ enabled }) }),
+
+  safari: (ballId: string, berryId: string | null) =>
+    request<SafariState>(`/api/safari?ballId=${encodeURIComponent(ballId)}${berryId ? `&berryId=${encodeURIComponent(berryId)}` : ''}`),
+  explore: (ballId: string, berryId: string | null) =>
+    request<ExploreResponse>('/api/safari/explore', { method: 'POST', body: JSON.stringify({ ballId, berryId }) }),
+  useLegendaryBerry: (ballId: string, berryId: string | null) =>
+    request<EncounterView>('/api/safari/berry', { method: 'POST', body: JSON.stringify({ ballId, berryId }) }),
+  soften: (action: 'weaken' | 'calm', ballId: string, berryId: string | null) =>
+    request<EncounterView>('/api/safari/soften', { method: 'POST', body: JSON.stringify({ action, ballId, berryId }) }),
+  throwBall: (ballId: string, berryId: string | null) =>
+    request<ThrowResult>('/api/safari/throw', { method: 'POST', body: JSON.stringify({ ballId, berryId }) }),
+  flee: () => request<{ ok: boolean }>('/api/safari/flee', { method: 'POST', body: '{}' }),
+  startEventBattle: () => request<BattleView>('/api/battle/event', { method: 'POST', body: '{}' }),
+
+  expeditions: () => request<ExpeditionOverview>('/api/expeditions'),
+  startExpedition: (kind: string, duration: string, creatureIds: string[]) =>
+    request<{ overview: ExpeditionOverview }>('/api/expeditions', {
+      method: 'POST', body: JSON.stringify({ kind, duration, creatureIds }),
+    }),
+  collectExpedition: (id: string) =>
+    request<{ result: CollectResult; overview: ExpeditionOverview }>('/api/expeditions/collect', {
+      method: 'POST', body: JSON.stringify({ id }),
+    }),
+
+  exportUrl: () => '/api/account/export',
+  deleteAccount: (confirm: string) =>
+    request<{ deleted: boolean; deletedRows: number }>('/api/account/delete', {
+      method: 'POST', body: JSON.stringify({ confirm }),
+    }),
+
+  admin: () => request<AdminDashboard>('/api/admin'),
+  createInvite: (maxUses: number, expiresInDays: number | null, note: string) =>
+    request<{ invite: { code: string }; dashboard: AdminDashboard }>('/api/admin/invite', {
+      method: 'POST', body: JSON.stringify({ maxUses, expiresInDays, note }),
+    }),
+  revokeInvite: (code: string) =>
+    request<AdminDashboard>('/api/admin/invite/revoke', { method: 'POST', body: JSON.stringify({ code }) }),
+  setBan: (targetId: string, value: boolean) =>
+    request<AdminDashboard>('/api/admin/ban', { method: 'POST', body: JSON.stringify({ targetId, value }) }),
+
+  story: () => request<StoryView>('/api/story'),
+  claimChapter: (chapterId: string) =>
+    request<{ chapterId: string; story: StoryView }>('/api/story/claim', {
+      method: 'POST', body: JSON.stringify({ chapterId }),
+    }),
+
+  evolutions: () => request<{ candidates: EvolutionCandidate[] }>('/api/evolutions'),
+  evolve: (creatureId: string, targetSpeciesId: string) =>
+    request<{ creature: CreatureLike; fromName: string; newDexEntry: boolean }>('/api/evolutions/evolve', {
+      method: 'POST', body: JSON.stringify({ creatureId, targetSpeciesId }),
+    }),
+
+  buildings: () => request<BuildingsView>('/api/buildings'),
+  upgradeBuilding: (buildingId: string) =>
+    request<{ buildingId: string; level: number; cost: number; buildings: BuildingsView }>('/api/buildings/upgrade', {
+      method: 'POST', body: JSON.stringify({ buildingId }),
+    }),
+
+  crafting: () => request<CraftingView>('/api/crafting'),
+  craft: (recipeId: string) =>
+    request<{ output: { itemId: string; quantity: number }; crafting: CraftingView }>('/api/crafting/craft', {
+      method: 'POST', body: JSON.stringify({ recipeId }),
+    }),
+
+  season: () => request<SeasonView>('/api/season'),
+  claimSeasonTier: (tier: number) =>
+    request<{ tier: number; label: string; season: SeasonView }>('/api/season/claim', {
+      method: 'POST', body: JSON.stringify({ tier }),
+    }),
+
+  achievements: () => request<AchievementsView>('/api/achievements'),
+  claimAchievement: (achievementId: string) =>
+    request<{ gold: number; achievements: AchievementsView }>('/api/achievements/claim', {
+      method: 'POST', body: JSON.stringify({ achievementId }),
+    }),
+
+  guild: () => request<GuildOverview>('/api/guild'),
+  foundGuild: (name: string, tag: string, motto: string) =>
+    request<GuildOverview>('/api/guild/found', { method: 'POST', body: JSON.stringify({ name, tag, motto }) }),
+  joinGuild: (guildId: string) =>
+    request<GuildOverview>('/api/guild/join', { method: 'POST', body: JSON.stringify({ guildId }) }),
+  leaveGuild: () => request<GuildOverview>('/api/guild/leave', { method: 'POST', body: '{}' }),
+  claimGuildGoal: () =>
+    request<{ gold: number; guild: GuildOverview }>('/api/guild/claim', { method: 'POST', body: '{}' }),
+
+  raids: () => request<RaidOverview>('/api/raids'),
+  summonRaid: (tier: 1 | 3 | 5) =>
+    request<RaidOverview>('/api/raids/summon', { method: 'POST', body: JSON.stringify({ tier }) }),
+  attackRaid: (raidId: string) =>
+    request<RaidAttackResponse>('/api/raids/attack', { method: 'POST', body: JSON.stringify({ raidId }) }),
+
+  pvp: () => request<PvpOverview>('/api/pvp'),
+  pvpLadder: () => request<PvpLadder>('/api/pvp/ladder'),
+  pvpHistory: () => request<{ duels: PvpHistoryEntry[] }>('/api/pvp/history'),
+  duel: (opponentId: string) =>
+    request<DuelResult>('/api/pvp/duel', { method: 'POST', body: JSON.stringify({ opponentId }) }),
+
+  tournament: () => request<TournamentView>('/api/tournament'),
+  enterTournament: () => request<TournamentView>('/api/tournament/enter', { method: 'POST', body: '{}' }),
+
+  friends: () => request<FriendOverview>('/api/friends'),
+  requestFriend: (code: string) =>
+    request<{ status: 'sent' | 'accepted' }>('/api/friends/request', { method: 'POST', body: JSON.stringify({ code }) }),
+  respondFriend: (fromId: string, accept: boolean) =>
+    request<FriendOverview>('/api/friends/respond', { method: 'POST', body: JSON.stringify({ fromId, accept }) }),
+  removeFriend: (trainerId: string) =>
+    request<FriendOverview>('/api/friends/remove', { method: 'POST', body: JSON.stringify({ trainerId }) }),
+
+  myCard: () => request<TrainerCard>('/api/card'),
+  card: (trainerId: string) => request<TrainerCard>(`/api/card/${trainerId}`),
+
+  market: () => request<MarketOverview>('/api/market'),
+  listOnMarket: (creatureId: string, price: number, note: string) =>
+    request<MarketOverview>('/api/market/list', { method: 'POST', body: JSON.stringify({ creatureId, price, note }) }),
+  cancelListing: (listingId: string) =>
+    request<MarketOverview>('/api/market/cancel', { method: 'POST', body: JSON.stringify({ listingId }) }),
+  buyListing: (listingId: string) =>
+    request<{ paid: number; market: MarketOverview }>('/api/market/buy', { method: 'POST', body: JSON.stringify({ listingId }) }),
+
+  trades: () => request<TradeOverview>('/api/trades'),
+  offerTrade: (toTrainerId: string, offeredId: string, requestedId: string | null, message: string) =>
+    request<TradeOverview>('/api/trades/offer', {
+      method: 'POST', body: JSON.stringify({ toTrainerId, offeredId, requestedId, message }),
+    }),
+  respondTrade: (tradeId: string, accept: boolean) =>
+    request<{ accepted: boolean; trades: TradeOverview }>('/api/trades/respond', {
+      method: 'POST', body: JSON.stringify({ tradeId, accept }),
+    }),
+
+  leaderboard: () => request<LeaderboardView>('/api/leaderboard'),
+  setPrivacy: (changes: Record<string, boolean>) =>
+    request<unknown>('/api/privacy', { method: 'POST', body: JSON.stringify(changes) }),
+
+  opponents: () => request<OpponentList>('/api/battle/opponents'),
+  currentBattle: () => request<{ battle: BattleView | null }>('/api/battle'),
+  startBattle: (opponentId: string) =>
+    request<BattleView>('/api/battle/start', { method: 'POST', body: JSON.stringify({ opponentId }) }),
+  battleAction: (action: BattleAction) =>
+    request<BattleView>('/api/battle/action', { method: 'POST', body: JSON.stringify(action) }),
+  forfeitBattle: () => request<BattleView>('/api/battle/forfeit', { method: 'POST', body: '{}' }),
+  healTeam: () => request<{ cost: number; healed: number; gold: number }>('/api/team/heal', { method: 'POST', body: '{}' }),
+
+  eggs: () => request<EggOverview>('/api/eggs'),
+  pairEggs: (creatureIdA: string, creatureIdB: string) =>
+    request<{ overview: EggOverview }>('/api/eggs/pair', {
+      method: 'POST', body: JSON.stringify({ creatureIdA, creatureIdB }),
+    }),
+  hatchEgg: (id: string) =>
+    request<{ creature: CreatureLike; newDexEntry: boolean; overview: EggOverview }>('/api/eggs/hatch', {
+      method: 'POST', body: JSON.stringify({ id }),
+    }),
+
+  bag: () => request<{ gold: number; items: BagItem[] }>('/api/bag'),
+  shop: () => request<ShopState>('/api/shop'),
+  buy: (itemId: string, quantity = 1) =>
+    request<ShopState>('/api/shop/buy', { method: 'POST', body: JSON.stringify({ itemId, quantity }) }),
+  sell: (itemId: string, quantity = 1) =>
+    request<ShopState>('/api/shop/sell', { method: 'POST', body: JSON.stringify({ itemId, quantity }) }),
+}
+
+export type CreatureLike = GardenState['team'][number]
+
+export interface BagItem {
+  id: string
+  quantity: number
+  name: string
+  description: string
+  category: string
+  icon: string
+  sellPrice: number | null
+}
+
+
+/* ---------------------------------------------------------------------------
+ * Response shapes for the world features.
+ *
+ * Declared here rather than in @game/shared because they are assembled by
+ * services from several sources; duplicating a zod schema for them would mean
+ * maintaining the same shape twice with no extra safety on the client, which
+ * only ever reads them.
+ * ------------------------------------------------------------------------- */
+
+export interface TypeChip { id: string; name: string; color: string }
+
+export interface UnlockRequirement {
+  kind: 'previous_area' | 'caught_in_previous' | 'creatures_at_level' | 'badges'
+  met: boolean
+  label: string
+  have: number
+  need: number
+  detail?: string[]
+}
+
+export interface AreaView {
+  id: string
+  name: string
+  description: string
+  icon: string
+  order: number
+  unlocked: boolean
+  visited: boolean
+  isCurrent: boolean
+  requirements: UnlockRequirement[]
+  caughtHere: number
+  speciesHere: number
+  encounters: number
+  gymId: string | null
+  gymCleared: boolean
+  trainerCount: number
+  spawnableNow: number
+  levels: { min: number; max: number }
+  /** Wie viele Level die dynamische Skalierung draufgelegt hat. */
+  levelBoost: number
+}
+
+export interface TodayTask {
+  kind: 'expedition' | 'plot_harvest' | 'plot_tend' | 'center' | 'egg' | 'pvp' | 'raid' | 'care'
+  screen: string
+  count: number
+  order: number
+}
+
+export interface TodayView {
+  tasks: TodayTask[]
+  energy: EnergyState
+  gold: number
+  teamSize: number
+  nextAt: number | null
+  journey: {
+    areaName: string | null
+    dexCaught: number
+    dexTotal: number
+    badges: number
+    badgeTotal: number
+  }
+}
+
+export interface WorldMap {
+  regions: Array<{ id: string; name: string; tagline: string; areas: AreaView[] }>
+  clock: { timeOfDay: string; weather: string; gameDate: string }
+  currentAreaId: string | null
+  badges: string[]
+  levelScaling: boolean
+  /** Median-Level des aktiven Teams; 0, wenn die Skalierung aus ist. */
+  referenceLevel: number
+  league: Array<{
+    regionId: string
+    regionName: string
+    cleared: boolean
+    badges: { have: number; need: number }
+    elites: Array<{ id: string; name: string; defeated: boolean; locked: boolean }>
+    champion: { id: string; name: string; defeated: boolean; locked: boolean } | null
+  }>
+}
+
+export interface EncounterView {
+  active: boolean
+  areaId: string
+  areaName: string
+  speciesId: string
+  speciesName: string
+  sprite: string
+  types: TypeChip[]
+  level: number
+  shiny: boolean
+  rarity: string
+  turn: number
+  weakenStacks: number
+  calmStacks: number
+  maxWeaken: number
+  maxCalm: number
+  probability: number
+  chain: number
+  legendary: boolean
+  legendaryBerries: number
+  maxLegendaryBerries: number
+  berriesOwned: number
+}
+
+export interface SafariState {
+  encounter: EncounterView | null
+  exploresUsed: number
+  energy: EnergyState
+  energyCost: number
+}
+
+export type ExploreResponse =
+  | { kind: 'encounter'; encounter: EncounterView; legendary: boolean }
+  | { kind: 'nothing' }
+  | { kind: 'event'; opponent: { id: string; name: string; title: string; sprite: string; intro: string } }
+
+export interface ThrowResult {
+  caught: boolean
+  shakes: number
+  probability: number
+  fled: boolean
+  creature: CreatureLike | null
+  newDexEntry: boolean
+  chain: number
+  reward: { gold: number } | null
+  areaCompleted: { areaId: string; areaName: string; energy: number } | null
+  encounter: EncounterView | null
+}
+
+export interface ExpeditionView {
+  id: string
+  kind: string
+  kindName: string
+  duration: string
+  areaName: string
+  startedAt: number
+  endsAt: number
+  ready: boolean
+  members: Array<{ id: string; name: string; sprite: string; level: number }>
+}
+
+export interface ExpeditionOverview {
+  open: ExpeditionView[]
+  /** null = unbegrenzt viele gleichzeitig. */
+  maxOpen: number | null
+  energy: EnergyState
+  kinds: Array<{ id: string; name: string; favouredTypes: TypeChip[] }>
+  durations: Array<{ id: string; minutes: number; energyCost: number; trainerEnergyCost: number }>
+  available: Array<{ id: string; name: string; sprite: string; level: number; energy: number; types: string[] }>
+  partyRange: { min: number; max: number }
+}
+
+export interface CollectResult {
+  loot: Array<{ itemId: string; name: string; quantity: number; icon: string; category: string }>
+  gold: number
+  xpPerMember: number
+  levelUps: Array<{ creatureId: string; name: string; newLevel: number }>
+}
+
+export interface EggView {
+  id: string
+  speciesKnown: boolean
+  speciesName: string | null
+  sprite: string | null
+  shiny: boolean
+  progress: number
+  hatchMinutes: number
+  minutesLeft: number
+  ready: boolean
+  ivPercentHint: string
+}
+
+export interface EggOverview {
+  eggs: EggView[]
+  maxEggs: number
+  minLevel: number
+  candidates: Array<{ id: string; name: string; sprite: string; level: number; eggGroups: string[]; shiny: boolean }>
+}
+
+
+export type BattleAction =
+  | { kind: 'move'; moveIndex: number }
+  | { kind: 'switch'; partyIndex: number }
+  | { kind: 'forfeit' }
+
+export interface OpponentEntry {
+  id: string
+  name: string
+  title: string
+  kind: string
+  isGym: boolean
+  sprite: string
+  teamSize: number
+  maxLevel: number
+  rewardGold: number
+  defeated: boolean
+  wins: number
+  badgeId: string | null
+  badgeEarned: boolean
+  intro: string
+}
+
+export interface OpponentList {
+  areaId: string
+  areaName: string
+  trainers: OpponentEntry[]
+  gym: OpponentEntry | null
+}
+
+export interface BattleFighterView {
+  id: string
+  name: string
+  level: number
+  hp: number
+  hpMax: number
+  status: string
+  sprite: string
+  shiny: boolean
+  types: TypeChip[]
+  stages: Record<string, number>
+  confused: boolean
+  fainted: boolean
+}
+
+export interface BattleMoveView {
+  index: number
+  id: string
+  name: string
+  type: string
+  typeColor: string
+  category: string
+  power: number
+  accuracy: number
+  pp: number
+  ppMax: number
+  effectiveness: number
+}
+
+export interface EventLoot {
+  gold: number
+  items: Array<{ itemId: string; name: string; icon: string; quantity: number }>
+  perfect: { speciesId: string; name: string; sprite: string; level: number } | null
+}
+
+export interface BattleReward {
+  won: boolean
+  gold: number
+  energy: number
+  event: EventLoot | null
+  xpPerMember: number
+  firstWin: boolean
+  badge: { id: string; name: string } | null
+  levelUps: Array<{ creatureId: string; name: string; newLevel: number }>
+  dialogue: string
+}
+
+/** Mirrors the engine's BattleEvent union. Kept structural rather than
+ *  imported so the web bundle does not pull in the whole engine. */
+export type BattleEventView = { type: string; [key: string]: unknown }
+
+export interface BattleView {
+  id: string
+  kind: string
+  turn: number
+  weather: string
+  finished: boolean
+  winner: number | null
+  opponentName: string
+  player: { active: BattleFighterView; party: BattleFighterView[]; moves: BattleMoveView[] }
+  foe: { active: BattleFighterView; party: BattleFighterView[] }
+  lastEvents: BattleEventView[]
+  reward: BattleReward | null
+}
+
+
+export interface FriendBrief {
+  trainerId: string
+  displayName: string
+  lastSeenAt: number
+  score: number
+  badges: number
+  dexCaught: number
+}
+
+export interface FriendOverview {
+  trainerCode: string
+  friends: FriendBrief[]
+  incoming: FriendBrief[]
+  outgoing: FriendBrief[]
+}
+
+export interface TrainerCard {
+  trainerId: string
+  displayName: string
+  trainerCode: string
+  joinedAt: number
+  rank: number | null
+  score: number
+  dexCaught: number
+  dexTotal: number
+  badges: Array<{ id: string; name: string; icon: string }>
+  battlesWon: number
+  shinies: number
+  highestLevel: number
+  teamPreview: Array<{ speciesId: string; name: string; sprite: string; level: number; shiny: boolean }>
+  isFriend: boolean
+  isSelf: boolean
+  requestPending: boolean
+}
+
+export interface MarketListingView {
+  id: string
+  price: number
+  note: string
+  createdAt: number
+  sellerName: string
+  isOwn: boolean
+  creature: CreatureLike | null
+}
+
+export interface MarketOverview {
+  gold: number
+  minPrice: number
+  maxPrice: number
+  feePercent: number
+  listings: MarketListingView[]
+  ownListings: MarketListingView[]
+  sellable: CreatureLike[]
+}
+
+export interface TradeOfferView {
+  id: string
+  fromName: string
+  toName: string
+  message: string
+  expiresAt: number
+  offered: CreatureLike | null
+  requested: CreatureLike | null
+}
+
+export interface TradeOverview {
+  incoming: TradeOfferView[]
+  outgoing: TradeOfferView[]
+  friends: Array<{ trainerId: string; displayName: string }>
+  tradable: CreatureLike[]
+}
+
+export interface LeaderboardView {
+  rows: Array<{
+    rank: number
+    trainerId: string
+    displayName: string
+    dexCaught: number
+    badges: number
+    battlesWon: number
+    shinies: number
+    highestLevel: number
+    teamPower: number
+    score: number
+    isSelf: boolean
+  }>
+  ownRank: number | null
+  hidden: boolean
+}
+
+
+export interface GuildMember {
+  trainerId: string
+  displayName: string
+  role: string
+  joinedAt: number
+  contribution: number
+}
+
+export interface GuildOverview {
+  guild: {
+    id: string
+    name: string
+    tag: string
+    motto: string
+    treasury: number
+    chatBound: boolean
+    joinOpen: boolean
+    role: string
+    members: GuildMember[]
+    memberCount: number
+    maxMembers: number
+    goal: {
+      kind: string
+      labelKey: string
+      target: number
+      progress: number
+      complete: boolean
+      claimed: boolean
+      rewardPerMember: number
+    }
+  } | null
+  open: Array<{ id: string; name: string; tag: string; motto: string; memberCount: number }>
+  foundingCost: number
+  maxMembers: number
+  gold: number
+}
+
+export interface RaidView {
+  id: string
+  speciesId: string
+  name: string
+  sprite: string
+  types: TypeChip[]
+  level: number
+  tier: number
+  hpLeft: number
+  hpMax: number
+  progress: number
+  expiresAt: number
+  defeated: boolean
+  participants: Array<{ trainerId: string; displayName: string; damage: number; attacks: number }>
+  myDamage: number
+  myAttacks: number
+  attacksLeft: number
+  maxAttacks: number
+  goldPool: number
+}
+
+export interface RaidOverview {
+  guild: { id: string; name: string; tag: string; chatBound: boolean } | null
+  open: RaidView[]
+  recent: RaidView[]
+  tiers: Array<{ tier: number; levelRange: [number, number]; durationHours: number; goldPool: number }>
+}
+
+export interface RaidAttackResponse {
+  damage: number
+  contributions: Array<{ creatureId: string; name: string; damage: number; effectiveness: number }>
+  raid: RaidView
+  defeated: boolean
+  reward: { gold: number; caught: boolean; creature: CreatureLike | null } | null
+}
+
+export interface PvpOverview {
+  rating: number
+  tier: string
+  wins: number
+  losses: number
+  streak: number
+  duelsToday: number
+  /** null = kein Tageslimit mehr; die Zahl bleibt als Statistik. */
+  duelsPerDay: number | null
+  energy: EnergyState
+  energyCost: number
+  unseenDefences: number
+  opponents: Array<{
+    trainerId: string
+    displayName: string
+    rating: number
+    tier: string
+    teamPreview: Array<{ sprite: string; level: number }>
+  }>
+}
+
+export interface PvpLadder {
+  rows: Array<{
+    rank: number
+    trainerId: string
+    displayName: string
+    rating: number
+    tier: string
+    wins: number
+    losses: number
+    isSelf: boolean
+  }>
+  own: { rating: number; tier: string; wins: number; losses: number; streak: number }
+}
+
+export interface PvpHistoryEntry {
+  id: string
+  opponentName: string
+  asChallenger: boolean
+  won: boolean
+  delta: number
+  foughtAt: number
+}
+
+export interface DuelResult {
+  duelId: string
+  won: boolean
+  ratingBefore: number
+  ratingAfter: number
+  delta: number
+  gold: number
+  opponentName: string
+  events: BattleEventView[]
+  turns: number
+}
+
+export interface TournamentView {
+  weekKey: string
+  state: string
+  closesAt: number
+  resolvedAt: number | null
+  entryFee: number
+  prizes: number[]
+  entered: boolean
+  myPlacement: number | null
+  entryCount: number
+  minEntries: number
+  entries: Array<{ trainerId: string; displayName: string; seedScore: number; placement: number | null; seed: number; isSelf: boolean }>
+  bracket: Array<{ round: number; a: string | null; b: string | null; winner: string | null }>
+}
+
+
+export interface EvolutionCandidate {
+  creature: CreatureLike
+  options: Array<{ speciesId: string; name: string; sprite: string; how: string }>
+}
+
+export interface BuildingsView {
+  gold: number
+  buildings: Array<{
+    id: string
+    level: number
+    maxLevel: number
+    effectKind: string
+    currentEffect: number
+    nextEffect: number | null
+    upgradeCost: number | null
+    affordable: boolean
+    maxed: boolean
+  }>
+}
+
+export interface CraftingView {
+  gold: number
+  recipes: Array<{
+    id: string
+    output: { itemId: string; name: string; icon: string; category: string; quantity: number }
+    inputs: Array<{ itemId: string; name: string; icon: string; category: string; quantity: number; have: number }>
+    goldCost: number
+    requiresBuilding: { buildingId: string; level: number } | null
+    craftable: boolean
+    blockedReason: string | null
+  }>
+}
+
+export interface SeasonView {
+  seasonKey: string
+  endsAt: number
+  points: number
+  tier: number
+  nextTierPoints: number | null
+  currentTierPoints: number
+  tiers: Array<{
+    tier: number
+    pointsRequired: number
+    reached: boolean
+    claimed: boolean
+    rewardLabel: string
+  }>
+}
+
+export interface AchievementsView {
+  visible: Array<{
+    id: string
+    metric: string
+    target: number
+    progress: number
+    unlocked: boolean
+    claimed: boolean
+    rewardGold: number
+  }>
+  unlockedCount: number
+  totalCount: number
+}
+
+
+export interface ChapterView {
+  id: string
+  order: number
+  title: string
+  text: string
+  reached: boolean
+  claimed: boolean
+  isCurrent: boolean
+  requirements: Array<{ kind: string; label: string; have: number; need: number; met: boolean }>
+  reward: { gold: number; itemName: string | null; quantity: number }
+}
+
+export interface StoryView {
+  chapters: ChapterView[]
+  currentChapter: ChapterView | null
+  completed: number
+  total: number
+}
+
+
+export interface AdminDashboard {
+  trainers: { total: number; activeToday: number; activeWeek: number; banned: number }
+  content: { pack: string; version: string; species: number; areas: number; trainers: number }
+  activity: {
+    creatures: number; shinies: number; battles: number; duels: number
+    raids: number; guilds: number; marketSales: number; goldInCirculation: number
+  }
+  invites: Array<{ code: string; uses: number; maxUses: number; expiresAt: number | null; note: string; exhausted: boolean }>
+  recentTrainers: Array<{
+    id: string; displayName: string; trainerCode: string
+    createdAt: number; lastSeenAt: number; isAdmin: number; isBanned: number; gold: number
+  }>
+  uptimeSeconds: number
+}

@@ -1,0 +1,29 @@
+{
+  "name": "poke-partner",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm run build -w @game/shared && npm run build -w @game/content && npm run build -w @game/engine && npm run build -w @game/api && npm run build -w @game/web",
+    "dev:api": "npm run dev -w @game/api",
+    "dev:web": "npm run dev -w @game/web",
+    "test": "vitest run",
+    "typecheck": "tsc -b --force",
+    "world": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/rebuild-world.ts",
+    "import": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/import-pokeapi.ts",
+    "import:kanto": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/import-pokeapi.ts --dex 1-151",
+    "import:full": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/import-pokeapi.ts --dex 1-251",
+    "simulate": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/simulate.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8",
+    "@types/node": "^22.10.2"
+  }
+}

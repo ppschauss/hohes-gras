@@ -1,0 +1,8 @@
+secrets.env
+data/
+build/app/node_modules/
+build/app/packages/*/node_modules/
+build/app/packages/*/dist/
+build/app/packages/api/public/
+*.log
+build/app/packages/api/public/__*.html

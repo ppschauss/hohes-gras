@@ -1,0 +1,1813 @@
+/* ============================================================ App-Gerüst === */
+
+.shell {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  /* --app-h wird aus Telegrams viewportStableHeight gesetzt (lib/telegram.ts).
+     100dvh ist im Telegram-Client unzuverlaessig und schiebt die Tab-Leiste
+     aus dem Bild. */
+  height: var(--app-h, 100dvh);
+  max-height: var(--app-h, 100dvh);
+  /* Ein sehr flacher Lichtkegel von oben, damit die Flaeche nicht tot wirkt.
+     Kein Farbverlauf quer durchs Bild: der Grund soll Grund bleiben. */
+  background:
+    radial-gradient(140% 55% at 50% -10%, oklch(0.30 0.03 158 / 0.5), transparent 60%),
+    var(--ground);
+}
+
+/* --- Kopfzeile ------------------------------------------------------------
+   Eine Leiste statt zweier. Sie scrollt mit dem Bildschirm, zu dem sie
+   gehoert, und klebt oben fest, solange dieser sichtbar ist. -------------- */
+
+.appbar {
+  position: sticky; top: 0; z-index: var(--z-sticky);
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  background: color-mix(in oklab, var(--ground) 88%, transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--edge);
+}
+.appbar--home { border-bottom-color: transparent; }
+
+.appbar__back {
+  flex: none;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  background: var(--surface); border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  color: var(--ink); cursor: pointer;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+.appbar__back:hover { background: var(--surface-raised); border-color: var(--edge-strong); }
+.appbar__back:active { transform: scale(0.94); }
+
+.appbar__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.appbar__title {
+  font-size: var(--t-lg); font-weight: 650; letter-spacing: -0.015em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.appbar__eyebrow {
+  font-size: var(--t-xs); color: var(--ink-faint);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.appbar__aside {
+  /* Darf schrumpfen: bei wenig Platz weicht die Nebenangabe, nicht die
+     Energieanzeige. */
+  min-width: 0; flex: 0 1 auto;
+  font-size: var(--t-sm); color: var(--ink-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* --- Ressourcen in der Kopfzeile ----------------------------------------- */
+
+.res { display: flex; align-items: center; gap: var(--s2); flex: none; }
+.res__chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px var(--s2) 5px 6px;
+  background: var(--surface); border: 1px solid var(--edge);
+  border-radius: var(--radius-pill);
+  font-size: var(--t-sm); font-weight: 600; font-variant-numeric: var(--num);
+  color: var(--ink); white-space: nowrap; cursor: pointer;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.res__chip:hover { border-color: var(--edge-strong); background: var(--surface-raised); }
+.res__chip:active { transform: scale(0.96); }
+.res__chip--gold svg { color: var(--gold); }
+.res__chip--energy svg { color: var(--energy); }
+.res__cap { color: var(--ink-faint); font-weight: 500; }
+
+/* --- Inhalt ---------------------------------------------------------------
+   .viewport ist die scrollende Grid-Zeile, .content der Innenabstand des
+   jeweiligen Bildschirms. Getrennt, damit ein Bildschirm eine eigene
+   Kopfzeile mitbringen kann, die mitscrollt. ------------------------------ */
+
+.viewport {
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex; flex-direction: column;
+}
+
+.content {
+  padding: var(--s4) var(--s4) var(--s6);
+  display: flex; flex-direction: column; gap: var(--s4);
+  flex: 1;
+}
+
+/* --- Währungsleiste ------------------------------------------------------- */
+
+/* --- Startbildschirm ------------------------------------------------------
+   Oben, was fertig ist. Darunter ein Raster der Ziele: acht Tueren in vier
+   Zeilen statt in acht — der Unterschied zwischen Ueberblick und Scrollen. */
+
+.today { display: flex; flex-direction: column; gap: var(--s2); }
+.today__head {
+  font-size: var(--t-xs); font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--accent);
+}
+.today__list { display: flex; flex-direction: column; gap: var(--s2); }
+.today__quiet {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: var(--s4);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+  color: var(--ink-muted); font-size: var(--t-sm);
+}
+.today__quiet svg { color: var(--nature); flex: none; }
+
+.task {
+  width: 100%;
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease),
+              transform var(--fast) var(--ease);
+}
+.task:hover { background: var(--surface-raised); border-color: var(--edge-strong); }
+.task:active { transform: scale(0.99); }
+.task__icon {
+  flex: none; width: 38px; height: 38px;
+  display: grid; place-items: center;
+  background: color-mix(in oklab, var(--accent) 14%, var(--surface-sunken));
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+}
+.task__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.task__title {
+  font-weight: 600; font-size: var(--t-md);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.task__hint {
+  font-size: var(--t-xs); color: var(--ink-faint);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.task__count {
+  flex: none;
+  min-width: 24px; padding: 2px var(--s2);
+  background: var(--accent); color: var(--accent-ink);
+  border-radius: var(--radius-pill);
+  font-size: var(--t-xs); font-weight: 700; text-align: center;
+  font-variant-numeric: var(--num);
+}
+.task__go { color: var(--ink-faint); flex: none; }
+
+.grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: var(--s2);
+}
+.tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--s2);
+  min-height: 82px; padding: var(--s3) var(--s2);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+  color: var(--ink-muted); font: inherit; cursor: pointer;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease),
+              color var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+.tile:hover:not(:disabled) {
+  background: var(--surface-raised);
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--edge));
+  color: var(--accent);
+}
+.tile:active:not(:disabled) { transform: scale(0.97); }
+.tile:disabled { opacity: 0.4; cursor: default; }
+.tile__label {
+  font-size: var(--t-xs); font-weight: 600; text-align: center;
+  line-height: 1.25; color: var(--ink);
+}
+
+.tag {
+  padding: 2px var(--s2);
+  border-radius: var(--radius-pill);
+  font-size: var(--t-xs); font-weight: 600;
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge);
+  color: var(--ink-faint);
+}
+.tag--soon { color: var(--warn); border-color: color-mix(in oklab, var(--warn) 40%, var(--edge)); }
+.tag--count {
+  background: var(--accent); border-color: transparent;
+  color: var(--accent-ink); min-width: 20px; text-align: center;
+  font-variant-numeric: var(--num);
+}
+
+/* --- Untere Navigation ---------------------------------------------------- */
+
+.tabbar {
+  z-index: var(--z-nav);
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: var(--s1);
+  padding: var(--s2) var(--s2) calc(var(--s2) + var(--safe-b));
+  /* Deckend statt Glas: unter der Leiste liegt nichts, was durchscheinen
+     soll, und ein backdrop-filter hier kostet nur Compositing-Aufwand. */
+  background: var(--surface-sunken);
+  border-top: 1px solid var(--edge);
+}
+.tabbar__btn {
+  position: relative; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: var(--s2) var(--s1) var(--s1);
+  min-height: var(--nav-h);
+  background: none; border: 0; border-radius: var(--radius);
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition: color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.tabbar__btn:hover:not(:disabled) { color: var(--ink-muted); }
+.tabbar__btn:disabled { cursor: default; opacity: 0.45; }
+.tabbar__btn[aria-current='page'] {
+  color: var(--ink);
+  background: color-mix(in oklab, var(--accent) 16%, var(--surface));
+}
+.tabbar__btn[aria-current='page'] svg { color: var(--accent); }
+.tabbar__label {
+  max-width: 100%;
+  font-size: 10px; font-weight: 600; letter-spacing: -0.005em;
+  text-align: center; line-height: 1.15;
+  overflow-wrap: anywhere; hyphens: auto;
+}
+/* Der aktive Reiter bekommt einen Balken, keine Farbfüllung — Farbe ist hier
+   für Zustand reserviert, nicht für Navigation. */
+.tabbar__btn[aria-current='page']::after {
+  content: ''; position: absolute; bottom: 2px;
+  width: 18px; height: 2px; border-radius: 2px; background: var(--accent);
+}
+
+/* --- Zustände: laden, leer, Fehler ---------------------------------------- */
+
+.center {
+  flex: 1; display: grid; place-items: center;
+  padding: var(--s6) var(--s4); text-align: center;
+}
+.center__inner { max-width: 34ch; display: flex; flex-direction: column; gap: var(--s3); align-items: center; }
+.center__glyph { font-size: 2.5rem; line-height: 1; }
+.center__body { color: var(--ink-muted); font-size: var(--t-sm); }
+
+.skeleton {
+  border-radius: var(--radius);
+  background: linear-gradient(100deg, var(--surface) 30%, var(--surface-raised) 50%, var(--surface) 70%);
+  background-size: 220% 100%;
+  animation: shimmer 1.4s var(--ease) infinite;
+}
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -40% 0; } }
+.skeleton--journey { height: 132px; }
+.skeleton--row { height: 66px; }
+
+/* --- Formular / Einladung ------------------------------------------------- */
+
+.field {
+  width: 100%;
+  padding: var(--s3);
+  font: inherit; font-size: var(--t-lg); letter-spacing: 0.08em; text-align: center;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge-strong);
+  border-radius: var(--radius);
+  transition: border-color var(--fast) var(--ease);
+}
+.field::placeholder { color: var(--ink-faint); letter-spacing: 0.04em; }
+.field:focus { border-color: var(--accent); outline: none; }
+.field[aria-invalid='true'] { border-color: var(--danger); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+  font: inherit; font-size: var(--t-sm); font-weight: 650;
+  cursor: pointer; white-space: nowrap;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease),
+              color var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+/* Die primaere Aktion ist hell, nicht bunt: sie muss sich gegen achtzehn
+   Typfarben behaupten, ohne mit ihnen zu konkurrieren. */
+.btn--primary { background: var(--accent); color: var(--accent-ink); }
+.btn--primary:hover:not(:disabled) { background: oklch(0.98 0.02 95); }
+.btn--primary:active:not(:disabled) { transform: scale(0.98); }
+.btn--ghost { background: var(--surface); border-color: var(--edge); color: var(--ink); }
+.btn--ghost:hover:not(:disabled) { background: var(--surface-raised); border-color: var(--edge-strong); }
+.btn--ghost:active:not(:disabled) { transform: scale(0.98); }
+.btn:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; }
+.btn:disabled { opacity: 0.42; cursor: default; }
+.btn--block { width: 100%; }
+
+/* Ein sichtbarer Fokusrahmen fuer alles Anklickbare — Telegram wird auch mit
+   Tastatur und Screenreader bedient. */
+button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible {
+  outline: 2px solid var(--accent-ring); outline-offset: 2px;
+}
+
+.notice {
+  padding: var(--s3);
+  border-radius: var(--radius);
+  font-size: var(--t-sm);
+  background: color-mix(in oklab, var(--danger) 16%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--danger) 42%, var(--edge));
+  color: var(--ink);
+}
+
+.spinner {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid oklch(1 0 0 / 0.25); border-top-color: currentColor;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ==================================================== Bildschirm-Kopfzeile === */
+
+.screenhead {
+  position: sticky; top: 0; z-index: var(--z-sticky);
+  display: grid; grid-template-columns: 36px 1fr auto;
+  align-items: center; gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  background: color-mix(in oklab, var(--ground) 88%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--edge);
+}
+.screenhead__back {
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  font-size: 1.5rem; line-height: 1;
+  background: var(--surface); border: 1px solid var(--edge);
+  border-radius: var(--radius-sm); cursor: pointer;
+  transition: background var(--fast) var(--ease);
+}
+.screenhead__back:hover { background: var(--surface-raised); }
+.screenhead__text { display: flex; flex-direction: column; min-width: 0; }
+.screenhead__eyebrow { font-size: var(--t-xs); color: var(--ink-faint); }
+.screenhead__title {
+  font-size: var(--t-lg); font-weight: 700; letter-spacing: -0.01em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.screenhead__aside { font-size: var(--t-xs); color: var(--ink-muted); white-space: nowrap; }
+
+/* ============================================================== Gartenszene === */
+
+.meadow {
+  position: relative; overflow: hidden;
+  height: 210px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--edge);
+  background: var(--surface-sunken);
+}
+/* Die Standardkulisse war ein grellblauer Himmel ueber giftgruenem Rasen —
+   das hellste Element der ganzen App, direkt neben Sprites, die selbst schon
+   kraeftig sind. Jetzt: spaeter Nachmittag, gedaempft. Die Sprites stehen
+   davor, nicht dagegen. */
+.meadow__sky {
+  position: absolute; inset: 0 0 42% 0;
+  background: linear-gradient(180deg, oklch(0.42 0.05 235), oklch(0.58 0.06 210));
+}
+.meadow__ground {
+  position: absolute; inset: 55% 0 0 0;
+  background: linear-gradient(180deg, oklch(0.44 0.09 148), oklch(0.31 0.07 150));
+  border-top: 2px solid oklch(0.52 0.10 146);
+}
+.meadow__sun {
+  position: absolute; top: 18px; right: 28px;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: radial-gradient(circle, oklch(0.90 0.10 88), oklch(0.80 0.12 78));
+  box-shadow: 0 0 34px oklch(0.85 0.11 84 / 0.35);
+}
+.meadow__cast {
+  position: absolute; inset: auto 0 18px 0;
+  display: flex; align-items: flex-end; justify-content: center;
+  gap: var(--s4); padding: 0 var(--s4);
+}
+.meadow__mon {
+  width: 64px; height: 64px;
+  /* Die Quell-Sprites sind 96x96 mit viel Luft drumherum. Ohne Vergroesserung
+     stehen die Pokemon verloren in der Szene. Ganzzahlig skalieren, sonst
+     franst die Pixelart aus. */
+  transform: scale(1.5);
+  transform-origin: bottom center;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 3px 3px oklch(0 0 0 / 0.4));
+  animation: bob 2.4s var(--ease) infinite;
+}
+@keyframes bob {
+  0%, 100% { transform: scale(1.5) translateY(0); }
+  50%      { transform: scale(1.5) translateY(-4px); }
+}
+/* Hintergrundvarianten aendern nur Himmel und Boden. */
+.meadow--forest .meadow__sky   { background: linear-gradient(180deg, oklch(0.42 0.07 175), oklch(0.55 0.09 160)); }
+.meadow--forest .meadow__ground{ background: linear-gradient(180deg, oklch(0.44 0.11 150), oklch(0.32 0.09 152)); }
+.meadow--beach  .meadow__sky   { background: linear-gradient(180deg, oklch(0.58 0.08 215), oklch(0.72 0.06 205)); }
+.meadow--beach  .meadow__ground{ background: linear-gradient(180deg, oklch(0.74 0.06 88), oklch(0.62 0.06 82)); border-top-color: oklch(0.78 0.05 90); }
+.meadow--moonlight .meadow__sky{ background: linear-gradient(180deg, oklch(0.24 0.06 268), oklch(0.34 0.07 255)); }
+.meadow--moonlight .meadow__ground { background: linear-gradient(180deg, oklch(0.32 0.06 200), oklch(0.24 0.05 210)); border-top-color: oklch(0.4 0.06 200); }
+.meadow--moonlight .meadow__sun{ background: radial-gradient(circle, oklch(0.92 0.02 250), oklch(0.82 0.03 250)); box-shadow: 0 0 28px oklch(0.9 0.03 250 / 0.4); }
+.meadow--dojo   .meadow__sky   { background: linear-gradient(180deg, oklch(0.36 0.05 40), oklch(0.48 0.07 45)); }
+.meadow--dojo   .meadow__ground{ background: linear-gradient(180deg, oklch(0.42 0.07 55), oklch(0.3 0.05 50)); border-top-color: oklch(0.5 0.08 55); }
+.meadow--space  .meadow__sky   { background: linear-gradient(180deg, oklch(0.16 0.05 285), oklch(0.24 0.08 275)); }
+.meadow--space  .meadow__ground{ background: linear-gradient(180deg, oklch(0.3 0.06 290), oklch(0.2 0.05 290)); border-top-color: oklch(0.42 0.09 290); }
+
+@media (prefers-reduced-motion: reduce) {
+  .meadow__mon { animation: none; }
+}
+
+/* ============================================================ Pflegeaktionen === */
+
+.careRow {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s2);
+}
+.careBtn {
+  min-width: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: var(--s3) var(--s1);
+  background: var(--surface); border: 1px solid var(--edge);
+  border-radius: var(--radius); cursor: pointer;
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+.careBtn:hover:not(:disabled) { background: var(--surface-raised); border-color: var(--edge-strong); }
+.careBtn:active:not(:disabled) { transform: scale(0.96); }
+.careBtn:disabled { opacity: 0.45; cursor: default; }
+.careBtn__glyph { font-size: 1.35rem; line-height: 1; }
+.careBtn__label { font-size: var(--t-sm); font-weight: 600; }
+.careBtn__hint {
+  font-size: 10px; color: var(--ink-faint); text-align: center;
+  line-height: 1.2; overflow-wrap: anywhere;
+}
+
+.gains {
+  list-style: none; margin: 0; padding: var(--s3);
+  display: flex; flex-direction: column; gap: var(--s2);
+  background: color-mix(in oklab, var(--ok) 12%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--ok) 34%, var(--edge));
+  border-radius: var(--radius);
+  animation: riseIn var(--mid) var(--ease);
+}
+.gains__row { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); }
+.gains__xp { margin-left: auto; color: var(--ok); font-weight: 600; }
+@keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .gains { animation: none; } }
+
+.explain {
+  padding: var(--s3);
+  background: var(--surface-sunken); border: 1px solid var(--edge);
+  border-radius: var(--radius);
+}
+.explain h3 { font-size: var(--t-sm); color: var(--nature); margin-bottom: var(--s1); }
+.explain p { font-size: var(--t-sm); color: var(--ink-muted); }
+
+/* ================================================================ Abschnitte === */
+
+.section { display: flex; flex-direction: column; gap: var(--s3); }
+.section__head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s3); }
+.section__eyebrow { font-size: var(--t-xs); color: var(--ink-faint); display: block; }
+.section__actions { display: flex; gap: var(--s2); flex-shrink: 0; }
+.stack { display: flex; flex-direction: column; gap: var(--s2); }
+
+.btn--sm { padding: var(--s2) var(--s3); font-size: var(--t-sm); gap: var(--s1); }
+
+/* ============================================================= Pokémon-Karte === */
+
+.ccard {
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--edge);
+  border-radius: var(--radius); overflow: hidden;
+}
+.ccard__main {
+  display: grid; grid-template-columns: 72px 1fr; gap: var(--s3);
+  align-items: center; text-align: left;
+  padding: var(--s3);
+  background: none; border: 0; cursor: pointer;
+}
+.ccard__main:disabled { cursor: default; }
+.ccard__portrait { position: relative; width: 72px; height: 72px; display: grid; place-items: center; }
+.ccard__portrait img { image-rendering: pixelated; }
+.ccard__shiny { position: absolute; top: 0; right: 0; font-size: 0.8rem; }
+.ccard__body { min-width: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.ccard__head { display: flex; align-items: baseline; gap: var(--s2); }
+.ccard__name {
+  font-weight: 650; font-size: var(--t-md);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ccard__level { margin-left: auto; font-size: var(--t-xs); color: var(--ink-muted); flex-shrink: 0; }
+.ccard__types { display: flex; flex-wrap: wrap; gap: var(--s1); }
+.ccard__meta { display: flex; gap: var(--s2); font-size: var(--t-xs); color: var(--ink-faint); }
+/* Der Aktionsknopf gehoert an den Rand, nicht ueber die volle Breite: sonst
+   wiegt er optisch schwerer als das Pokemon, um das es geht. */
+.ccard__actions {
+  display: flex; gap: var(--s2); flex-wrap: wrap;
+  justify-content: flex-end;
+  margin: 0 var(--s3) var(--s3);
+}
+.ccard__action {
+  align-self: flex-end;
+  padding: var(--s2) var(--s4);
+  font-size: var(--t-sm);
+}
+
+.chip {
+  padding: 1px var(--s2); border-radius: var(--radius-pill);
+  font-size: 10px; font-weight: 600;
+  color: oklch(0.98 0 0);
+  background: color-mix(in oklab, var(--chip, var(--accent)) 68%, black);
+}
+.chip--evo { background: var(--gold); color: oklch(0.2 0.04 80); }
+
+.bars { display: flex; flex-direction: column; gap: 3px; }
+.bar {
+  height: 5px; border-radius: var(--radius-pill);
+  background: var(--surface-sunken); overflow: hidden;
+}
+.bar--lg { height: 10px; }
+.bar__fill { display: block; height: 100%; border-radius: inherit; transition: width var(--mid) var(--ease); }
+.bar__fill--hp { background: linear-gradient(90deg, var(--ok), oklch(0.78 0.14 140)); }
+.bar__fill--xp { background: linear-gradient(90deg, var(--accent), oklch(0.76 0.12 205)); }
+.bar__fill--dex { background: linear-gradient(90deg, var(--gold), oklch(0.84 0.13 70)); }
+
+.tag--level { background: var(--gold); border-color: transparent; color: oklch(0.2 0.04 80); }
+.tag--active { background: var(--ok); border-color: transparent; color: oklch(0.16 0.03 150); }
+
+/* ================================================================== Starter === */
+
+.intro { display: flex; flex-direction: column; gap: var(--s2); padding-top: var(--s5); }
+.intro__lead { color: var(--ink-muted); font-size: var(--t-sm); max-width: 46ch; }
+
+.starters { display: flex; flex-direction: column; gap: var(--s3); }
+.starter {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  /* Genau so viele Zeilen wie Inhalte: Name, Typen, Beschreibung. Eine
+     Zeile mehr erzeugt den leeren Streifen unter der Karte. */
+  grid-template-rows: auto auto 1fr;
+  gap: var(--s1) var(--s3);
+  align-items: start; text-align: left;
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge);
+  border-radius: var(--radius-lg); cursor: pointer;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.starter--selected { border-color: var(--accent); background: var(--surface-raised); }
+.starter:disabled { opacity: 0.6; cursor: default; }
+.starter__art {
+  grid-row: 1 / span 3; align-self: center; justify-self: center;
+  width: 112px; height: 112px;
+  /* Pixelart mit ganzzahligem Faktor skalieren, sonst franst sie aus. */
+  image-rendering: pixelated;
+  transform: scale(1.35);
+  filter: drop-shadow(0 4px 6px oklch(0 0 0 / 0.45));
+}
+.starter__name { font-size: var(--t-xl); font-weight: 700; align-self: end; }
+.starter__types { display: flex; gap: var(--s1); flex-wrap: wrap; }
+.starter__desc {
+  font-size: var(--t-sm); color: var(--ink-faint); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.starter__confirm {
+  grid-column: 1 / -1;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s2);
+  margin-top: var(--s2);
+  padding: var(--s3);
+  background: var(--accent); color: var(--accent-ink);
+  border-radius: var(--radius); font-weight: 650; font-size: var(--t-md);
+}
+
+/* =================================================================== Pokédex === */
+
+.progressCard {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s4);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+
+.segmented {
+  display: flex; gap: 2px; padding: 3px;
+  background: var(--surface-sunken); border: 1px solid var(--edge);
+  border-radius: var(--radius); 
+}
+.segmented__btn {
+  flex: 1; min-width: 0;
+  padding: var(--s2); border: 0; border-radius: var(--radius-sm);
+  background: none; color: var(--ink-faint);
+  font-size: var(--t-sm); font-weight: 600; cursor: pointer;
+  transition: background var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.segmented__btn[aria-selected='true'], .segmented__btn[aria-pressed='true'] {
+  background: var(--surface-raised); color: var(--ink);
+}
+
+.dexgrid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: var(--s2);
+}
+.dexcell {
+  position: relative; min-height: 108px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s1);
+  padding: var(--s2);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.dexcell--locked { opacity: 0.42; }
+/* Nicht gefangene Arten als Silhouette, nicht als Grauton: die Form bleibt
+   erkennbar, die Farbe verrät nichts. */
+.dexcell--locked .dexcell__sprite { filter: brightness(0) opacity(0.55); }
+.dexcell__num { position: absolute; top: 4px; left: 6px; font-size: 9px; color: var(--ink-faint); }
+.dexcell__owned { position: absolute; top: 4px; right: 6px; font-size: 9px; color: var(--gold); }
+.dexcell__sprite { image-rendering: pixelated; }
+.dexcell__name {
+  font-size: var(--t-xs); text-align: center; line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+/* ====================================================================== Shop === */
+
+.shopRow {
+  display: grid; grid-template-columns: 36px 1fr auto; gap: var(--s3);
+  align-items: center;
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.shopRow__text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.shopRow__name { font-weight: 600; font-size: var(--t-md); }
+.shopRow__desc { font-size: var(--t-sm); color: var(--ink-faint); }
+.shopRow__owned { font-size: var(--t-xs); color: var(--ink-muted); }
+.shopRow__buy { flex-shrink: 0; }
+
+.itemIcon { image-rendering: pixelated; flex-shrink: 0; }
+.itemIcon--glyph {
+  display: grid; place-items: center;
+  font-size: 1.1rem;
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+}
+
+/* Kaufknopf: umrandet statt gefuellt. Eine ganze Spalte in Akzentfarbe laesst
+   jede Zeile gleich laut schreien — der Artikelname soll zuerst gelesen
+   werden, der Preis danach. */
+.btn--buy {
+  background: transparent;
+  border-color: color-mix(in oklab, var(--accent) 55%, var(--edge));
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.btn--buy:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  border-color: var(--accent);
+}
+.btn--buy:active:not(:disabled) { transform: scale(0.97); }
+.btn--buy:disabled { border-color: var(--edge); color: var(--ink-faint); }
+
+/* ================================================================ Weltkarte === */
+
+.area {
+  background: var(--surface); border: 1px solid var(--edge);
+  border-radius: var(--radius); overflow: hidden;
+}
+.area--current { border-color: var(--accent); }
+.area--locked { background: var(--surface-sunken); }
+.area__main {
+  width: 100%; text-align: left;
+  display: grid; grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: start; gap: var(--s3);
+  padding: var(--s3);
+  background: none; border: 0; cursor: pointer;
+  transition: background var(--fast) var(--ease);
+}
+.area__main:hover:not(:disabled) { background: var(--surface-raised); }
+.area__main:disabled { cursor: default; }
+.area__index {
+  font-size: var(--t-sm); color: var(--ink-faint);
+  padding-top: 2px;
+}
+.area--locked .area__index { opacity: 0.6; }
+.area__text { min-width: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.area__head { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.area__name { font-weight: 650; font-size: var(--t-md); }
+.area--locked .area__name { color: var(--ink-muted); }
+.area__desc { font-size: var(--t-sm); color: var(--ink-faint); }
+.area__stats {
+  display: flex; flex-wrap: wrap; gap: var(--s2);
+  font-size: var(--t-xs); color: var(--ink-muted);
+}
+.area__gym { color: var(--warn); font-weight: 600; }
+.area__gym--done { color: var(--ok); }
+.area__go { color: var(--ink-faint); font-size: 1.2rem; align-self: center; }
+
+.area__reqs { list-style: none; margin: var(--s1) 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.req {
+  display: flex; align-items: baseline; gap: var(--s2);
+  font-size: var(--t-xs); color: var(--ink-faint);
+}
+.req--met { color: var(--ok); }
+.req__mark { width: 10px; flex-shrink: 0; }
+
+.tag--done { background: var(--ok); border-color: transparent; color: oklch(0.15 0.03 150); }
+
+/* =================================================================== Safari === */
+
+.stage {
+  position: relative; overflow: hidden;
+  min-height: 210px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s2);
+  padding: var(--s5) var(--s4);
+  text-align: center;
+  border-radius: var(--radius-lg); border: 1px solid var(--edge);
+  background: linear-gradient(180deg, oklch(0.74 0.09 215) 0%, oklch(0.8 0.06 208) 45%, oklch(0.58 0.13 145) 45%, oklch(0.46 0.12 148) 100%);
+  color: oklch(0.18 0.03 220);
+}
+.stage h2 { font-size: var(--t-lg); color: oklch(0.16 0.03 220); }
+.stage .center__body { color: oklch(0.3 0.03 220); }
+.stage--idle, .stage--sad, .stage--throw {
+  background: var(--surface-sunken); color: var(--ink); border-color: var(--edge);
+}
+.stage--idle h2, .stage--sad h2 { color: var(--ink); }
+.stage--idle .center__body, .stage--sad .center__body { color: var(--ink-muted); }
+.stage--win {
+  background: linear-gradient(180deg, oklch(0.42 0.1 150), oklch(0.3 0.08 155));
+  color: var(--ink);
+}
+.stage--win h2 { color: var(--ink); }
+.stage__mon {
+  image-rendering: pixelated;
+  transform: scale(1.4);
+  filter: drop-shadow(0 4px 6px oklch(0 0 0 / 0.4));
+  animation: appear 420ms var(--ease);
+}
+@keyframes appear {
+  from { opacity: 0; transform: scale(0.6) translateY(10px); }
+  to   { opacity: 1; transform: scale(1.4) translateY(0); }
+}
+.stage__grass {
+  position: absolute; inset: auto 0 0 0; height: 40%;
+  background: repeating-linear-gradient(95deg, transparent 0 8px, oklch(0.5 0.1 148 / 0.25) 8px 11px);
+}
+.stage__meta { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: center; align-items: center; }
+.stage__reward { font-size: var(--t-lg); font-weight: 700; color: var(--gold); }
+
+.stage__ball {
+  width: 46px; height: 46px; border-radius: 50%;
+  background:
+    linear-gradient(180deg, oklch(0.6 0.2 25) 0 46%, oklch(0.22 0.01 260) 46% 54%, oklch(0.96 0 0) 54% 100%);
+  border: 2px solid oklch(0.2 0.01 260);
+  animation: wobble 520ms var(--ease) infinite;
+}
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-16deg); }
+  75%      { transform: rotate(16deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage__ball { animation: none; }
+  .stage__mon { animation: none; }
+}
+
+.chanceBar { display: flex; align-items: center; gap: var(--s2); width: 100%; max-width: 320px; }
+.chanceBar__label { font-size: var(--t-xs); color: oklch(0.3 0.03 220); white-space: nowrap; }
+.chanceBar .bar { flex: 1; background: oklch(0.25 0.02 220 / 0.35); }
+.chanceBar__value { font-size: var(--t-sm); font-weight: 700; }
+.bar__fill--chance { background: linear-gradient(90deg, var(--danger), var(--warn) 45%, var(--ok)); }
+
+.softenRow { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+.softenBtn {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s2);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge);
+  border-radius: var(--radius); font-size: var(--t-sm); cursor: pointer;
+  transition: background var(--fast) var(--ease);
+}
+.softenBtn:hover:not(:disabled) { background: var(--surface-raised); }
+.softenBtn:disabled { opacity: 0.45; cursor: default; }
+
+.pickers { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+.picker { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.picker__label { font-size: var(--t-xs); color: var(--ink-faint); }
+.picker__body {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.picker__select {
+  flex: 1; min-width: 0;
+  background: none; border: 0; color: var(--ink);
+  font: inherit; font-size: var(--t-sm); cursor: pointer;
+}
+.picker__select option { background: var(--surface); color: var(--ink); }
+
+.actionRow { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: var(--s2); }
+
+/* ============================================================== Expeditionen === */
+
+.expo {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.expo__party { display: flex; }
+.expo__mon { image-rendering: pixelated; margin-right: -10px; }
+.expo__text { min-width: 0; display: flex; flex-direction: column; }
+.expo__name { font-weight: 600; font-size: var(--t-md); }
+.expo__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+
+.favoured { display: flex; flex-direction: column; gap: var(--s1); }
+.favoured__chips { display: flex; flex-wrap: wrap; gap: var(--s1); }
+
+.picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: var(--s2); }
+.pick {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: var(--s2);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+  cursor: pointer; min-width: 0;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.pick--on { border-color: var(--accent); background: var(--surface-raised); }
+.pick:disabled { opacity: 0.4; cursor: default; }
+.pick__mon { image-rendering: pixelated; }
+.pick__name {
+  font-size: var(--t-xs); font-weight: 600; max-width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pick__meta { font-size: 10px; color: var(--ink-faint); }
+
+.harvest {
+  padding: var(--s3);
+  background: color-mix(in oklab, var(--gold) 12%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--gold) 36%, var(--edge));
+  border-radius: var(--radius);
+  display: flex; flex-direction: column; gap: var(--s2);
+}
+.harvest h3 { font-size: var(--t-sm); color: var(--gold); }
+.harvest__loot { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.harvest__loot li { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); }
+.harvest__loot li .num { margin-left: auto; }
+.harvest__gold { font-weight: 700; color: var(--gold); }
+
+/* ==================================================================== Eier === */
+
+.eggs { display: flex; flex-direction: column; gap: var(--s2); }
+.egg {
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.egg__shell {
+  width: 56px; height: 56px; display: grid; place-items: center;
+  font-size: 1.9rem;
+  background: var(--surface-sunken); border: 1px solid var(--edge);
+  border-radius: 50% 50% 46% 46%;
+}
+.egg__shell--ready {
+  border-color: var(--gold);
+  animation: nudge 1.6s var(--ease) infinite;
+}
+@keyframes nudge {
+  0%, 88%, 100% { transform: rotate(0deg); }
+  92%           { transform: rotate(-7deg); }
+  96%           { transform: rotate(7deg); }
+}
+@media (prefers-reduced-motion: reduce) { .egg__shell--ready { animation: none; } }
+.egg__mon { image-rendering: pixelated; }
+.egg__text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.egg__name { font-weight: 600; font-size: var(--t-md); }
+.egg__hint { font-size: var(--t-xs); color: var(--ink-faint); }
+.egg__time { font-size: var(--t-xs); color: var(--ink-muted); }
+.bar__fill--egg { background: linear-gradient(90deg, oklch(0.72 0.1 60), var(--gold)); }
+
+/* ================================================================== Gegner === */
+
+.opponent {
+  display: grid; grid-template-columns: auto minmax(0, 1fr);
+  align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.opponent--gym { border-color: color-mix(in oklab, var(--gold) 45%, var(--edge)); }
+.opponent__text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.opponent__head { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.opponent__name { font-weight: 650; font-size: var(--t-md); }
+.opponent__title { font-size: var(--t-xs); color: var(--ink-faint); }
+.opponent__meta { font-size: var(--t-xs); color: var(--ink-muted); }
+.opponent__intro { font-size: var(--t-sm); color: var(--ink-faint); font-style: italic; }
+
+/* ================================================================== Kampf === */
+
+.content--battle { gap: var(--s3); }
+
+/* .arena, nicht .field: `.field` ist schon das Formular-Eingabefeld und bringt
+   text-transform: uppercase mit — der Kampfplatz hat sich das mitgeerbt und
+   alle Namen in Grossbuchstaben gesetzt. */
+.arena {
+  display: flex; flex-direction: column; gap: var(--s3);
+  padding: var(--s4);
+  border-radius: var(--radius-lg); border: 1px solid var(--edge);
+  background:
+    linear-gradient(180deg, oklch(0.72 0.09 218) 0%, oklch(0.79 0.06 210) 42%,
+                            oklch(0.56 0.12 145) 42%, oklch(0.44 0.11 148) 100%);
+}
+
+/* Flex mit row-reverse statt direction: rtl. Der rtl-Trick kippt auch die
+   Ausrichtung der Kinder und schob das Gegner-Panel aus dem Container. */
+.fighter {
+  display: flex; align-items: center; gap: var(--s3);
+}
+.fighter__info { flex: 1 1 auto; min-width: 0; }
+.fighter__sprite { flex: 0 0 80px; }
+.fighter--foe { flex-direction: row-reverse; }
+.fighter__info {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: var(--s2) var(--s3);
+  background: oklch(0.16 0.03 240 / 0.82);
+  border-radius: var(--radius);
+}
+.fighter__stats { flex-wrap: wrap; }
+.fighter__head { display: flex; align-items: baseline; gap: var(--s2); }
+.fighter__name {
+  font-weight: 650; font-size: var(--t-sm); color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fighter__level { margin-left: auto; font-size: var(--t-xs); color: var(--ink-muted); flex-shrink: 0; }
+.fighter__stats {
+  display: flex; align-items: center; gap: var(--s2);
+  font-size: var(--t-xs); color: var(--ink-muted); min-height: 16px;
+}
+.fighter__dots { display: flex; gap: 3px; }
+.dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ink-faint); opacity: 0.5;
+}
+.dot--active { opacity: 1; background: var(--accent); }
+.dot--out { background: var(--danger); opacity: 0.45; }
+.fighter__sprite {
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 5px oklch(0 0 0 / 0.4));
+}
+.bar__fill--ok     { background: linear-gradient(90deg, var(--ok), oklch(0.78 0.14 140)); }
+.bar__fill--warn   { background: linear-gradient(90deg, var(--warn), oklch(0.82 0.14 78)); }
+.bar__fill--danger { background: linear-gradient(90deg, var(--danger), oklch(0.66 0.19 30)); }
+.tag--status { background: var(--warn); border-color: transparent; color: oklch(0.2 0.04 70); }
+
+.battlelog {
+  max-height: 132px; overflow-y: auto;
+  padding: var(--s3);
+  background: var(--surface-sunken); border: 1px solid var(--edge); border-radius: var(--radius);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.battlelog__line { font-size: var(--t-sm); color: var(--ink-muted); }
+.battlelog__line--dim { color: var(--ink-faint); }
+
+.battleActions { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: var(--s2); }
+
+.movePanel { display: flex; flex-direction: column; gap: var(--s2); }
+.moveGrid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+.moveBtn {
+  position: relative; min-width: 0;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: var(--s3);
+  background: var(--surface);
+  /* Der Typ faerbt nur die Kante, nicht die Flaeche: vier vollflaechig bunte
+     Knoepfe waeren lauter als die Kampfszene darueber. */
+  border: 1px solid color-mix(in oklab, var(--chip, var(--edge)) 55%, var(--edge));
+  border-left-width: 1px;
+  border-radius: var(--radius); cursor: pointer;
+  transition: background var(--fast) var(--ease);
+}
+.moveBtn::before {
+  content: ''; position: absolute; inset: auto 0 0 0; height: 3px;
+  background: var(--chip, var(--accent)); border-radius: 0 0 var(--radius) var(--radius);
+}
+.moveBtn:hover:not(:disabled) { background: var(--surface-raised); }
+.moveBtn:disabled { opacity: 0.4; cursor: default; }
+.moveBtn__name { font-weight: 600; font-size: var(--t-sm); }
+.moveBtn__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+.moveBtn__eff { font-size: 10px; font-weight: 600; }
+.moveBtn__eff--good { color: var(--ok); }
+.moveBtn__eff--bad { color: var(--ink-faint); }
+
+.result {
+  display: flex; flex-direction: column; align-items: center; gap: var(--s2);
+  padding: var(--s5) var(--s4);
+  border-radius: var(--radius-lg);
+  background: var(--surface); border: 1px solid var(--edge);
+  text-align: center;
+}
+.result--win {
+  background: linear-gradient(180deg, color-mix(in oklab, var(--ok) 22%, var(--surface)), var(--surface));
+  border-color: color-mix(in oklab, var(--ok) 40%, var(--edge));
+}
+.result__dialogue { font-style: italic; color: var(--ink-muted); font-size: var(--t-sm); }
+.result__badge { color: var(--gold); font-weight: 700; }
+
+/* ================================================================= Sozial === */
+
+.segmented--scroll {
+  overflow-x: auto; scrollbar-width: none;
+  /* Fuenf Reiter passen auf einem schmalen Telefon nicht nebeneinander;
+     waagerecht scrollen ist ehrlicher als sie unlesbar zu quetschen. */
+  justify-content: flex-start;
+}
+.segmented--scroll::-webkit-scrollbar { display: none; }
+.segmented--scroll .segmented__btn { flex: 0 0 auto; padding-inline: var(--s3); white-space: nowrap; }
+
+.codeCard {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s4);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.codeCard__row { display: flex; align-items: center; gap: var(--s3); }
+.codeCard__code {
+  flex: 1; min-width: 0;
+  font-family: var(--font-num); font-size: var(--t-xl); font-weight: 700;
+  letter-spacing: 0.12em; color: var(--accent);
+  /* Auswaehlbar lassen: in manchen In-App-Browsern ist die Zwischenablage
+     gesperrt, dann bleibt Markieren der Ausweg. */
+  user-select: all;
+}
+
+.addRow { display: flex; gap: var(--s2); align-items: stretch; }
+.field--inline {
+  flex: 1; min-width: 0;
+  font-size: var(--t-md); text-align: left; letter-spacing: 0.06em;
+  padding: var(--s2) var(--s3);
+}
+.field--text { text-transform: none; letter-spacing: normal; }
+
+.notice--ok {
+  background: color-mix(in oklab, var(--ok) 16%, var(--surface));
+  border-color: color-mix(in oklab, var(--ok) 42%, var(--edge));
+}
+
+.friend {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.friend__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.friend__name { font-weight: 600; font-size: var(--t-md); }
+.friend__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+.friend__actions { display: flex; gap: var(--s2); flex-shrink: 0; }
+
+/* ------------------------------------------------------------- Marktplatz */
+
+.marketHead { display: flex; align-items: baseline; justify-content: space-between; }
+.listing {
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+  overflow: hidden;
+}
+.listing .ccard { border: 0; border-radius: 0; background: none; }
+.listing__foot {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s2) var(--s3) var(--s3);
+  border-top: 1px solid var(--edge);
+}
+.listing__meta { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2); }
+.listing__price { font-weight: 700; color: var(--gold); }
+.listing__seller { font-size: var(--t-xs); color: var(--ink-faint); }
+.listing__note { font-size: var(--t-xs); color: var(--ink-muted); font-style: italic; }
+.sellForm { display: flex; flex-direction: column; gap: var(--s2); }
+
+/* ----------------------------------------------------------------- Tausch */
+
+.offer {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.offer__sides { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--s2); }
+.offer__side { min-width: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.offer__mon { display: flex; flex-direction: column; align-items: center; gap: 1px; font-size: var(--t-xs); }
+.offer__mon img { image-rendering: pixelated; }
+.offer__arrow { font-size: 1.2rem; color: var(--accent); }
+.offer__gift { font-size: var(--t-sm); color: var(--gold); text-align: center; }
+.offer__message { font-size: var(--t-sm); color: var(--ink-muted); font-style: italic; }
+.offer__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+.offer__foot .num { font-size: var(--t-xs); color: var(--ink-faint); }
+.offer__actions { display: flex; gap: var(--s2); }
+
+/* -------------------------------------------------------------- Rangliste */
+
+.ranking { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.ranking__row {
+  display: grid; grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.ranking__row--self { border-color: var(--accent); background: var(--surface-raised); }
+.ranking__place { font-weight: 700; color: var(--ink-faint); text-align: center; }
+.ranking__row:nth-child(1) .ranking__place { color: var(--gold); }
+.ranking__row:nth-child(2) .ranking__place,
+.ranking__row:nth-child(3) .ranking__place { color: var(--ink-muted); }
+.ranking__text { min-width: 0; display: flex; flex-direction: column; }
+.ranking__name { font-weight: 600; font-size: var(--t-md); }
+.ranking__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+.ranking__score { font-weight: 700; color: var(--accent); }
+
+/* ----------------------------------------------------------- Trainerkarte */
+
+.trainerCard {
+  display: flex; flex-direction: column; gap: var(--s4);
+  padding: var(--s4);
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklab, var(--accent) 30%, var(--edge));
+  background: linear-gradient(168deg, color-mix(in oklab, var(--accent) 14%, var(--surface)), var(--surface) 65%);
+}
+.trainerCard__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); }
+.trainerCard__head .codeCard__code { font-size: var(--t-md); flex: 0 0 auto; }
+
+.statGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: var(--s2); }
+.statTile {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: var(--s2);
+  background: var(--surface-sunken); border: 1px solid var(--edge); border-radius: var(--radius-sm);
+}
+.statTile__value { font-size: var(--t-lg); font-weight: 700; }
+.statTile__label { font-size: 10px; color: var(--ink-faint); text-align: center; }
+
+.badgeRow { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.badge {
+  padding: var(--s1) var(--s3); border-radius: var(--radius-pill);
+  background: color-mix(in oklab, var(--gold) 22%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--gold) 45%, var(--edge));
+  font-size: var(--t-xs); font-weight: 600; color: var(--gold);
+}
+
+.teamStrip { display: flex; gap: var(--s2); flex-wrap: wrap; }
+.teamStrip__mon {
+  display: flex; flex-direction: column; align-items: center;
+  font-size: 10px; color: var(--ink-faint);
+}
+.teamStrip__mon img { image-rendering: pixelated; }
+
+/* ------------------------------------------------------------ Schalter --- */
+
+.switches { display: flex; flex-direction: column; gap: var(--s2); }
+.switch {
+  position: relative;
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+  cursor: pointer;
+}
+.switch__text { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: var(--t-sm); }
+.switch__hint { font-size: var(--t-xs); color: var(--ink-faint); }
+.switch input {
+  position: absolute; opacity: 0; width: 0; height: 0;
+}
+.switch__track {
+  flex: 0 0 44px; height: 26px; border-radius: var(--radius-pill);
+  background: var(--surface-sunken); border: 1px solid var(--edge-strong);
+  position: relative; transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+.switch__track::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--ink-faint);
+  transition: transform var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.switch input:checked + .switch__track { background: var(--accent); border-color: var(--accent); }
+.switch input:checked + .switch__track::after { transform: translateX(18px); background: oklch(0.99 0 0); }
+.switch input:focus-visible + .switch__track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.switch input:disabled + .switch__track { opacity: 0.5; }
+
+/* =================================================================== Koop === */
+
+.guildHeader {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3);
+  padding: var(--s4);
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklab, var(--accent) 28%, var(--edge));
+  background: linear-gradient(168deg, color-mix(in oklab, var(--accent) 12%, var(--surface)), var(--surface) 68%);
+}
+
+.goalCard {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s4);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.goalCard h3 { font-size: var(--t-md); }
+.goalCard .num { font-size: var(--t-sm); color: var(--ink-muted); }
+
+.raidCard {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s4);
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklab, var(--danger) 34%, var(--edge));
+  background: linear-gradient(168deg, color-mix(in oklab, var(--danger) 14%, var(--surface)), var(--surface) 70%);
+}
+.raidCard__head { display: flex; align-items: center; gap: var(--s3); }
+.raidCard__mon {
+  image-rendering: pixelated;
+  filter: drop-shadow(0 3px 4px oklch(0 0 0 / 0.45));
+}
+.raidCard__text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.raidCard__name { font-weight: 700; font-size: var(--t-lg); }
+.raidCard__meta { font-size: var(--t-xs); color: var(--ink-muted); }
+.raidCard__types { display: flex; gap: var(--s1); flex-wrap: wrap; }
+.raidCard__hp { font-size: var(--t-xs); color: var(--ink-muted); text-align: right; }
+.raidCard__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+.raidCard__foot .num { font-size: var(--t-xs); color: var(--ink-muted); }
+.raidCard__party {
+  list-style: none; margin: 0; padding: var(--s2) 0 0;
+  border-top: 1px solid var(--edge);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.raidCard__party li {
+  display: flex; justify-content: space-between; gap: var(--s2);
+  font-size: var(--t-xs); color: var(--ink-muted);
+}
+
+.ratingCard {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s3);
+  padding: var(--s4);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(168deg, color-mix(in oklab, var(--gold) 16%, var(--surface)), var(--surface) 70%);
+  border: 1px solid color-mix(in oklab, var(--gold) 34%, var(--edge));
+}
+.ratingCard__tier { display: block; font-size: var(--t-xs); color: var(--gold); font-weight: 600; }
+.ratingCard__value { font-size: var(--t-2xl); font-weight: 700; }
+.ratingCard__meta {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  font-size: var(--t-xs); color: var(--ink-muted);
+}
+
+.delta--up { color: var(--ok); font-weight: 600; }
+.delta--down { color: var(--danger); font-weight: 600; }
+
+.bracketRound { display: flex; flex-direction: column; gap: var(--s1); margin-bottom: var(--s3); }
+.bracketMatch {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius-sm);
+  font-size: var(--t-sm);
+}
+.bracketMatch__vs { font-size: var(--t-xs); color: var(--ink-faint); }
+.bracketMatch__win { font-weight: 700; color: var(--ok); }
+
+/* ============================================================ Fortschritt === */
+
+.evoRow {
+  display: grid; grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.evoRow__from { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.evoRow__name { font-size: var(--t-sm); font-weight: 600; }
+.evoRow__from .num { font-size: var(--t-xs); color: var(--ink-faint); }
+.evoRow__arrow { color: var(--accent); font-size: 1.3rem; }
+.evoRow__targets { display: flex; gap: var(--s2); flex-wrap: wrap; min-width: 0; }
+.evoTarget {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: var(--s2);
+  background: var(--surface-sunken);
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--edge));
+  border-radius: var(--radius); cursor: pointer;
+  transition: background var(--fast) var(--ease);
+}
+.evoTarget:hover:not(:disabled) { background: var(--surface-raised); }
+.evoTarget:disabled { opacity: 0.5; cursor: default; }
+.evoTarget__name { font-size: var(--t-xs); font-weight: 600; }
+.evoTarget__how { font-size: 10px; color: var(--ink-faint); }
+
+.building {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.building__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
+.building__name { font-weight: 650; font-size: var(--t-md); }
+.building__level { font-size: var(--t-xs); color: var(--ink-faint); }
+.building__pips { display: flex; gap: 3px; }
+.pip {
+  flex: 1; height: 5px; border-radius: var(--radius-pill);
+  background: var(--surface-sunken); border: 1px solid var(--edge);
+}
+.pip--on { background: var(--accent); border-color: var(--accent); }
+.building__effect { font-size: var(--t-sm); color: var(--ok); }
+.building__next { font-size: var(--t-xs); color: var(--ink-faint); }
+.building__btn { align-self: flex-end; }
+
+.recipe {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.recipe__out { display: flex; align-items: center; gap: var(--s2); }
+.recipe__name { font-weight: 650; font-size: var(--t-md); }
+.recipe__in { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.recipe__in li {
+  display: flex; align-items: center; gap: var(--s2);
+  font-size: var(--t-sm);
+}
+.recipe__in li .num { margin-left: auto; }
+.recipe__have { color: var(--ink-muted); }
+.recipe__missing { color: var(--danger); }
+.recipe__req { font-size: var(--t-xs); color: var(--warn); }
+
+.seasonHead {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s4);
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklab, var(--gold) 32%, var(--edge));
+  background: linear-gradient(168deg, color-mix(in oklab, var(--gold) 14%, var(--surface)), var(--surface) 70%);
+}
+.seasonHead .num { color: var(--gold); font-weight: 700; }
+
+.seasonTrack { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.seasonTier {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center; gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  background: var(--surface-sunken); border: 1px solid var(--edge); border-radius: var(--radius-sm);
+  opacity: 0.6;
+}
+.seasonTier--reached { opacity: 1; background: var(--surface); }
+.seasonTier--claimed { border-color: color-mix(in oklab, var(--ok) 34%, var(--edge)); }
+.seasonTier__num {
+  width: 34px; height: 26px; display: grid; place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised); font-weight: 700; font-size: var(--t-sm);
+}
+.seasonTier--reached .seasonTier__num { background: var(--gold); color: oklch(0.2 0.04 80); }
+.seasonTier__reward { font-size: var(--t-sm); }
+.seasonTier__locked { font-size: var(--t-xs); color: var(--ink-faint); }
+
+.achievement {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.achievement--done { border-color: color-mix(in oklab, var(--gold) 40%, var(--edge)); }
+.achievement__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.achievement__name { font-size: var(--t-sm); font-weight: 600; }
+.achievement__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+
+/* ================================================================== Story === */
+
+.guide {
+  display: flex; flex-direction: column; gap: var(--s3);
+  padding: var(--s4);
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklab, var(--accent) 30%, var(--edge));
+  background: linear-gradient(168deg, color-mix(in oklab, var(--accent) 13%, var(--surface)), var(--surface) 68%);
+}
+.guide__head { display: flex; align-items: flex-start; gap: var(--s3); }
+.guide__avatar {
+  width: 44px; height: 44px; flex-shrink: 0;
+  display: grid; place-items: center; font-size: 1.4rem;
+  background: var(--surface-sunken); border: 1px solid var(--edge);
+  border-radius: 50%;
+}
+.guide__chapter { font-size: var(--t-xs); color: var(--ink-faint); }
+.guide__text {
+  font-size: var(--t-sm); color: var(--ink-muted); line-height: 1.55;
+  font-style: italic;
+}
+
+.chapterTrail { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.chapterStep {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center; gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  background: var(--surface-sunken); border: 1px solid var(--edge); border-radius: var(--radius-sm);
+  opacity: 0.6;
+}
+.chapterStep--done { opacity: 1; background: var(--surface); }
+.chapterStep--current { border-color: var(--accent); opacity: 1; }
+.chapterStep__num {
+  width: 28px; height: 24px; display: grid; place-items: center;
+  border-radius: var(--radius-sm); background: var(--surface-raised);
+  font-size: var(--t-xs); font-weight: 700;
+}
+.chapterStep--done .chapterStep__num { background: var(--ok); color: oklch(0.16 0.03 150); }
+.chapterStep__title { font-size: var(--t-sm); }
+
+/* ================================================================== Daten === */
+
+.dangerZone {
+  padding: var(--s4);
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in oklab, var(--danger) 38%, var(--edge));
+  background: color-mix(in oklab, var(--danger) 8%, var(--surface));
+}
+.btn--danger {
+  background: var(--danger);
+  color: oklch(0.99 0 0);
+}
+.btn--danger:hover:not(:disabled) { background: color-mix(in oklab, var(--danger) 88%, white); }
+
+/* --- Energie und Teams ----------------------------------------------------
+   Beides sind Bausteine, die in der Kopfzeile bzw. auf einem eigenen
+   Bildschirm leben; die Formensprache bleibt die der uebrigen Listen. ---- */
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+.energyPill {
+  display: inline-flex; align-items: baseline; gap: 2px;
+  padding: var(--s1) var(--s3);
+  background: var(--surface); border: 1px solid var(--edge);
+  border-radius: var(--radius-pill);
+  color: var(--ink); font-size: var(--t-xs); white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 160ms cubic-bezier(0.22, 1, 0.36, 1),
+              background 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.energyPill:hover { border-color: var(--edge-strong); background: var(--surface-raised); }
+.energyPill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.energyPill__glyph { font-size: 0.9rem; }
+.energyPill__value { font-weight: 700; font-size: var(--t-sm); }
+.energyPill__cap { color: var(--ink-faint); }
+.energyPill__timer {
+  margin-left: var(--s1); padding-left: var(--s2);
+  border-left: 1px solid var(--edge);
+  color: var(--ink-faint);
+}
+
+.energyHero {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2);
+  padding: var(--s4);
+  background: linear-gradient(160deg,
+    color-mix(in oklab, var(--gold) 18%, var(--surface)), var(--surface));
+  border: 1px solid var(--edge); border-radius: var(--radius-lg);
+}
+.energyHero__glyph { font-size: 1.6rem; }
+.energyHero__value { font-size: var(--t-2xl); font-weight: 700; letter-spacing: -0.02em; }
+.energyHero__cap { color: var(--ink-muted); font-size: var(--t-md); }
+.energyHero__note { flex-basis: 100%; margin-top: var(--s1); font-size: var(--t-sm); color: var(--ink-muted); }
+
+.packRow {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.packRow__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.packRow__name { font-weight: 600; }
+.packRow__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+
+.ledger { display: flex; flex-direction: column; list-style: none; padding: 0; margin: 0; }
+.ledger__row {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  border-bottom: 1px solid var(--edge);
+  font-size: var(--t-sm);
+}
+.ledger__row:last-child { border-bottom: none; }
+.ledger__value { font-weight: 700; }
+.ledger__value--out { color: var(--warn); }
+.ledger__value--in { color: var(--ok); }
+
+.rowActions { display: flex; gap: var(--s2); flex-wrap: wrap; margin-top: var(--s4); }
+.rowActions .btn { flex: 1 1 auto; min-width: 0; }
+
+.teamcard {
+  display: flex; flex-direction: column; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.teamcard--active { border-color: var(--ok); }
+.teamcard__head { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.teamcard__name {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  flex: 1; min-width: 0;
+  background: none; border: none; padding: 0;
+  color: var(--ink); font: inherit; font-weight: 700; font-size: var(--t-lg);
+  text-align: left; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.teamcard__pencil { color: var(--ink-faint); font-size: var(--t-sm); }
+.teamcard__name:hover .teamcard__pencil { color: var(--accent); }
+.teamcard__rename { display: flex; gap: var(--s2); flex: 1; min-width: 0; }
+.teamcard__rename .field { flex: 1; min-width: 0; }
+.teamcard__foot { display: flex; gap: var(--s2); }
+
+.slots { display: flex; gap: var(--s2); list-style: none; padding: 0; margin: 0; }
+.slot {
+  flex: 1 1 0; min-width: 0; aspect-ratio: 1;
+  display: grid; place-items: center;
+  background: var(--surface-sunken); border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+}
+.slot--empty { color: var(--ink-faint); border-style: dashed; }
+.slot__btn {
+  position: relative;
+  width: 100%; height: 100%;
+  display: grid; place-items: center;
+  background: none; border: none; padding: 0; cursor: pointer;
+}
+.slot__btn:disabled { cursor: default; }
+.slot__btn img { width: 100%; height: auto; max-width: 44px; image-rendering: pixelated; }
+.slot__level {
+  position: absolute; right: 2px; bottom: 0;
+  font-size: var(--t-xs); color: var(--ink-muted);
+}
+.slot__away { position: absolute; left: 2px; top: 0; font-size: var(--t-xs); }
+.slot__remove {
+  position: absolute; right: -2px; top: -4px;
+  width: 18px; height: 18px; display: grid; place-items: center;
+  background: var(--danger); color: oklch(0.99 0 0);
+  border-radius: var(--radius-pill); font-size: var(--t-xs); font-weight: 700;
+}
+
+.picker { display: flex; flex-direction: column; gap: var(--s2); }
+.picker__search { display: block; }
+.picker__search .field { width: 100%; }
+.picker__list {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column;
+  max-height: 340px; overflow-y: auto;
+  border: 1px solid var(--edge); border-radius: var(--radius-sm);
+}
+.picker__row {
+  width: 100%;
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  background: none; border: none; border-bottom: 1px solid var(--edge);
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.picker__list li:last-child .picker__row { border-bottom: none; }
+.picker__row:hover:not(:disabled) { background: var(--surface-raised); }
+.picker__row:disabled { opacity: 0.45; cursor: default; }
+.picker__row img { image-rendering: pixelated; flex: none; }
+.picker__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.picker__name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.picker__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+.picker__add { color: var(--accent); font-weight: 700; font-size: var(--t-lg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .energyPill { transition: none; }
+}
+
+/* --- Attackenauswahl ------------------------------------------------------
+   Klappt unter der Kreaturenkarte auf und lehnt sich optisch an sie an:
+   gleiche Kante, gleicher Radius, nur eingerueckt. ----------------------- */
+
+.moves {
+  display: flex; flex-direction: column; gap: var(--s3);
+  margin: calc(var(--s2) * -1) var(--s2) 0;
+  padding: var(--s3);
+  background: var(--surface-sunken);
+  border: 1px solid var(--edge); border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.moves__slots {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2);
+  list-style: none; padding: 0; margin: 0;
+}
+.moves__slot {
+  min-height: 62px;
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius-sm);
+}
+.moves__slot--empty {
+  display: grid; place-items: center;
+  border-style: dashed; color: var(--ink-faint); font-size: var(--t-xs);
+}
+.moves__slotBtn {
+  position: relative;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  padding: var(--s2); border: none; background: none;
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.moves__slotBtn:disabled { cursor: default; }
+.moves__x {
+  position: absolute; top: var(--s1); right: var(--s2);
+  color: var(--ink-faint); font-weight: 700;
+}
+.moves__slotBtn:hover:not(:disabled) .moves__x { color: var(--danger); }
+
+.moves__name {
+  font-weight: 600; font-size: var(--t-sm);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.moves__meta { font-size: var(--t-xs); color: var(--ink-muted); }
+.moves__hint { font-size: var(--t-xs); color: var(--ink-muted); }
+
+.moves__list {
+  list-style: none; padding: 0; margin: 0;
+  display: flex; flex-direction: column;
+  max-height: 320px; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius-sm);
+}
+.moves__row {
+  width: 100%;
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  background: none; border: none; border-bottom: 1px solid var(--edge);
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.moves__list li:last-child .moves__row { border-bottom: none; }
+.moves__row:hover:not(:disabled) { background: var(--surface-raised); }
+/* Gesperrt heisst hier nicht unwichtig: die Kennzahlen sind genau das, was man
+   liest, um zu entscheiden, welche Attacke Platz machen soll. Sie bleiben
+   deshalb lesbar, nur der Zugriff faellt weg. */
+.moves__row:disabled { opacity: 0.72; cursor: default; }
+.moves__text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.moves__add { color: var(--accent); font-weight: 700; font-size: var(--t-lg); }
+
+/* --- Poké-Center ---------------------------------------------------------- */
+
+.centerDesk {
+  display: flex; flex-direction: column; align-items: center; gap: var(--s3);
+  padding: var(--s5) var(--s4);
+  background: linear-gradient(165deg,
+    color-mix(in oklab, var(--ok) 14%, var(--surface)), var(--surface));
+  border: 1px solid var(--edge); border-radius: var(--radius-lg);
+  text-align: center;
+}
+.centerDesk__glyph { font-size: 2.4rem; line-height: 1; }
+.centerDesk__line { color: var(--ink-muted); font-size: var(--t-sm); max-width: 34ch; }
+.centerDesk__note { color: var(--ink-faint); font-size: var(--t-xs); }
+.centerDesk .btn { width: 100%; }
+
+.centerResult {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.centerResult__heal { font-size: var(--t-sm); color: var(--ink-muted); }
+.centerResult__event {
+  display: flex; align-items: center; gap: var(--s2);
+  font-weight: 600; color: var(--gold);
+}
+.centerResult__event img { image-rendering: pixelated; }
+
+.tradeOffer {
+  display: flex; flex-direction: column; gap: var(--s3);
+  padding: var(--s4);
+  background: var(--surface); border: 1px solid var(--accent-soft); border-radius: var(--radius);
+}
+.tradeOffer__line { font-size: var(--t-sm); color: var(--ink-muted); }
+.tradeOffer__hint { font-size: var(--t-xs); color: var(--ink-faint); }
+.tradeOffer__deal {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: var(--s2);
+}
+.tradeOffer__side {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-width: 0;
+}
+.tradeOffer__side img { image-rendering: pixelated; }
+.tradeOffer__label { font-size: var(--t-xs); color: var(--ink-faint); }
+.tradeOffer__name {
+  font-weight: 600; font-size: var(--t-sm); text-align: center;
+  overflow-wrap: anywhere;
+}
+.tradeOffer__arrow { font-size: var(--t-xl); color: var(--accent); }
+
+.tradeOffer__picks { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--s2); }
+.tradeOffer__pick {
+  width: 100%;
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  background: var(--surface-sunken); border: 1px solid var(--edge); border-radius: var(--radius-sm);
+  color: var(--ink); font: inherit; text-align: left; cursor: pointer;
+}
+.tradeOffer__pick[aria-pressed='true'] { border-color: var(--accent); background: var(--surface-raised); }
+.tradeOffer__pick img { image-rendering: pixelated; flex: none; }
+.tradeOffer__pickName {
+  flex: 1; min-width: 0; font-weight: 600; font-size: var(--t-sm);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Eine angehobene Route soll man auf den ersten Blick erkennen — dieselbe
+   Form wie die übrigen Marken, nur in der Akzentfarbe. */
+.tag--scaled {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Poké-Beet ------------------------------------------------------------ */
+
+.plot {
+  display: flex; flex-direction: column; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.plot--ready { border-color: var(--nature); }
+.plot--empty { border-style: dashed; }
+
+.plot__head { display: flex; align-items: center; gap: var(--s2); }
+.plot__stake { display: flex; align-items: center; gap: var(--s2); flex: 1; min-width: 0; }
+.plot__stake img { image-rendering: pixelated; flex: none; }
+.plot__name {
+  font-weight: 600; min-width: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.plot__meta { font-size: var(--t-sm); color: var(--ink-muted); }
+.plot__hint { font-size: var(--t-xs); color: var(--ink-faint); flex: 1; min-width: 0; }
+.plot__phases { font-size: var(--t-xs); color: var(--ink-faint); align-self: center; }
+
+.plot__bar {
+  height: 8px; border-radius: var(--radius-pill); overflow: hidden;
+  background: var(--surface-sunken); border: 1px solid var(--edge);
+}
+.plot__fill {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, var(--nature-deep), var(--nature));
+  transition: width 400ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.plot__tender {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: var(--s2);
+  background: var(--surface-sunken); border-radius: var(--radius-sm);
+}
+.plot__tender img { image-rendering: pixelated; flex: none; }
+.plot__tenderText { flex: 1; min-width: 0; font-size: var(--t-sm); }
+.plot__tenderPick, .plot__amount { display: flex; flex-direction: column; gap: var(--s1); }
+.plot__tenderPick select, .plot__amount input, .plot--empty select { width: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .plot__fill { transition: none; }
+}
+
+.plot--collapsed {
+  flex-direction: row; align-items: center; gap: var(--s3);
+  padding: var(--s3);
+}
+
+/* Die drei Zahlen, an denen man seinen Stand abliest. Eine Zeile, keine
+   Karten: es sind Kennzahlen, keine Ziele zum Antippen. */
+.journey {
+  display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.journey__cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.journey__label {
+  font-size: var(--t-xs); color: var(--ink-faint);
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.journey__value {
+  font-size: var(--t-md); font-weight: 650;
+  font-variant-numeric: var(--num);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.journey__of { color: var(--ink-faint); font-weight: 500; }
+
+/* --- Design-Laden ---------------------------------------------------------
+   Jede Kachel traegt ihre eigene Palette als lokale Variablen und zeigt sie
+   als Streifen. Der Name einer Farbe verkauft nichts; die Farbe schon. ---- */
+
+.themeGrid {
+  /* Erst ab echter Tablet-Breite zwei Spalten: auf dem Telefon brach der
+     Beschreibungstext sonst auf vier Zeilen und die Karten wurden ungleich
+     hoch. */
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--s2);
+}
+.themeCard {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.themeCard--active { border-color: var(--accent); }
+
+.themeCard__preview {
+  position: relative; flex: none;
+  width: 52px; height: 52px; border-radius: var(--radius-sm);
+  background: var(--pv-ground);
+  border: 1px solid var(--edge);
+  overflow: hidden;
+}
+.themeCard__bar { position: absolute; left: 8px; height: 6px; border-radius: 3px; }
+.themeCard__bar--accent { top: 12px; width: 30px; background: var(--pv-accent); }
+.themeCard__bar--spot { top: 24px; width: 20px; background: var(--pv-spot); }
+.themeCard__dot {
+  position: absolute; right: 9px; bottom: 9px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--pv-accent);
+}
+
+.themeCard__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.themeCard__name {
+  display: flex; align-items: center; gap: var(--s1);
+  font-weight: 650; font-size: var(--t-sm);
+}
+.themeCard__name svg { color: var(--accent); }
+.themeCard__hint { font-size: var(--t-xs); color: var(--ink-faint); }
+
+/* Im Hellen braucht die Kulisse einen anderen Himmel — ein Nachtblau ueber
+   hellen Karten waere ein Loch in der Seite. */
+:root[data-mode='day'] .meadow__sky {
+  background: linear-gradient(180deg, oklch(0.80 0.07 235), oklch(0.90 0.05 210));
+}
+:root[data-mode='day'] .meadow__ground {
+  background: linear-gradient(180deg, oklch(0.72 0.11 148), oklch(0.60 0.10 150));
+  border-top-color: oklch(0.78 0.11 146);
+}
+
+.stage--event { border-color: var(--danger); }
+.stage--event .btn { margin-top: var(--s3); }
+
+/* Ein Legendäres bekommt seine eigene Leiste: Bälle und Softening sind hier
+   wirkungslos, also stehen sie auch nicht da. */
+.legendary {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s3);
+  background: color-mix(in oklab, var(--gold) 12%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--gold) 45%, var(--edge));
+  border-radius: var(--radius);
+}
+.legendary__lead { font-size: var(--t-sm); font-weight: 600; }
+.legendary__hint { font-size: var(--t-xs); color: var(--ink-muted); }

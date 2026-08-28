@@ -1,0 +1,173 @@
+import type { PokeApi } from './pokeapi-client.ts'
+import { germanName } from './pokeapi-client.ts'
+
+/**
+ * Items are hand-authored, not imported.
+ *
+ * PokéAPI knows what an Ultra Ball is called, but not what it should cost in
+ * *this* game or how much it should improve a catch. Those numbers are balance
+ * decisions and belong next to the game, so only the names come from the API.
+ */
+
+export interface ItemOut {
+  id: string
+  name: { de: string }
+  description: { de: string }
+  category: string
+  price: number | null
+  sellPrice: number | null
+  stackable: boolean
+  icon: string
+  params: Record<string, number | string | boolean>
+}
+
+interface Authored {
+  id: string
+  category: ItemOut['category']
+  price: number | null
+  sellPrice: number | null
+  params?: Record<string, number | string | boolean>
+  name?: string
+  description?: string
+  stackable?: boolean
+}
+
+export const AUTHORED: Authored[] = [
+  // --- Bälle. catchMultiplier geht direkt in die Fangformel ein. -----------
+  { id: 'poke-ball',   category: 'ball', price: 30,   sellPrice: 15,  params: { catchMultiplier: 1.0 },
+    description: 'Der Standardball. Günstig, zuverlässig, überall zu haben.' },
+  { id: 'great-ball',  category: 'ball', price: 90,   sellPrice: 45,  params: { catchMultiplier: 1.5 },
+    description: 'Fängt spürbar besser als ein Pokéball.' },
+  { id: 'ultra-ball',  category: 'ball', price: 180,  sellPrice: 90,  params: { catchMultiplier: 2.0 },
+    description: 'Der zuverlässigste Ball, den der Shop führt.' },
+  { id: 'net-ball',    category: 'ball', price: 150,  sellPrice: 75,  params: { catchMultiplier: 1.0, bonusVsTypes: 'bug,water', bonusMultiplier: 3.5 },
+    description: 'Gegen Käfer- und Wasser-Pokémon außergewöhnlich wirksam.' },
+  { id: 'dusk-ball',   category: 'ball', price: 150,  sellPrice: 75,  params: { catchMultiplier: 1.0, bonusTimeOfDay: 'dusk,night', bonusMultiplier: 3.0 },
+    description: 'Bei Dämmerung und in der Nacht deutlich wirksamer.' },
+  { id: 'timer-ball',  category: 'ball', price: 150,  sellPrice: 75,  params: { catchMultiplier: 1.0, perTurnBonus: 0.3, maxMultiplier: 4.0 },
+    description: 'Wird mit jeder Runde der Begegnung stärker.' },
+
+  // --- Beeren. Werden vor dem Wurf eingesetzt. ------------------------------
+  { id: 'razz-berry',  category: 'berry', price: 40,  sellPrice: 20,  params: { catchBonus: 1.5 },
+    name: 'Himmihbeere', description: 'Lenkt das Pokémon ab — der nächste Ball hält besser.' },
+  { id: 'nanab-berry', category: 'berry', price: 40,  sellPrice: 20,  params: { calmBonus: 1.0 },
+    name: 'Nanabbeere', description: 'Beruhigt das Pokémon, es bewegt sich kaum noch.' },
+  { id: 'pinap-berry', category: 'berry', price: 60,  sellPrice: 30,  params: { candyBonus: 2.0 },
+    name: 'Sananabeere', description: 'Verdoppelt die Bonbons bei einem erfolgreichen Fang.' },
+  { id: 'golden-razz', category: 'berry', price: 250, sellPrice: 90,  params: { catchBonus: 2.5 },
+    name: 'Goldene Himmihbeere', description: 'Die wirksamste Beere überhaupt. Selten und teuer.' },
+  // Die einzige Beere, die gegen Legendäre wirkt — und die einzige, die man
+  // nicht kaufen kann. Sie fällt nur bei Überfällen. Preis 0 heißt: taucht im
+  // Laden nicht auf.
+  { id: 'legendary-berry', category: 'berry', price: 0, sellPrice: 0, params: { legendaryBonus: 0.25 },
+    name: 'Sagenbeere', description: 'Uralt und bitter. Nur sie beeindruckt ein Legendäres — höchstens drei auf einmal.' },
+  { id: 'oran-berry',  category: 'berry', price: 50,  sellPrice: 25,  params: { careValue: 1, friendship: 3 },
+    description: 'Lieblingssnack im Garten. Gibt Freundschaft und etwas Energie.' },
+
+  // --- Medizin -------------------------------------------------------------
+  { id: 'potion',        category: 'medicine', price: 100,  sellPrice: 50,  params: { heal: 20 },
+    description: 'Heilt 20 KP.' },
+  { id: 'super-potion',  category: 'medicine', price: 250,  sellPrice: 125, params: { heal: 60 },
+    description: 'Heilt 60 KP.' },
+  { id: 'hyper-potion',  category: 'medicine', price: 600,  sellPrice: 300, params: { heal: 120 },
+    description: 'Heilt 120 KP.' },
+  { id: 'full-restore',  category: 'medicine', price: 1200, sellPrice: 500, params: { healFull: true, cureAll: true },
+    description: 'Stellt alle KP her und heilt jeden Statuszustand.' },
+  { id: 'revive',        category: 'medicine', price: 900,  sellPrice: 400, params: { revive: 0.5 },
+    description: 'Belebt ein besiegtes Pokémon mit der Hälfte seiner KP wieder.' },
+  { id: 'full-heal',     category: 'medicine', price: 300,  sellPrice: 150, params: { cureAll: true },
+    description: 'Heilt jeden Statuszustand.' },
+  { id: 'energy-drink',  category: 'medicine', price: 200,  sellPrice: 80,  params: { energy: 40 },
+    name: 'Energydrink', description: 'Füllt die Energie eines Gartenpokémon wieder auf.' },
+
+  // --- Erfahrung -----------------------------------------------------------
+  { id: 'rare-candy',  category: 'xp', price: 800,  sellPrice: 0,   params: { xp: 50, targetSingle: true },
+    description: 'Gibt einem einzelnen Pokémon sofort 50 EP.' },
+  { id: 'exp-candy-s', category: 'xp', price: 300,  sellPrice: 100, params: { xp: 800 },
+    name: 'EP-Bonbon S', description: 'Ein kleiner Erfahrungsschub.' },
+  { id: 'exp-candy-l', category: 'xp', price: 1400, sellPrice: 500, params: { xp: 5000 },
+    name: 'EP-Bonbon L', description: 'Ein kräftiger Erfahrungsschub.' },
+
+  // --- Material für das Handwerk -------------------------------------------
+  { id: 'soft-sand',   category: 'material', price: null, sellPrice: 40,  name: 'Feinsand',
+    description: 'Handwerksmaterial. Fällt bei Expeditionen an.' },
+  { id: 'silk-thread', category: 'material', price: null, sellPrice: 40,  name: 'Seidenfaden',
+    description: 'Handwerksmaterial. Fällt bei Expeditionen an.' },
+  { id: 'iron-shard',  category: 'material', price: null, sellPrice: 70,  name: 'Eisensplitter',
+    description: 'Handwerksmaterial. Fällt bei Expeditionen an.' },
+  { id: 'dew-drop',    category: 'material', price: null, sellPrice: 70,  name: 'Tautropfen',
+    description: 'Handwerksmaterial. Fällt bei Expeditionen an.' },
+  { id: 'star-piece',  category: 'material', price: null, sellPrice: 300, name: 'Sternenstaub',
+    description: 'Seltenes Handwerksmaterial. Sehr wertvoll.' },
+
+  // --- Gartenhintergründe. Einmalkauf, nicht stapelbar. ---------------------
+  { id: 'bg-classic',   category: 'background', price: 0,    sellPrice: null, stackable: false,
+    name: 'Klassisch', description: 'Die vertraute Gartenwiese.' },
+  { id: 'bg-forest',    category: 'background', price: 800,  sellPrice: null, stackable: false,
+    name: 'Wald', description: 'Eine schattige Lichtung zwischen alten Bäumen.' },
+  { id: 'bg-beach',     category: 'background', price: 800,  sellPrice: null, stackable: false,
+    name: 'Strand', description: 'Sand, Brandung und viel Platz zum Toben.' },
+  { id: 'bg-moonlight', category: 'background', price: 1500, sellPrice: null, stackable: false,
+    name: 'Mondlicht', description: 'Stille Nacht unter einem klaren Himmel.' },
+  { id: 'bg-dojo',      category: 'background', price: 1500, sellPrice: null, stackable: false,
+    name: 'Dojo', description: 'Für Teams, die es ernst meinen.' },
+  { id: 'bg-space',     category: 'background', price: 4000, sellPrice: null, stackable: false,
+    name: 'Weltraum', description: 'Warum nicht. Es ist dein Garten.' },
+]
+
+/** Names for stones and trade items come from the API so they match the rest
+ *  of the pack; prices are ours. */
+const STONE_PRICE = 1500
+
+export async function buildItems(
+  api: PokeApi,
+  requiredExtraIds: Set<string>,
+  log: (m: string) => void,
+): Promise<ItemOut[]> {
+  const out: ItemOut[] = []
+  const authoredIds = new Set(AUTHORED.map((a) => a.id))
+
+  for (const a of AUTHORED) {
+    out.push({
+      id: a.id,
+      name: { de: a.name ?? (await apiName(api, a.id)) },
+      description: { de: a.description ?? '' },
+      category: a.category,
+      price: a.price,
+      sellPrice: a.sellPrice,
+      stackable: a.stackable ?? true,
+      icon: `/media/items/${a.id}.png`,
+      params: a.params ?? {},
+    })
+  }
+
+  // Anything an evolution refers to must exist, or the pack fails validation.
+  for (const id of requiredExtraIds) {
+    if (authoredIds.has(id)) continue
+    out.push({
+      id,
+      name: { de: await apiName(api, id) },
+      description: { de: 'Lässt bestimmte Pokémon sich entwickeln.' },
+      category: 'stone',
+      price: STONE_PRICE,
+      sellPrice: Math.round(STONE_PRICE / 2),
+      stackable: true,
+      icon: `/media/items/${id}.png`,
+      params: {},
+    })
+  }
+
+  out.sort((a, b) => a.id.localeCompare(b.id))
+  log(`Items: ${out.length} (${AUTHORED.length} kuratiert, ${out.length - AUTHORED.length} aus Entwicklungen abgeleitet)`)
+  return out
+}
+
+async function apiName(api: PokeApi, id: string): Promise<string> {
+  try {
+    const item = await api.get<{ names: Array<{ name: string; language: { name: string } }> }>(`item/${id}`)
+    return germanName(item.names, id)
+  } catch {
+    // Not every id we invent exists upstream; a readable fallback beats a crash.
+    return id.split('-').map((w) => w[0]!.toUpperCase() + w.slice(1)).join(' ')
+  }
+}

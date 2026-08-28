@@ -1,0 +1,12 @@
+app/node_modules
+app/packages/*/node_modules
+app/packages/*/dist
+app/packages/api/public
+# Inkrementelle Build-Info nie mitkopieren — sonst haelt `tsc -b` im Image
+# alles fuer aktuell und erzeugt keine Artefakte.
+**/*.tsbuildinfo
+**/.tsbuildinfo
+**/*.log
+# Entwicklungs-Vorschauseiten enthalten signiertes initData und duerfen
+# unter keinen Umstaenden ins Image.
+app/packages/api/public/__*.html

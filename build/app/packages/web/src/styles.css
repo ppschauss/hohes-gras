@@ -1,0 +1,150 @@
+/* =============================================================================
+   Design-Tokens
+   -----------------------------------------------------------------------------
+   Die App lebt IN Telegram: gespielt wird abends, kurz, bei niedriger
+   Helligkeit, in einem Client, der bei den meisten dunkel steht. Eine helle
+   Insel im dunklen Chat wäre ein Bruch, kein Stil.
+
+   FARBSTRATEGIE — der eine Gedanke, aus dem alles Übrige folgt:
+
+     Das Content-Pack liefert achtzehn kräftige Typfarben mit. Sie sind
+     *Daten*: an ihnen liest man ab, was ein Pokémon kann. Ein ebenso kräftiger
+     Akzent im Interface würde permanent mit ihnen konkurrieren — zwei Systeme,
+     die um dieselbe Aufmerksamkeit bitten.
+
+     Deshalb ist die Oberfläche warm-unbunt. Die primäre Aktion ist hell, nicht
+     farbig: heller Knopf auf tiefem Grund, unverwechselbar und ohne Hue, die
+     mit irgendetwas streiten könnte. Sättigung bleibt der Bedeutung
+     vorbehalten — Typen, Gold, Wachstum, Gefahr. Sonst nichts.
+
+   Der Grund ist ein sehr dunkles, leicht grünstichiges Schwarz: Tinte, kein
+   Marineblau. Es nimmt sich zurück, wärmt aber die Sprites, die davor stehen.
+   ========================================================================== */
+
+:root {
+  /* Von Telegram überschrieben, sobald verfügbar (lib/telegram.ts). */
+  --tg-bg: oklch(0.16 0.012 160);
+  --tg-text: oklch(0.97 0.006 90);
+  --tg-hint: oklch(0.64 0.012 120);
+  --tg-link: oklch(0.80 0.09 150);
+  --tg-button: oklch(0.93 0.02 95);
+  --tg-button-text: oklch(0.18 0.02 150);
+  --tg-secondary-bg: oklch(0.21 0.013 158);
+  --tg-header-bg: oklch(0.18 0.013 158);
+
+  /* Spielflächen. Eine Hue-Familie, vier Helligkeiten. */
+  --ground: oklch(0.145 0.016 158);
+  --surface: oklch(0.196 0.015 158);
+  --surface-raised: oklch(0.242 0.016 158);
+  --surface-sunken: oklch(0.122 0.014 158);
+  --edge: oklch(0.30 0.014 158);
+  --edge-strong: oklch(0.42 0.018 158);
+
+  /* Warmes Bone statt kaltem Weiß — bei niedriger Helligkeit angenehmer. */
+  --ink: oklch(0.965 0.008 95);
+  --ink-muted: oklch(0.795 0.011 95);   /* 8.0:1 auf --surface */
+  --ink-faint: oklch(0.665 0.013 95);   /* 4.9:1 auf --surface, Minimum für Fließtext */
+
+  /* Interaktion: hell, nicht bunt. Der einzige Ton, der überall auftauchen
+     darf, ohne etwas zu bedeuten. */
+  --accent: oklch(0.935 0.022 95);
+  --accent-ink: oklch(0.175 0.022 158);
+  --accent-soft: oklch(0.30 0.016 130);
+  --accent-ring: oklch(0.935 0.022 95 / 0.55);
+
+  /* Semantische Farben. Jede hat genau einen Job — und nur diese sind bunt. */
+  --nature: oklch(0.70 0.125 152);        /* Wachstum, Pflege, Erfolg */
+  --nature-deep: oklch(0.44 0.085 152);
+  --gold: oklch(0.815 0.125 82);          /* Währung und Belohnung */
+  --energy: oklch(0.855 0.145 96);        /* Trainer-Energie */
+  --danger: oklch(0.645 0.175 25);        /* Kampf, Verlust, Löschen */
+  --warn: oklch(0.775 0.125 62);
+  --ok: var(--nature);
+
+  --radius-sm: 8px;
+  --radius: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  /* 4px-Raster mit bewusst ungleichen Spruengen — gleichmaessige Abstaende
+     lesen sich als Tabelle, nicht als Rhythmus. */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+
+  --font: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", system-ui, sans-serif;
+  --font-num: ui-monospace, "SF Mono", "Roboto Mono", Menlo, monospace;
+
+  /* Zahlen stehen überall in Tabellen und Balken untereinander — ohne feste
+     Ziffernbreite springt jede Anzeige, die sich sekündlich aktualisiert. */
+  --num: tabular-nums;
+
+  /* Feste rem-Skala, Verhaeltnis ~1.15. Fluid waere hier falsch: die App
+     laeuft immer in etwa derselben Breite. */
+  --t-xs: 0.6875rem; --t-sm: 0.8125rem; --t-md: 0.9375rem;
+  --t-lg: 1.0625rem; --t-xl: 1.3125rem; --t-2xl: 1.625rem;
+
+  /* Auf dunklem Grund trägt eine Kante mehr als ein Schatten. Schatten bleiben
+     für das, was wirklich schwebt. */
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.4);
+  --shadow: 0 6px 20px oklch(0 0 0 / 0.45);
+  --shadow-lg: 0 16px 40px oklch(0 0 0 / 0.55);
+
+  /* Exponentielles Ausklingen, kein Bounce. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --fast: 140ms;
+  --mid: 220ms;
+
+  /* Semantische Stapelordnung statt willkuerlicher Zahlen. */
+  --z-base: 0; --z-sticky: 10; --z-nav: 20;
+  --z-backdrop: 30; --z-modal: 40; --z-toast: 50;
+
+  --nav-h: 62px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  font-size: var(--t-md);
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--ground);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Telegram schiebt die Seite beim Wischen; das verhindert den Gummiband-Effekt. */
+  overscroll-behavior-y: none;
+  /* Letzte Sicherung. Die eigentlichen Ursachen (min-width:auto auf Flex- und
+     Grid-Kindern) sind in app.css behoben; das hier faengt nur ab, dass ein
+     kuenftiger langer String die ganze Seite seitwaerts schiebt. */
+  overflow-x: hidden;
+}
+
+h1, h2, h3 { margin: 0; text-wrap: balance; line-height: 1.22; font-weight: 700; }
+h1 { font-size: var(--t-2xl); letter-spacing: -0.02em; }
+h2 { font-size: var(--t-xl); letter-spacing: -0.015em; }
+h3 { font-size: var(--t-lg); letter-spacing: -0.01em; }
+p  { margin: 0; text-wrap: pretty; }
+
+button { font: inherit; color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Zahlen in Tabellen und Zaehlern duerfen beim Hochzaehlen nicht springen. */
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

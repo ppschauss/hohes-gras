@@ -1,0 +1,230 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { makeTestApp, signInitData, type TestApp } from './helpers.js'
+
+let h: TestApp
+let token: string
+let trainerId: string
+
+beforeEach(async () => {
+  h = await makeTestApp()
+  const auth = await h.post('/api/auth/session', { initData: signInitData({ id: 111, first_name: 'Ash' }) })
+  token = auth.body.token
+  trainerId = auth.body.trainer.id
+  await h.post('/api/starter', { speciesId: 'testmon' }, token)
+  h.ctx.db.prepare(
+    'UPDATE trainers SET current_area_id = ?, energy = 9000, gold = 5000 WHERE id = ?',
+  ).run('test-route', trainerId)
+  // Ein Team, das gewinnen kann.
+  h.ctx.db.prepare('UPDATE creatures SET level = 90, hp_current = 9999 WHERE owner_id = ?').run(trainerId)
+})
+afterEach(async () => { await h.close() })
+
+const defeat = (opponentId: string) =>
+  h.ctx.db.prepare(
+    'INSERT OR REPLACE INTO trainer_defeats (trainer_id, opponent_id, wins, first_win_at, last_win_at) VALUES (?, ?, 1, ?, ?)',
+  ).run(trainerId, opponentId, Date.now(), Date.now())
+
+const startAgainst = (id: string) => h.post('/api/battle/start', { opponentId: id }, token)
+
+describe('Top Vier', () => {
+  it('laesst den ersten sofort antreten', async () => {
+    expect((await startAgainst('elite-eins')).status).toBe(200)
+  })
+
+  it('sperrt den zweiten, solange der erste steht', async () => {
+    const r = await startAgainst('elite-zwei')
+    expect(r.status).toBe(409)
+    expect(r.body.detail.reason).toBe('elite_locked')
+    expect(r.body.detail.requires).toBe('elite-eins')
+  })
+
+  it('oeffnet den zweiten nach einem Sieg ueber den ersten', async () => {
+    defeat('elite-eins')
+    h.resetRateLimits()
+    expect((await startAgainst('elite-zwei')).status).toBe(200)
+  })
+
+  it('haelt den Meister zurueck, bis die Top Vier gefallen sind', async () => {
+    const r = await startAgainst('test-gym')
+    // test-gym ist ein Arenaleiter, kein Meister — der bleibt frei.
+    expect(r.status).toBe(200)
+  })
+
+  it('laesst gewoehnliche Trainer unberuehrt', async () => {
+    expect((await startAgainst('test-rival')).status).toBe(200)
+  })
+
+  it('zeigt den Ligastand auf der Weltkarte', async () => {
+    const r = await h.get('/api/world', token)
+    const league = r.body.league.find((l: any) => l.regionId === 'testland')
+    expect(league).toBeTruthy()
+    expect(league.elites.map((e: any) => e.id)).toEqual(['elite-eins', 'elite-zwei'])
+    expect(league.elites[0].locked).toBe(false)
+    expect(league.elites[1].locked).toBe(true)
+    expect(league.cleared).toBe(false)
+
+    defeat('elite-eins')
+    h.resetRateLimits()
+    const after = await h.get('/api/world', token)
+    const l2 = after.body.league.find((l: any) => l.regionId === 'testland')
+    expect(l2.elites[0].defeated).toBe(true)
+    expect(l2.elites[1].locked).toBe(false)
+  })
+})
+
+describe('Überfall', () => {
+  const pend = (opponentId = 'event-rocket-anderswo', areaId = 'test-route') =>
+    h.ctx.db.prepare('UPDATE trainers SET pending_event_id = ?, pending_event_area = ? WHERE id = ?')
+      .run(opponentId, areaId, trainerId)
+
+  it('laesst sich ohne Vormerkung nicht starten', async () => {
+    const r = await h.post('/api/battle/event', {}, token)
+    expect(r.status).toBe(409)
+    expect(r.body.detail.reason).toBe('no_event')
+  })
+
+  it('startet den Kampf gegen den vorgemerkten Gegner', async () => {
+    pend()
+    const r = await h.post('/api/battle/event', {}, token)
+    expect(r.status).toBe(200)
+    expect(r.body.opponentName).toBe('Rüpel')
+  })
+
+  it('verbraucht die Vormerkung genau einmal', async () => {
+    pend()
+    expect((await h.post('/api/battle/event', {}, token)).status).toBe(200)
+    await h.post('/api/battle/forfeit', {}, token)
+    h.resetRateLimits()
+    const again = await h.post('/api/battle/event', {}, token)
+    expect(again.status).toBe(409)
+    expect(again.body.detail.reason).toBe('no_event')
+  })
+
+  it('wirft beim Sieg Gold und Gegenstaende ab', async () => {
+    // Skalierung aus: sonst hebt sie den Ruepel von Level 5 auf das Niveau des
+    // eigenen Teams, und der Ausgang des Kampfes waere offen — der Test wuerde
+    // dann mal bestehen und mal nicht.
+    h.ctx.db.prepare('UPDATE trainers SET level_scaling = 0 WHERE id = ?').run(trainerId)
+    pend()
+    const goldBefore = (await h.get('/api/bag', token)).body.gold
+    await h.post('/api/battle/event', {}, token)
+
+    // Bis zum Ende durchkaempfen — Level 90 gegen Level 5 endet schnell.
+    let reward: any = null
+    for (let i = 0; i < 40 && !reward; i++) {
+      h.resetRateLimits()
+      const r = await h.post('/api/battle/action', { kind: 'move', moveIndex: 0 }, token)
+      if (r.status !== 200) break
+      reward = r.body.reward
+    }
+    expect(reward).toBeTruthy()
+    expect(reward.won).toBe(true)
+    expect(reward.event).toBeTruthy()
+    expect(reward.event.gold).toBeGreaterThan(0)
+    expect(reward.event.items.length).toBeGreaterThan(0)
+    for (const item of reward.event.items) {
+      // Die Sagenbeere faellt einzeln, alles andere im Stapel.
+      const min = item.itemId === 'legendary-berry' ? 1 : 2
+      expect(item.quantity).toBeGreaterThanOrEqual(min)
+    }
+    // Das Gold ist auch wirklich eingebucht.
+    expect((await h.get('/api/bag', token)).body.gold)
+      .toBeGreaterThan(goldBefore + reward.event.gold - 1)
+  })
+
+  it('gibt bei einem gewoehnlichen Kampf keine Ereignisbeute', async () => {
+    h.ctx.db.prepare('UPDATE trainers SET level_scaling = 0 WHERE id = ?').run(trainerId)
+    const r = await startAgainst('test-rival')
+    expect(r.status).toBe(200)
+    let reward: any = null
+    for (let i = 0; i < 40 && !reward; i++) {
+      h.resetRateLimits()
+      const step = await h.post('/api/battle/action', { kind: 'move', moveIndex: 0 }, token)
+      if (step.status !== 200) break
+      reward = step.body.reward
+    }
+    expect(reward?.event ?? null).toBeNull()
+  })
+})
+
+describe('Legendäre fangen', () => {
+  /** Eine legendäre Begegnung direkt setzen — der 0,1-Prozent-Wurf ist im
+   *  Engine-Test abgedeckt, hier geht es um die Fangregeln. */
+  const encounter = (berries = 0) =>
+    h.ctx.db.prepare(
+      `INSERT OR REPLACE INTO active_encounter
+         (trainer_id, area_id, species_id, level, shiny, turn, weaken_stacks, calm_stacks,
+          seed, started_at, legendary_berries)
+       VALUES (?, 'test-route', 'sagenmon', 70, 0, 0, 0, 0, 'seed', ?, ?)`,
+    ).run(trainerId, Date.now(), berries)
+
+  const giveBerries = (n: number) =>
+    h.ctx.db.prepare(
+      'INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)',
+    ).run(trainerId, 'legendary-berry', n)
+
+  const view = async () => (await h.get('/api/safari?ballId=poke-ball', token)).body.encounter
+
+  it('meldet die Begegnung als legendär und startet bei fünf Prozent', async () => {
+    encounter()
+    const e = await view()
+    expect(e.legendary).toBe(true)
+    expect(e.probability).toBeCloseTo(0.05, 5)
+    expect(e.maxLegendaryBerries).toBe(3)
+  })
+
+  it('ignoriert den besseren Ball vollständig', async () => {
+    encounter()
+    const plain = (await h.get('/api/safari?ballId=poke-ball', token)).body.encounter.probability
+    const better = (await h.get('/api/safari?ballId=great-ball', token)).body.encounter.probability
+    expect(better).toBe(plain)
+  })
+
+  it('hebt die Chance je Sagenbeere um ein Viertel', async () => {
+    encounter()
+    giveBerries(3)
+    for (const expected of [0.30, 0.55, 0.80]) {
+      h.resetRateLimits()
+      const r = await h.post('/api/safari/berry', { ballId: 'poke-ball' }, token)
+      expect(r.status).toBe(200)
+      expect(r.body.probability).toBeCloseTo(expected, 5)
+    }
+  })
+
+  it('nimmt keine vierte Beere an', async () => {
+    encounter(3)
+    giveBerries(5)
+    const r = await h.post('/api/safari/berry', { ballId: 'poke-ball' }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.detail.reason).toBe('already_maxed')
+  })
+
+  it('verbraucht die Beere aus dem Beutel', async () => {
+    encounter()
+    giveBerries(2)
+    await h.post('/api/safari/berry', { ballId: 'poke-ball' }, token)
+    const bag = (await h.get('/api/bag', token)).body.items
+    expect(bag.find((i: any) => i.id === 'legendary-berry').quantity).toBe(1)
+  })
+
+  it('weist Sagenbeeren bei gewöhnlichen Pokémon ab', async () => {
+    h.ctx.db.prepare(
+      `INSERT OR REPLACE INTO active_encounter
+         (trainer_id, area_id, species_id, level, shiny, turn, weaken_stacks, calm_stacks, seed, started_at, legendary_berries)
+       VALUES (?, 'test-route', 'wildmon', 5, 0, 0, 0, 0, 'seed', ?, 0)`,
+    ).run(trainerId, Date.now())
+    giveBerries(1)
+    const r = await h.post('/api/safari/berry', { ballId: 'poke-ball' }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.detail.reason).toBe('not_legendary')
+  })
+
+  it('verbraucht bei einem Legendären keine gewöhnliche Beere', async () => {
+    encounter()
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, 5)')
+      .run(trainerId, 'razz-berry')
+    await h.post('/api/safari/throw', { ballId: 'poke-ball', berryId: 'razz-berry' }, token)
+    const bag = (await h.get('/api/bag', token)).body.items
+    expect(bag.find((i: any) => i.id === 'razz-berry').quantity).toBe(5)
+  })
+})
