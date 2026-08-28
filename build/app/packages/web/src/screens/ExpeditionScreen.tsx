@@ -43,7 +43,7 @@ export function ExpeditionScreen({ onBack }: { onBack: () => void }) {
 
   const rush = (id: string) => {
     haptic.tap()
-    void action.run(() => api.rushExpedition(id), (res) => { data.set(res.overview); haptic.success() })
+    void action.run(() => api.rushExpedition(id), (res) => { overview.set(res.overview); haptic.success() })
   }
 
   const collect = (id: string) => {
