@@ -4,11 +4,18 @@ import { useGame } from './store'
 import { NavBar } from './ui/NavBar'
 import { CenterState, PartnerSkeleton } from './ui/States'
 import { InviteGate } from './ui/InviteGate'
+import { LinkGate } from './ui/LinkGate'
 import { GameRouter } from './tabs/GameRouter'
+import { Sidebar } from './ui/Sidebar'
+import { useWide } from './lib/useWide'
 import './app.css'
 
 export function App() {
-  const { auth, boot, screen, submitting, start, submitInvite, setScreen, syncScreenFromLocation, refresh } = useGame()
+  const wide = useWide()
+  const {
+    auth, boot, screen, submitting,
+    start, submitInvite, submitLinkCode, setScreen, syncScreenFromLocation, refresh,
+  } = useGame()
 
   useEffect(() => { void start() }, [start])
 
@@ -18,14 +25,10 @@ export function App() {
     return () => window.removeEventListener('hashchange', syncScreenFromLocation)
   }, [syncScreenFromLocation])
 
-  if (auth.status === 'outside_telegram') {
+  if (auth.status === 'needs_link') {
     return (
       <Shell>
-        <CenterState
-          glyph="📱"
-          title={t('auth.outsideTelegram.title')}
-          body={t('auth.outsideTelegram.body')}
-        />
+        <LinkGate message={auth.message} submitting={submitting} onSubmit={submitLinkCode} />
       </Shell>
     )
   }
@@ -63,14 +66,28 @@ export function App() {
     )
   }
 
-  // Die Kopfzeile gehoert jetzt zum Bildschirm, nicht zur Huelle: jeder
-  // Bildschirm kennt seinen Titel selbst, und zwei Leisten uebereinander waren
-  // auf einem Telefon eine Verschwendung.
+  const game = <GameRouter boot={boot} onTrainerChanged={() => void refresh()} />
+
+  // Zwei Huellen, ein Spiel. Am Rechner traegt eine Seitenleiste die
+  // Navigation und der Inhalt bekommt die Breite; auf dem Telefon bleibt es
+  // bei der Leiste unten. Die Bildschirme selbst wissen davon nichts.
+  if (wide) {
+    return (
+      <div className="deck">
+        <Sidebar active={screen} boot={boot} onChange={setScreen} />
+        <div className="deck__main">
+          <div className="viewport">{game}</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Die Kopfzeile gehoert zum Bildschirm, nicht zur Huelle: jeder Bildschirm
+  // kennt seinen Titel selbst, und zwei Leisten uebereinander waren auf einem
+  // Telefon eine Verschwendung.
   return (
     <Shell footer={<NavBar active={screen} onChange={setScreen} />}>
-      <div className="viewport">
-        <GameRouter boot={boot} onTrainerChanged={() => void refresh()} />
-      </div>
+      <div className="viewport">{game}</div>
     </Shell>
   )
 }

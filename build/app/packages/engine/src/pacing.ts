@@ -56,6 +56,18 @@ export const CARE_PACING: PacingRules = {
   minGapMs: MIN_GAP_MS,
 }
 
+/**
+ * Dieselben Regeln, nur mit groesserem Fenster.
+ *
+ * Die Pflegestation hebt allein die *Menge*. Mindestabstand und
+ * Rhythmuspruefung bleiben, wie sie sind — sonst waere der Ausbau ein
+ * kaeuflicher Freibrief fuer Automatik statt Luft fuer jemanden, der viel von
+ * Hand spielt.
+ */
+export function carePacingWith(limitBonus: number): PacingRules {
+  return { ...CARE_PACING, limit: CARE_WINDOW_LIMIT + Math.max(0, Math.floor(limitBonus)) }
+}
+
 /** Erkunden ist absichtlich unbegrenzt — geschuetzt wird nur gegen Automatik. */
 export const EXPLORE_PACING: PacingRules = {
   windowMs: CARE_WINDOW_MS,

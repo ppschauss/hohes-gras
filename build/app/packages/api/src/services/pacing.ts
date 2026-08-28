@@ -1,8 +1,9 @@
 import { GameError, type Trainer } from '@game/shared'
-import { CARE_PACING, EXPLORE_PACING, checkPacing, type PacingRules } from '@game/engine'
+import { CARE_PACING, EXPLORE_PACING, carePacingWith, checkPacing, type PacingRules } from '@game/engine'
 import type { AppContext } from '../context.js'
 import * as pulse from '../repos/pulse.js'
 import { logEvent } from '../repos/events.js'
+import { bonuses } from './progression.js'
 
 /**
  * Taktkontrolle vor einer Aktion.
@@ -34,7 +35,10 @@ export function assertPace(
   bucket: PacingBucket,
   now = Date.now(),
 ): void {
-  const rules = BUCKETS[bucket]
+  // Die Pflegestation hebt das Fenster; alles andere bleibt.
+  const rules = bucket === 'care'
+    ? carePacingWith(bonuses(ctx, trainer.id).careLimitBonus)
+    : BUCKETS[bucket]
 
   // Eine laufende Pause zuerst: sie meldet die *verbleibende* Zeit, nicht
   // jedes Mal wieder dreissig Sekunden.

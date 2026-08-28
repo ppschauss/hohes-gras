@@ -19,6 +19,7 @@ export interface BuildingSpec {
     | 'catchRateBonus'     // Prozent bessere Fangchance
     | 'energyRegenBonus'   // Prozent schnellere Energieerholung
     | 'energyCapBonus'     // hoehere Obergrenze der Trainer-Energie
+    | 'careLimitBonus'     // zusaetzliche Pflegeaktionen je Viertelstunde
 }
 
 export const BUILDINGS: BuildingSpec[] = [
@@ -46,6 +47,22 @@ export const BUILDINGS: BuildingSpec[] = [
     id: 'rest-house', maxLevel: 5, effectKind: 'energyRegenBonus',
     cost: (level) => 1000 * level ** 2,
     effect: (level) => level * 15,
+  },
+  {
+    /*
+     * Pflegestation: mehr Pflegeaktionen je Viertelstunde.
+     *
+     * Das Fenster von hundert Aktionen ist kein Balancewert, sondern eine
+     * Schranke gegen Automatik — und wer viel von Hand spielt, stiess daran,
+     * ohne je etwas automatisiert zu haben. Der Ausbau hebt genau diese
+     * Schranke, nicht den Ertrag: der Rhythmuswaechter und der Mindestabstand
+     * bleiben unangetastet, ein Skript gewinnt hier also nichts.
+     *
+     * Gestaffelt in Fuenfziger-Schritten: +50 je Stufe bis 350 auf Stufe 5.
+     */
+    id: 'care-station', maxLevel: 5, effectKind: 'careLimitBonus',
+    cost: (level) => 2000 * level ** 2,
+    effect: (level) => level * 50,
   },
   {
     id: 'greenhouse', maxLevel: 3, effectKind: 'energyCapBonus',

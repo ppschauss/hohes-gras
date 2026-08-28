@@ -5,6 +5,7 @@ import type { AppContext } from '../context.js'
 import { resolveSession } from '../auth/session.js'
 import { findById, touchLastSeen } from '../repos/trainers.js'
 import { consume, type BucketName } from '../repos/rateLimit.js'
+import { state as energyState } from '../services/energy.js'
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -70,4 +71,22 @@ export function registerErrorHandler(app: FastifyInstance): void {
 
   // Der 404-Handler wird bewusst NICHT hier gesetzt: Fastify erlaubt nur einen
   // pro Praefix, und server.ts braucht ihn fuer den SPA-Fallback.
+}
+
+/**
+ * Antwort einer Aktion, die Energie kostet.
+ *
+ * Die Kopfzeile im Client aktualisiert sich aus jeder Antwort, die ein Feld
+ * `energy` mitbringt — und genau das fehlte ausgerechnet den Endpunkten, die
+ * Energie *verbrauchen*: Pflege, Erkunden, Kampf, Raid, Duell, Beetpflege.
+ * Der Balken stand deshalb still, bis irgendwann ein Neuladen oder ein
+ * Tabwechsel den Stand vom Server holte.
+ *
+ * Statt die Zeile an sechs Stellen einzeln zu ergaenzen — und sie bei der
+ * siebten wieder zu vergessen — haengt sie hier an einer Stelle.
+ */
+export function withEnergy<T extends object>(
+  ctx: AppContext, trainerId: string, payload: T,
+): T & { energy: ReturnType<typeof energyState> } {
+  return { ...payload, energy: energyState(ctx, trainerId) }
 }

@@ -301,6 +301,7 @@ export const JOHTO_AREAS: AreaOut[] = [
 export const JOHTO_CHAPTERS = [
   {
     id: 'ch-9-new-region', order: 9,
+    guide: { de: 'Prof. Lind' },
     title: { de: 'Über die Grenze' },
     intro: { de: 'Kanto war deine Ausbildung. Johto ist deine Prüfung. Die Pokémon hier kennen dich nicht — und deinen Ruf schon gar nicht.' },
     outro: { de: 'Du hast in einer fremden Region Fuß gefasst. Das können wenige.' },
@@ -309,6 +310,7 @@ export const JOHTO_CHAPTERS = [
   },
   {
     id: 'ch-10-johto-league', order: 10,
+    guide: { de: 'Prof. Lind' },
     title: { de: 'Sieben neue Orden' },
     intro: { de: 'Sieben Arenen, sieben Arten sich zu irren. Johtos Leiter kämpfen anders als Kantos.' },
     outro: { de: 'Fünfzehn Orden. Du bist keine Trainerin mehr, du bist eine Reisende.' },

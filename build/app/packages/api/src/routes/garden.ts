@@ -8,7 +8,7 @@ import {
   TeamMembersRequestSchema, TeamNameRequestSchema,
 } from '@game/shared'
 import type { AppContext } from '../context.js'
-import { rateLimit, requireTrainer } from './plugin.js'
+import { rateLimit, requireTrainer, withEnergy } from './plugin.js'
 import * as garden from '../services/garden.js'
 import * as shop from '../services/shop.js'
 import * as teams from '../services/teams.js'
@@ -40,7 +40,7 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
     const gained = garden.performCare(ctx, req.trainer!, action)
     // Re-read the trainer: care can change gold and items indirectly.
     const fresh = findById(ctx.db, req.trainer!.id)!
-    return { garden: garden.gardenState(ctx, fresh), gained }
+    return withEnergy(ctx, fresh.id, { garden: garden.gardenState(ctx, fresh), gained })
   })
 
   app.get('/api/starter', auth, async (req) => {
@@ -155,7 +155,7 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
 
   app.post('/api/plots/tend', write, async (req) => {
     const { slot } = PlotSlotRequestSchema.parse(req.body)
-    return plots.tend(ctx, req.trainer!, slot)
+    return withEnergy(ctx, req.trainer!.id, plots.tend(ctx, req.trainer!, slot))
   })
 
   app.post('/api/plots/harvest', write, async (req) => {

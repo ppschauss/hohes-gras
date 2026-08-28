@@ -31,6 +31,7 @@ export interface ChapterDef {
 export const CHAPTERS: ChapterDef[] = [
   {
     id: 'ch-1-first-steps', order: 1,
+    guide: { de: 'Prof. Eich' },
     title: { de: 'Die ersten Schritte' },
     intro: { de: 'Jede Reise beginnt mit einem Partner und einem Weg. Fang ein paar Pokémon auf Route 1 — nicht um stark zu sein, sondern um zu sehen, wer dort lebt.' },
     outro: { de: 'Gut. Du hast angefangen zuzuhören, statt nur zu laufen.' },
@@ -39,6 +40,7 @@ export const CHAPTERS: ChapterDef[] = [
   },
   {
     id: 'ch-2-forest', order: 2,
+    guide: { de: 'Prof. Eich' },
     title: { de: 'Was im Wald wohnt' },
     intro: { de: 'Der Vertania-Wald ist eng und laut. Wer ihn durchquert, ohne ein Käferpokémon zu fangen, hat nicht hingesehen.' },
     outro: { de: 'Zehn Arten. Du fängst an, ein Sammler zu werden.' },
@@ -47,6 +49,7 @@ export const CHAPTERS: ChapterDef[] = [
   },
   {
     id: 'ch-3-first-badge', order: 3,
+    guide: { de: 'Prof. Eich' },
     title: { de: 'Der erste Orden' },
     intro: { de: 'Rocko wartet in der Arena. Er wird dich nicht schonen — und genau deshalb lernst du dort mehr als auf zehn Routen.' },
     outro: { de: 'Ein Orden. Er wiegt nichts und ändert alles.' },
@@ -55,6 +58,7 @@ export const CHAPTERS: ChapterDef[] = [
   },
   {
     id: 'ch-4-team', order: 4,
+    guide: { de: 'Prof. Eich' },
     title: { de: 'Ein Team, kein Rudel' },
     intro: { de: 'Fünf Pokémon sind kein Team, solange keins über Level 20 ist. Zieh sie auf. Der Garten ist kein Abstellplatz.' },
     outro: { de: 'Jetzt tragt ihr euch gegenseitig. Das ist der Unterschied.' },
@@ -63,6 +67,7 @@ export const CHAPTERS: ChapterDef[] = [
   },
   {
     id: 'ch-5-halfway', order: 5,
+    guide: { de: 'Prof. Eich' },
     title: { de: 'Die halbe Liga' },
     intro: { de: 'Vier Orden bedeuten vier verschiedene Arten zu verlieren. Du hast jede davon überstanden.' },
     outro: { de: 'Die zweite Hälfte wird nicht leichter. Sie wird nur interessanter.' },
@@ -71,6 +76,7 @@ export const CHAPTERS: ChapterDef[] = [
   },
   {
     id: 'ch-6-collector', order: 6,
+    guide: { de: 'Prof. Eich' },
     title: { de: 'Der Sammler' },
     intro: { de: 'Fünfzig Arten im Pokédex. Nicht gefangen, um zu gewinnen — gefangen, weil du wissen wolltest, was es gibt.' },
     outro: { de: 'Der Pokédex ist kein Abhakzettel. Er ist ein Reisetagebuch.' },
@@ -79,6 +85,7 @@ export const CHAPTERS: ChapterDef[] = [
   },
   {
     id: 'ch-7-all-badges', order: 7,
+    guide: { de: 'Prof. Eich' },
     title: { de: 'Acht Orden' },
     intro: { de: 'Giovanni ist der letzte. Er kämpft nicht, um zu gewinnen — er kämpft, um dir zu zeigen, dass du noch nicht so weit bist.' },
     outro: { de: 'Acht Orden. Das Indigo-Plateau steht dir offen.' },
@@ -87,6 +94,7 @@ export const CHAPTERS: ChapterDef[] = [
   },
   {
     id: 'ch-8-champion', order: 8,
+    guide: { de: 'Prof. Eich' },
     title: { de: 'Die Meisterprüfung' },
     intro: { de: 'Vier Meister und ein Champion. Kein Trick hilft hier, nur ein Team, das du wirklich kennst.' },
     outro: { de: 'Kanto-Meister. Es gibt größere Titel, aber keinen ersten mehr.' },

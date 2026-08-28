@@ -6,6 +6,7 @@ import { haptic } from '../lib/telegram'
 import { useAsync } from '../lib/useAsync'
 import { useGame, type Screen } from '../store'
 import { Icon, type IconName } from '../ui/Icon'
+import { DESTINATIONS } from '../ui/destinations'
 import { Resources } from '../ui/Resources'
 
 /**
@@ -20,28 +21,6 @@ import { Resources } from '../ui/Resources'
  * eine leere Zeile zu zeigen. Die Räume darunter sind ein Raster statt einer
  * Liste: acht Ziele in vier Zeilen Höhe, nicht in acht.
  */
-interface Destination {
-  screen: Screen
-  icon: IconName
-  labelKey: string
-  feature: string
-}
-
-const DESTINATIONS: Destination[] = [
-  { screen: 'garden', icon: 'garden', labelKey: 'menu.garden.title', feature: 'garden' },
-  { screen: 'map', icon: 'map', labelKey: 'menu.map.title', feature: 'worldmap' },
-  { screen: 'teams', icon: 'team', labelKey: 'menu.teams.title', feature: 'teams' },
-  { screen: 'plots', icon: 'plots', labelKey: 'menu.plots.title', feature: 'plots' },
-  { screen: 'expeditions', icon: 'expedition', labelKey: 'menu.expeditions.title', feature: 'safari' },
-  { screen: 'eggs', icon: 'egg', labelKey: 'menu.eggs.title', feature: 'safari' },
-  { screen: 'center', icon: 'center', labelKey: 'menu.center.title', feature: 'center' },
-  { screen: 'shop', icon: 'shop', labelKey: 'menu.shop.title', feature: 'shop' },
-  { screen: 'coop', icon: 'guild', labelKey: 'menu.coop.title', feature: 'guilds' },
-  { screen: 'progress', icon: 'progress', labelKey: 'menu.progress.title', feature: 'story' },
-  { screen: 'friends', icon: 'friends', labelKey: 'menu.friends.title', feature: 'social' },
-  { screen: 'energy', icon: 'energy', labelKey: 'menu.energy.title', feature: 'energy' },
-  { screen: 'themes', icon: 'spark', labelKey: 'menu.themes.title', feature: 'themes' },
-]
 
 const TASK_ICONS: Record<TodayTask['kind'], IconName> = {
   expedition: 'expedition',
@@ -73,7 +52,7 @@ export function HomeScreen({ boot }: { boot: Bootstrap }) {
         <Resources />
       </header>
 
-      <main className="content">
+      <main className="content content--home">
         <section className="today">
           <h2 className="today__head">{t('home.now')}</h2>
 
@@ -129,7 +108,9 @@ export function HomeScreen({ boot }: { boot: Bootstrap }) {
           </section>
         )}
 
-        <nav className="grid" aria-label={t('app.title')}>
+        {/* Am Rechner traegt die Seitenleiste dieselben Ziele — dann waere das
+            Raster hier eine zweite Navigation mit denselben dreizehn Woertern. */}
+        <nav className="grid grid--menu" aria-label={t('app.title')}>
           {DESTINATIONS.map((d) => {
             const enabled = boot.features[d.feature] === true
             return (

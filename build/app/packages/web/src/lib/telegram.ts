@@ -44,7 +44,17 @@ declare global {
 
 const webApp = (): TelegramWebApp | undefined => window.Telegram?.WebApp
 
-export const isAvailable = (): boolean => Boolean(webApp()?.initData !== undefined)
+/**
+ * Laeuft die App wirklich in Telegram?
+ *
+ * Gefragt wird nach den *Daten*, nicht nach dem Objekt. `telegram-web-app.js`
+ * wird von index.html immer geladen und legt `window.Telegram.WebApp` auch in
+ * einem normalen Browser an — dort aber mit leerem `initData`. Die alte
+ * Pruefung auf `!== undefined` war deshalb ueberall wahr: die Browserfassung
+ * schickte eine leere Signatur an den Server und landete in
+ * "Anmeldung fehlgeschlagen", statt nach dem Code zu fragen.
+ */
+export const isAvailable = (): boolean => Boolean(webApp()?.initData)
 
 export const initData = (): string => webApp()?.initData ?? ''
 

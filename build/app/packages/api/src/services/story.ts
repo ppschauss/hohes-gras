@@ -12,6 +12,9 @@ import { metricsOf } from './progression.js'
 export interface ChapterView {
   id: string
   order: number
+  /** Wer durch das Kapitel fuehrt; null faellt auf den Namen aus der
+   *  Oberflaeche zurueck. */
+  guide: string | null
   title: string
   text: string
   reached: boolean
@@ -91,6 +94,9 @@ export function storyView(ctx: AppContext, trainer: Trainer) {
     return {
       id: chapter.id,
       order: chapter.order,
+      // Wer durch das Kapitel fuehrt, steht im Pack: in Kanto ist das ein
+      // anderer Professor als in Hoenn.
+      guide: chapter.guide ? ctx.registry.localized(chapter.guide, trainer.locale) : null,
       title: ctx.registry.localized(chapter.title, trainer.locale),
       text: ctx.registry.localized(reached ? chapter.outro : chapter.intro, trainer.locale),
       reached,

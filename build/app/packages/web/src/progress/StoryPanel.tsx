@@ -27,7 +27,7 @@ export function StoryPanel() {
           <div className="guide__head">
             <span className="guide__avatar" aria-hidden="true">🧭</span>
             <div>
-              <span className="section__eyebrow">{t('story.guide')}</span>
+              <span className="section__eyebrow">{current.guide ?? t('story.guide')}</span>
               <h2>{current.title}</h2>
               <span className="num guide__chapter">
                 {t('story.chapter', { n: current.order, total: d?.total ?? 0 })}

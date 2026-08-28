@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { RaidTier } from '@game/engine'
 import type { AppContext } from '../context.js'
-import { rateLimit, requireTrainer } from './plugin.js'
+import { rateLimit, requireTrainer, withEnergy } from './plugin.js'
 import { findById } from '../repos/trainers.js'
 import * as guilds from '../services/guilds.js'
 import * as raids from '../services/raids.js'
@@ -58,7 +58,7 @@ export function registerCoopRoutes(app: FastifyInstance, ctx: AppContext): void 
 
   app.post('/api/raids/attack', heavy, async (req) => {
     const { raidId } = RaidIdSchema.parse(req.body)
-    return raids.attack(ctx, req.trainer!, raidId)
+    return withEnergy(ctx, req.trainer!.id, raids.attack(ctx, req.trainer!, raidId))
   })
 
   app.get('/api/pvp', auth, async (req) => pvp.findMatches(ctx, req.trainer!))
@@ -67,7 +67,7 @@ export function registerCoopRoutes(app: FastifyInstance, ctx: AppContext): void 
 
   app.post('/api/pvp/duel', heavy, async (req) => {
     const { opponentId } = OpponentSchema.parse(req.body)
-    return pvp.duel(ctx, req.trainer!, opponentId)
+    return withEnergy(ctx, req.trainer!.id, pvp.duel(ctx, req.trainer!, opponentId))
   })
 
   app.get('/api/tournament', auth, async (req) => tournament.overview(ctx, req.trainer!))

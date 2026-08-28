@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { ENERGY_COSTS } from '@game/engine'
 import type { AppContext } from '../context.js'
-import { rateLimit, requireTrainer } from './plugin.js'
+import { rateLimit, requireTrainer, withEnergy } from './plugin.js'
 import { findById, setLevelScaling } from '../repos/trainers.js'
 import * as worldService from '../services/world.js'
 import * as safari from '../services/safari.js'
@@ -58,7 +58,7 @@ export function registerWorldRoutes(app: FastifyInstance, ctx: AppContext): void
 
   app.post('/api/safari/explore', write, async (req) => {
     const { ballId, berryId } = SafariSelectionSchema.parse(req.body ?? {})
-    return safari.explore(ctx, req.trainer!, ballId, berryId)
+    return withEnergy(ctx, req.trainer!.id, safari.explore(ctx, req.trainer!, ballId, berryId))
   })
 
   app.post('/api/safari/berry', write, async (req) => {

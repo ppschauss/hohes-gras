@@ -15,12 +15,24 @@ export class ApiFailure extends Error {
   }
 }
 
-let token: string | null = sessionStorage.getItem(TOKEN_KEY)
+/**
+ * Wo der Token liegt, haengt davon ab, wie man hereingekommen ist.
+ *
+ * In Telegram reicht `sessionStorage`: die Mini-App holt sich beim naechsten
+ * Oeffnen ohnehin eine frische Sitzung aus dem `initData`. Im Browser gibt es
+ * diese Quelle nicht — laege der Token dort nur in der Sitzung, muesste man
+ * nach jedem Schliessen des Tabs einen neuen Code aus dem Chat holen.
+ * `localStorage` ist deshalb kein Bequemlichkeitsgewinn, sondern das, was die
+ * Anmeldung ueberhaupt brauchbar macht. Die Sitzung dahinter laeuft nach
+ * dreissig Tagen ab und ist jederzeit widerrufbar.
+ */
+let token: string | null = localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY)
 
-export const setToken = (value: string | null): void => {
+export const setToken = (value: string | null, persist = false): void => {
   token = value
-  if (value) sessionStorage.setItem(TOKEN_KEY, value)
-  else sessionStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(TOKEN_KEY)
+  if (value) (persist ? localStorage : sessionStorage).setItem(TOKEN_KEY, value)
 }
 
 export const hasToken = (): boolean => token !== null
@@ -173,6 +185,11 @@ export const api = {
     }),
 
   exportUrl: () => '/api/account/export',
+
+  redeemLink: (code: string) =>
+    request<{ token: string; expiresAt: number }>('/api/auth/link/redeem', {
+      method: 'POST', body: JSON.stringify({ code }),
+    }),
 
   sessions: () => request<{ sessions: SessionView[] }>('/api/sessions'),
   linkCode: () => request<{ code: string; expiresAt: number }>('/api/auth/link/code', { method: 'POST' }),
@@ -919,6 +936,8 @@ export interface AchievementsView {
 export interface ChapterView {
   id: string
   order: number
+  /** Wer durch das Kapitel führt — je Region ein anderer. */
+  guide: string | null
   title: string
   text: string
   reached: boolean

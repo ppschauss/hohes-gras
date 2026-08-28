@@ -351,6 +351,7 @@ export const HOENN_AREAS: AreaOut[] = [
 export const HOENN_CHAPTERS = [
   {
     id: 'ch-11-hoenn-arrival', order: 11,
+    guide: { de: 'Prof. Birk' },
     title: { de: 'Salz in der Luft' },
     intro: { de: 'Hoenn ist halb Wasser. Wer hier ankommt, merkt zuerst, dass sein Team für festen Boden gebaut ist.' },
     outro: { de: 'Du hast dich an eine Region gewöhnt, die sich nicht an dich gewöhnt.' },
@@ -359,6 +360,7 @@ export const HOENN_CHAPTERS = [
   },
   {
     id: 'ch-12-hoenn-league', order: 12,
+    guide: { de: 'Prof. Birk' },
     title: { de: 'Acht neue Orden' },
     intro: { de: 'Hoenns Arenen kämpfen mit dem Wetter im Rücken. Rechne damit, dass die Hälfte deiner Attacken heute anders wirkt.' },
     outro: { de: 'Drei Kronen. Es gibt Trainer, die kennen nicht einmal drei Regionen.' },

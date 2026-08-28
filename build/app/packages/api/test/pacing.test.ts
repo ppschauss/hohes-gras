@@ -193,3 +193,52 @@ describe('Taktkontrolle bei der Pflege', () => {
     expect((await h.post('/api/safari/explore', { ballId: 'poke-ball' }, token)).status).toBe(200)
   })
 })
+
+describe('Pflegestation', () => {
+  const build = (level: number) => {
+    for (let i = 0; i < level; i++) {
+      h.ctx.db.prepare(
+        `INSERT INTO buildings (trainer_id, building_id, level, built_at)
+         VALUES (?, 'care-station', ?, ?)
+         ON CONFLICT(trainer_id, building_id) DO UPDATE SET level = excluded.level`,
+      ).run(trainerId, i + 1, Date.now())
+    }
+  }
+
+  it('hebt das Fenster um fuenfzig je Stufe', async () => {
+    // Ohne Ausbau ist bei hundert Schluss.
+    // Unregelmaessige Abstaende: gleichmaessige waeren ein Skript, und dann
+    // pruefte der Test die Rhythmusschranke statt der Mengenschranke.
+    seedPulse('care', Array.from({ length: CARE_WINDOW_LIMIT }, (_, i) => 1_500 + (i % 13) * 140))
+    h.resetRateLimits()
+    const blocked = await care()
+    expect(blocked.status).toBe(429)
+    expect(blocked.body.detail.reason).toBe('window')
+    expect(blocked.body.detail.limit).toBe(CARE_WINDOW_LIMIT)
+
+    build(2)
+    h.resetRateLimits()
+    const after = await care()
+    expect(after.status).toBe(200)
+  })
+
+  it('meldet die neue Grenze auch in der Ablehnung', async () => {
+    build(1)
+    seedPulse('care', Array.from({ length: CARE_WINDOW_LIMIT + 50 }, (_, i) => 1_500 + (i % 11) * 90))
+    h.resetRateLimits()
+    const r = await care()
+    expect(r.status).toBe(429)
+    expect(r.body.detail.limit).toBe(CARE_WINDOW_LIMIT + 50)
+  })
+
+  it('kauft keinen Freibrief fuer Automatik', async () => {
+    // Die Station hebt die Menge, nicht den Takt: eine maschinelle Folge faellt
+    // weiter auf.
+    build(5)
+    seedPulse('care', Array(14).fill(400))
+    h.resetRateLimits()
+    const r = await care()
+    expect(r.status).toBe(429)
+    expect(r.body.detail.reason).toBe('rhythm')
+  })
+})

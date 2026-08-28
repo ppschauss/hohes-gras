@@ -213,6 +213,10 @@ export const ChapterConditionSchema = z.object({
 export const ChapterDefSchema = z.object({
   id: Id,
   order: z.number().int().min(1),
+  /** Wer durch dieses Kapitel führt. Leer heißt: der Name aus der Oberfläche.
+   *  Gehört ins Pack, weil er zur Region gehört — Kanto hat einen anderen
+   *  Professor als Hoenn. */
+  guide: LocalizedText.optional(),
   title: LocalizedText,
   intro: LocalizedText,
   outro: LocalizedText,

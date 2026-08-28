@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import type { AppContext } from '../context.js'
-import { rateLimit, requireTrainer } from './plugin.js'
+import { rateLimit, requireTrainer, withEnergy } from './plugin.js'
 import { findById } from '../repos/trainers.js'
 import * as battle from '../services/battle.js'
 import { requireCurrentArea } from '../services/world.js'
@@ -29,7 +29,7 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: AppContext): voi
 
   app.post('/api/battle/start', write, async (req) => {
     const { opponentId } = StartSchema.parse(req.body)
-    return battle.start(ctx, req.trainer!, opponentId)
+    return withEnergy(ctx, req.trainer!.id, battle.start(ctx, req.trainer!, opponentId))
   })
 
   app.post('/api/battle/action', write, async (req) => {

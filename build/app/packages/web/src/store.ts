@@ -35,7 +35,7 @@ export function screenFromLocation(): Screen {
 
 export type AuthPhase =
   | { status: 'booting' }
-  | { status: 'outside_telegram' }
+  | { status: 'needs_link'; message: string | null }
   | { status: 'needs_invite'; message: string | null }
   | { status: 'ready' }
   | { status: 'failed'; code: string; detail: Record<string, unknown> }
@@ -50,6 +50,8 @@ interface GameState {
   submitInvite: (code: string) => Promise<void>
   refresh: () => Promise<void>
   setScreen: (screen: Screen) => void
+  submitLinkCode: (code: string) => Promise<void>
+  signOut: () => void
   syncScreenFromLocation: () => void
 }
 
@@ -63,8 +65,20 @@ export const useGame = create<GameState>((set, get) => ({
   submitting: false,
 
   async start() {
+    // Im Browser gibt es kein initData. Ein gespeicherter Token aus einem
+    // frueheren Besuch zaehlt trotzdem — sonst waere jeder Aufruf eine neue
+    // Anmeldung.
     if (!isAvailable()) {
-      set({ auth: { status: 'outside_telegram' } })
+      if (hasToken()) {
+        try {
+          const boot = await api.state()
+          applyTrainer(set, boot)
+          return
+        } catch {
+          setToken(null)
+        }
+      }
+      set({ auth: { status: 'needs_link', message: null } })
       return
     }
     // A session from a previous open is still good; skip the round trip.
@@ -109,6 +123,28 @@ export const useGame = create<GameState>((set, get) => ({
       window.history.replaceState(null, '', hash || window.location.pathname)
     }
     set({ screen })
+  },
+
+  async submitLinkCode(code) {
+    set({ submitting: true })
+    try {
+      const res = await api.redeemLink(code)
+      // Im Browser dauerhaft ablegen: es gibt keine zweite Quelle, aus der
+      // sich die Anmeldung nachholen liesse.
+      setToken(res.token, true)
+      const boot = await api.state()
+      applyTrainer(set, boot)
+    } catch (err) {
+      const code = err instanceof ApiFailure ? err.code : 'network'
+      set({ auth: { status: 'needs_link', message: code } })
+    } finally {
+      set({ submitting: false })
+    }
+  },
+
+  signOut() {
+    setToken(null)
+    set({ auth: { status: 'needs_link', message: null }, boot: null })
   },
 
   syncScreenFromLocation: () => set({ screen: screenFromLocation() }),

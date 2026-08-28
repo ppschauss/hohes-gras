@@ -36,6 +36,11 @@ Kaufbar: 10 Energie für 100 Gold, größere Pakete bis 8 Gold je Punkt.
 | Pflegeaktionen je 15 Minuten | 100 |
 | Mindestabstand zwischen Klicks | 180 ms |
 | Rhythmus: Standardabweichung der letzten 12 Abstände | < 15 ms → 30 s Pause |
+| Pflegestation (Ausbau) | +50 Aktionen je Stufe, bis 350 auf Stufe 5 |
+
+Die Pflegestation hebt **nur die Menge**. Mindestabstand und Rhythmusprüfung
+bleiben unangetastet — sonst wäre der Ausbau ein käuflicher Freibrief für
+Automatik statt Luft für jemanden, der viel von Hand spielt.
 
 Der dritte Punkt ist der eigentliche Schutz. Gemessen wird nicht
 Geschwindigkeit, sondern **Gleichmäßigkeit**: ein Skript klickt metronomisch,

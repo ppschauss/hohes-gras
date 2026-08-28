@@ -69,32 +69,56 @@ export interface AchievementSpec {
   chain?: string
 }
 
+/**
+ * Die Ketten reichen über alle Regionen.
+ *
+ * Vorher endeten sie an Kanto: 151 Arten, 8 Orden, Level 100 — Zahlen, die mit
+ * drei Regionen (386 Arten, 26 Orden, Reisegrenze bis 500) zu früh aufhörten.
+ * Eine Kette, deren letztes Glied man auf halber Strecke erreicht, hört auf,
+ * ein Ziel zu sein.
+ *
+ * Die Ordensstufen sind bewusst 9 / 17 / 26: das ist je eine vollständig
+ * bezwungene Region, Krone eingerechnet.
+ */
 export const ACHIEVEMENTS: AchievementSpec[] = [
   { id: 'catch-10', metric: 'catches', target: 10, reward: { gold: 200 }, chain: 'catches' },
   { id: 'catch-50', metric: 'catches', target: 50, reward: { gold: 600 }, chain: 'catches' },
   { id: 'catch-200', metric: 'catches', target: 200, reward: { gold: 2000 }, chain: 'catches' },
+  { id: 'catch-500', metric: 'catches', target: 500, reward: { gold: 6000 }, chain: 'catches' },
+  { id: 'catch-1000', metric: 'catches', target: 1000, reward: { gold: 15000 }, chain: 'catches' },
 
   { id: 'dex-25', metric: 'dexCaught', target: 25, reward: { gold: 500 }, chain: 'dex' },
   { id: 'dex-75', metric: 'dexCaught', target: 75, reward: { gold: 1500 }, chain: 'dex' },
   { id: 'dex-151', metric: 'dexCaught', target: 151, reward: { gold: 6000 }, chain: 'dex' },
+  { id: 'dex-251', metric: 'dexCaught', target: 251, reward: { gold: 14000 }, chain: 'dex' },
+  { id: 'dex-386', metric: 'dexCaught', target: 386, reward: { gold: 40000 }, chain: 'dex' },
 
   { id: 'badges-1', metric: 'badges', target: 1, reward: { gold: 300 }, chain: 'badges' },
   { id: 'badges-4', metric: 'badges', target: 4, reward: { gold: 1200 }, chain: 'badges' },
-  { id: 'badges-8', metric: 'badges', target: 8, reward: { gold: 5000 }, chain: 'badges' },
+  { id: 'badges-9', metric: 'badges', target: 9, reward: { gold: 5000 }, chain: 'badges' },
+  { id: 'badges-17', metric: 'badges', target: 17, reward: { gold: 15000 }, chain: 'badges' },
+  { id: 'badges-26', metric: 'badges', target: 26, reward: { gold: 45000 }, chain: 'badges' },
 
   { id: 'level-25', metric: 'highestLevel', target: 25, reward: { gold: 400 }, chain: 'level' },
   { id: 'level-50', metric: 'highestLevel', target: 50, reward: { gold: 1200 }, chain: 'level' },
   { id: 'level-100', metric: 'highestLevel', target: 100, reward: { gold: 8000 }, chain: 'level' },
+  { id: 'level-150', metric: 'highestLevel', target: 150, reward: { gold: 20000 }, chain: 'level' },
+  { id: 'level-200', metric: 'highestLevel', target: 200, reward: { gold: 50000 }, chain: 'level' },
 
   { id: 'shiny-1', metric: 'shinies', target: 1, reward: { gold: 1000 }, chain: 'shiny' },
   { id: 'shiny-5', metric: 'shinies', target: 5, reward: { gold: 4000 }, chain: 'shiny' },
+  { id: 'shiny-15', metric: 'shinies', target: 15, reward: { gold: 15000 }, chain: 'shiny' },
 
   { id: 'evolutions-5', metric: 'evolutions', target: 5, reward: { gold: 300 }, chain: 'evolution' },
   { id: 'evolutions-25', metric: 'evolutions', target: 25, reward: { gold: 1500 }, chain: 'evolution' },
+  { id: 'evolutions-75', metric: 'evolutions', target: 75, reward: { gold: 6000 }, chain: 'evolution' },
 
   { id: 'raids-3', metric: 'raidsWon', target: 3, reward: { gold: 800 }, chain: 'raids' },
+  { id: 'raids-15', metric: 'raidsWon', target: 15, reward: { gold: 5000 }, chain: 'raids' },
   { id: 'duels-10', metric: 'duelsWon', target: 10, reward: { gold: 900 }, chain: 'duels' },
+  { id: 'duels-50', metric: 'duelsWon', target: 50, reward: { gold: 6000 }, chain: 'duels' },
   { id: 'eggs-10', metric: 'eggsHatched', target: 10, reward: { gold: 700 }, chain: 'eggs' },
+  { id: 'eggs-50', metric: 'eggsHatched', target: 50, reward: { gold: 5000 }, chain: 'eggs' },
   { id: 'friends-3', metric: 'friends', target: 3, reward: { gold: 400 }, chain: 'social' },
 ]
 

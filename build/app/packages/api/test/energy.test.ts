@@ -177,3 +177,35 @@ describe('Energie mit Ausbau-Bonus', () => {
     expect(Number.isInteger(stored.at)).toBe(true)
   })
 })
+
+describe('Energieanzeige nach dem Verbrauch', () => {
+  /**
+   * Der Client aktualisiert die Kopfzeile aus jedem Feld `energy` in einer
+   * Antwort. Ausgerechnet den Endpunkten, die Energie *verbrauchen*, fehlte
+   * es — der Balken stand still, bis ein Neuladen den Stand holte.
+   */
+  it('schickt den neuen Stand in derselben Antwort mit', async () => {
+    const before = (await h.get('/api/energy', token)).body.state.current
+
+    h.resetRateLimits()
+    const care = await h.post('/api/garden/care', { action: 'rest' }, token)
+    expect(care.status).toBe(200)
+    expect(care.body.energy).toBeTruthy()
+    expect(care.body.energy.current).toBeLessThan(before)
+
+    // Und der mitgeschickte Stand stimmt mit dem ueberein, den ein eigener
+    // Abruf liefert — sonst zeigte die Kopfzeile eine zweite Wahrheit.
+    h.resetRateLimits()
+    expect((await h.get('/api/energy', token)).body.state.current).toBe(care.body.energy.current)
+  })
+
+  it('gilt auch fuers Erkunden', async () => {
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('test-route', trainerId)
+    h.resetRateLimits()
+    const before = (await h.get('/api/energy', token)).body.state.current
+    h.resetRateLimits(); h.resetPacing()
+    const r = await h.post('/api/safari/explore', { ballId: 'poke-ball' }, token)
+    expect(r.status).toBe(200)
+    expect(r.body.energy.current).toBeLessThan(before)
+  })
+})
