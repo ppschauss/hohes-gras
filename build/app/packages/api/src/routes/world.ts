@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { ENERGY_COSTS } from '@game/engine'
+import { ENERGY_COSTS, MAX_PARTY, MIN_PARTY } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { rateLimit, requireTrainer, withEnergy } from './plugin.js'
 import { findById, setLevelScaling } from '../repos/trainers.js'
@@ -24,7 +24,11 @@ const SoftenSchema = SafariSelectionSchema.extend({ action: z.enum(['weaken', 'c
 const StartExpeditionSchema = z.object({
   kind: z.string(),
   duration: z.string(),
-  creatureIds: z.array(z.string().uuid()).min(1).max(3),
+  /* Die Grenze steht in der Engine (MIN_PARTY/MAX_PARTY) und nirgends sonst.
+     Hier stand einmal eine 3, waehrend Engine und Oberflaeche sechs erlaubten:
+     wer sechs auswaehlte, bekam "Diese Eingabe passt nicht" — eine Absage, die
+     nicht einmal sagt, welche Eingabe. */
+  creatureIds: z.array(z.string().uuid()).min(MIN_PARTY).max(MAX_PARTY),
 })
 const IdSchema = z.object({ id: z.string() })
 const PairSchema = z.object({ creatureIdA: z.string().uuid(), creatureIdB: z.string().uuid() })

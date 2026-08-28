@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { MAX_PARTY } from '@game/engine'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -181,5 +182,45 @@ describe('Vorziehen', () => {
     const again = await h.post('/api/expeditions/rush', { id }, token)
     expect(again.status).toBe(409)
     expect(again.body.detail.reason).toBe('already_ready')
+  })
+})
+
+describe('Truppgröße', () => {
+  /*
+   * Weitere Pokemon in der Box anlegen.
+   *
+   * Bewusst nicht im Team: das fasst fuenf, eine Expedition nimmt sechs. Wer
+   * sechs losschickt, schickt also mindestens eines aus der Kiste — genau der
+   * Fall, der gemeldet wurde.
+   */
+  const addMember = () => {
+    const trainerId = (h.ctx.db.prepare('SELECT id FROM trainers LIMIT 1').get() as { id: string }).id
+    const id = crypto.randomUUID()
+    h.ctx.db.prepare(
+      `INSERT INTO creatures (id, owner_id, species_id, xp, level, nature,
+         iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, friendship, energy, hp_current,
+         shiny, moves, caught_at, team_slot)
+       VALUES (?, ?, 'wildmon', 0, 5, 'hardy', 20,20,20,20,20,20, 70, 100, 20, 0, '["tackle"]', ?, NULL)`,
+    ).run(id, trainerId, Date.now())
+    return id
+  }
+
+  it('nimmt so viele Pokemon an, wie die Oberflaeche verspricht', async () => {
+    // Gemeldet: "Wähle 1 bis 6 Pokémon" und dann "Diese Eingabe passt nicht".
+    // Die Route klemmte bei drei, Engine und Oberflaeche erlaubten sechs.
+    const ids = [await teamId()]
+    for (let i = 1; i < MAX_PARTY; i++) ids.push(addMember())
+    h.resetRateLimits()
+    const r = await h.post('/api/expeditions', { kind: 'forage', duration: 'short', creatureIds: ids }, token)
+    expect(r.status).toBe(200)
+    expect(r.body.expedition.members).toHaveLength(MAX_PARTY)
+  })
+
+  it('weist mehr als die Hoechstzahl ab', async () => {
+    const ids = [await teamId()]
+    for (let i = 1; i <= MAX_PARTY; i++) ids.push(addMember())
+    h.resetRateLimits()
+    expect((await h.post('/api/expeditions', { kind: 'forage', duration: 'short', creatureIds: ids }, token)).status)
+      .toBe(400)
   })
 })
