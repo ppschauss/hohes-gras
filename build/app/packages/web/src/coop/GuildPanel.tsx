@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { t } from '../i18n'
+import { errorText } from '../lib/errors'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -44,7 +45,7 @@ export function GuildPanel() {
   if (!d?.guild) {
     return (
       <>
-        {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+        {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
         <CenterState glyph="🛡️" title={t('guild.none.title')} body={t('guild.none.body')} />
 
         <section className="section">
@@ -90,7 +91,7 @@ export function GuildPanel() {
 
   return (
     <>
-      {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+      {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
       {claimed !== null && <p className="notice notice--ok">{t('guild.goal.reward', { n: claimed })}</p>}
 
       <section className="guildHeader">

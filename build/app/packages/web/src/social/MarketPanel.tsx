@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { MarketListingView } from '../lib/api'
 import { t } from '../i18n'
+import { errorText } from '../lib/errors'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -45,7 +46,7 @@ export function MarketPanel() {
         <span className="section__eyebrow">{t('market.fee', { n: d?.feePercent ?? 0 })}</span>
       </div>
 
-      {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+      {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
       {bought !== null && <p className="notice notice--ok">{t('market.bought', { n: bought })}</p>}
 
       <section className="section">

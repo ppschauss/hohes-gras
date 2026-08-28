@@ -29,6 +29,18 @@ soll früh spürbar sein und sich später *wegspielen* lassen.
 
 Kaufbar: 10 Energie für 100 Gold, größere Pakete bis 8 Gold je Punkt.
 
+## Vergessene Kämpfe
+
+Ein Kampf ist rundenbasiert und wartet geduldig — aber nach **zwei Stunden**
+ohne Zug gilt er als verlassen und schließt sich ohne Sieger.
+
+Der Grund ist gemessen, nicht theoretisch: wer die App mitten im Kampf
+schließt, hatte vorher für immer einen laufenden Kampf, und *alles*, was
+„läuft gerade ein Kampf?" prüft, sagte nein — Heilen im Poké-Center, der
+nächste Überfall, der nächste Arenaleiter. Ein Kampf von 13:06 Uhr blockierte
+so um 19:30 Uhr noch das Heilen, und die Meldung dazu lautete „Das geht gerade
+nicht".
+
 ## Taktkontrolle
 
 | | Wert |

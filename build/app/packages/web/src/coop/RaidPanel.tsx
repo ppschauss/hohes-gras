@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { RaidAttackResponse, RaidView } from '../lib/api'
 import { t } from '../i18n'
+import { errorText } from '../lib/errors'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -34,7 +35,7 @@ export function RaidPanel() {
 
   return (
     <>
-      {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+      {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
       {last && (
         <section className={`harvest${last.defeated ? '' : ''}`}>

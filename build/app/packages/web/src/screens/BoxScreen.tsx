@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { t } from '../i18n'
+import { errorText } from '../lib/errors'
 import { api, type CreatureLike } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -50,7 +51,7 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
       aside={<span className="num">{t('garden.inGarden', { n: team.length, max: capacity })}</span>}
     >
       <main className="content">
-        {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+        {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
         <section className="section">
           <h2>{t('box.inTeam')}</h2>

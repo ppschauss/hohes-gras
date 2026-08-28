@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { FriendBrief } from '../lib/api'
 import { t } from '../i18n'
+import { errorText } from '../lib/errors'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -73,7 +74,7 @@ export function FriendsPanel() {
       </div>
 
       {status && <p className="notice notice--ok">{t(status)}</p>}
-      {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+      {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
       {d && d.incoming.length > 0 && (
         <section className="section">

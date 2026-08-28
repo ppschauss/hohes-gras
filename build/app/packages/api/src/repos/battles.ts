@@ -32,11 +32,45 @@ const toRecord = (r: Row): BattleRecord => ({
   winner: r.winner, rewarded: r.rewarded === 1,
 })
 
-export function activeOf(db: Db, trainerId: string): BattleRecord | null {
+/**
+ * Wie lange ein unberührter Kampf offen bleibt.
+ *
+ * Ein Kampf ist rundenbasiert und wartet geduldig — aber nicht ewig. Wer die
+ * App mitten im Kampf schließt, hat sonst für immer einen laufenden Kampf, und
+ * *alles*, was "läuft gerade ein Kampf?" prüft, sagt nein: Heilen im Center,
+ * der nächste Überfall, der nächste Arenaleiter. Genau das ist passiert — ein
+ * Kampf von 13:06 blockierte sechs Stunden später noch das Heilen.
+ *
+ * Zwei Stunden sind großzügig genug für eine Pause und kurz genug, dass ein
+ * vergessener Kampf niemanden aussperrt.
+ */
+export const BATTLE_ABANDON_MS = 2 * 60 * 60 * 1000
+
+export function activeOf(db: Db, trainerId: string, now = Date.now()): BattleRecord | null {
   const row = db
     .prepare('SELECT * FROM battles WHERE trainer_id = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1')
     .get(trainerId) as Row | undefined
-  return row ? toRecord(row) : null
+  if (!row) return null
+  if (now - row.started_at > BATTLE_ABANDON_MS) {
+    // Aufgeben ohne Strafe: wer nicht zurückkommt, hat auch nicht verloren.
+    abandon(db, row.id, now)
+    return null
+  }
+  return toRecord(row)
+}
+
+/** Einen offenen Kampf schließen, ohne Sieger und ohne Belohnung. */
+export function abandon(db: Db, battleId: string, now = Date.now()): void {
+  // winner bleibt NULL: der Kampf ist beendet, aber niemand hat gewonnen.
+  db.prepare('UPDATE battles SET finished_at = ? WHERE id = ? AND finished_at IS NULL')
+    .run(now, battleId)
+}
+
+/** Alle vergessenen Kämpfe schließen; stündlich vom Scheduler. */
+export function abandonStale(db: Db, now = Date.now()): number {
+  return db.prepare(
+    'UPDATE battles SET finished_at = ? WHERE finished_at IS NULL AND started_at < ?',
+  ).run(now, now - BATTLE_ABANDON_MS).changes
 }
 
 export function byId(db: Db, id: string): BattleRecord | null {

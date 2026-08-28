@@ -257,3 +257,33 @@ describe('Team heilen', () => {
     expect(r.body.detail.reason).toBe('battle_in_progress')
   })
 })
+
+describe('Vergessene Kämpfe', () => {
+  it('sperrt nach zwei Stunden nicht mehr alles andere aus', async () => {
+    // Der gemeldete Fall: ein Kampf von 13:06 blockierte um 19:30 noch das
+    // Heilen im Center — und die Meldung dazu war "Das geht gerade nicht".
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('test-route', trainerId)
+    h.resetRateLimits()
+    expect((await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)).status).toBe(200)
+
+    // Solange er frisch ist, blockiert er — das ist so gewollt.
+    h.resetRateLimits()
+    const blocked = await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+    expect(blocked.status).toBe(409)
+    expect(blocked.body.detail.reason).toBe('battle_in_progress')
+
+    // Zwei Stunden zurueckdatieren: der Kampf gilt als verlassen.
+    h.ctx.db.prepare('UPDATE battles SET started_at = ? WHERE trainer_id = ?')
+      .run(Date.now() - 3 * 60 * 60 * 1000, trainerId)
+
+    h.resetRateLimits()
+    expect((await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)).status).toBe(200)
+
+    // Und der alte Kampf ist geschlossen, ohne Sieger.
+    const old = h.ctx.db
+      .prepare('SELECT winner, finished_at AS finishedAt FROM battles WHERE trainer_id = ? ORDER BY started_at LIMIT 1')
+      .get(trainerId) as { winner: number | null; finishedAt: number | null }
+    expect(old.finishedAt).toBeTruthy()
+    expect(old.winner).toBeNull()
+  })
+})

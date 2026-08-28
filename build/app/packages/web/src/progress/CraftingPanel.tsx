@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { t } from '../i18n'
+import { errorText } from '../lib/errors'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -22,7 +23,7 @@ export function CraftingPanel() {
 
   return (
     <>
-      {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+      {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
       {made && <p className="notice notice--ok">{made}</p>}
       <p className="num">🪙 {number(crafting.data?.gold ?? 0)}</p>
 

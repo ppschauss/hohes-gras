@@ -1,5 +1,6 @@
 import type { MoveOption } from '@game/shared'
 import { t } from '../i18n'
+import { errorText } from '../lib/errors'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -48,7 +49,7 @@ export function MovesPanel({ creatureId }: { creatureId: string }) {
 
   return (
     <section className="moves">
-      {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+      {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
       <ol className="moves__slots" aria-label={t('moves.slots')}>
         {Array.from({ length: d.capacity }, (_, i) => {

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { BattleFighterView, BattleMoveView, BattleView, OpponentEntry } from '../lib/api'
 import { t } from '../i18n'
+import { errorText } from '../lib/errors'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -49,7 +50,7 @@ export function BattleScreen({ onBack }: { onBack: () => void }) {
     return (
       <Screen eyebrow={opponents.data?.areaName ?? ''} title={t('area.trainers')} onBack={onBack}>
         <main className="content">
-          {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+          {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
           {opponents.data?.gym && (
             <section className="section">
               <h2>{t('area.gym')}</h2>
@@ -91,7 +92,7 @@ export function BattleScreen({ onBack }: { onBack: () => void }) {
           <div ref={logEnd} />
         </div>
 
-        {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+        {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
         {battle.finished
           ? <Result battle={battle} onLeave={leave} />

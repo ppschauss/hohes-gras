@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { t } from '../i18n'
+import { errorText } from '../lib/errors'
 import { api, type CreatureLike } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -51,7 +52,7 @@ export function EggScreen({ onBack }: { onBack: () => void }) {
       aside={data && <span className="num">{t('egg.slots', { open: data.eggs.length, max: data.maxEggs })}</span>}
     >
       <main className="content">
-        {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+        {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
         {hatched && (
           <section className="stage stage--win">

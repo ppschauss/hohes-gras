@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ShopItem } from '@game/shared'
 import { t } from '../i18n'
+import { errorText } from '../lib/errors'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -38,7 +39,7 @@ export function ShopScreen({ onBack, activeBackground, onBackgroundChanged }: Pr
       onBack={onBack}
     >
       <main className="content">
-        {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+        {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
         <div className="segmented" role="group" aria-label={t('shop.quantity')}>
           {QUANTITIES.map((q) => (

@@ -1,4 +1,5 @@
 import { t } from '../i18n'
+import { errorText } from '../lib/errors'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -37,7 +38,7 @@ export function EnergyScreen({ onBack }: { onBack: () => void }) {
       onBack={onBack}
     >
       <main className="content">
-        {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+        {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
         {d && (
           <section className="energyHero">

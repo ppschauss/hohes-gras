@@ -1,4 +1,5 @@
 import { t } from '../i18n'
+import { errorText } from '../lib/errors'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -37,7 +38,7 @@ export function AreaScreen({ onBack, onSafari, onBattle }: Props) {
       aside={data && <span className="num">{defeated}/{data.trainers.length} · {t('area.trainers')}</span>}
     >
       <main className="content">
-        {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+        {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
         {teamFainted && <p className="notice" role="alert">{t('battle.teamFainted')}</p>}
 
         <nav className="menu">

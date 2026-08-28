@@ -8,6 +8,7 @@ import { resolve as resolveTournament, currentWeek } from '../services/tournamen
 import { dueReminders, recordSent } from '../services/reminders.js'
 import { purgeOldCounters } from '../repos/counters.js'
 import { purgeStalePulses } from '../repos/pulse.js'
+import { abandonStale } from '../repos/battles.js'
 
 export interface Job {
   name: string
@@ -66,6 +67,14 @@ export const JOBS: Job[] = [
       }
       if (due.length) console.log(`[job] ${due.length} Erinnerungen verschickt`)
     },
+  },
+  {
+    // Vergessene Kaempfe schliessen. Ohne das blockiert ein Kampf, den jemand
+    // durch Schliessen der App verlassen hat, auf Dauer Heilen, Ueberfaelle
+    // und jeden weiteren Kampf.
+    name: 'abandon-stale-battles',
+    everyMs: 3_600_000,
+    run: (ctx) => { abandonStale(ctx.db) },
   },
   {
     name: 'purge-pulses',

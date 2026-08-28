@@ -13,8 +13,15 @@ export function errorText(code: string | null, detail: Record<string, unknown> =
     Object.entries(detail).filter(([, v]) => typeof v === 'string' || typeof v === 'number'),
   ) as Record<string, string | number>
 
-  if (code === 'rate_limited' && typeof detail.reason === 'string') {
-    const specific = `error.rate_limited.${detail.reason}`
+  /*
+   * Ein Grund im Detail schlaegt die allgemeine Meldung.
+   *
+   * "Das geht gerade nicht" ist keine Auskunft. Ein Mitspieler stand vor
+   * genau diesem Satz, als ein vergessener Kampf das Heilen und den Ueberfall
+   * blockierte — und konnte daraus nicht ableiten, was zu tun ist.
+   */
+  if ((code === 'rate_limited' || code === 'invalid_state') && typeof detail.reason === 'string') {
+    const specific = `error.${code}.${detail.reason}`
     const text = t(specific, vars)
     // t() gibt bei fehlendem Schluessel den Schluessel zurueck — dann greift
     // die allgemeine Meldung.
