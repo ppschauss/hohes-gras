@@ -69,7 +69,12 @@ export const SetTeamRequestSchema = z.object({
 })
 export type SetTeamRequest = z.infer<typeof SetTeamRequestSchema>
 
-export const ChooseStarterRequestSchema = z.object({ speciesId: z.string() })
+export const ChooseStarterRequestSchema = z.object({
+  speciesId: z.string(),
+  /** Startregion. Fehlt sie, gilt die erste freie — so bleiben alte Clients
+   *  funktionsfaehig. */
+  regionId: z.string().optional(),
+})
 export type ChooseStarterRequest = z.infer<typeof ChooseStarterRequestSchema>
 
 export const StarterOptionSchema = z.object({
@@ -81,6 +86,17 @@ export const StarterOptionSchema = z.object({
   baseStats: z.object({ hp: z.number(), atk: z.number(), def: z.number(), spa: z.number(), spd: z.number(), spe: z.number() }),
 })
 export type StarterOption = z.infer<typeof StarterOptionSchema>
+
+/** Eine waehlbare Startregion: ein Gebiet ohne jede Vorbedingung. */
+export const StartRegionSchema = z.object({
+  regionId: z.string(),
+  name: z.string(),
+  tagline: z.string(),
+  areaId: z.string(),
+  areaName: z.string(),
+  areaCount: z.number().int(),
+})
+export type StartRegion = z.infer<typeof StartRegionSchema>
 
 export const DexRowSchema = z.object({
   speciesId: z.string(),

@@ -15,6 +15,7 @@ import { ENERGY_COSTS } from '@game/engine'
 import { battleContent } from './battle.js'
 import { contributeToGoal } from './guilds.js'
 import { awardSeasonPoints, bumpMetric } from './progression.js'
+import { capOf, duelCap } from './travel.js'
 import * as energy from './energy.js'
 
 /** Duelle sind unbegrenzt; der Zaehler bleibt als Statistik im UI. */
@@ -45,6 +46,7 @@ export function findMatches(ctx: AppContext, trainer: Trainer) {
     wins: rating.wins,
     losses: rating.losses,
     streak: rating.streak,
+    levelCap: capOf(ctx, trainer),
     duelsToday: pvp.duelsToday(ctx.db, trainer.id, sinceMidnight),
     duelsPerDay: DUELS_PER_DAY,
     energy: energy.state(ctx, trainer.id),
@@ -89,6 +91,16 @@ export function duel(ctx: AppContext, trainer: Trainer, opponentId: string): Due
     // Kein Tageslimit mehr: Duelle kosten Energie, und die begrenzt sich selbst.
     energy.spendFor(ctx, trainer.id, 'duel')
 
+    /*
+     * Beide Teams auf dieselbe Reisegrenze bringen.
+     *
+     * Ohne das gewinnt, wer mehr Regionen abgehakt hat: ein Trainer mit
+     * Grenze 250 gegen einen mit 100 ist kein Duell, sondern eine Vorfuehrung.
+     * Ein Duell soll ueber die Aufstellung entscheiden, nicht ueber
+     * Reisekilometer — also gilt die niedrigere der beiden Grenzen.
+     */
+    const cap = duelCap(ctx, trainer, opponent)
+
     const ppOf = (id: string) => ctx.registry.tryMove(id)?.pp ?? 10
     const build = (list: typeof myTeam, locale: string) =>
       list.map((c) => {
@@ -96,7 +108,7 @@ export function duel(ctx: AppContext, trainer: Trainer, opponentId: string): Due
         // Snapshots always start at full health: a duel must not be decided by
         // whether the defender happened to be hurt when they logged off.
         return toFighter(
-          { ...c, hpCurrent: Number.MAX_SAFE_INTEGER },
+          { ...c, level: Math.min(c.level, cap), hpCurrent: Number.MAX_SAFE_INTEGER },
           species,
           ctx.registry.localized(species.name, locale),
           ppOf,

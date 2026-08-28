@@ -23,6 +23,7 @@ import { awardSeasonPoints, bumpMetric } from './progression.js'
 import * as energy from './energy.js'
 import { referenceOf, scaledLevel, trainerOffset } from './scaling.js'
 import { gateFor } from './league.js'
+import { capOf } from './travel.js'
 import { contributeToGoal } from './guilds.js'
 
 /** How well an opponent plays, by kind. Route trainers are beatable by
@@ -459,6 +460,7 @@ function applyOutcome(
 
   const levelUps: BattleReward['levelUps'] = []
   const participants = record.state.sides[0]!.party
+  const cap = capOf(ctx, trainer)
   let xpPerMember = 0
 
   for (const fighter of participants) {
@@ -467,7 +469,7 @@ function applyOutcome(
     const species = ctx.registry.species(stored.speciesId)
     const amount = battleXpYield(baseYield, foeLevel, stored.level) * (firstWin ? 1 : 0.5)
     xpPerMember = Math.round(amount)
-    const gained = grantXpTo(species.growthRate, stored.xp, stored.level, amount)
+    const gained = grantXpTo(species.growthRate, stored.xp, stored.level, amount, cap)
     ctx.db.prepare('UPDATE creatures SET xp = ?, level = ? WHERE id = ?')
       .run(gained.totalXp, gained.levelAfter, stored.id)
 

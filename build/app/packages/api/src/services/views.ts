@@ -17,10 +17,13 @@ export function creatureView(
   c: OwnedCreature,
   locale: string,
   timeOfDay: TimeOfDay,
+  /** Reisegrenze des Besitzers. Ohne sie zeigte der Balken einen naechsten
+   *  Levelaufstieg an, den es fuer diesen Trainer noch gar nicht gibt. */
+  levelCap?: number,
 ): CreatureView {
   const species = registry.species(c.speciesId)
   const stats = computeStats(species, c.level, c.ivs, c.evs, c.nature)
-  const progress = levelProgress(species.growthRate, c.xp)
+  const progress = levelProgress(species.growthRate, c.xp, levelCap)
   const speciesName = registry.localized(species.name, locale)
 
   // Gespeicherte KP koennen ueber dem Maximum liegen — etwa wenn ein Pokemon

@@ -1,11 +1,12 @@
 import type { Trainer } from '@game/shared'
 import type { AreaDef } from '@game/content'
 import {
-  areaBand, bandOffset, referenceLevel, shiftBand, shiftLevel,
+  areaBand, referenceLevel, regionOffset, shiftBand, shiftLevel,
   type LevelBand,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
 import * as creatures from '../repos/creatures.js'
+import { capOf } from './travel.js'
 
 /**
  * Wie stark ein Gebiet gerade ist.
@@ -18,11 +19,26 @@ export function referenceOf(ctx: AppContext, trainer: Trainer): number {
   return referenceLevel(creatures.teamOf(ctx.db, trainer.id).map((c) => c.level))
 }
 
-/** Levelversatz eines Gebiets. 0 = unverändert. */
+/**
+ * Levelversatz eines Gebiets — bestimmt am Eingang seiner Region.
+ *
+ * Nicht am Gebiet selbst: sonst wäre jede Region nur über ihren eigenen
+ * Einstieg betretbar und die freie Startwahl eine Lüge. So wandert die ganze
+ * Region auf das Niveau dessen, der sie betritt, und behält dabei ihre innere
+ * Steigung.
+ */
 export function areaOffset(ctx: AppContext, trainer: Trainer, area: AreaDef, reference?: number): number {
   if (!trainer.levelScaling) return 0
   const ref = reference ?? referenceOf(ctx, trainer)
-  return bandOffset(areaBand(area), ref)
+  return regionOffset(anchorOf(ctx, area.regionId), ref, capOf(ctx, trainer))
+}
+
+/** Das Levelband des ersten Gebiets einer Region. */
+export function anchorOf(ctx: AppContext, regionId: string): LevelBand {
+  const first = ctx.registry.allAreas
+    .filter((a) => a.regionId === regionId)
+    .sort((a, b) => a.order - b.order)[0]
+  return first ? areaBand(first) : { min: 1, max: 1 }
 }
 
 /**

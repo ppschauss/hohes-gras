@@ -33,6 +33,32 @@ export function WorldMapScreen({ onBack, onEnterArea }: Props) {
         {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
 
         {world.data && (
+          <section className="travelCap">
+            <div className="travelCap__head">
+              <span className="travelCap__title">{t('map.cap.title')}</span>
+              <span className="travelCap__value num">
+                {t('map.cap.value', { n: world.data.travel.cap })}
+              </span>
+            </div>
+            <span className="bar bar--lg">
+              <span
+                className="bar__fill bar__fill--dex"
+                style={{ width: `${(world.data.travel.clearedRegions / Math.max(1, world.data.travel.totalRegions)) * 100}%` }}
+              />
+            </span>
+            <p className="travelCap__hint">
+              {world.data.travel.nextCap === null
+                ? t('map.cap.done', { n: world.data.travel.cap })
+                : t('map.cap.next', {
+                    cleared: world.data.travel.clearedRegions,
+                    total: world.data.travel.totalRegions,
+                    next: world.data.travel.nextCap,
+                  })}
+            </p>
+          </section>
+        )}
+
+        {world.data && (
           <label className="switch">
             <span className="switch__text">
               <span>{t('map.scaling.title')}</span>
@@ -98,9 +124,14 @@ function AreaRow({ area, busy, onTravel }: { area: AreaView; busy: boolean; onTr
           {area.unlocked ? (
             <span className="area__stats">
               <span className="num">{t('map.levels', { min: area.levels.min, max: area.levels.max })}</span>
-              {area.levelBoost > 0 && (
-                <span className="tag tag--scaled" title={t('map.scaling.boostHint')}>
-                  {t('map.scaling.boost', { n: area.levelBoost })}
+              {area.levelBoost !== 0 && (
+                <span
+                  className="tag tag--scaled"
+                  title={t(area.levelBoost > 0 ? 'map.scaling.boostHint' : 'map.scaling.lowerHint')}
+                >
+                  {area.levelBoost > 0
+                    ? t('map.scaling.boost', { n: area.levelBoost })
+                    : t('map.scaling.lower', { n: -area.levelBoost })}
                 </span>
               )}
               <span aria-hidden="true">·</span>

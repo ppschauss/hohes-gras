@@ -123,6 +123,9 @@ function writeMinimalPack(dataDir: string): void {
         requiredBadgeIds: ['test-badge'],
       },
       spawns: [{ speciesId: 'wildmon', weight: 100, minLevel: 8, maxLevel: 12 }],
+      // Der Meister sitzt hier: eine Region gilt erst mit ihm als bezwungen,
+      // und ohne bezwungene Region liesse sich die Reisegrenze nicht pruefen.
+      gymId: 'test-champ',
     },
   ])
   put('trainers.json', [
@@ -155,6 +158,12 @@ function writeMinimalPack(dataDir: string): void {
       sprite: '/media/t.png', team: [{ speciesId: 'wildmon', level: 3 }],
       rewardGold: 100, repeatRewardRatio: 0.25,
       dialogue: { intro: { de: 'Hey' }, win: { de: 'Ha' }, lose: { de: 'Puh' } },
+    },
+    {
+      id: 'test-champ', name: { de: 'Meisterin' }, title: { de: 'Champ' }, kind: 'champion',
+      sprite: '/media/ch.png', team: [{ speciesId: 'wildmon', level: 45 }],
+      rewardGold: 2000, repeatRewardRatio: 0.1,
+      dialogue: { intro: { de: 'Zeig es' }, win: { de: 'Schwach' }, lose: { de: 'Stark' } },
     },
     {
       id: 'test-gym', name: { de: 'Arenaleiter' }, title: { de: 'Leiter' }, kind: 'gym',

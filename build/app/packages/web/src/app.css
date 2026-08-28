@@ -565,6 +565,41 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
   border-radius: var(--radius); font-weight: 650; font-size: var(--t-md);
 }
 
+/* Die Reisegrenze steht ganz oben auf der Karte: sie erklaert, warum ein
+   Gebiet nicht weiter mitwaechst, bevor jemand danach sucht. */
+.travelCap {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.travelCap__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
+.travelCap__title { font-size: var(--t-sm); font-weight: 650; }
+.travelCap__value { font-size: var(--t-lg); font-weight: 700; color: var(--gold); }
+.travelCap__hint { font-size: var(--t-xs); color: var(--ink-muted); line-height: 1.4; }
+
+/* Startregion: eine Entscheidung vor der Entscheidung. Bewusst schlicht
+   gehalten — sie steht allein auf dem Bildschirm und braucht keine Konkurrenz
+   zu den Starterkarten, die direkt danach kommen. */
+.region {
+  display: flex; flex-direction: column; gap: var(--s1);
+  align-items: start; text-align: left;
+  padding: var(--s4);
+  background: var(--surface); border: 1px solid var(--edge);
+  border-radius: var(--radius-lg); cursor: pointer;
+  transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
+}
+.region:hover, .region:focus-visible { border-color: var(--accent); background: var(--surface-raised); }
+.region__name { font-size: var(--t-xl); font-weight: 700; }
+.region__tagline { font-size: var(--t-sm); color: var(--ink-muted); line-height: 1.4; }
+.region__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+
+.pickedRegion {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.pickedRegion__label { font-size: var(--t-sm); color: var(--ink-muted); }
+
 /* =================================================================== Pokédex === */
 
 .progressCard {

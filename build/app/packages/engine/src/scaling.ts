@@ -1,4 +1,5 @@
 import type { AreaDef } from '@game/content'
+import { ABSOLUTE_MAX_LEVEL } from './leveling.js'
 import { clamp } from './stats.js'
 
 /**
@@ -18,7 +19,7 @@ import { clamp } from './stats.js'
  *    ganze Welt hoch und macht dem Rest des Teams das Leben unmöglich.
  */
 
-export const LEVEL_CAP = 100
+export const LEVEL_CAP = ABSOLUTE_MAX_LEVEL
 
 export interface LevelBand {
   min: number
@@ -59,10 +60,36 @@ export function areaBand(area: AreaDef): LevelBand {
  * Abstand erhalten, den der Entwurf vorsieht — Route 1 liegt mit 2–6 knapp
  * über einem Starter auf Level 5, und genau dieses Verhältnis gilt dann auch
  * mit Level 90.
+ *
+ * Geht nur nach oben: ein einzelnes Gebiet wird nie leichter, als es entworfen
+ * wurde. Für ganze Regionen gilt das nicht — siehe `regionOffset`.
  */
 export function bandOffset(band: LevelBand, reference: number): number {
   if (reference <= band.max) return 0
   return Math.min(reference - band.max, LEVEL_CAP - band.max)
+}
+
+/**
+ * Der Versatz einer ganzen Region, gemessen an ihrem Eingang.
+ *
+ * Das ist der Unterschied zwischen "die Regionen sind eine Kette" und "die
+ * Regionen sind parallel". Solange jedes Gebiet für sich skaliert und nur nach
+ * oben, ist Johto mit seinem Einstieg auf Level 58 für einen Anfänger
+ * verschlossen — und eine frei wählbare Startregion wäre eine Lüge.
+ *
+ * Deshalb: der Versatz wird **einmal am ersten Gebiet der Region** bestimmt und
+ * auf alle ihre Gebiete angewandt, nach oben wie nach unten. Die innere
+ * Steigung bleibt dabei unangetastet — die erste Route bleibt die leichteste,
+ * der Silberberg der härteste. Nur wandert die ganze Region auf das Niveau
+ * dessen, der sie betritt.
+ */
+export function regionOffset(anchor: LevelBand, reference: number, cap = LEVEL_CAP): number {
+  if (reference <= 0) return 0
+  const raw = reference - anchor.max
+  // Nach unten nur so weit, dass das schwächste Gebiet bei Level 2 endet:
+  // eine Region voller Level-1-Gegner wäre keine Region mehr.
+  const floor = 2 - anchor.min
+  return clamp(raw, floor, cap - anchor.max)
 }
 
 export const shiftLevel = (level: number, offset: number): number =>

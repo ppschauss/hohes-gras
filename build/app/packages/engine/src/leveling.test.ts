@@ -1,8 +1,52 @@
 import { describe, expect, it } from 'vitest'
 import { GROWTH_RATES, type GrowthRate } from '@game/shared'
 import {
-  battleXpYield, grantXp, grantXpTo, levelForXp, levelProgress, reconcileXp, xpForLevel, MAX_LEVEL,
+  ABSOLUTE_MAX_LEVEL, battleXpYield, grantXp, grantXpTo, levelForXp, levelProgress,
+  reconcileXp, travelCap, xpForLevel, MAX_LEVEL,
 } from './leveling.js'
+
+describe('Reisegrenze', () => {
+  it('gibt der ersten Region fuenfzig Level', () => {
+    expect(travelCap(0)).toBe(50)
+  })
+
+  it('legt je bezwungener Region fuenfzig drauf', () => {
+    expect(travelCap(1)).toBe(100)
+    expect(travelCap(2)).toBe(150)
+    expect(travelCap(8)).toBe(450)
+  })
+
+  it('endet bei der absoluten Grenze', () => {
+    expect(travelCap(9)).toBe(ABSOLUTE_MAX_LEVEL)
+    expect(travelCap(99)).toBe(ABSOLUTE_MAX_LEVEL)
+  })
+})
+
+describe('EP-Kurve jenseits von Level 100', () => {
+  it('bleibt auf jeder Kurve streng monoton bis zur Grenze', () => {
+    // Der Grund fuer die Fortsetzung: `erratic` enthaelt den Faktor (160 − n)
+    // und faellt ab Level 160 ins Negative. Eine fallende EP-Kurve bedeutet
+    // Level, die man durch Kaempfen verliert.
+    for (const rate of GROWTH_RATES) {
+      for (let n = 2; n <= ABSOLUTE_MAX_LEVEL; n++) {
+        expect(xpForLevel(rate, n)).toBeGreaterThan(xpForLevel(rate, n - 1))
+      }
+    }
+  })
+
+  it('setzt die polynomialen Kurven exakt fort', () => {
+    expect(xpForLevel('medium_fast', 150)).toBe(150 ** 3)
+    expect(xpForLevel('medium_fast', ABSOLUTE_MAX_LEVEL)).toBe(ABSOLUTE_MAX_LEVEL ** 3)
+    expect(xpForLevel('fast', 200)).toBe(Math.floor((4 * 200 ** 3) / 5))
+  })
+
+  it('haelt die Reihenfolge der Kurven auch oben ein', () => {
+    for (const level of [150, 300, 500]) {
+      expect(xpForLevel('fast', level)).toBeLessThan(xpForLevel('medium_fast', level))
+      expect(xpForLevel('medium_fast', level)).toBeLessThan(xpForLevel('slow', level))
+    }
+  })
+})
 
 describe('xpForLevel', () => {
   it('startet fuer jede Kurve bei 0', () => {
@@ -44,9 +88,18 @@ describe('levelForXp', () => {
     expect(levelForXp(rate, at51 - 1)).toBe(50)
   })
 
-  it('klemmt bei 1 und 100', () => {
+  it('klemmt bei 1 und an der absoluten Grenze', () => {
     expect(levelForXp('slow', -999)).toBe(1)
-    expect(levelForXp('slow', 99_999_999)).toBe(MAX_LEVEL)
+    expect(levelForXp('slow', 999_999_999_999)).toBe(ABSOLUTE_MAX_LEVEL)
+  })
+
+  it('haelt sich an eine uebergebene Reisegrenze', () => {
+    // Zwei Trainer mit derselben EP-Zahl, aber verschieden weit gereist:
+    // dieselben Punkte bedeuten fuer sie verschiedene Level.
+    const xp = xpForLevel('medium_fast', 120)
+    expect(levelForXp('medium_fast', xp, 50)).toBe(50)
+    expect(levelForXp('medium_fast', xp, 100)).toBe(100)
+    expect(levelForXp('medium_fast', xp, 150)).toBe(120)
   })
 })
 
@@ -58,11 +111,22 @@ describe('grantXp', () => {
     expect(r.levelsGained).toBe(11)
   })
 
-  it('deckelt bei Level 100 statt ins Leere zu wachsen', () => {
-    const cap = xpForLevel('slow', MAX_LEVEL)
-    const r = grantXp('slow', cap - 10, 5_000_000)
-    expect(r.totalXp).toBe(cap)
-    expect(r.levelAfter).toBe(MAX_LEVEL)
+  it('deckelt an der absoluten Grenze statt ins Leere zu wachsen', () => {
+    const ceiling = xpForLevel('slow', ABSOLUTE_MAX_LEVEL)
+    const r = grantXp('slow', ceiling - 10, 5_000_000_000)
+    expect(r.totalXp).toBe(ceiling)
+    expect(r.levelAfter).toBe(ABSOLUTE_MAX_LEVEL)
+  })
+
+  it('deckelt an der Reisegrenze des Trainers', () => {
+    // Der eigentliche Zweck: wer erst eine Region bezwungen hat, sammelt keine
+    // EP jenseits von Level 100 an — sonst saesse er nach der naechsten Region
+    // schlagartig auf zwanzig geschenkten Leveln.
+    const at100 = xpForLevel('medium_fast', 100)
+    const r = grantXp('medium_fast', at100 - 10, 50_000_000, 100)
+    expect(r.totalXp).toBe(at100)
+    expect(r.levelAfter).toBe(100)
+    expect(r.levelsGained).toBe(1)
   })
 
   it('ignoriert negative Betraege', () => {
@@ -83,7 +147,7 @@ describe('levelProgress', () => {
     expect(p.isMaxLevel).toBe(false)
   })
 
-  it('markiert Level 100 als Maximum', () => {
+  it('markiert die Grenze als Maximum', () => {
     const p = levelProgress('fast', xpForLevel('fast', MAX_LEVEL))
     expect(p.isMaxLevel).toBe(true)
     expect(p.xpForNextLevel).toBe(0)

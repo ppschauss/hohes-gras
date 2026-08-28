@@ -1,12 +1,51 @@
 import type { GrowthRate } from '@game/shared'
 import { clamp } from './stats.js'
 
-export const MAX_LEVEL = 100
+/**
+ * Die harte Obergrenze des Spiels.
+ *
+ * Frueher stand hier 100, und `xpForLevel` klemmte darauf — mit der Folge,
+ * dass jedes Level darueber *gratis* gewesen waere: die Kurve lieferte fuer
+ * 150 und fuer 450 denselben Wert. Seit die Reisegrenze mit jeder bezwungenen
+ * Region waechst, laeuft die Kurve weiter. 500 ist das Ende der Fahnenstange:
+ * neun Regionen zu je fuenfzig Leveln.
+ */
+export const ABSOLUTE_MAX_LEVEL = 500
 
-/** Total XP required to *be* at `level`. Level 1 is always 0. */
+/** Die Grenze einer einzelnen Region — und der Startwert der Reisegrenze. */
+export const LEVELS_PER_REGION = 50
+
+/** @deprecated Nur noch fuer Aufrufer ohne eigene Grenze. Wer eine
+ *  Reisegrenze kennt, soll sie uebergeben. */
+export const MAX_LEVEL = ABSOLUTE_MAX_LEVEL
+
+/**
+ * Total XP required to *be* at `level`. Level 1 is always 0.
+ *
+ * Ab Level 101 gilt eine Fortsetzung statt der Originalformeln. Die sind nur
+ * bis 100 definiert, und zwei davon brechen darueber zusammen: `erratic`
+ * enthaelt den Faktor (160 − n), wird bei Level 160 also null und danach
+ * negativ. Eine EP-Kurve, die faellt, bedeutet Level, die man durch Kaempfen
+ * *verliert*.
+ *
+ * Die Fortsetzung skaliert den Wert bei 100 kubisch weiter. Fuer die
+ * polynomialen Kurven ist das exakt dieselbe Zahl wie zuvor — `medium_fast`
+ * ist n³, und n³ = 100³·(n/100)³. Fuer die beiden Sonderkurven ist es die
+ * naheliegende Fortschreibung ihres Aufwands.
+ */
 export function xpForLevel(rate: GrowthRate, level: number): number {
-  const n = clamp(Math.floor(level), 1, MAX_LEVEL)
+  const n = clamp(Math.floor(level), 1, ABSOLUTE_MAX_LEVEL)
   if (n === 1) return 0
+  if (n > CURVE_LIMIT) {
+    return Math.floor(baseCurve(rate, CURVE_LIMIT) * (n / CURVE_LIMIT) ** 3)
+  }
+  return baseCurve(rate, n)
+}
+
+/** Bis hierher gelten die Originalformeln. */
+const CURVE_LIMIT = 100
+
+function baseCurve(rate: GrowthRate, n: number): number {
   switch (rate) {
     case 'fast': return Math.floor((4 * n ** 3) / 5)
     case 'medium_fast': return n ** 3
@@ -30,10 +69,16 @@ function fluctuating(n: number): number {
   return Math.floor((n ** 3 * (Math.floor(n / 2) + 32)) / 50)
 }
 
-/** Level that `totalXp` corresponds to. Monotonic and clamped to 1..100. */
-export function levelForXp(rate: GrowthRate, totalXp: number): number {
+/**
+ * Level, das `totalXp` entspricht — hoechstens aber `cap`.
+ *
+ * Die Reisegrenze wird hier durchgereicht statt global zu gelten: zwei
+ * Trainer mit unterschiedlich vielen bezwungenen Regionen haben verschiedene
+ * Grenzen, und dieselbe EP-Zahl bedeutet fuer sie verschiedene Level.
+ */
+export function levelForXp(rate: GrowthRate, totalXp: number, cap = ABSOLUTE_MAX_LEVEL): number {
   let lo = 1
-  let hi = MAX_LEVEL
+  let hi = clamp(Math.floor(cap), 1, ABSOLUTE_MAX_LEVEL)
   while (lo < hi) {
     const mid = Math.ceil((lo + hi) / 2)
     if (xpForLevel(rate, mid) <= totalXp) lo = mid
@@ -49,14 +94,15 @@ export interface LevelProgress {
   isMaxLevel: boolean
 }
 
-export function levelProgress(rate: GrowthRate, totalXp: number): LevelProgress {
-  const level = levelForXp(rate, totalXp)
-  if (level >= MAX_LEVEL) {
-    return { level: MAX_LEVEL, xpIntoLevel: 0, xpForNextLevel: 0, isMaxLevel: true }
+export function levelProgress(rate: GrowthRate, totalXp: number, cap = ABSOLUTE_MAX_LEVEL): LevelProgress {
+  const ceiling = clamp(Math.floor(cap), 1, ABSOLUTE_MAX_LEVEL)
+  const level = levelForXp(rate, totalXp, ceiling)
+  if (level >= ceiling) {
+    return { level: ceiling, xpIntoLevel: 0, xpForNextLevel: 0, isMaxLevel: true }
   }
   const floor = xpForLevel(rate, level)
-  const ceiling = xpForLevel(rate, level + 1)
-  return { level, xpIntoLevel: totalXp - floor, xpForNextLevel: ceiling - floor, isMaxLevel: false }
+  const next = xpForLevel(rate, level + 1)
+  return { level, xpIntoLevel: totalXp - floor, xpForNextLevel: next - floor, isMaxLevel: false }
 }
 
 export interface XpGainResult {
@@ -66,10 +112,15 @@ export interface XpGainResult {
   levelsGained: number
 }
 
-export function grantXp(rate: GrowthRate, totalXp: number, amount: number): XpGainResult {
-  const levelBefore = levelForXp(rate, totalXp)
-  const capped = Math.min(totalXp + Math.max(0, Math.floor(amount)), xpForLevel(rate, MAX_LEVEL))
-  const levelAfter = levelForXp(rate, capped)
+export function grantXp(
+  rate: GrowthRate, totalXp: number, amount: number, cap = ABSOLUTE_MAX_LEVEL,
+): XpGainResult {
+  const ceiling = clamp(Math.floor(cap), 1, ABSOLUTE_MAX_LEVEL)
+  const levelBefore = levelForXp(rate, totalXp, ceiling)
+  // An der Reisegrenze laeuft die EP-Zahl nicht weiter. Sonst saesse jemand
+  // nach einer neuen Region ploetzlich auf zwanzig geschenkten Leveln.
+  const capped = Math.min(totalXp + Math.max(0, Math.floor(amount)), xpForLevel(rate, ceiling))
+  const levelAfter = levelForXp(rate, capped, ceiling)
   return { totalXp: capped, levelBefore, levelAfter, levelsGained: levelAfter - levelBefore }
 }
 
@@ -89,8 +140,22 @@ export function reconcileXp(rate: GrowthRate, totalXp: number, level: number): n
 
 /** grantXp on a possibly-inconsistent row. Prefer this wherever the level and
  *  XP both come from storage. */
-export function grantXpTo(rate: GrowthRate, totalXp: number, level: number, amount: number): XpGainResult {
-  return grantXp(rate, reconcileXp(rate, totalXp, level), amount)
+export function grantXpTo(
+  rate: GrowthRate, totalXp: number, level: number, amount: number, cap = ABSOLUTE_MAX_LEVEL,
+): XpGainResult {
+  return grantXp(rate, reconcileXp(rate, totalXp, level), amount, cap)
+}
+
+/**
+ * Die Reisegrenze: fuenfzig Level je bezwungener Region, plus die erste.
+ *
+ * Bewusst an *bezwungene* Regionen gebunden, nicht an betretene — sonst
+ * tourte man neun Regionen auf Level fuenf ab und haette die Grenze
+ * geschenkt.
+ */
+export function travelCap(clearedRegions: number): number {
+  const regions = Math.max(0, Math.floor(clearedRegions))
+  return Math.min(ABSOLUTE_MAX_LEVEL, LEVELS_PER_REGION * (regions + 1))
 }
 
 /** XP a defeated opponent yields. Scales with the level gap so that grinding

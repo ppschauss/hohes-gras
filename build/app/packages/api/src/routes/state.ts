@@ -5,6 +5,7 @@ import { worldClock } from '../worldClock.js'
 import { rateLimit, requireTrainer } from './plugin.js'
 import * as energy from '../services/energy.js'
 import * as todayService from '../services/today.js'
+import * as travel from '../services/travel.js'
 import { ENERGY_COSTS } from '@game/engine'
 
 /** Which feature slices the client should render. Later phases flip these on as
@@ -46,6 +47,7 @@ export function registerStateRoutes(app: FastifyInstance, ctx: AppContext): void
       trainer: req.trainer!,
       clock: worldClock(),
       energy: energy.state(ctx, req.trainer!.id),
+      travel: travel.viewOf(ctx, req.trainer!),
       energyCosts: { ...ENERGY_COSTS },
       energyPacks: energy.packViews(),
       contentPack: {

@@ -1,6 +1,6 @@
 import type { CareAction, StatBlock } from '@game/shared'
 import type { SpeciesDef } from '@game/content'
-import { grantXpTo, type XpGainResult } from './leveling.js'
+import { ABSOLUTE_MAX_LEVEL, grantXpTo, type XpGainResult } from './leveling.js'
 import { clamp } from './stats.js'
 
 /** Plaetze im aktiven Team. Auch die Obergrenze eines gespeicherten Teams. */
@@ -79,6 +79,8 @@ export function applyCare(
   itemQuantity: number,
   /** Prozentualer EP-Zuschlag aus dem Trainingsdojo. */
   xpBonusPercent = 0,
+  /** Reisegrenze des Trainers. Ohne sie stiege ein Team ueber sein Cap. */
+  levelCap = ABSOLUTE_MAX_LEVEL,
 ): CareResult {
   if (team.length === 0) return { ok: false, reason: 'empty_team' }
 
@@ -102,7 +104,7 @@ export function applyCare(
     const gain = Math.max(1, Math.round(rules.xp * share * bond * (1 + xpBonusPercent / 100)))
     // Level mitgeben: eine Zeile mit abweichenden EP darf nie zu einer
     // Ruecksufung fuehren.
-    const xp = grantXpTo(species.growthRate, c.xp, c.level, gain)
+    const xp = grantXpTo(species.growthRate, c.xp, c.level, gain, levelCap)
     const friendshipAfter = clamp(c.friendship + rules.friendship, 0, FRIENDSHIP_MAX)
     const energyAfter = clamp(c.energy + rules.energy, 0, ENERGY_MAX)
     return {

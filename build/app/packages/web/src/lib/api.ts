@@ -1,7 +1,7 @@
 import type {
   ApiError, AuthResponse, Bootstrap, CareAction, CareResponse, CenterState, CenterVisit,
   DexRow, EnergyOverview, EnergyState, GardenState, MoveSet, PlotsState, ShopState,
-  StarterOption, TeamsState, ThemesState,
+  StartRegion, StarterOption, TeamsState, ThemesState,
 } from '@game/shared'
 
 import { looksLikeEnergy, useEnergy } from './energyStore.js'
@@ -74,9 +74,13 @@ export const api = {
   setBackground: (itemId: string) =>
     request<GardenState>('/api/garden/background', { method: 'POST', body: JSON.stringify({ itemId }) }),
 
-  starterInfo: () => request<{ needsStarter: boolean; options: StarterOption[] }>('/api/starter'),
-  chooseStarter: (speciesId: string) =>
-    request<GardenState>('/api/starter', { method: 'POST', body: JSON.stringify({ speciesId }) }),
+  starterInfo: () =>
+    request<{ needsStarter: boolean; options: StarterOption[]; regions: StartRegion[] }>('/api/starter'),
+  chooseStarter: (speciesId: string, regionId: string | null) =>
+    request<GardenState>('/api/starter', {
+      method: 'POST',
+      body: JSON.stringify(regionId ? { speciesId, regionId } : { speciesId }),
+    }),
 
   box: () => request<{ creatures: CreatureLike[]; teamCapacity: number }>('/api/box'),
   setTeam: (creatureIds: string[]) =>
@@ -395,6 +399,15 @@ export interface WorldMap {
     elites: Array<{ id: string; name: string; defeated: boolean; locked: boolean }>
     champion: { id: string; name: string; defeated: boolean; locked: boolean } | null
   }>
+  /** Die Reisegrenze: das hoechste Level, das fuer diesen Trainer ueberhaupt
+   *  existiert. Waechst mit jeder bezwungenen Region. */
+  travel: {
+    cap: number
+    clearedRegions: number
+    totalRegions: number
+    levelsPerRegion: number
+    nextCap: number | null
+  }
 }
 
 export interface EncounterView {
@@ -763,6 +776,8 @@ export interface PvpOverview {
   losses: number
   streak: number
   duelsToday: number
+  /** Deine Reisegrenze. Im Duell gilt die niedrigere von beiden. */
+  levelCap: number
   /** null = kein Tageslimit mehr; die Zahl bleibt als Statistik. */
   duelsPerDay: number | null
   energy: EnergyState

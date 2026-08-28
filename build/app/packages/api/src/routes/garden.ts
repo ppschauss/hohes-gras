@@ -17,6 +17,7 @@ import * as moves from '../services/moves.js'
 import * as center from '../services/center.js'
 import * as plots from '../services/plots.js'
 import * as themes from '../services/themes.js'
+import * as travel from '../services/travel.js'
 import * as creatures from '../repos/creatures.js'
 import * as dexRepo from '../repos/dex.js'
 import * as inventory from '../repos/inventory.js'
@@ -44,12 +45,16 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
 
   app.get('/api/starter', auth, async (req) => {
     const owned = creatures.countOwned(ctx.db, req.trainer!.id).total
-    return { needsStarter: owned === 0, options: garden.starterOptions(ctx, req.trainer!) }
+    return {
+      needsStarter: owned === 0,
+      options: garden.starterOptions(ctx, req.trainer!),
+      regions: garden.startRegions(ctx, req.trainer!),
+    }
   })
 
   app.post('/api/starter', write, async (req) => {
-    const { speciesId } = ChooseStarterRequestSchema.parse(req.body)
-    garden.chooseStarter(ctx, req.trainer!, speciesId)
+    const { speciesId, regionId } = ChooseStarterRequestSchema.parse(req.body)
+    garden.chooseStarter(ctx, req.trainer!, speciesId, regionId)
     const fresh = findById(ctx.db, req.trainer!.id)!
     return garden.gardenState(ctx, fresh)
   })
@@ -58,8 +63,9 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
     const trainer = req.trainer!
     const clock = worldClock()
     const box = creatures.boxOf(ctx.db, trainer.id)
+    const cap = travel.capOf(ctx, trainer)
     return {
-      creatures: box.map((c) => creatureView(ctx.registry, c, trainer.locale, clock.timeOfDay)),
+      creatures: box.map((c) => creatureView(ctx.registry, c, trainer.locale, clock.timeOfDay, cap)),
       teamCapacity: garden.TEAM_CAPACITY,
     }
   })

@@ -39,6 +39,7 @@ export function PvpPanel() {
             {d.streak !== 0 && <span>{t('pvp.streak', { n: d.streak })}</span>}
             <span>{t('pvp.duelsToday', { n: d.duelsToday })}</span>
             <span>{t('pvp.duelCost', { n: d.energyCost })}</span>
+            <span>{t('pvp.levelCap', { n: d.levelCap })}</span>
             {d.unseenDefences > 0 && <span className="tag tag--count">{t('pvp.defended', { n: d.unseenDefences })}</span>}
           </div>
         </section>

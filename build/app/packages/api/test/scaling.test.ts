@@ -55,17 +55,17 @@ describe('Dynamische Levelskalierung', () => {
   })
 
   it('hebt das Gebiet an, sobald das Team darueber liegt', async () => {
-    setTeamLevel(60)
+    setTeamLevel(45)
     const route = (await h.get('/api/world', token)).body.regions[0].areas[0]
-    // Bandobergrenze wandert auf 60, die Breite bleibt.
-    expect(route.levels).toEqual({ min: 56, max: 60 })
-    expect(route.levelBoost).toBe(54)
+    // Bandobergrenze wandert auf 45, die Breite bleibt.
+    expect(route.levels).toEqual({ min: 41, max: 45 })
+    expect(route.levelBoost).toBe(39)
 
     const levels = await exploreLevels(8)
     expect(levels.length).toBeGreaterThan(0)
     for (const level of levels) {
-      expect(level).toBeGreaterThanOrEqual(56)
-      expect(level).toBeLessThanOrEqual(60)
+      expect(level).toBeGreaterThanOrEqual(41)
+      expect(level).toBeLessThanOrEqual(45)
     }
   })
 
@@ -116,7 +116,7 @@ describe('Dynamische Levelskalierung', () => {
   })
 
   it('laesst sich abschalten und wieder einschalten', async () => {
-    setTeamLevel(60)
+    setTeamLevel(45)
     const off = await h.post('/api/world/scaling', { enabled: false }, token)
     expect(off.status).toBe(200)
     expect(off.body.levelScaling).toBe(false)
@@ -129,14 +129,41 @@ describe('Dynamische Levelskalierung', () => {
     h.resetRateLimits()
     const on = await h.post('/api/world/scaling', { enabled: true }, token)
     expect(on.body.levelScaling).toBe(true)
-    expect(on.body.regions[0].areas[0].levelBoost).toBe(54)
+    expect(on.body.regions[0].areas[0].levelBoost).toBe(39)
   })
 
-  it('stoesst nicht ueber Level 100 hinaus', async () => {
+  it('stoesst nicht ueber die Reisegrenze hinaus', async () => {
+    // Wer noch keine Region bezwungen hat, hebt auch kein Gebiet ueber
+    // Level 50 — sonst holte man sich Level-100-Gegner in die erste Region
+    // und damit Beute, fuer die die Reise noch nicht bezahlt ist.
     setTeamLevel(100)
     const route = (await h.get('/api/world', token)).body.regions[0].areas[0]
-    expect(route.levels.max).toBe(100)
+    expect(route.levels.max).toBe(50)
     const levels = await exploreLevels(6)
-    for (const level of levels) expect(level).toBeLessThanOrEqual(100)
+    for (const level of levels) expect(level).toBeLessThanOrEqual(50)
+  })
+
+  it('gibt die Reisegrenze frei, sobald eine Region bezwungen ist', async () => {
+    const clear = () => {
+      h.ctx.db.prepare(
+        'INSERT OR IGNORE INTO trainer_badges (trainer_id, badge_id, earned_at) VALUES (?, ?, ?)',
+      ).run(trainerId, 'test-badge', Date.now())
+      for (const id of ['elite-eins', 'elite-zwei', 'test-champ']) {
+        h.ctx.db.prepare(
+          `INSERT OR REPLACE INTO trainer_defeats
+             (trainer_id, opponent_id, wins, first_win_at, last_win_at) VALUES (?, ?, 1, ?, ?)`,
+        ).run(trainerId, id, Date.now(), Date.now())
+      }
+    }
+
+    setTeamLevel(100)
+    expect((await h.get('/api/world', token)).body.travel.cap).toBe(50)
+
+    clear()
+    h.resetRateLimits()
+    const after = await h.get('/api/world', token)
+    expect(after.body.travel.cap).toBe(100)
+    expect(after.body.travel.clearedRegions).toBe(1)
+    expect(after.body.regions[0].areas[0].levels.max).toBe(100)
   })
 })

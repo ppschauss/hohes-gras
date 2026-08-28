@@ -45,8 +45,9 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Teams** | Bis zu 8 gespeicherte Aufstellungen, eine davon aktiv |
 | **Attacken** | Vier Plätze je Pokémon, frei wählbar; die Automatik füllt nur leere Plätze |
 | **Energie** | Statt Tageslimits: 2 Punkte/Minute, für Gold nachkaufbar, Vorrat dauerhaft ausbaubar |
-| **Welt** | 2 Regionen, 25 Gebiete inkl. Nachliga, Wetter und Tageszeit steuern Spawns |
-| **Skalierung** | Gebiete und Trainer heben ihr Level auf den Teammedian — nie darunter, abschaltbar |
+| **Welt** | 2 Regionen, 25 Gebiete inkl. Nachliga, freie Startregion, Wetter und Tageszeit steuern Spawns |
+| **Skalierung** | Ganze Regionen treffen den Teammedian — nach oben wie nach unten, abschaltbar |
+| **Reisegrenze** | Level 50 zum Start, +50 je bezwungener Region, absolutes Ende bei 500 |
 | **Safari** | Ball- und Beerenwahl, Schwächen/Beruhigen, Fangserie für Shiny-Jagd |
 | **Kampf** | Typentabelle, Status, Stat-Stufen, Mehrfachtreffer, KI in vier Stufen, 17 Orden, Top Vier je Region |
 | **Ereignisse** | Überfälle beim Erkunden: Gold, Gegenstände, Sagenbeeren, selten ein Pokémon mit makellosen Werten |

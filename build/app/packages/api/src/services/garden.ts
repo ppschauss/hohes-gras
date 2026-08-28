@@ -13,6 +13,7 @@ import { bumpCounter, counterValue } from '../repos/counters.js'
 import * as energy from './energy.js'
 import * as teams from './teams.js'
 import { assertPace, recordPace } from './pacing.js'
+import { capOf } from './travel.js'
 import { logEvent } from '../repos/events.js'
 import { worldClock } from '../worldClock.js'
 import { creatureView } from './views.js'
@@ -46,7 +47,8 @@ export function gardenState(ctx: AppContext, trainer: Trainer): GardenState {
   const dexNumbers = dex.dexCounts(ctx.db, trainer.id)
 
   const background = ctx.registry.tryItem(trainer.gardenBackground)
-  const views = team.map((c) => creatureView(ctx.registry, c, trainer.locale, clock.timeOfDay))
+  const cap = capOf(ctx, trainer)
+  const views = team.map((c) => creatureView(ctx.registry, c, trainer.locale, clock.timeOfDay, cap))
 
   return {
     team: views,
@@ -122,6 +124,7 @@ export function performCare(ctx: AppContext, trainer: Trainer, action: CareActio
     const perks = bonuses(ctx, trainer.id)
     const result = applyCare(
       action, careTeam, (id) => ctx.registry.species(id), have, perks.careXpBonus,
+      capOf(ctx, trainer),
     )
     if (!result.ok) throw refusalToError(result)
 
@@ -202,6 +205,32 @@ export function refreshMoves(ctx: AppContext, creatureId: string, speciesId: str
   }
 }
 
+/**
+ * Die waehlbaren Startregionen.
+ *
+ * Jede Region, deren erstes Gebiet ohne Vorbedingung offen steht. Das ist
+ * keine gepflegte Liste, sondern faellt aus dem Content-Pack: eine neue Region
+ * mit freiem Einstieg taucht hier automatisch auf.
+ */
+export function startRegions(ctx: AppContext, trainer: Trainer) {
+  return ctx.registry.allRegions.flatMap((region) => {
+    const first = ctx.registry.allAreas
+      .filter((a) => a.regionId === region.id)
+      .sort((a, b) => a.order - b.order)[0]
+    if (!first || first.unlock.previousAreaId !== null || first.unlock.requiredBadgeIds.length > 0) {
+      return []
+    }
+    return [{
+      regionId: region.id,
+      name: ctx.registry.localized(region.name, trainer.locale),
+      tagline: ctx.registry.localized(region.tagline, trainer.locale),
+      areaId: first.id,
+      areaName: ctx.registry.localized(first.name, trainer.locale),
+      areaCount: ctx.registry.allAreas.filter((a) => a.regionId === region.id).length,
+    }]
+  })
+}
+
 export function starterOptions(ctx: AppContext, trainer: Trainer) {
   return ctx.registry.manifest.starterSpeciesIds.map((id) => {
     const s = ctx.registry.species(id)
@@ -219,10 +248,17 @@ export function starterOptions(ctx: AppContext, trainer: Trainer) {
   })
 }
 
-export function chooseStarter(ctx: AppContext, trainer: Trainer, speciesId: string): void {
+export function chooseStarter(
+  ctx: AppContext, trainer: Trainer, speciesId: string, regionId?: string,
+): void {
   if (!ctx.registry.manifest.starterSpeciesIds.includes(speciesId)) {
     throw new GameError('validation_failed', { field: 'speciesId' })
   }
+  const regions = startRegions(ctx, trainer)
+  const start = regionId
+    ? regions.find((r) => r.regionId === regionId)
+    : regions[0]
+  if (!start) throw new GameError('validation_failed', { field: 'regionId' })
   tx(ctx.db, () => {
     // Re-check inside the transaction: two taps on a slow connection must not
     // produce two starters.
@@ -257,6 +293,10 @@ export function chooseStarter(ctx: AppContext, trainer: Trainer, speciesId: stri
     // XP must match the level, or the next XP gain would snap it back to 1.
     ctx.db.prepare('UPDATE creatures SET xp = ? WHERE id = ?')
       .run(xpFloorForLevel(ctx, speciesId, STARTER_LEVEL), created.id)
+
+    // Startgebiet setzen: die gewaehlte Region ist der Ort, an dem alles
+    // beginnt.
+    ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run(start.areaId, trainer.id)
 
     for (const kit of STARTER_KIT) inventory.grant(ctx.db, trainer.id, kit.itemId, kit.quantity)
     dex.markCaught(ctx.db, trainer.id, speciesId)

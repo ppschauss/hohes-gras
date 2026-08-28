@@ -23,6 +23,14 @@ export const BootstrapSchema = z.object({
   trainer: TrainerSchema,
   clock: WorldClockSchema,
   energy: EnergyStateSchema,
+  /** Reisegrenze: 50 Level je bezwungener Region, plus die erste. */
+  travel: z.object({
+    cap: z.number().int(),
+    clearedRegions: z.number().int(),
+    totalRegions: z.number().int(),
+    levelsPerRegion: z.number().int(),
+    nextCap: z.number().int().nullable(),
+  }),
   /** Konstant fuer alle Spieler; einmal beim Start geladen statt bei jeder
    *  Aktion mitgeschickt. */
   energyCosts: z.record(z.number().int()),

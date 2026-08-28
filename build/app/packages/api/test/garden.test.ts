@@ -58,6 +58,30 @@ describe('Starter', () => {
     expect(r.status).toBe(400)
   })
 
+  it('bietet nur Regionen an, deren erstes Gebiet ohne Vorbedingung offensteht', async () => {
+    const r = await h.get('/api/starter', token)
+    expect(r.body.regions).toHaveLength(1)
+    expect(r.body.regions[0]).toMatchObject({
+      regionId: 'testland', areaId: 'test-route', areaCount: 2,
+    })
+    // Die Testhoehle verlangt Orden und Vorgaenger — sie taugt nicht als Anfang.
+    expect(r.body.regions.map((x: any) => x.areaId)).not.toContain('test-cave')
+  })
+
+  it('setzt den Trainer in die gewaehlte Startregion', async () => {
+    const r = await h.post('/api/starter', { speciesId: 'testmon', regionId: 'testland' }, token)
+    expect(r.status).toBe(200)
+    const world = await h.get('/api/world', token)
+    expect(world.body.currentAreaId).toBe('test-route')
+  })
+
+  it('weist eine Region ab, die kein Anfang ist', async () => {
+    const r = await h.post('/api/starter', { speciesId: 'testmon', regionId: 'nirgendwo' }, token)
+    expect(r.status).toBe(400)
+    // Und der Starter ist auch nicht heimlich doch entstanden.
+    expect((await h.get('/api/starter', token)).body.needsStarter).toBe(true)
+  })
+
   it('gibt dem Starter Attacken', async () => {
     await pick()
     const g = await h.get('/api/garden', token)

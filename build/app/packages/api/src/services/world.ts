@@ -7,6 +7,7 @@ import * as creatures from '../repos/creatures.js'
 import { worldClock } from '../worldClock.js'
 import { areaOffset, referenceOf } from './scaling.js'
 import { progressOf } from './league.js'
+import * as travelService from './travel.js'
 
 export interface UnlockRequirement {
   kind: 'previous_area' | 'caught_in_previous' | 'creatures_at_level' | 'badges'
@@ -105,6 +106,7 @@ export function worldMap(ctx: AppContext, trainer: Trainer): {
   levelScaling: boolean
   referenceLevel: number
   league: ReturnType<typeof progressOf>
+  travel: travelService.TravelView
 } {
   const clock = worldClock()
   const caughtPerArea = world.caughtPerArea(ctx.db, trainer.id)
@@ -155,6 +157,7 @@ export function worldMap(ctx: AppContext, trainer: Trainer): {
     levelScaling: trainer.levelScaling,
     referenceLevel: reference,
     league: progressOf(ctx, trainer),
+    travel: travelService.viewOf(ctx, trainer),
     regions: ctx.registry.allRegions.map((r) => ({
       id: r.id,
       name: ctx.registry.localized(r.name, trainer.locale),

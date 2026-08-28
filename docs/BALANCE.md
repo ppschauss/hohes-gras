@@ -96,16 +96,52 @@ darauf trifft, verliert es vermutlich.
 
 ## Skalierung
 
-Gebiete und Trainer heben ihr Level auf den **Median** des aktiven Teams — nie
-darunter. Der Median, nicht das stärkste Mitglied: ein Team aus 5/5/5/5/90 hat
-den Durchschnitt 22, eine Zahl, die auf kein einziges davon zutrifft. So macht
-ein getauschtes Level-90-Pokémon nicht die ganze Welt unspielbar.
+Gebiete und Trainer treffen den **Median** des aktiven Teams. Der Median, nicht
+das stärkste Mitglied: ein Team aus 5/5/5/5/90 hat den Durchschnitt 22, eine
+Zahl, die auf kein einziges davon zutrifft. So macht ein getauschtes
+Level-90-Pokémon nicht die ganze Welt unspielbar.
+
+Der Versatz wird **am Eingang der Region** bestimmt, nicht am einzelnen Gebiet.
+Sonst wäre jede Region nur über ihren eigenen Einstieg betretbar und die freie
+Startwahl eine Lüge. So wandert die ganze Region auf das Niveau dessen, der sie
+betritt, und behält dabei ihre innere Steigung: der Silberberg bleibt härter als
+Route 29, egal wann man kommt.
+
+Und deshalb geht es hier — anders als früher — **auch nach unten**: Johto
+beginnt im Entwurf bei Level 58; wer dort mit Level 5 anfängt, findet Level 5
+vor. Das schwächste Gebiet fällt nie unter Level 2.
 
 Trainer erben den Versatz **ihres Gebiets**, nicht ihren eigenen: der Rivale
 steht im Entwurf zwei Level unter der Obergrenze seiner Route, ein Arenaleiter
 darüber. Diese Abstände sind die Aussage des Entwurfs.
 
 Abschaltbar auf der Weltkarte.
+
+## Reisegrenze
+
+Die einzige Zahl, die sagt, wie weit jemand gekommen ist:
+
+| Bezwungene Regionen | Grenze |
+|---|---|
+| 0 (Start) | 50 |
+| 1 | 100 |
+| 2 | 150 |
+| … | +50 je Region |
+| 9 | 500 (absolutes Ende) |
+
+Bezwungen heißt: **alle Orden der Region plus ihr Meister**. Bewusst an
+bezwungene Regionen gebunden, nicht an betretene — sonst tourte man neun
+Regionen auf Level fünf ab und hätte die Grenze geschenkt.
+
+Die Grenze steht nirgends gespeichert; sie folgt aus Orden und Siegen. Eine
+gespeicherte Grenze wäre eine zweite Wahrheit, die beim nächsten
+Content-Wechsel falsch wird.
+
+Sie wirkt an drei Stellen: EP laufen an ihr nicht weiter (sonst säße man nach
+der nächsten Region schlagartig auf zwanzig geschenkten Leveln), die Skalierung
+hebt kein Gebiet darüber hinaus, und im Duell gilt die **niedrigere** der
+beiden Grenzen — ein Duell soll über die Aufstellung entscheiden, nicht über
+Reisekilometer.
 
 ## Levelkurve
 
@@ -116,8 +152,22 @@ Abschaltbar auf der Weltkarte.
 | Johto Route 29 → Silberberg | 58 | 94 |
 | Johto nach der Liga | 86 | 100 |
 
-Johto setzt bei 58 an, wo Kanto bei 64 endet. Eine zweite Region, die wieder
-bei Level 5 anfängt, macht alles zunichte, was der Spieler aufgebaut hat.
+Das sind die **Entwurfslevel**. Wer Johto zuerst wählt, spielt dieselben
+Gebiete auf sein eigenes Niveau gesenkt; die Abstände zwischen ihnen bleiben.
+
+Jenseits von Level 100 gelten die Originalformeln nicht mehr — sie sind dort
+nicht definiert, und zwei von ihnen brechen zusammen: `erratic` enthält den
+Faktor (160 − n) und fällt ab Level 160 ins Negative. Eine EP-Kurve, die fällt,
+bedeutet Level, die man durch Kämpfen *verliert*. Ab 101 wird deshalb der Wert
+bei 100 kubisch fortgeschrieben. Für die polynomialen Kurven ist das exakt
+dieselbe Zahl wie zuvor (n³ = 100³·(n/100)³), für die beiden Sonderkurven die
+naheliegende Fortschreibung ihres Aufwands.
+
+## Startregion
+
+Jede Region, deren erstes Gebiet keine Vorbedingung hat, ist ein möglicher
+Anfang — heute Kanto und Johto. Die Wahl setzt nur, wo man aufwacht: gereist
+wird überallhin.
 
 ## Wo die Zahlen stehen
 

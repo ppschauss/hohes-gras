@@ -136,10 +136,18 @@ export const JOHTO_AREAS: AreaOut[] = [
     name: { de: 'Route 29' },
     description: { de: 'Der Weg nach Johto. Vertrautes Gras, unbekannte Bewohner.' },
     icon: '/media/areas/route-29.png', background: '/media/areas/route-29-bg.png',
+    /*
+     * Kein Vorgänger, keine Bedingung.
+     *
+     * Früher hing Johtos Einstieg an Kantos Krone — die Regionen waren eine
+     * Kette. Seit die Startregion frei wählbar ist und die Skalierung eine
+     * ganze Region auf das Niveau ihres Besuchers hebt, wäre das eine Tür, die
+     * es nicht mehr geben darf. Jede Region beginnt für sich.
+     */
     unlock: {
-      previousAreaId: 'indigo-plateau', minCaughtInPrevious: 6,
-      minCreaturesAtLevel: { count: 6, level: 60 },
-      requiredBadgeIds: ['league-crown'],
+      previousAreaId: null, minCaughtInPrevious: 0,
+      minCreaturesAtLevel: null,
+      requiredBadgeIds: [],
     },
     spawns: [
       s('sentret', 30, 58, 64), s('hoothoot', 26, 58, 64, { t: ['dusk', 'night'] }),
