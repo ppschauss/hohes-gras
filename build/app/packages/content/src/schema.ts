@@ -100,6 +100,19 @@ export const SpeciesDefSchema = z.object({
   eggGroups: z.array(Id),
   /** Moves the species can learn, with the level at which they unlock. */
   learnset: z.array(z.object({ moveId: Id, level: z.number().int().min(0).max(MAX_CONTENT_LEVEL) })),
+  /**
+   * Wie viel EP diese Art für einen Aufstieg braucht, relativ zur Kurve.
+   *
+   * 2 heißt: doppelt so viel. Kein zweiter Kurventyp, sondern ein Faktor —
+   * damit bleibt die Kurve dieselbe und nur das Tempo ändert sich.
+   */
+  xpFactor: z.number().min(0.1).max(10).default(1),
+  /**
+   * Ereignis-Art: wird von Hand vergeben, taucht in keiner Spawn-Tabelle auf
+   * und zählt nicht in die Pokédex-Summe. Sonst wäre der Dex für alle
+   * unvollständig, die bei der Verteilung nicht dabei waren.
+   */
+  event: z.boolean().default(false),
   evolutions: z.array(EvolutionSchema).default([]),
   sprite: z.string(),
   spriteShiny: z.string(),

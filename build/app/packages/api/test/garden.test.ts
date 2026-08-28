@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { xpForLevel } from '@game/engine'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -287,5 +288,50 @@ describe('Pokedex', () => {
       .toMatchObject({ caught: true, owned: 1 })
     expect(r.body.rows.filter((x: any) => x.caught)).toHaveLength(1)
     expect(r.body.counts).toEqual({ seen: 1, caught: 1, total: 7 })
+  })
+})
+
+describe('Ereignis-Wesen', () => {
+  it('zaehlt nicht in die Pokedex-Summe', async () => {
+    await pick()
+    const dex = await h.get('/api/dex', token)
+    const all = h.ctx.registry.allSpecies.length
+    // Die Ereignis-Art faellt aus der Summe heraus, alle anderen bleiben drin.
+    expect(dex.body.counts.total).toBe(all - 1)
+    expect(dex.body.rows.some((r: any) => r.speciesId === 'festmon')).toBe(false)
+  })
+
+  it('braucht doppelt so viele EP je Aufstieg', async () => {
+    await pick()
+    /*
+     * Zwei gleich starke Pokemon nebeneinander, eines davon die Ereignis-Art.
+     * Gleiches Level, gleiche Werte, gleiche Aktion — der einzige Unterschied
+     * ist der EP-Faktor, und der halbiert den Gewinn.
+     */
+    const trainerId = (h.ctx.db.prepare('SELECT id FROM trainers LIMIT 1').get() as { id: string }).id
+    const add = (speciesId: string, slot: number) => {
+      const id = crypto.randomUUID()
+      // EP passend zum Level einsetzen: mit 0 EP auf Level 30 meldet die erste
+      // Pflege die *Korrektur* als Gewinn, nicht den Gewinn.
+      const xp = xpForLevel('medium_fast', 30)
+      h.ctx.db.prepare(
+        `INSERT INTO creatures (id, owner_id, species_id, xp, level, nature,
+           iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, friendship, energy, hp_current,
+           shiny, moves, caught_at, team_slot)
+         VALUES (?, ?, ?, ?, 30, 'hardy', 31,31,31,31,31,31, 0, 100, 30, 0, '["tackle"]', ?, ?)`,
+      ).run(id, trainerId, speciesId, xp, Date.now(), slot)
+      return id
+    }
+    // Der Starter aus `pick()` steht auf Slot 0 — diese beiden daneben.
+    const eventId = add('festmon', 1)
+    const plainId = add('wildmon', 2)
+
+    h.resetRateLimits()
+    const care = await h.post('/api/garden/care', { action: 'rest' }, token)
+    expect(care.status).toBe(200)
+    const evGain = care.body.gained.find((g: any) => g.creatureId === eventId).xpGained
+    const normal = care.body.gained.find((g: any) => g.creatureId === plainId).xpGained
+    expect(evGain).toBeGreaterThan(0)
+    expect(evGain).toBeCloseTo(normal / 2, -1)
   })
 })

@@ -80,6 +80,7 @@ Erreichbarkeit garantiert die Pipeline.
 tools/curated-kanto.ts    Kanto: Regionen, Orden, Trainer, 15 Gebiete
 tools/curated-johto.ts    Johto: dasselbe, 10 Gebiete
 tools/curated-hoenn.ts    Hoenn: dasselbe, 13 Gebiete
+tools/curated-event.ts    Ereignis-Wesen, die von Hand vergeben werden
 tools/curated-items.ts    Gegenstände (AUTHORED) + abgeleitete Steine
 tools/curated-story.ts    Story-Kapitel
 ```
@@ -122,3 +123,27 @@ sind genau deshalb hinten und hinter der Regionskrone.
 Werden beim Import lokal gespiegelt und aus `/media/` ausgeliefert. Kein
 Hotlinking: die Mini-App soll ohne fremde Hosts funktionieren, und die
 Cloudflare-Kante kann sie mit unveränderlichen Dateinamen ewig cachen.
+
+## Ereignis-Wesen
+
+Arten, die niemand fangen kann: sie stehen in keiner Spawn-Tabelle, in keinem
+Raid-Pool und in keinem Tauschangebot. Der einzige Weg ins Spiel führt über
+`/event <Trainer-Code> [Art]` im Bot, und den kann nur ein Admin aufrufen.
+
+Sie zählen **nicht** in die Pokédex-Summe. Täten sie es, bliebe der Dex für
+jeden unvollständig, der bei der Verteilung nicht dabei war — ein Sammelziel,
+das man nicht erreichen kann, ist kein Ziel, sondern ein Makel.
+
+Zusammengesetzt werden sie in `rebuild-world.ts` aus ihren Vorbildern: Werte und
+Typen vom ersten, das Lernset aus allen vereinigt (je Attacke das niedrigste
+Level), Entwicklungen leer. Zwei neue Felder im Artenschema tragen den Rest:
+
+- `event: true` — hält sie aus allen Pools heraus.
+- `xpFactor` — wie viel EP ein Aufstieg kostet, relativ zur Kurve. Der Faktor
+  wirkt auf den *Gewinn*, nicht auf die Kurve, damit Fortschrittsbalken und
+  Levelableitung stimmig bleiben.
+
+**Prisma-Abra** (`abra-prisma`) ist das erste: ein Abra, das nie erwachsen wird
+— keine Entwicklung, dafür von Anfang an das Repertoire der ganzen Linie bis
+Simsala, dazu makellose Werte und schillernd. Bezahlt wird das mit der
+doppelten EP-Kurve. Es kann alles, nur eben langsam.

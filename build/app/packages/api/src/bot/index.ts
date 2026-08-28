@@ -4,6 +4,7 @@ import { createInvite, listInvites } from '../repos/invites.js'
 import { findByTelegramId, setAdmin, countTrainers } from '../repos/trainers.js'
 import { logEvent } from '../repos/events.js'
 import { createCode as createLinkCode, LINK_CODE_TTL_MS } from '../services/link.js'
+import { eventSpecies, grantEventSpecies } from '../services/eventGift.js'
 import { renderCard } from './card.js'
 import { renderRaidCard } from './raidCard.js'
 import * as guildRepo from '../repos/guilds.js'
@@ -136,7 +137,12 @@ export function createBot(ctx: AppContext): Bot {
       'Alles Weitere passiert in der App.',
     ]
     if (isAdmin(String(c.from?.id ?? ''))) {
-      lines.push('', '*Admin*', '/einladen — neuen Code erzeugen', '/codes — offene Codes anzeigen')
+      lines.push(
+      '', '*Admin*',
+      '/einladen — neuen Code erzeugen',
+      '/codes — offene Codes anzeigen',
+      '/event — Ereignis-Wesen vergeben',
+    )
     }
     await c.reply(lines.join('\n'), { parse_mode: 'Markdown', reply_markup: openKeyboard })
   })
@@ -153,6 +159,46 @@ export function createBot(ctx: AppContext): Bot {
       `Einladungscode: \`${invite.code}\`\nGültig 30 Tage, ${uses}× nutzbar.\n\nOder direkt weiterleiten:\n${deepLink}`,
       { parse_mode: 'Markdown' },
     )
+  })
+
+  bot.command('event', async (c) => {
+    const tgId = String(c.from?.id ?? '')
+    if (!isAdmin(tgId)) return c.reply('Das kann nur ein Admin.')
+    const me = findByTelegramId(ctx.db, tgId)
+    if (!me) return c.reply('Du hast noch keinen Trainer. Tipp /start.')
+
+    const args = (c.match ?? '').toString().trim().split(/\s+/).filter(Boolean)
+    const available = eventSpecies(ctx)
+    if (args.length === 0) {
+      const list = available.map((s) => `\`${s.id}\` — ${s.name}`).join('\n')
+      return c.reply(
+        `*Ereignis-Wesen vergeben*\n\n\`/event <Trainer-Code> [Art]\`\n\n`
+        + `Verfügbar:\n${list || '— keine —'}\n\n`
+        + 'Ohne Art wird die erste genommen. Vergeben wird immer schillernd, '
+        + 'mit makellosen Werten, auf Level 5.',
+        { parse_mode: 'Markdown' },
+      )
+    }
+
+    const code = args[0]!
+    const speciesId = args[1] ?? available[0]?.id
+    if (!speciesId) return c.reply('Dieses Pack kennt keine Ereignis-Arten.')
+
+    try {
+      const gift = grantEventSpecies(ctx, me, code, speciesId)
+      await c.reply(
+        `✨ *${gift.speciesName}* liegt jetzt in der Box von *${gift.trainerName}* `
+        + `— Level ${gift.level}, schillernd, makellose Werte.`,
+        { parse_mode: 'Markdown' },
+      )
+    } catch (err) {
+      const code2 = err instanceof Error ? err.message : 'unbekannt'
+      await c.reply(
+        code2 === 'not_found'
+          ? 'Kein Trainer mit diesem Code — oder die Art gibt es nicht.'
+          : `Ging nicht: ${code2}`,
+      )
+    }
   })
 
   bot.command('codes', async (c) => {

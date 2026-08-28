@@ -535,7 +535,9 @@ function applyOutcome(
     const species = ctx.registry.species(stored.speciesId)
     const amount = battleXpYield(baseYield, foeLevel, stored.level) * (firstWin ? 1 : 0.5)
     xpPerMember = Math.round(amount)
-    const gained = grantXpTo(species.growthRate, stored.xp, stored.level, amount, cap)
+    // Ereignis-Arten steigen langsamer; siehe `xpFactor` im Pack.
+    const scaled = Math.max(1, Math.round(amount / (species.xpFactor ?? 1)))
+    const gained = grantXpTo(species.growthRate, stored.xp, stored.level, scaled, cap)
     ctx.db.prepare('UPDATE creatures SET xp = ?, level = ? WHERE id = ?')
       .run(gained.totalXp, gained.levelAfter, stored.id)
 

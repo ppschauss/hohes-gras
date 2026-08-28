@@ -123,11 +123,14 @@ export function applyCare(
     const span = Math.max(
       1, xpForLevel(species.growthRate, c.level + 1) - xpForLevel(species.growthRate, c.level),
     )
-    const gain = Math.max(
+    const raw = Math.max(
       1,
       Math.round(rules.xp * factor),
       Math.round((span * rules.xp / CARE_LEVEL_SPAN) * factor),
     )
+    // Manche Arten brauchen mehr EP je Aufstieg — der Faktor wirkt auf den
+    // Gewinn, nicht auf die Kurve, damit alle Anzeigen stimmig bleiben.
+    const gain = Math.max(1, Math.round(raw / (species.xpFactor ?? 1)))
     // Level mitgeben: eine Zeile mit abweichenden EP darf nie zu einer
     // Ruecksufung fuehren.
     const xp = grantXpTo(species.growthRate, c.xp, c.level, gain, levelCap)

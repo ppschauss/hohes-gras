@@ -86,7 +86,7 @@ export function summon(ctx: AppContext, trainer: Trainer, tier: RaidTier): Retur
 
     const rarityOrder = ['common', 'uncommon', 'rare', 'legendary']
     const minIndex = rarityOrder.indexOf(spec.minRarity)
-    const pool = ctx.registry.allSpecies.filter((s) => rarityOrder.indexOf(s.rarity) >= minIndex)
+    const pool = ctx.registry.obtainableSpecies.filter((s) => rarityOrder.indexOf(s.rarity) >= minIndex)
     if (pool.length === 0) throw new GameError('content_unavailable', { reason: 'no_species_for_tier' }, 409)
 
     const species = rng.pick(pool)

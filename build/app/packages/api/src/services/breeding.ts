@@ -25,7 +25,7 @@ const HATCH_LEVEL = 1
  */
 export function baseFormOf(ctx: AppContext, speciesId: string): string {
   const parents = new Map<string, string>()
-  for (const s of ctx.registry.allSpecies) {
+  for (const s of ctx.registry.obtainableSpecies) {
     for (const evo of s.evolutions) parents.set(evo.to, s.id)
   }
   let current = speciesId

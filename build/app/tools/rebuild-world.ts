@@ -16,6 +16,7 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { AUTHORED, lureItems } from './curated-items.ts'
+import { EVENT_SPECIES } from './curated-event.ts'
 import { AREAS, BADGES, REGIONS, TRAINERS } from './curated-kanto.ts'
 import { CHAPTERS } from './curated-story.ts'
 import { JOHTO_AREAS, JOHTO_BADGES, JOHTO_CHAPTERS, JOHTO_REGION, JOHTO_TRAINERS } from './curated-johto.ts'
@@ -33,8 +34,50 @@ const OUT = join(DATA_DIR, 'packs', PACK)
 const log = (msg: string) => console.log(`  ${msg}`)
 
 async function main(): Promise<void> {
-  const species = JSON.parse(await readFile(join(OUT, 'species.json'), 'utf8')) as Array<{ id: string }>
-  const inPack = new Set(species.map((s) => s.id))
+  const species = JSON.parse(await readFile(join(OUT, 'species.json'), 'utf8')) as Array<Record<string, any>>
+
+  /*
+   * Ereignis-Arten aus ihren Vorbildern zusammensetzen.
+   *
+   * Werte und Typen vom ersten Vorbild, Lernset aus allen dreien vereinigt —
+   * je Attacke das niedrigste Level, damit wirklich alles lernbar ist. Keine
+   * Entwicklung: das ist der Witz an der Sache.
+   */
+  const speciesById = new Map(species.map((sp) => [sp.id as string, sp]))
+  let eventCount = 0
+  for (const ev of EVENT_SPECIES) {
+    const base = speciesById.get(ev.basedOn[0]!)
+    if (!base) continue
+    const learnset = new Map<string, number>()
+    for (const source of ev.basedOn) {
+      for (const l of (speciesById.get(source)?.learnset ?? []) as Array<{ moveId: string; level: number }>) {
+        const before = learnset.get(l.moveId)
+        if (before === undefined || l.level < before) learnset.set(l.moveId, l.level)
+      }
+    }
+    const entry = {
+      ...base,
+      id: ev.id,
+      dexNumber: ev.dexNumber,
+      name: ev.name,
+      description: ev.description,
+      types: ev.types,
+      evolutions: [],
+      learnset: [...learnset].map(([moveId, level]) => ({ moveId, level })).sort((a, b) => a.level - b.level),
+      xpFactor: ev.xpFactor,
+      event: true,
+      sprite: ev.sprite,
+      spriteShiny: ev.sprite,
+    }
+    const index = species.findIndex((sp) => sp.id === ev.id)
+    if (index >= 0) species[index] = entry
+    else { species.push(entry); eventCount++ }
+    speciesById.set(ev.id, entry)
+  }
+  if (eventCount) log(`${eventCount} Ereignis-Arten ergaenzt`)
+  await writeFile(join(OUT, 'species.json'), JSON.stringify(species, null, 1))
+
+  const inPack = new Set(species.map((s) => s.id as string))
   console.log(`Welt neu erzeugen · Pack "${PACK}" · ${inPack.size} bekannte Arten\n`)
 
   const allAreas = [...AREAS, ...JOHTO_AREAS, ...HOENN_AREAS]

@@ -102,7 +102,7 @@ export function dexRows(
   ownedCounts: Map<string, number>,
   locale: string,
 ): DexRow[] {
-  return registry.allSpecies.map((s) => {
+  return registry.obtainableSpecies.map((s) => {
     const entry = entries.get(s.id)
     return {
       speciesId: s.id,

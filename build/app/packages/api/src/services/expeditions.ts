@@ -256,7 +256,8 @@ export function collect(ctx: AppContext, trainer: Trainer, expeditionId: string)
     for (const member of party) {
       const c = creatures.byId(ctx.db, member.creatureId)!
       const species = ctx.registry.species(c.speciesId)
-      const gained = grantXpTo(species.growthRate, c.xp, c.level, outcome.xpPerMember, cap)
+      const share = Math.max(1, Math.round(outcome.xpPerMember / (species.xpFactor ?? 1)))
+      const gained = grantXpTo(species.growthRate, c.xp, c.level, share, cap)
       ctx.db.prepare('UPDATE creatures SET xp = ?, level = ? WHERE id = ?')
         .run(gained.totalXp, gained.levelAfter, c.id)
       if (gained.levelsGained > 0) {

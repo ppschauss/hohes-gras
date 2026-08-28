@@ -171,7 +171,7 @@ function rollTrade(ctx: AppContext, trainer: Trainer, rng: Rng, now: number): Ce
 
   const given = rng.pick(tradable)
   const caught = dex.caughtSpeciesIds(ctx.db, trainer.id)
-  const candidates = ctx.registry.allSpecies.filter(
+  const candidates = ctx.registry.obtainableSpecies.filter(
     (s) => s.catchRate >= TRADE_MIN_CATCH_RATE && s.id !== given.speciesId,
   )
   if (candidates.length === 0) return null

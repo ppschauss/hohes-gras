@@ -283,7 +283,7 @@ function pickLegendary(ctx: AppContext, regionId: string, rng: Rng): string | nu
   const low = Math.min(...numbers)
   const high = Math.max(...numbers)
 
-  const candidates = ctx.registry.allSpecies.filter(
+  const candidates = ctx.registry.obtainableSpecies.filter(
     (sp) => sp.catchRate <= LEGENDARY_CATCH_RATE && sp.dexNumber >= low && sp.dexNumber <= high,
   )
   return candidates.length > 0 ? rng.pick(candidates).id : null

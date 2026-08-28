@@ -8,6 +8,15 @@ export class Registry {
 
   get manifest() { return this.pack.manifest }
   get allSpecies(): SpeciesDef[] { return [...this.pack.species.values()].sort((a, b) => a.dexNumber - b.dexNumber) }
+
+  /**
+   * Alles, was sich erspielen laesst.
+   *
+   * Ereignis-Arten werden von Hand vergeben und stehen in keiner Spawn-Tabelle.
+   * Zaehlte man sie mit, waere der Pokedex fuer jeden unvollstaendig, der bei
+   * der Verteilung nicht dabei war.
+   */
+  get obtainableSpecies(): SpeciesDef[] { return this.allSpecies.filter((s) => !s.event) }
   get allItems(): ItemDef[] { return [...this.pack.items.values()] }
   /** Areas in the order a player travels them: region by region, and inside a
    *  region by its own order. Sorting by `order` alone interleaves two regions
@@ -23,7 +32,8 @@ export class Registry {
   get allBadges(): BadgeDef[] { return [...this.pack.badges.values()] }
   get allTrainers(): TrainerDef[] { return [...this.pack.trainers.values()] }
   get chapters(): ChapterDef[] { return this.pack.chapters }
-  get speciesCount() { return this.pack.species.size }
+  /** Zaehlt nur, was sich erspielen laesst — siehe `obtainableSpecies`. */
+  get speciesCount() { return this.obtainableSpecies.length }
 
   species(id: string): SpeciesDef { return req(this.pack.species.get(id), 'species', id) }
   move(id: string): MoveDef { return req(this.pack.moves.get(id), 'move', id) }

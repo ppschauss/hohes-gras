@@ -83,6 +83,9 @@ function writeMinimalPack(dataDir: string): void {
     // Fangrate 3 = legendaer. Steht in keiner Spawn-Tabelle: es taucht nur
     // ueber den 0,1-Prozent-Wurf auf.
     species('sagenmon', 7, { catchRate: 3 }),
+    // Ereignis-Art: nirgends zu fangen, doppelte EP-Kurve, zaehlt nicht in den
+    // Dex.
+    species('festmon', 8, { event: true, xpFactor: 2 }),
   ])
   // Dieselben Ids wie im echten Pack: Startausruestung und Pflegelogik nennen
   // sie fest, eine abweichende Fixture wuerde am eigentlichen Verhalten
