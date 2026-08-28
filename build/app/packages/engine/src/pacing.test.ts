@@ -127,4 +127,42 @@ describe('checkPacing — Rhythmus', () => {
     const now = history[history.length - 1]! + 700
     expect(checkPacing(history, now, CARE_PACING).ok).toBe(true)
   })
+
+  it('haelt schnelles Tippen einer echten Hand fuer echt', () => {
+    // Gemessen an einem echten Spieler, der so schnell getippt hat, wie es
+    // geht: 218 ms Mittel, 33,5 ms Streuung. Die alte Schwelle von 35 ms hat
+    // ihn als Skript eingestuft und fuer eine Viertelstunde gesperrt.
+    const gaps = [294, 202, 228, 238, 208, 182, 199, 192, 245, 211, 226, 197]
+    const history = [T0]
+    for (const g of gaps) history.push(history[history.length - 1]! + g)
+    expect(looksAutomated(history)).toBe(false)
+    expect(checkPacing(history, history[history.length - 1]! + 210, CARE_PACING).ok).toBe(true)
+  })
+
+  it('laesst eine abgegoltene Serie nicht ein zweites Mal ausloesen', () => {
+    // Der Kern des Fehlers: ein abgewiesener Versuch wird nicht mitgeschrieben.
+    // Ohne diese Abgrenzung sieht die Probe nach der Pause dieselben Abstaende
+    // und weist wieder ab — dreissig angekuendigte Sekunden wurden so zu einer
+    // Viertelstunde.
+    const history = series(RHYTHM_SAMPLES + 1, 400)
+    const caughtAt = history[history.length - 1]! + 400
+    expect(checkPacing(history, caughtAt, CARE_PACING).ok).toBe(false)
+
+    const penaltyEnd = caughtAt + RHYTHM_PENALTY_MS
+    expect(checkPacing(history, penaltyEnd + 1, CARE_PACING, penaltyEnd).ok).toBe(true)
+  })
+
+  it('faengt eine Maschine nach der Pause wieder ein', () => {
+    // Abgegolten heisst nicht begnadigt: wer weitermacht wie vorher, sammelt
+    // neue Abstaende und faellt erneut auf.
+    const first = series(RHYTHM_SAMPLES + 1, 400)
+    const penaltyEnd = first[first.length - 1]! + 400 + RHYTHM_PENALTY_MS
+    const after = series(RHYTHM_SAMPLES + 1, 400, 0, penaltyEnd + 400)
+    const history = [...first, ...after]
+    const now = after[after.length - 1]! + 400
+    const verdict = checkPacing(history, now, CARE_PACING, penaltyEnd)
+    expect(verdict.ok).toBe(false)
+    if (verdict.ok) return
+    expect(verdict.reason).toBe('rhythm')
+  })
 })

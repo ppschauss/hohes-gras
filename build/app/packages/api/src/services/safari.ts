@@ -150,9 +150,10 @@ export type ExploreResult =
     }
 
 export function explore(ctx: AppContext, trainer: Trainer, ballId: string, berryId: string | null): ExploreResult {
+  // Erkunden bleibt unbegrenzt; geprueft wird nur, ob ein Mensch klickt.
+  // Ausserhalb der Transaktion, damit die Zwangspause den Abbruch ueberlebt.
+  assertPace(ctx, trainer, 'explore')
   return tx(ctx.db, () => {
-    // Erkunden bleibt unbegrenzt; geprueft wird nur, ob ein Mensch klickt.
-    assertPace(ctx, trainer, 'explore')
     const area = requireCurrentArea(ctx, trainer)
     const used = counterValue(ctx.db, trainer.id, EXPLORE_COUNTER)
     energy.spendFor(ctx, trainer.id, 'explore')

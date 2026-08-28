@@ -19,6 +19,15 @@ export const BUCKETS: Record<'care' | 'explore', PacingRules> = {
 
 export type PacingBucket = keyof typeof BUCKETS
 
+/**
+ * Taktkontrolle. Muss **ausserhalb** einer Transaktion laufen.
+ *
+ * Sie schreibt zwei Dinge, die eine abgewiesene Aktion ueberleben muessen: die
+ * Zwangspause und den Protokolleintrag. Innerhalb von `tx()` nimmt der
+ * Rollback beide wieder mit — die Pause verschwaende, und das Protokoll, mit
+ * dem sich die Schwelle ueberpruefen laesst, blieb fuer immer leer. Genau so
+ * war es, bis es jemandem auffiel.
+ */
 export function assertPace(
   ctx: AppContext,
   trainer: Trainer,
@@ -26,13 +35,27 @@ export function assertPace(
   now = Date.now(),
 ): void {
   const rules = BUCKETS[bucket]
+
+  // Eine laufende Pause zuerst: sie meldet die *verbleibende* Zeit, nicht
+  // jedes Mal wieder dreissig Sekunden.
+  const penalty = pulse.penaltyOf(ctx.db, trainer.id, bucket)
+  if (penalty && penalty.until > now) {
+    throw new GameError('rate_limited', {
+      reason: penalty.reason,
+      retryAfter: Math.ceil((penalty.until - now) / 1000),
+    }, 429)
+  }
+
   const history = pulse.recent(ctx.db, trainer.id, bucket, now - rules.windowMs)
-  const verdict = checkPacing(history, now, rules)
+  // Abstaende aus der Zeit vor der letzten Pause sind abgegolten und duerfen
+  // nicht noch einmal dieselbe Pause ausloesen.
+  const verdict = checkPacing(history, now, rules, penalty?.until ?? 0)
   if (verdict.ok) return
 
-  // Auffaellige Muster landen im Protokoll — nicht um jemanden zu sperren,
-  // sondern damit sich hinterher nachsehen laesst, ob die Schwelle stimmt.
   if (verdict.reason === 'rhythm') {
+    pulse.setPenalty(ctx.db, trainer.id, bucket, now + verdict.retryAfterMs, 'rhythm', now)
+    // Auffaellige Muster landen im Protokoll — nicht um jemanden zu sperren,
+    // sondern damit sich hinterher nachsehen laesst, ob die Schwelle stimmt.
     logEvent(ctx.db, trainer.id, 'pacing.rhythm', { bucket, samples: history.length })
   }
 

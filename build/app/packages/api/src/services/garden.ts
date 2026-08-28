@@ -107,11 +107,12 @@ export interface CareGain {
 }
 
 export function performCare(ctx: AppContext, trainer: Trainer, action: CareAction): CareGain[] {
+  // Hundert Pflegeaktionen je Viertelstunde, kein maschineller Takt. Steht
+  // bewusst *vor* der Transaktion: ein abgewiesener Versuch soll weder Energie
+  // noch Beeren kosten — und die Zwangspause, die die Pruefung dabei setzt,
+  // muss den Abbruch ueberleben.
+  assertPace(ctx, trainer, 'care')
   return tx(ctx.db, () => {
-    // Vor allem anderen: hundert Pflegeaktionen je Viertelstunde, kein
-    // maschineller Takt. Steht hier oben, damit ein abgewiesener Versuch weder
-    // Energie noch Beeren kostet.
-    assertPace(ctx, trainer, 'care')
 
     const team = creatures.teamOf(ctx.db, trainer.id)
     const rules = CARE_RULES[action]

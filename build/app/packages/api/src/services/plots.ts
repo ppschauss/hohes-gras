@@ -250,8 +250,9 @@ export interface TendResult {
  * die Pflege hätte keinen Bezug mehr zum Wachsen.
  */
 export function tend(ctx: AppContext, trainer: Trainer, slot: number, now = Date.now()): TendResult {
+  // Ausserhalb der Transaktion: siehe assertPace.
+  assertPace(ctx, trainer, 'care', now)
   return tx(ctx.db, () => {
-    assertPace(ctx, trainer, 'care', now)
 
     const row = plots.atSlot(ctx.db, trainer.id, slot)
     if (!row) throw new GameError('not_found', { slot }, 404)

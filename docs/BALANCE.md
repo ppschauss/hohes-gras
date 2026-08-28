@@ -35,12 +35,31 @@ Kaufbar: 10 Energie für 100 Gold, größere Pakete bis 8 Gold je Punkt.
 |---|---|
 | Pflegeaktionen je 15 Minuten | 100 |
 | Mindestabstand zwischen Klicks | 180 ms |
-| Rhythmus: Standardabweichung der letzten 8 Abstände | < 35 ms → 30 s Pause |
+| Rhythmus: Standardabweichung der letzten 12 Abstände | < 15 ms → 30 s Pause |
 
 Der dritte Punkt ist der eigentliche Schutz. Gemessen wird nicht
 Geschwindigkeit, sondern **Gleichmäßigkeit**: ein Skript klickt metronomisch,
-eine Hand schwankt um Dutzende Millisekunden. Wer genug Jitter einbaut, um
-durchzukommen, hat keinen Vorteil mehr.
+eine Hand nicht. Wer genug Jitter einbaut, um durchzukommen, hat keinen Vorteil
+mehr.
+
+Die Schwelle stand zuerst bei 35 ms über 8 Abstände, begründet damit, dass eine
+Hand um Dutzende Millisekunden schwanke. Am schnellen Ende stimmt das nicht: wer
+so schnell tippt, wie es geht, wird *gleichmäßiger*. An den Daten eines echten
+Spielers gemessen — 218 ms Mittel, 33,5 ms Streuung — lag eine Hand knapp unter
+der alten Schwelle und wurde als Skript behandelt. 15 ms liegt unter allem, was
+eine Hand erzeugt, und weit über dem, was ein Timer erzeugt.
+
+Die Zwangspause steht in `pacing_penalties`, und die Abstände davor sind danach
+abgegolten. Ohne beides war die angekündigte Zeit eine Falschaussage: ein
+abgewiesener Versuch wird nicht mitgeschrieben, also sah die Probe dreißig
+Sekunden später dieselben Abstände und wies wieder ab — bis sie nach einer
+Viertelstunde aus dem Fenster fielen. Angekündigt: 30 Sekunden. Tatsächlich: bis
+zu 15 Minuten.
+
+Die Prüfung läuft bewusst **außerhalb** der Transaktion. Innerhalb nahm der
+Rollback der abgewiesenen Aktion die Pause und den Protokolleintrag mit — das
+Protokoll, mit dem sich die Schwelle überprüfen lässt, blieb deshalb
+ausgerechnet in jedem echten Fall leer.
 
 ## Poké-Beet
 

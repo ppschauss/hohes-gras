@@ -85,7 +85,7 @@ describe('Taktkontrolle bei der Pflege', () => {
 
   it('erkennt einen maschinellen Takt und verhaengt eine Pause', async () => {
     // Exakt gleiche Abstaende — kein Mensch klickt so.
-    seedPulse('care', Array(10).fill(400))
+    seedPulse('care', Array(14).fill(400))
     h.resetRateLimits()
     const r = await care()
     expect(r.status).toBe(429)
@@ -104,7 +104,7 @@ describe('Taktkontrolle bei der Pflege', () => {
     const bagBefore = (await h.get('/api/bag', token)).body.items
       .find((i: any) => i.id === 'oran-berry')?.quantity ?? 0
 
-    seedPulse('care', Array(10).fill(400))
+    seedPulse('care', Array(14).fill(400))
     h.resetRateLimits()
     expect((await h.post('/api/garden/care', { action: 'feed' }, token)).status).toBe(429)
 
@@ -113,7 +113,7 @@ describe('Taktkontrolle bei der Pflege', () => {
       .find((i: any) => i.id === 'oran-berry')?.quantity ?? 0
     expect(bagAfter).toBe(bagBefore)
     // Der abgewiesene Versuch belegt auch keinen Platz im Fenster.
-    expect(pulseCount('care')).toBe(10)
+    expect(pulseCount('care')).toBe(14)
   })
 
   it('haelt die Eimer von Pflege und Erkundung auseinander', async () => {
@@ -128,11 +128,62 @@ describe('Taktkontrolle bei der Pflege', () => {
 
   it('bremst auch beim Erkunden einen maschinellen Takt', async () => {
     h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('test-route', trainerId)
-    seedPulse('explore', Array(10).fill(350))
+    seedPulse('explore', Array(14).fill(350))
     h.resetRateLimits()
     const r = await h.post('/api/safari/explore', { ballId: 'poke-ball' }, token)
     expect(r.status).toBe(429)
     expect(r.body.detail.reason).toBe('rhythm')
+  })
+
+  it('meldet nach der Zwangspause die verbleibende Zeit, nicht wieder dreissig Sekunden', async () => {
+    // Der Fehler, den ein Mitspieler gemeldet hat: angekuendigt waren dreissig
+    // Sekunden, gedauert hat es Minuten. Ursache war, dass ein abgewiesener
+    // Versuch nicht mitgeschrieben wird — dieselben Abstaende loesten dieselbe
+    // Pause immer wieder aus, bis sie aus dem Viertelstundenfenster fielen.
+    seedPulse('care', Array(14).fill(400))
+    h.resetRateLimits()
+    const first = await care()
+    expect(first.status).toBe(429)
+    expect(first.body.detail.retryAfter).toBe(30)
+
+    // Die Pause ist gespeichert und ueberlebt den abgebrochenen Vorgang.
+    const row = h.ctx.db
+      .prepare('SELECT until FROM pacing_penalties WHERE trainer_id = ? AND bucket = ?')
+      .get(trainerId, 'care') as { until: number } | undefined
+    expect(row).toBeTruthy()
+
+    // Ein zweiter Versuch bekommt weniger Zeit genannt, nicht wieder dreissig.
+    h.resetRateLimits()
+    const second = await care()
+    expect(second.status).toBe(429)
+    expect(second.body.detail.retryAfter).toBeLessThanOrEqual(30)
+
+    // Und nach Ablauf geht es weiter — ohne dass eine Viertelstunde vergeht.
+    h.ctx.db.prepare('UPDATE pacing_penalties SET until = ? WHERE trainer_id = ?')
+      .run(Date.now() - 1, trainerId)
+    h.resetRateLimits()
+    expect((await care()).status).toBe(200)
+  })
+
+  it('protokolliert das Muster, statt es im Rollback zu verlieren', async () => {
+    // Das Protokoll ist die einzige Moeglichkeit, die Schwelle spaeter zu
+    // ueberpruefen. Innerhalb der Transaktion nahm der Rollback es mit — der
+    // Eintrag fehlte deshalb ausgerechnet in jedem echten Fall.
+    seedPulse('care', Array(14).fill(400))
+    h.resetRateLimits()
+    expect((await care()).status).toBe(429)
+
+    const n = h.ctx.db
+      .prepare("SELECT COUNT(*) n FROM event_log WHERE trainer_id = ? AND kind = 'pacing.rhythm'")
+      .get(trainerId) as { n: number }
+    expect(n.n).toBe(1)
+  })
+
+  it('haelt schnelles Tippen einer echten Hand fuer echt', async () => {
+    // Abstaende eines echten Spielers, so schnell getippt, wie es geht.
+    seedPulse('care', [294, 202, 228, 238, 208, 182, 199, 192, 245, 211, 226, 197])
+    h.resetRateLimits()
+    expect((await care()).status).toBe(200)
   })
 
   it('kennt beim Erkunden aber kein Mengenlimit', async () => {

@@ -23,3 +23,24 @@ export function record(db: Db, trainerId: string, bucket: string, at: number): v
 export function purgeStalePulses(db: Db, olderThan: number): number {
   return db.prepare('DELETE FROM action_pulse WHERE at < ?').run(olderThan).changes
 }
+
+/* ------------------------------------------------------ Zwangspausen */
+
+export interface Penalty { until: number; reason: string }
+
+export function penaltyOf(db: Db, trainerId: string, bucket: string): Penalty | null {
+  const row = db
+    .prepare('SELECT until, reason FROM pacing_penalties WHERE trainer_id = ? AND bucket = ?')
+    .get(trainerId, bucket) as Penalty | undefined
+  return row ?? null
+}
+
+export function setPenalty(
+  db: Db, trainerId: string, bucket: string, until: number, reason: string, now = Date.now(),
+): void {
+  db.prepare(
+    `INSERT INTO pacing_penalties (trainer_id, bucket, until, reason, set_at) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(trainer_id, bucket) DO UPDATE SET
+       until = excluded.until, reason = excluded.reason, set_at = excluded.set_at`,
+  ).run(trainerId, bucket, Math.floor(until), reason, Math.floor(now))
+}
