@@ -10,6 +10,7 @@ import {
 import type { AppContext } from '../context.js'
 import { rateLimit, requireTrainer, withEnergy } from './plugin.js'
 import * as garden from '../services/garden.js'
+import * as souls from '../services/souls.js'
 import * as shop from '../services/shop.js'
 import * as teams from '../services/teams.js'
 import * as energy from '../services/energy.js'
@@ -58,6 +59,22 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
     garden.chooseStarter(ctx, req.trainer!, speciesId, regionId)
     const fresh = findById(ctx.db, req.trainer!.id)!
     return garden.gardenState(ctx, fresh)
+  })
+
+  /* -------------------------------------------------------- Verwerten */
+
+  app.get('/api/souls', auth, async (req) => ({ souls: souls.overview(ctx, req.trainer!) }))
+
+  app.post('/api/souls/salvage', write, async (req) => {
+    const { creatureId } = z.object({ creatureId: z.string().uuid() }).parse(req.body)
+    const result = souls.salvage(ctx, req.trainer!, creatureId)
+    return { result, souls: souls.overview(ctx, req.trainer!) }
+  })
+
+  app.post('/api/souls/redeem', write, async (req) => {
+    const { typeId } = z.object({ typeId: z.string().min(1).max(32) }).parse(req.body)
+    const egg = souls.redeem(ctx, req.trainer!, typeId)
+    return { egg, souls: souls.overview(ctx, req.trainer!) }
   })
 
   app.get('/api/box', auth, async (req) => {

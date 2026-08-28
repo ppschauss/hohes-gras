@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { t } from '../i18n'
 import { errorText } from '../lib/errors'
-import { api, type CreatureLike } from '../lib/api'
+import { api, type CreatureLike, type SalvageResult } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
 import { CenterState } from '../ui/States'
@@ -15,6 +15,19 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
   const action = useAction()
   const [pending, setPending] = useState<string | null>(null)
   const [openMoves, setOpenMoves] = useState<string | null>(null)
+  // Verwerten ist endgueltig — deshalb erst fragen, dann handeln.
+  const [salvaging, setSalvaging] = useState<string | null>(null)
+  const [salvaged, setSalvaged] = useState<SalvageResult | null>(null)
+
+  const salvage = (id: string) => {
+    haptic.tap()
+    void action.run(() => api.salvage(id), (res) => {
+      setSalvaging(null)
+      setSalvaged(res.result)
+      reloadBoth()
+      haptic.success()
+    })
+  }
 
   const movesAction = (id: string) => ({
     label: openMoves === id ? t('moves.close') : t('moves.edit'),
@@ -51,6 +64,14 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
       aside={<span className="num">{t('garden.inGarden', { n: team.length, max: capacity })}</span>}
     >
       <main className="content">
+        {salvaged && (
+          <p className="notice notice--ok" role="status">
+            {t('souls.done', {
+              name: salvaged.creatureName,
+              list: salvaged.fragments.map((f) => `${f.name} (${f.quantity})`).join(', '),
+            })}
+          </p>
+        )}
         {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
         <section className="section">
@@ -94,8 +115,25 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
                           onClick: () => move(c.id, true),
                           disabled: teamFull || (action.busy && pending === c.id),
                         },
+                        {
+                          label: t('souls.salvage'),
+                          onClick: () => setSalvaging(salvaging === c.id ? null : c.id),
+                          disabled: action.busy,
+                        },
                       ]}
                     />
+                    {salvaging === c.id && (
+                      <div className="evoAsk">
+                        <span className="evoAsk__text">{t('souls.confirm', { name: c.displayName })}</span>
+                        <span className="chain__hint">{t('souls.hint')}</span>
+                        <span className="evoAsk__buttons">
+                          <button type="button" className="btn btn--danger btn--sm" disabled={action.busy}
+                            onClick={() => salvage(c.id)}>{t('app.yes')}</button>
+                          <button type="button" className="btn btn--ghost btn--sm" disabled={action.busy}
+                            onClick={() => setSalvaging(null)}>{t('app.no')}</button>
+                        </span>
+                      </div>
+                    )}
                     {openMoves === c.id && <MovesPanel creatureId={c.id} />}
                   </div>
                 ))}

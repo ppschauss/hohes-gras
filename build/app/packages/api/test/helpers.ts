@@ -101,6 +101,8 @@ function writeMinimalPack(dataDir: string): void {
     { id: 'bg-classic', name: { de: 'Klassisch' }, description: { de: 'Wiese.' }, category: 'background', price: 0, sellPrice: null, stackable: false, icon: '/media/bg.png' },
     // Lockduft als Packung: der Preis gilt fuer fuenf Anwendungen.
     { id: 'rocket-bait', name: { de: 'Störsender' }, description: { de: 'Ruft die Bande.' }, category: 'key', price: 10000, sellPrice: 500, icon: '/media/bait.png', params: { rocketCharges: 5 } },
+    { id: 'soul-normal', name: { de: 'Seelenfragment (Normal)' }, description: { de: 'Rest.' }, category: 'material', price: null, sellPrice: null, icon: '/media/soul.svg', params: { soulType: 'normal' } },
+    { id: 'soul-grass', name: { de: 'Seelenfragment (Pflanze)' }, description: { de: 'Rest.' }, category: 'material', price: null, sellPrice: null, icon: '/media/soul.svg', params: { soulType: 'grass' } },
     { id: 'lure-grass', name: { de: 'Lockduft-Pflanze' }, description: { de: 'Lockt Pflanzen an.' }, category: 'lure', price: 50, sellPrice: 10, icon: '/media/lure.png', params: { lureType: 'grass', packSize: 5 } },
   ])
   put('regions.json', [

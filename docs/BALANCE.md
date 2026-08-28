@@ -79,6 +79,29 @@ Rollback der abgewiesenen Aktion die Pause und den Protokolleintrag mit — das
 Protokoll, mit dem sich die Schwelle überprüfen lässt, blieb deshalb
 ausgerechnet in jedem echten Fall leer.
 
+## Verwerten und Seelenfragmente
+
+| | Wert |
+|---|---|
+| Fragmente je verwertetem Pokémon | 1 je Typ |
+| Fragmente für ein Ei | 10 desselben Typs |
+| Ei enthält | eine zufällige **Grundform** dieses Typs |
+
+Eine Box füllt sich mit Pokémon, die man nicht braucht — und wegwerfen ohne
+Gegenwert tut niemand. Verwerten macht daraus Fragmente, zehn davon werden zu
+einem Ei derselben Sorte: aus dem, was man nicht braucht, wird ein Weg zu dem,
+was man sucht.
+
+Je Typ ein Fragment, nicht je Pokémon eines: ein Zwei-Typen-Pokémon gibt zwei
+verschiedene. Das belohnt Vielfalt, ohne die Menge zu verdoppeln — zehn
+Feuer-Fragmente brauchen weiterhin zehn Feuer-Pokémon.
+
+Nur Grundformen schlüpfen. Ein Ei, aus dem eine Entwicklungsstufe käme, wäre
+eine Abkürzung um das Aufziehen herum.
+
+Drei Sperren, alle mit demselben Grund — Verwerten ist endgültig: nicht im
+Kampf, nicht auf Expedition, und nie das letzte Pokémon.
+
 ## Fangserie und Shinys
 
 | | Wert |

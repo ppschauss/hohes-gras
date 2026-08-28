@@ -198,6 +198,16 @@ export const api = {
       method: 'POST', body: JSON.stringify({ code }),
     }),
 
+  souls: () => request<{ souls: SoulView[] }>('/api/souls'),
+  salvage: (creatureId: string) =>
+    request<{ result: SalvageResult; souls: SoulView[] }>('/api/souls/salvage', {
+      method: 'POST', body: JSON.stringify({ creatureId }),
+    }),
+  redeemSouls: (typeId: string) =>
+    request<{ egg: { id: string; speciesId: string }; souls: SoulView[] }>('/api/souls/redeem', {
+      method: 'POST', body: JSON.stringify({ typeId }),
+    }),
+
   sessions: () => request<{ sessions: SessionView[] }>('/api/sessions'),
   linkCode: () => request<{ code: string; expiresAt: number }>('/api/auth/link/code', { method: 'POST' }),
   revokeSession: (id: string) =>
@@ -994,6 +1004,21 @@ export interface AdminDashboard {
   uptimeSeconds: number
 }
 
+
+export interface SoulView {
+  typeId: string
+  typeName: string
+  color: string
+  itemId: string
+  have: number
+  need: number
+  ready: boolean
+}
+
+export interface SalvageResult {
+  creatureName: string
+  fragments: Array<{ itemId: string; typeId: string; name: string; quantity: number }>
+}
 
 export interface SessionView {
   id: string

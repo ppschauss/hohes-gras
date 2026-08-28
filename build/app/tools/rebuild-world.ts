@@ -15,7 +15,7 @@
  */
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { AUTHORED, lureItems } from './curated-items.ts'
+import { AUTHORED, lureItems, soulItems } from './curated-items.ts'
 import { EVENT_SPECIES } from './curated-event.ts'
 import { AREAS, BADGES, REGIONS, TRAINERS } from './curated-kanto.ts'
 import { CHAPTERS } from './curated-story.ts'
@@ -194,10 +194,10 @@ async function main(): Promise<void> {
   }
   // Lockduefte folgen den Typen des Packs; ein neuer Typ bringt seinen mit.
   const types = JSON.parse(await readFile(join(OUT, 'types.json'), 'utf8')) as Array<{ id: string; name: { de: string } }>
-  for (const lure of lureItems(types)) {
-    const before = byId.get(lure.id)
+  for (const extra of [...lureItems(types), ...soulItems(types)]) {
+    const before = byId.get(extra.id)
     if (!before) added++
-    byId.set(lure.id, { ...before, ...lure })
+    byId.set(extra.id, { ...before, ...extra })
   }
 
   const mergedItems = [...byId.values()].sort((x, y) => x.id.localeCompare(y.id))

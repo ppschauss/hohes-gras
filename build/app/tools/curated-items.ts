@@ -176,6 +176,34 @@ export function lureItems(types: Array<{ id: string; name: { de: string } }>): I
   }))
 }
 
+/** Wie viele Fragmente eines Typs ein Ei kosten. */
+export const SOUL_PER_EGG = 10
+
+/**
+ * Ein Seelenfragment je Typ.
+ *
+ * Nicht käuflich und nicht verkäuflich: es entsteht nur beim Verwerten eines
+ * Pokémon und geht nur in ein Ei. Eine Währung, die man weder kaufen noch zu
+ * Gold machen kann, bleibt das, was sie sein soll — ein Tauschmittel zwischen
+ * dem, was man nicht braucht, und dem, was man sucht.
+ */
+export function soulItems(types: Array<{ id: string; name: { de: string } }>): ItemOut[] {
+  return types.map((t) => ({
+    id: `soul-${t.id}`,
+    name: { de: `Seelenfragment (${t.name.de})` },
+    description: {
+      de: `Bleibt zurück, wenn ein ${t.name.de}-Pokémon verwertet wird. `
+        + `${SOUL_PER_EGG} davon werden zu einem Ei.`,
+    },
+    category: 'material',
+    price: null,
+    sellPrice: null,
+    stackable: true,
+    icon: `/media/items/soul-${t.id}.svg`,
+    params: { soulType: t.id },
+  }))
+}
+
 export async function buildItems(
   api: PokeApi,
   requiredExtraIds: Set<string>,
