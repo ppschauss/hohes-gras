@@ -40,7 +40,7 @@ const BAIT_CHARGES = 5
 /** Gegenstaende, deren Bild selbst erzeugt wurde und als Vektor vorliegt. */
 export const SVG_ICONS = new Set([
   'rocket-bait', 'energy-drink', 'exp-candy-s', 'exp-candy-l',
-  'golden-razz', 'legendary-berry',
+  'golden-razz', 'legendary-berry', 'lure-legendary',
 ])
 
 export const AUTHORED: Authored[] = [
@@ -59,6 +59,29 @@ export const AUTHORED: Authored[] = [
       + `${BAIT_CHARGES} Erkundungen enden in einem Überfall.`,
     params: { rocketCharges: BAIT_CHARGES },
   },
+  {
+    /*
+     * Der Prüfstand für Legendäre.
+     *
+     * Ein Legendäres taucht nur in einer bezwungenen Region auf und dort mit
+     * Bruchteilen eines Prozents — wer die Begegnung *testen* will, wartet
+     * sonst tagelang auf einen Zufall. Dieser Duft ersetzt beides: er
+     * überspringt die Regionsbedingung und den Wurf.
+     *
+     * Deshalb hat er keinen Preis. Er entsteht nur durch `/gegenstand` und
+     * liegt damit dort, wo er hingehört — beim Admin. Anders als die
+     * gekauften Düfte kommt er nicht als Fünferpackung: eine Einheit, eine
+     * Erkundung, damit sich die Zahl im Beutel wie ein Vorrat an Versuchen
+     * liest.
+     */
+    id: 'lure-legendary', category: 'lure', price: null, sellPrice: null,
+    name: 'Legendärer Lockduft',
+    description: 'Testgegenstand. Die nächste Erkundung führt zu einem '
+      + 'Legendären der Region — ohne Rücksicht darauf, ob sie bezwungen ist. '
+      + 'Eine Einheit je Erkundung.',
+    params: { legendaryLure: true, packSize: 1 },
+  },
+
   // --- Bälle. catchMultiplier geht direkt in die Fangformel ein. -----------
   { id: 'poke-ball',   category: 'ball', price: 30,   sellPrice: 15,  params: { catchMultiplier: 1.0 },
     description: 'Der Standardball. Günstig, zuverlässig, überall zu haben.' },

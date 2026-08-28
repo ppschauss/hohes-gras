@@ -501,10 +501,17 @@ function applyOutcome(
   const gold = Math.round(def.rewardGold * (firstWin ? 1 : def.repeatRewardRatio))
   inventory.earnGold(ctx.db, trainer.id, gold)
 
-  // Ein Sieg gibt Energie zurueck, ein erster Orden deutlich mehr: die beiden
-  // Quellen, die das Kampfsystem selbsttragend machen.
-  let energyBack = ENERGY_REWARDS.battleWon
-  energy.reward(ctx, trainer.id, 'battleWon')
+  /*
+   * Energie gibt es einmal je Gegner, nicht je Kampf.
+   *
+   * Ein Kampf kostet 2 und gab 4 zurueck — auch beim hundertsten Mal gegen
+   * denselben Trainer. Wer die Skalierung nach unten drueckte und in einem
+   * Anfangsgebiet alles mit einem Schlag erledigte, machte daraus einen
+   * Energie-Automaten; genau so wurde es gemeldet. Der erste Sieg zahlt
+   * weiterhin, die Wiederholung ist ein Zuschuss und kein Geschaeft.
+   */
+  let energyBack = firstWin ? ENERGY_REWARDS.battleWon : 0
+  if (firstWin) energy.reward(ctx, trainer.id, 'battleWon')
 
   let badge: BattleReward['badge'] = null
   if (def.badgeId && world.awardBadge(ctx.db, trainer.id, def.badgeId)) {

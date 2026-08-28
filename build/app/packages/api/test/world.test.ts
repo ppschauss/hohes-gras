@@ -290,6 +290,33 @@ describe('Lockduft', () => {
     expect(r.status).toBe(200)
   })
 
+  it('holt mit dem Prueflduft ein Legendaeres, ohne dass die Region bezwungen ist', async () => {
+    // Ohne ihn braeuchte es eine vollstaendig bezwungene Region *und* einen
+    // Wurf im Promillebereich — als Testgegenstand waere er wertlos, wenn er
+    // nur die Chance erhoehte.
+    give('lure-legendary', 2)
+    h.resetRateLimits(); h.resetPacing()
+    const r = await h.post('/api/safari/explore', { ballId: 'poke-ball', lureId: 'lure-legendary' }, token)
+    expect(r.status).toBe(200)
+    expect(r.body.legendary).toBe(true)
+    expect(r.body.encounter.speciesId).toBe('sagenmon')
+    expect(r.body.lure).toMatchObject({ itemId: 'lure-legendary', left: 1 })
+  })
+
+  it('verbraucht den Prueflduft je Erkundung einzeln', async () => {
+    give('lure-legendary', 3)
+    for (let i = 0; i < 3; i++) {
+      h.resetRateLimits(); h.resetPacing()
+      await h.post('/api/safari/explore', { ballId: 'poke-ball', lureId: 'lure-legendary' }, token)
+      h.resetRateLimits()
+      await h.post('/api/safari/flee', {}, token)
+    }
+    const left = h.ctx.db
+      .prepare('SELECT quantity FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, 'lure-legendary') as { quantity: number }
+    expect(left.quantity).toBe(0)
+  })
+
   it('verschiebt die Begegnungen sichtbar zum gewaehlten Typ', async () => {
     // Blattmon ist die einzige Pflanzen-Art auf der Testroute und mit Gewicht
     // 1 gegen 70/20/10 praktisch unsichtbar. Mit Lockduft muss es auftauchen.

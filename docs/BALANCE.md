@@ -20,14 +20,20 @@ soll früh spürbar sein und sich später *wegspielen* lassen.
 
 | Kosten | | Erträge | |
 |---|---|---|---|
-| Pflege, Erkundung | 1 | Gewonnener Kampf | +4 |
+| Pflege, Erkundung | 1 | Erster Sieg über einen Gegner | +4 |
 | Kampf, Raid-Angriff | 2 | Gewonnenes Duell | +5 |
 | Duell, Expedition | 3 (2–6) | Entwicklung | +15 |
 | | | Raid-Boss besiegt | +20 |
 | | | Neuer Orden | +60 |
 | | | Gebiet vollständig | +120 |
 
-Kaufbar: 10 Energie für 100 Gold, größere Pakete bis 8 Gold je Punkt.
+Kaufbar: siehe „Energie kaufen".
+
+**Energie gibt es einmal je Gegner, nicht je Kampf.** Ein Kampf kostet 2 und gab
+4 zurück — auch beim hundertsten Mal gegen denselben Trainer. Wer die Skalierung
+nach unten drückte und in einem Anfangsgebiet alles mit einem Schlag erledigte,
+machte daraus einen Automaten. Der erste Sieg zahlt weiterhin, die Wiederholung
+gibt Gold und EP, aber keine Energie mehr.
 
 ## Vergessene Kämpfe
 

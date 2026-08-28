@@ -4,6 +4,7 @@ import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import * as creatures from '../repos/creatures.js'
 import * as dex from '../repos/dex.js'
+import * as inventory from '../repos/inventory.js'
 import { logEvent } from '../repos/events.js'
 
 /**
@@ -70,6 +71,49 @@ export function grantEventSpecies(
       speciesName: ctx.registry.localized(species.name, 'de'),
       trainerName: target.displayName,
       level: EVENT_GIFT_LEVEL,
+    }
+  })
+}
+
+export interface ItemGiftResult {
+  itemId: string
+  itemName: string
+  trainerName: string
+  quantity: number
+  total: number
+}
+
+/**
+ * Gegenstände von Hand vergeben.
+ *
+ * Der Gegenstück zu `grantEventSpecies` für alles, was im Beutel liegt:
+ * Prüfgegenstände wie der legendäre Lockduft haben keinen Preis und fallen
+ * nirgends, es gibt also keinen anderen Weg ins Spiel. Bewusst ohne
+ * Obergrenze je Aufruf, aber mit Protokoll — wer 250 Stück verteilt, soll das
+ * im `event_log` wiederfinden.
+ */
+export function grantItem(
+  ctx: AppContext, admin: Trainer, trainerCode: string, itemId: string, quantity: number,
+): ItemGiftResult {
+  const item = ctx.registry.tryItem(itemId)
+  if (!item) throw new GameError('not_found', { itemId }, 404)
+  const n = Math.floor(quantity)
+  if (!Number.isFinite(n) || n <= 0) throw new GameError('validation_failed', { field: 'quantity' })
+
+  const target = ctx.db
+    .prepare('SELECT id, display_name AS displayName FROM trainers WHERE trainer_code = ?')
+    .get(trainerCode.trim().toUpperCase()) as { id: string; displayName: string } | undefined
+  if (!target) throw new GameError('not_found', { trainerCode }, 404)
+
+  return tx(ctx.db, () => {
+    inventory.grant(ctx.db, target.id, itemId, n)
+    logEvent(ctx.db, target.id, 'admin.item', { itemId, quantity: n, by: admin.id })
+    return {
+      itemId,
+      itemName: ctx.registry.localized(item.name, 'de'),
+      trainerName: target.displayName,
+      quantity: n,
+      total: inventory.quantityOf(ctx.db, target.id, itemId),
     }
   })
 }

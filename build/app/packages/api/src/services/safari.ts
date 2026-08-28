@@ -187,7 +187,9 @@ export function explore(
      * Anwendung erhalten und man wuerfelte gratis weiter.
      */
     const lureUsed: { current: LureUse | null } = { current: null }
-    const lure = useLure(ctx, trainer, lureId, lureUsed)
+    /* Ein Duft kann statt eines Typs eine Zusage tragen; siehe `useLure`. */
+    const forced = { legendary: false }
+    const lure = useLure(ctx, trainer, lureId, lureUsed, forced)
     const rolled = rollEncounter(
       area, clock, rng,
       chainSpecies ? { speciesId: chainSpecies.s, streak: chainSpecies.streak } : null,
@@ -200,8 +202,12 @@ export function explore(
     // Zuerst das Seltenste: ein Legendaeres schlaegt jede andere Begegnung.
     // Nur in einer Region, die vollstaendig bezwungen ist — sonst waere es
     // eine Abkuerzung statt einer Belohnung.
-    if (clearedRegions(ctx, trainer).has(area.regionId) && rollLegendary(rng)) {
+    if (forced.legendary || (clearedRegions(ctx, trainer).has(area.regionId) && rollLegendary(rng))) {
+      // Der Prueflduft darf nicht ins Leere laufen: hat die Region selbst kein
+      // Legendaeres, nimmt er eines aus dem Pack. Beim Zufallstreffer bleibt
+      // es bei der Region — sonst waere die Regionsbindung nur Zierde.
       const legendary = pickLegendary(ctx, area.regionId, rng)
+        ?? (forced.legendary ? pickAnyLegendary(ctx, rng) : null)
       if (legendary) {
         const level = Math.min(100, (rolled?.level ?? 60) + LEGENDARY_LEVEL_BONUS)
         dex.markSeen(ctx.db, trainer.id, legendary)
@@ -404,24 +410,35 @@ export interface LureUse {
 
 function useLure(
   ctx: AppContext, trainer: Trainer, lureId: string | null, used: { current: LureUse | null },
+  forced: { legendary: boolean } = { legendary: false },
 ): LureEffect | null {
   if (!lureId) return null
   const item = ctx.registry.tryItem(lureId)
   if (!item || item.category !== 'lure') return null
+  // Ein Duft zieht entweder einen Typ an oder gibt eine Zusage. Ohne beides
+  // ist er keiner.
+  const legendary = item.params.legendaryLure === true
   const typeId = String(item.params.lureType ?? '')
-  if (!typeId) return null
+  if (!typeId && !legendary) return null
   if (inventory.quantityOf(ctx.db, trainer.id, lureId) <= 0) return null
 
   inventory.consume(ctx.db, trainer.id, lureId, 1)
-  logEvent(ctx.db, trainer.id, 'safari.lure', { itemId: lureId, typeId })
-  const type = ctx.registry.tryType(typeId)
+  logEvent(ctx.db, trainer.id, 'safari.lure', { itemId: lureId, typeId, legendary })
+  const type = typeId ? ctx.registry.tryType(typeId) : null
   used.current = {
     itemId: lureId,
     name: ctx.registry.localized(item.name, trainer.locale),
     typeName: type ? ctx.registry.localized(type.name, trainer.locale) : typeId,
     left: inventory.quantityOf(ctx.db, trainer.id, lureId),
   }
-  return { typeId, typesOf: (speciesId) => ctx.registry.species(speciesId).types }
+  forced.legendary = legendary
+  return typeId ? { typeId, typesOf: (speciesId) => ctx.registry.species(speciesId).types } : null
+}
+
+/** Irgendein Legendaeres des Packs — die Notloesung des Prueflufts. */
+function pickAnyLegendary(ctx: AppContext, rng: Rng): string | null {
+  const candidates = ctx.registry.obtainableSpecies.filter((sp) => sp.catchRate <= LEGENDARY_CATCH_RATE)
+  return candidates.length > 0 ? rng.pick(candidates).id : null
 }
 
 /**

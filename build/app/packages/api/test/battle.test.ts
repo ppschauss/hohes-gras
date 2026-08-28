@@ -173,6 +173,28 @@ describe('Sieg und Belohnung', () => {
     expect(body.reward.gold).toBe(25)
   })
 
+  it('macht aus dem Wiederholungssieg keinen Energie-Automaten', async () => {
+    // Gemeldet von einem Spieler: Kampf kostet 2 Energie, Sieg gab 4 — also
+    // beliebig oft +2 gegen denselben Trainer.
+    addStrongMember(50)
+    await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+    await fightToEnd()
+    h.resetRateLimits()
+    h.ctx.db.prepare('UPDATE creatures SET hp_current = 9999 WHERE owner_id = ?').run(trainerId)
+
+    const before = (h.ctx.db.prepare('SELECT energy FROM trainers WHERE id = ?')
+      .get(trainerId) as { energy: number }).energy
+    h.resetRateLimits()
+    await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+    const { body } = await fightToEnd()
+    const after = (h.ctx.db.prepare('SELECT energy FROM trainers WHERE id = ?')
+      .get(trainerId) as { energy: number }).energy
+
+    expect(body.reward.won).toBe(true)
+    expect(body.reward.energy).toBe(0)
+    expect(after).toBeLessThan(before)
+  })
+
   it('vergibt den Orden bei der Arena', async () => {
     addStrongMember(60)
     await h.post('/api/battle/start', { opponentId: 'test-gym' }, token)

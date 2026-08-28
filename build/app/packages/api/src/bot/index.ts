@@ -4,7 +4,7 @@ import { createInvite, listInvites } from '../repos/invites.js'
 import { findByTelegramId, setAdmin, countTrainers } from '../repos/trainers.js'
 import { logEvent } from '../repos/events.js'
 import { createCode as createLinkCode, LINK_CODE_TTL_MS } from '../services/link.js'
-import { eventSpecies, grantEventSpecies } from '../services/eventGift.js'
+import { eventSpecies, grantEventSpecies, grantItem } from '../services/eventGift.js'
 import { renderCard } from './card.js'
 import { renderRaidCard } from './raidCard.js'
 import * as guildRepo from '../repos/guilds.js'
@@ -142,6 +142,7 @@ export function createBot(ctx: AppContext): Bot {
       '/einladen — neuen Code erzeugen',
       '/codes — offene Codes anzeigen',
       '/event — Ereignis-Wesen vergeben',
+      '/gegenstand — Gegenstände vergeben',
     )
     }
     await c.reply(lines.join('\n'), { parse_mode: 'Markdown', reply_markup: openKeyboard })
@@ -197,6 +198,39 @@ export function createBot(ctx: AppContext): Bot {
         code2 === 'not_found'
           ? 'Kein Trainer mit diesem Code — oder die Art gibt es nicht.'
           : `Ging nicht: ${code2}`,
+      )
+    }
+  })
+
+  bot.command(['gegenstand', 'item'], async (c) => {
+    const tgId = String(c.from?.id ?? '')
+    if (!isAdmin(tgId)) return c.reply('Das kann nur ein Admin.')
+    const me = findByTelegramId(ctx.db, tgId)
+    if (!me) return c.reply('Du hast noch keinen Trainer. Tipp /start.')
+
+    const args = (c.match ?? '').toString().trim().split(/\s+/).filter(Boolean)
+    if (args.length < 2) {
+      return c.reply(
+        '*Gegenstand vergeben*\n\n`/gegenstand <Trainer-Code> <Gegenstand-Id> [Anzahl]`\n\n'
+        + 'Beispiel: `/gegenstand ABCD1234 lure-legendary 250`\n'
+        + 'Ohne Anzahl wird einer vergeben.',
+        { parse_mode: 'Markdown' },
+      )
+    }
+
+    try {
+      const gift = grantItem(ctx, me, args[0]!, args[1]!, Number.parseInt(args[2] ?? '1', 10))
+      await c.reply(
+        `📦 *${gift.quantity}× ${gift.itemName}* liegen jetzt im Beutel von *${gift.trainerName}* `
+        + `— insgesamt ${gift.total}.`,
+        { parse_mode: 'Markdown' },
+      )
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : 'unbekannt'
+      await c.reply(
+        reason === 'not_found'
+          ? 'Kein Trainer mit diesem Code — oder den Gegenstand gibt es nicht.'
+          : `Ging nicht: ${reason}`,
       )
     }
   })
