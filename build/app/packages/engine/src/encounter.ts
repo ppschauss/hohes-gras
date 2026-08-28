@@ -9,6 +9,22 @@ export const SHINY_BASE_ODDS = 1 / 512
  *  hunt stays a hunt. Mirrors the "catch combo" idea, which rewards commitment
  *  without ever guaranteeing anything. */
 export const SHINY_CHAIN_CAP = 40
+/** Wie viel eine Stufe der Serie zur Grundchance dazulegt. */
+export const SHINY_CHAIN_STEP = 0.25
+
+/**
+ * Die Shiny-Chance für eine bestimmte Art, gegeben die laufende Fangserie.
+ *
+ * Die Serie zählt **nur für die Art, die man jagt**. Vorher galt der Zuschlag
+ * für jede Begegnung: wer Abra vierzigmal hintereinander fing, traf auch überall
+ * sonst elfmal häufiger auf Schillernde — und musste sie wegwerfen, weil es die
+ * falsche Art war. Genau das ist gemeldet worden: sieben, acht übersprungene
+ * Shinys neben einer Serie von 45.
+ */
+export function shinyOdds(chainStreak: number): number {
+  const steps = Math.max(0, Math.min(Math.floor(chainStreak), SHINY_CHAIN_CAP))
+  return SHINY_BASE_ODDS * (1 + steps * SHINY_CHAIN_STEP)
+}
 
 export interface SpawnContext {
   timeOfDay: TimeOfDay
@@ -59,7 +75,7 @@ export function rollEncounter(
   area: AreaDef,
   ctx: SpawnContext,
   rng: Rng,
-  shinyChain = 0,
+  chain: { speciesId: string; streak: number } | null = null,
   /** Levelversatz aus der dynamischen Skalierung; siehe `scaling.ts`. */
   levelOffset = 0,
   lure: LureEffect | null = null,
@@ -75,11 +91,12 @@ export function rollEncounter(
   // Der Wurf passiert im entworfenen Band und wird danach verschoben: so
   // bleibt die relative Verteilung innerhalb des Gebiets erhalten.
   const level = shiftLevel(rng.int(entry.minLevel, entry.maxLevel), levelOffset)
-  const chainBonus = 1 + Math.min(shinyChain, SHINY_CHAIN_CAP) * 0.25
+  // Der Serienbonus gilt nur der gejagten Art.
+  const streak = chain && chain.speciesId === entry.speciesId ? chain.streak : 0
   return {
     speciesId: entry.speciesId,
     level,
-    shiny: rng.chance(SHINY_BASE_ODDS * chainBonus * 100),
+    shiny: rng.chance(shinyOdds(streak) * 100),
     gatedByConditions: Boolean(entry.timeOfDay || entry.weather),
   }
 }

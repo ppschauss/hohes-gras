@@ -194,6 +194,35 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
           )}
         </div>
 
+        {safari.data?.chain && (
+          <section className="chain">
+            <img className="chain__mon" src={safari.data.chain.sprite} alt="" width={40} height={40} />
+            <span className="chain__text">
+              <span className="chain__title">
+                {t('safari.chain.title', {
+                  name: safari.data.chain.speciesName,
+                  n: safari.data.chain.streak,
+                })}
+              </span>
+              <span className="chain__odds num">
+                {t('safari.chain.odds', {
+                  odds: (safari.data.chain.odds * 100).toFixed(2),
+                  base: (safari.data.chain.baseOdds * 100).toFixed(2),
+                })}
+              </span>
+              <span className="bar">
+                <span className="bar__fill bar__fill--xp"
+                  style={{ width: `${Math.min(100, (safari.data.chain.streak / safari.data.chain.cap) * 100)}%` }} />
+              </span>
+              <span className="chain__hint">
+                {safari.data.chain.streak >= safari.data.chain.cap
+                  ? t('safari.chain.maxed')
+                  : t('safari.chain.toGo', { n: safari.data.chain.cap - safari.data.chain.streak })}
+              </span>
+            </span>
+          </section>
+        )}
+
         {(charges > 0 || jammers > 0) && (
           <div className="jammer">
             <span className="jammer__text">

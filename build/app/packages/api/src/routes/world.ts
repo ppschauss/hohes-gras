@@ -53,6 +53,7 @@ export function registerWorldRoutes(app: FastifyInstance, ctx: AppContext): void
     return {
       encounter: safari.currentEncounter(ctx, trainer, q.ballId, q.berryId),
       jammerCharges: safari.jammerCharges(ctx, trainer),
+      chain: safari.chainOf(ctx, trainer),
       exploresUsed: counterValue(ctx.db, trainer.id, safari.EXPLORE_COUNTER),
       energy: energy.state(ctx, trainer.id),
       energyCost: ENERGY_COSTS.explore,
@@ -93,6 +94,15 @@ export function registerWorldRoutes(app: FastifyInstance, ctx: AppContext): void
     const body = StartExpeditionSchema.parse(req.body)
     const started = expeditionService.start(ctx, req.trainer!, body.kind, body.duration, body.creatureIds)
     return { expedition: started, overview: expeditionService.overview(ctx, findById(ctx.db, req.trainer!.id)!) }
+  })
+
+  app.post('/api/expeditions/rush', write, async (req) => {
+    const { id } = IdSchema.parse(req.body)
+    const result = expeditionService.rush(ctx, req.trainer!, id)
+    return withEnergy(ctx, req.trainer!.id, {
+      result,
+      overview: expeditionService.overview(ctx, findById(ctx.db, req.trainer!.id)!),
+    })
   })
 
   app.post('/api/expeditions/collect', write, async (req) => {

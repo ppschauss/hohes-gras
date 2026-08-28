@@ -611,6 +611,19 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 }
 .jammer__text { font-size: var(--t-sm); color: var(--ink-muted); }
 
+/* Die Fangserie: Stand, Chance und wie weit es noch ist. */
+.chain {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: var(--s3);
+  align-items: start;
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.chain__mon { image-rendering: pixelated; }
+.chain__text { display: flex; flex-direction: column; gap: var(--s1); min-width: 0; }
+.chain__title { font-size: var(--t-sm); font-weight: 650; }
+.chain__odds { font-size: var(--t-xs); color: var(--accent); }
+.chain__hint { font-size: var(--t-xs); color: var(--ink-faint); }
+
 /* ============================================================ Kampfpanels ===
    Wechseln und Gegenstaende. Diese Klassen hatten wie das Gebietsmenue keine
    Regeln — die Listen fielen zu schrumpfenden Kaestchen zusammen, in denen

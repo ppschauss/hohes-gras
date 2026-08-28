@@ -182,6 +182,10 @@ export const api = {
     request<{ overview: ExpeditionOverview }>('/api/expeditions', {
       method: 'POST', body: JSON.stringify({ kind, duration, creatureIds }),
     }),
+  rushExpedition: (id: string) =>
+    request<{ result: { cost: number; endsAt: number }; overview: ExpeditionOverview }>(
+      '/api/expeditions/rush', { method: 'POST', body: JSON.stringify({ id }) },
+    ),
   collectExpedition: (id: string) =>
     request<{ result: CollectResult; overview: ExpeditionOverview }>('/api/expeditions/collect', {
       method: 'POST', body: JSON.stringify({ id }),
@@ -472,6 +476,16 @@ export interface SafariState {
   energyCost: number
   /** Restliche Erkundungen mit garantiertem Überfall. */
   jammerCharges: number
+  /** Laufende Fangserie — sie zählt nur für die gejagte Art. */
+  chain: {
+    speciesId: string
+    speciesName: string
+    sprite: string
+    streak: number
+    cap: number
+    odds: number
+    baseOdds: number
+  } | null
 }
 
 export type ExploreResponse =
@@ -501,6 +515,8 @@ export interface ExpeditionView {
   startedAt: number
   endsAt: number
   ready: boolean
+  /** Energie, um den Rest zu überspringen. */
+  rushCost: number
   members: Array<{ id: string; name: string; sprite: string; level: number }>
 }
 

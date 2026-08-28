@@ -142,3 +142,44 @@ describe('Expeditionen', () => {
     expect(r.status).toBe(400)
   })
 })
+
+describe('Vorziehen', () => {
+  const startShort = async () => {
+    const creature = await teamId()
+    h.resetRateLimits()
+    return h.post('/api/expeditions', { kind: 'dig', duration: 'short', creatureIds: [creature] }, token)
+  }
+
+  it('kostet Energie und macht die Expedition sofort fertig', async () => {
+    const started = await startShort()
+    const id = started.body.expedition.id
+    h.resetRateLimits()
+    const overview = await h.get('/api/expeditions', token)
+    const cost = overview.body.open.find((e: any) => e.id === id).rushCost
+    // 30 Minuten zu zehn Minuten je Punkt.
+    expect(cost).toBe(3)
+
+    const before = (await h.get('/api/energy', token)).body.state.current
+    h.resetRateLimits()
+    const r = await h.post('/api/expeditions/rush', { id }, token)
+    expect(r.status).toBe(200)
+    expect(r.body.result.cost).toBe(3)
+    expect(r.body.overview.open.find((e: any) => e.id === id).ready).toBe(true)
+    expect(r.body.energy.current).toBe(before - 3)
+
+    // Und sie laesst sich sofort einsammeln.
+    h.resetRateLimits()
+    expect((await h.post('/api/expeditions/collect', { id }, token)).status).toBe(200)
+  })
+
+  it('laesst sich nicht zweimal vorziehen', async () => {
+    const started = await startShort()
+    const id = started.body.expedition.id
+    h.resetRateLimits()
+    await h.post('/api/expeditions/rush', { id }, token)
+    h.resetRateLimits()
+    const again = await h.post('/api/expeditions/rush', { id }, token)
+    expect(again.status).toBe(409)
+    expect(again.body.detail.reason).toBe('already_ready')
+  })
+})

@@ -75,15 +75,38 @@ describe('rollEncounter', () => {
   })
 
   it('erhoeht die Shiny-Chance mit der Fangserie', () => {
-    const count = (chain: number) => {
-      const rng = createRng(`shiny-${chain}`)
+    const count = (chain: { speciesId: string; streak: number } | null, species: string) => {
+      const rng = createRng(`shiny-${chain?.speciesId}-${chain?.streak}`)
       let n = 0
       for (let i = 0; i < 40000; i++) {
-        if (rollEncounter(area, { timeOfDay: 'day', weather: 'clear' }, rng, chain)!.shiny) n++
+        const e = rollEncounter(area, { timeOfDay: 'day', weather: 'clear' }, rng, chain)!
+        if (e.speciesId === species && e.shiny) n++
       }
       return n
     }
-    expect(count(40)).toBeGreaterThan(count(0) * 3)
+    const jagd = { speciesId: 'tag-mon', streak: 40 }
+    expect(count(jagd, 'tag-mon')).toBeGreaterThan(count(null, 'tag-mon') * 3)
+  })
+
+  it('laesst andere Arten unberuehrt', () => {
+    /*
+     * Der gemeldete Fall: eine Serie von 45 auf Abra, und daneben sieben, acht
+     * Shinys anderer Arten, die man wegwerfen musste. Der Zuschlag galt fuer
+     * jede Begegnung statt nur fuer die gejagte.
+     */
+    const others = (chain: { speciesId: string; streak: number } | null) => {
+      const rng = createRng(`other-${chain?.streak ?? 0}`)
+      let n = 0
+      for (let i = 0; i < 40000; i++) {
+        const e = rollEncounter(area, { timeOfDay: 'night', weather: 'clear' }, rng, chain)!
+        if (e.speciesId !== 'tag-mon' && e.shiny) n++
+      }
+      return n
+    }
+    const mitJagd = others({ speciesId: 'tag-mon', streak: 40 })
+    const ohne = others(null)
+    // Gleiche Groessenordnung — die Serie faerbt nicht auf den Rest ab.
+    expect(mitJagd).toBeLessThan(ohne * 2 + 5)
   })
 })
 

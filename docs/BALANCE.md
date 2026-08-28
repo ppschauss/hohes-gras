@@ -79,6 +79,31 @@ Rollback der abgewiesenen Aktion die Pause und den Protokolleintrag mit — das
 Protokoll, mit dem sich die Schwelle überprüfen lässt, blieb deshalb
 ausgerechnet in jedem echten Fall leer.
 
+## Fangserie und Shinys
+
+| | Wert |
+|---|---|
+| Grundchance | 1 : 512 (0,20 %) |
+| je Stufe der Serie | +25 % der Grundchance |
+| Höchststufe | 40 → 2,15 % |
+
+Die Serie zählt **nur für die Art, die man jagt**. Vorher galt der Zuschlag für
+jede Begegnung: wer Abra 45-mal hintereinander fing, traf auch überall sonst
+elfmal häufiger auf Schillernde — und musste sie wegwerfen, weil es die falsche
+Art war. Genau so ist es gemeldet worden. Der Fehler kostete nichts an Zahlen,
+nur an Sinn: eine Jagd, die einem alles außer dem Gesuchten schenkt.
+
+Die Safari zeigt die Serie jetzt an: Art, Stand, die Chance daraus und wie weit
+es noch bis zur Höchststufe ist.
+
+## Expeditionen vorziehen
+
+Zehn Minuten je Energiepunkt. Die kurze Reise (30 min) kostet damit 3 Punkte,
+die lange (8 h) 48 — teuer genug, dass es eine Entscheidung bleibt.
+
+Kein Verkauf von Fortschritt: Energie füllt sich von selbst, sie fehlt dann nur
+beim Erkunden. Wer beschleunigt, verschiebt also, statt zu kaufen.
+
 ## Poké-Beet
 
 | | Wert |

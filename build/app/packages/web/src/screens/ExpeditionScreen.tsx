@@ -41,6 +41,11 @@ export function ExpeditionScreen({ onBack }: { onBack: () => void }) {
     })
   }
 
+  const rush = (id: string) => {
+    haptic.tap()
+    void action.run(() => api.rushExpedition(id), (res) => { data.set(res.overview); haptic.success() })
+  }
+
   const collect = (id: string) => {
     haptic.tap()
     void action.run(() => api.collectExpedition(id), (res) => {
@@ -101,10 +106,22 @@ export function ExpeditionScreen({ onBack }: { onBack: () => void }) {
                       {e.ready ? t('expedition.collect') : t('expedition.readyIn', { n: untilLabel(e.endsAt) })}
                     </span>
                   </span>
-                  <button type="button" className="btn btn--primary btn--sm"
-                    disabled={!e.ready || action.busy} onClick={() => collect(e.id)}>
-                    {t('expedition.collect')}
-                  </button>
+                  {/* Wer nicht warten will, zahlt mit Energie: zehn Minuten
+                      je Punkt. Kein Verkauf von Fortschritt — die Energie
+                      fuellt sich von selbst, sie fehlt nur beim Erkunden. */}
+                  {e.ready
+                    ? (
+                      <button type="button" className="btn btn--primary btn--sm"
+                        disabled={action.busy} onClick={() => collect(e.id)}>
+                        {t('expedition.collect')}
+                      </button>
+                    )
+                    : (
+                      <button type="button" className="btn btn--ghost btn--sm"
+                        disabled={action.busy} onClick={() => rush(e.id)}>
+                        {t('expedition.rush', { n: e.rushCost })}
+                      </button>
+                    )}
                 </article>
               ))}
             </div>

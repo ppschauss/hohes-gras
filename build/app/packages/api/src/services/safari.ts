@@ -5,6 +5,7 @@ import {
   isEventTrainer, LEGENDARY_BERRY_ID, LEGENDARY_MAX_BERRIES, isLegendaryCatchRate,
   legendaryCatchChance, rollEvent, rollLegendary, xpForLevel, type Rng,
   MAX_CALM_STACKS, MAX_WEAKEN_STACKS, ROCKET_BAIT_ID, ROCKET_BAIT_CHARGES,
+  SHINY_BASE_ODDS, SHINY_CHAIN_CAP, shinyOdds,
   type CatchModifiers, type LureEffect,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
@@ -186,7 +187,9 @@ export function explore(
      */
     const lure = useLure(ctx, trainer, lureId)
     const rolled = rollEncounter(
-      area, clock, rng, chainSpecies?.streak ?? 0, areaOffset(ctx, trainer, area), lure,
+      area, clock, rng,
+      chainSpecies ? { speciesId: chainSpecies.s, streak: chainSpecies.streak } : null,
+      areaOffset(ctx, trainer, area), lure,
     )
     bumpCounter(ctx.db, trainer.id, EXPLORE_COUNTER)
     recordPace(ctx, trainer, 'explore')
@@ -305,6 +308,43 @@ function pickEvent(ctx: AppContext, trainer: Trainer, regionId: string, anyGang 
     kind: def.kind,
     sprite: def.sprite,
     intro: ctx.registry.localized(def.dialogue.intro, trainer.locale),
+  }
+}
+
+/**
+ * Die laufende Fangserie.
+ *
+ * Sie zählt nur für die Art, die man jagt — und ohne Anzeige weiß niemand, wie
+ * weit er ist oder was die Serie überhaupt bringt. Deshalb kommt hier beides
+ * heraus: der Stand und die Chance, die daraus folgt.
+ */
+export interface ChainView {
+  speciesId: string
+  speciesName: string
+  sprite: string
+  streak: number
+  /** Ab hier bringt jede weitere Stufe nichts mehr. */
+  cap: number
+  /** Shiny-Chance für diese Art, als Anteil (0–1). */
+  odds: number
+  /** Was ohne Serie gälte — für den Vergleich. */
+  baseOdds: number
+}
+
+export function chainOf(ctx: AppContext, trainer: Trainer): ChainView | null {
+  const row = ctx.db
+    .prepare('SELECT species_id AS s, streak FROM catch_chains WHERE trainer_id = ? ORDER BY streak DESC LIMIT 1')
+    .get(trainer.id) as { s: string; streak: number } | undefined
+  if (!row || row.streak <= 0) return null
+  const species = ctx.registry.species(row.s)
+  return {
+    speciesId: row.s,
+    speciesName: ctx.registry.localized(species.name, trainer.locale),
+    sprite: species.sprite,
+    streak: row.streak,
+    cap: SHINY_CHAIN_CAP,
+    odds: shinyOdds(row.streak),
+    baseOdds: SHINY_BASE_ODDS,
   }
 }
 

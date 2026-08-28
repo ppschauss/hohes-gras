@@ -153,5 +153,22 @@ export function resolveExpedition(
   }
 }
 
+/**
+ * Energie als Beschleuniger.
+ *
+ * Eine Expedition wartet — das ist ihr Wesen. Wer nicht warten will, zahlt mit
+ * dem einzigen Vorrat, der sich von selbst füllt: **zehn Minuten je Punkt**.
+ * Damit kostet die kurze Reise (30 min) drei Punkte, die lange (8 h) achtund-
+ * vierzig — teuer genug, dass es eine Entscheidung bleibt, und billig genug,
+ * dass es die letzte Viertelstunde vor dem Schlafengehen rettet.
+ */
+export const RUSH_MINUTES_PER_ENERGY = 10
+
+/** Wie viel Energie es kostet, `remainingMs` zu überspringen. */
+export function rushCost(remainingMs: number): number {
+  if (remainingMs <= 0) return 0
+  return Math.max(1, Math.ceil(remainingMs / 60_000 / RUSH_MINUTES_PER_ENERGY))
+}
+
 export const findDuration = (id: string): ExpeditionDuration | undefined => DURATIONS.find((d) => d.id === id)
 export const findKind = (id: string): ExpeditionKind | undefined => KINDS.find((k) => k.id === id)

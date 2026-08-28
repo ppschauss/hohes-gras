@@ -2,7 +2,7 @@ import { GameError, type Trainer } from '@game/shared'
 import {
   createRng, energyCost, findDuration, findKind, partyRating, resolveExpedition,
   grantXpTo, computeStats, DURATIONS, ENERGY_COSTS, EXPEDITION_ENERGY, KINDS,
-  MAX_PARTY, MIN_PARTY, type ExpeditionParty,
+  MAX_PARTY, MIN_PARTY, rushCost, type ExpeditionParty,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
@@ -33,6 +33,8 @@ export interface ExpeditionView {
   startedAt: number
   endsAt: number
   ready: boolean
+  /** Energie, um den Rest zu ueberspringen; 0, wenn sie ohnehin fertig ist. */
+  rushCost: number
   members: Array<{ id: string; name: string; sprite: string; level: number }>
 }
 
@@ -65,6 +67,8 @@ function toView(ctx: AppContext, trainer: Trainer, e: expeditions.Expedition, no
     startedAt: e.startedAt,
     endsAt: e.endsAt,
     ready: now >= e.endsAt,
+    /** Was es kostet, den Rest zu ueberspringen. */
+    rushCost: now >= e.endsAt ? 0 : rushCost(e.endsAt - now),
     members,
   }
 }
@@ -182,6 +186,30 @@ export interface CollectResult {
   gold: number
   xpPerMember: number
   levelUps: Array<{ creatureId: string; name: string; newLevel: number }>
+}
+
+/**
+ * Eine laufende Expedition vorziehen.
+ *
+ * Die Energie ist der Preis für die Zeit — und weil sie sich von selbst füllt,
+ * ist das kein Verkauf von Fortschritt, sondern eine Umschichtung: wer
+ * beschleunigt, erkundet in der Zwischenzeit weniger.
+ */
+export function rush(
+  ctx: AppContext, trainer: Trainer, expeditionId: string, now = Date.now(),
+): { cost: number; endsAt: number } {
+  return tx(ctx.db, () => {
+    const e = expeditions.byId(ctx.db, expeditionId)
+    if (!e || e.trainerId !== trainer.id) throw new GameError('not_found', { expeditionId }, 404)
+    if (e.collectedAt !== null) throw new GameError('invalid_state', { reason: 'already_collected' }, 409)
+    if (now >= e.endsAt) throw new GameError('invalid_state', { reason: 'already_ready' }, 409)
+
+    const cost = rushCost(e.endsAt - now)
+    energy.spend(ctx, trainer.id, cost, `rush:${expeditionId}`, now)
+    expeditions.setEndsAt(ctx.db, e.id, now)
+    logEvent(ctx.db, trainer.id, 'expedition.rush', { expeditionId, cost })
+    return { cost, endsAt: now }
+  })
 }
 
 export function collect(ctx: AppContext, trainer: Trainer, expeditionId: string): CollectResult {

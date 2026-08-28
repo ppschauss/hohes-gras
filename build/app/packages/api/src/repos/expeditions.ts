@@ -72,3 +72,8 @@ export function markCollected(db: Db, id: string, now = Date.now()): boolean {
     .prepare('UPDATE expeditions SET collected_at = ? WHERE id = ? AND collected_at IS NULL')
     .run(now, id).changes === 1
 }
+
+/** Eine laufende Expedition vorziehen — der Beschleuniger setzt das Ende. */
+export function setEndsAt(db: Db, id: string, endsAt: number): void {
+  db.prepare('UPDATE expeditions SET ends_at = ? WHERE id = ?').run(endsAt, id)
+}
