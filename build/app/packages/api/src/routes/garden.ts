@@ -23,6 +23,7 @@ import * as themes from '../services/themes.js'
 import * as travel from '../services/travel.js'
 import * as creatures from '../repos/creatures.js'
 import * as eggsRepo from '../repos/eggs.js'
+import * as breeding from '../services/breeding.js'
 import * as dexRepo from '../repos/dex.js'
 import * as inventory from '../repos/inventory.js'
 import { findById } from '../repos/trainers.js'
@@ -72,7 +73,7 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
     // tut: wer drei offene Eier hat, bekommt kein viertes — egal wie viele
     // Fragmente er hat.
     eggsOpen: eggsRepo.openOf(ctx.db, req.trainer!.id).length,
-    eggsMax: eggsRepo.MAX_OPEN_EGGS,
+    eggsMax: breeding.eggSlots(ctx, req.trainer!.id),
   }))
 
   /* Einzeln oder als Auswahl — ein alter Client schickt weiter `creatureId`. */

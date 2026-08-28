@@ -146,6 +146,20 @@ describe('Basisausbau', () => {
     expect(second.body.cost).toBe(5000)
   })
 
+  it('gibt mit der Brutkammer einen Brutplatz je Stufe dazu', async () => {
+    const before = (await h.get('/api/souls', token)).body.eggsMax
+    h.resetRateLimits()
+    await h.post('/api/buildings/upgrade', { buildingId: 'hatch-chamber' }, token)
+    h.resetRateLimits()
+    const after = (await h.get('/api/souls', token)).body.eggsMax
+    expect(after).toBe(before + 1)
+
+    // Und die Zucht rechnet mit derselben Zahl — sie stand einmal doppelt im
+    // Code und waere sonst beim Ausbau zurueckgeblieben.
+    h.resetRateLimits()
+    expect((await h.get('/api/eggs', token)).body.maxEggs).toBe(after)
+  })
+
   it('weist ein unbekanntes Gebaeude ab', async () => {
     expect((await h.post('/api/buildings/upgrade', { buildingId: 'raumhafen' }, token)).status).toBe(404)
   })

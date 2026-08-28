@@ -90,7 +90,7 @@ export function overview(ctx: AppContext, trainer: Trainer) {
 
   return {
     eggs: open.map((e) => eggView(ctx, trainer, e, now)),
-    maxEggs: eggs.MAX_OPEN_EGGS,
+    maxEggs: eggSlots(ctx, trainer.id),
     minLevel: MIN_BREEDING_LEVEL,
     candidates: all
       .filter((c) => c.level >= MIN_BREEDING_LEVEL)
@@ -110,8 +110,9 @@ export function overview(ctx: AppContext, trainer: Trainer) {
 
 export function pair(ctx: AppContext, trainer: Trainer, idA: string, idB: string): EggView {
   return tx(ctx.db, () => {
-    if (eggs.openOf(ctx.db, trainer.id).length >= eggs.MAX_OPEN_EGGS) {
-      throw new GameError('invalid_state', { reason: 'too_many_eggs', max: eggs.MAX_OPEN_EGGS }, 409)
+    const max = eggSlots(ctx, trainer.id)
+    if (eggs.openOf(ctx.db, trainer.id).length >= max) {
+      throw new GameError('invalid_state', { reason: 'too_many_eggs', max }, 409)
     }
 
     const a = creatures.byId(ctx.db, idA)
@@ -197,4 +198,14 @@ export function hatch(ctx: AppContext, trainer: Trainer, eggId: string) {
       newDexEntry,
     }
   })
+}
+
+/**
+ * Wie viele Eier gleichzeitig offen sein duerfen.
+ *
+ * Grundstock plus Brutkammer. Alle Stellen fragen hier — eine zweite, fest
+ * verdrahtete Zahl waere beim Ausbau zurueckgeblieben.
+ */
+export function eggSlots(ctx: AppContext, trainerId: string): number {
+  return eggs.MAX_OPEN_EGGS + bonuses(ctx, trainerId).eggSlotBonus
 }

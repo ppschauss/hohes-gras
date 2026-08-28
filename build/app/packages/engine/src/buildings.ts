@@ -22,6 +22,7 @@ export interface BuildingSpec {
     | 'careLimitBonus'     // zusaetzliche Pflegeaktionen je Viertelstunde
     | 'centerSpeedBonus'   // Stufen, um die die Abklingzeit des Centers sinkt
     | 'boxSlotBonus'       // zusaetzliche Plaetze in der Box
+    | 'eggSlotBonus'       // zusaetzliche Brutplaetze
 }
 
 /**
@@ -100,6 +101,19 @@ export const BUILDINGS: BuildingSpec[] = [
     id: 'storage', maxLevel: 25, effectKind: 'boxSlotBonus',
     cost: () => 5000,
     effect: (level) => level * 50,
+  },
+  {
+    /*
+     * Brutkammer: ein Brutplatz mehr je Stufe.
+     *
+     * Drei offene Eier sind der Grundstock, und wer viel verwertet, steht
+     * schnell davor. Anders als beim Depot waechst der Preis quadratisch: ein
+     * Platz mehr heisst nicht nur mehr Ablage, sondern eine weitere Brut, die
+     * *gleichzeitig* laeuft — die Wirkung legt sich auf alles Kommende.
+     */
+    id: 'hatch-chamber', maxLevel: 5, effectKind: 'eggSlotBonus',
+    cost: (level) => 2500 * level ** 2,
+    effect: (level) => level,
   },
   {
     id: 'greenhouse', maxLevel: 3, effectKind: 'energyCapBonus',

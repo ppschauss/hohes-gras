@@ -9,6 +9,7 @@ import * as expeditions from '../repos/expeditions.js'
 import * as battles from '../repos/battles.js'
 import { logEvent } from '../repos/events.js'
 import { bonuses } from './progression.js'
+import { eggSlots } from './breeding.js'
 
 /**
  * Verwerten.
@@ -207,8 +208,9 @@ export function redeem(ctx: AppContext, trainer: Trainer, typeId: string, shiny 
     if (inventory.quantityOf(ctx.db, trainer.id, item.id) < cost) {
       throw new GameError('insufficient_items', { itemId: item.id, need: cost }, 409)
     }
-    if (eggs.openOf(ctx.db, trainer.id).length >= eggs.MAX_OPEN_EGGS) {
-      throw new GameError('invalid_state', { reason: 'too_many_eggs', max: eggs.MAX_OPEN_EGGS }, 409)
+    const maxEggs = eggSlots(ctx, trainer.id)
+    if (eggs.openOf(ctx.db, trainer.id).length >= maxEggs) {
+      throw new GameError('invalid_state', { reason: 'too_many_eggs', max: maxEggs }, 409)
     }
 
     // Nur Grundformen: ein Ei, aus dem eine Entwicklungsstufe schluepft, waere

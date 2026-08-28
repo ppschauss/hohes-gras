@@ -40,6 +40,18 @@ nach unten drückte und in einem Anfangsgebiet alles mit einem Schlag erledigte,
 machte daraus einen Automaten. Der erste Sieg zahlt weiterhin, die Wiederholung
 gibt Gold und EP, aber keine Energie mehr.
 
+## Kapazitäten und ihr Ausbau
+
+| Was | Grundstock | Ausbau | je Stufe | Preis | Ende |
+|---|---|---|---|---|---|
+| Box | 900 | Depot, 25 Stufen | +50 Plätze | 5.000 (fest) | 2.150 |
+| Brutplätze | 3 | Brutkammer, 5 Stufen | +1 Ei | 2.500 · Stufe² | 8 |
+
+Das Depot hat als einziger Ausbau einen festen Preis: Platz ist eine Ware,
+fünfzig Plätze sind fünfzig Plätze. Die Brutkammer wächst quadratisch, weil ein
+Brutplatz mehr keine Ablage ist, sondern eine weitere Brut, die *gleichzeitig*
+läuft.
+
 ## Vergessene Kämpfe
 
 Ein Kampf ist rundenbasiert und wartet geduldig — aber nach **zwei Stunden**
