@@ -655,6 +655,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .soulRow__text { display: flex; flex-direction: column; gap: var(--s1); min-width: 0; }
 .soulRow__name { font-size: var(--t-sm); font-weight: 650; }
 .soulRow__count { font-size: var(--t-xs); color: var(--ink-muted); }
+.soulRow__buttons { display: flex; gap: var(--s2); flex-wrap: wrap; justify-content: end; }
 
 /* Zusatz auf einem Knopf — etwa der Preis unter "Team heilen". */
 .btn__note { display: block; font-size: var(--t-xs); font-weight: 500; opacity: 0.75; }

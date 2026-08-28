@@ -11,6 +11,7 @@ import type { AppContext } from '../context.js'
 import { rateLimit, requireTrainer, withEnergy } from './plugin.js'
 import * as garden from '../services/garden.js'
 import * as souls from '../services/souls.js'
+import { useItem } from '../services/useItem.js'
 import * as shop from '../services/shop.js'
 import * as teams from '../services/teams.js'
 import * as energy from '../services/energy.js'
@@ -72,9 +73,21 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
   })
 
   app.post('/api/souls/redeem', write, async (req) => {
-    const { typeId } = z.object({ typeId: z.string().min(1).max(32) }).parse(req.body)
-    const egg = souls.redeem(ctx, req.trainer!, typeId)
+    const { typeId, shiny } = z.object({
+      typeId: z.string().min(1).max(32),
+      shiny: z.boolean().default(false),
+    }).parse(req.body)
+    const egg = souls.redeem(ctx, req.trainer!, typeId, shiny)
     return { egg, souls: souls.overview(ctx, req.trainer!) }
+  })
+
+  app.post('/api/items/use', write, async (req) => {
+    const { itemId, creatureId } = z.object({
+      itemId: z.string().min(1).max(64),
+      creatureId: z.string().uuid().optional(),
+    }).parse(req.body)
+    const result = useItem(ctx, req.trainer!, itemId, creatureId)
+    return withEnergy(ctx, req.trainer!.id, { result })
   })
 
   app.get('/api/box', auth, async (req) => {

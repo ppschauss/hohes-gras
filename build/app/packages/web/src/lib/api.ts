@@ -198,14 +198,19 @@ export const api = {
       method: 'POST', body: JSON.stringify({ code }),
     }),
 
+  useItem: (itemId: string, creatureId?: string) =>
+    request<{ result: UseItemResult }>('/api/items/use', {
+      method: 'POST', body: JSON.stringify({ itemId, creatureId }),
+    }),
+
   souls: () => request<{ souls: SoulView[] }>('/api/souls'),
   salvage: (creatureId: string) =>
     request<{ result: SalvageResult; souls: SoulView[] }>('/api/souls/salvage', {
       method: 'POST', body: JSON.stringify({ creatureId }),
     }),
-  redeemSouls: (typeId: string) =>
+  redeemSouls: (typeId: string, shiny = false) =>
     request<{ egg: { id: string; speciesId: string }; souls: SoulView[] }>('/api/souls/redeem', {
-      method: 'POST', body: JSON.stringify({ typeId }),
+      method: 'POST', body: JSON.stringify({ typeId, shiny }),
     }),
 
   sessions: () => request<{ sessions: SessionView[] }>('/api/sessions'),
@@ -1005,6 +1010,16 @@ export interface AdminDashboard {
 }
 
 
+export interface UseItemResult {
+  kind: 'heal' | 'revive' | 'cure' | 'xp' | 'jammer'
+  itemName: string
+  creatureName?: string
+  healed?: number
+  xpGained?: number
+  leveledUp?: boolean
+  charges?: number
+}
+
 export interface SoulView {
   typeId: string
   typeName: string
@@ -1013,6 +1028,9 @@ export interface SoulView {
   have: number
   need: number
   ready: boolean
+  /** Kosten und Bereitschaft für das schillernde Ei. */
+  needShiny: number
+  readyShiny: boolean
 }
 
 export interface SalvageResult {

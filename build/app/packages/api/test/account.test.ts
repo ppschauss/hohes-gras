@@ -113,7 +113,7 @@ describe('Verwaltung', () => {
     const asAdmin = await h.get('/api/admin', admin.token)
     expect(asAdmin.status).toBe(200)
     expect(asAdmin.body.trainers.total).toBe(2)
-    expect(asAdmin.body.content.species).toBe(7)
+    expect(asAdmin.body.content.species).toBe(h.ctx.registry.speciesCount)
   })
 
   it('erzeugt und zieht Einladungen zurueck', async () => {

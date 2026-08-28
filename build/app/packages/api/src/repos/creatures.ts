@@ -153,3 +153,9 @@ export function ownedSpeciesIds(db: Db, ownerId: string): Set<string> {
   const rows = db.prepare('SELECT DISTINCT species_id AS s FROM creatures WHERE owner_id = ?').all(ownerId) as Array<{ s: string }>
   return new Set(rows.map((r) => r.s))
 }
+
+/** EP und Level setzen — für Bonbons und alles, was ausserhalb eines Kampfes
+ *  Erfahrung gibt. */
+export function setXp(db: Db, creatureId: string, xp: number, level: number): void {
+  db.prepare('UPDATE creatures SET xp = ?, level = ? WHERE id = ?').run(xp, level, creatureId)
+}

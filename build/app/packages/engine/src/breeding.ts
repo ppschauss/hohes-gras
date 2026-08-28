@@ -1,3 +1,20 @@
+/**
+ * Wie viele Seelenfragmente eines Typs ein Ei kosten.
+ *
+ * Steht hier und nicht im Dienst: der Gegenstandstext im Pack nennt dieselbe
+ * Zahl, und zwei Stellen waeren zwei Wahrheiten — eine davon irgendwann falsch.
+ */
+export const SOUL_PER_EGG = 15
+
+/**
+ * Und was ein schillerndes Ei kostet.
+ *
+ * Fast sechsmal so viel. Das ist Absicht: bei 1:512 im Freien entspricht ein
+ * garantiertes Shiny einem sehr langen Atem, und 85 Fragmente sind rund
+ * fuenfundachtzig verwertete Pokemon eines Typs — ein Vorhaben, kein Nebenbei.
+ */
+export const SOUL_PER_SHINY_EGG = 85
+
 import { STATS, type Nature, type StatBlock } from '@game/shared'
 import type { SpeciesDef } from '@game/content'
 import { NATURES } from '@game/shared'

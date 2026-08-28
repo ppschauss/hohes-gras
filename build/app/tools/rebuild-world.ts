@@ -13,6 +13,7 @@
  * Spawn-Tabellen, Trainer ohne Team fallen weg, und Freischaltbedingungen
  * werden auf das geklemmt, was im Vorgängergebiet jederzeit erreichbar ist.
  */
+import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { AUTHORED, lureItems, soulItems } from './curated-items.ts'
@@ -30,6 +31,7 @@ const arg = (flag: string, fallback: string): string => {
 const DATA_DIR = resolve(arg('--data', '/mnt/cache/appdata/telegram-pokemon/data'))
 const PACK = arg('--pack', 'kanto')
 const OUT = join(DATA_DIR, 'packs', PACK)
+const MEDIA_DIR = join(DATA_DIR, 'media')
 
 const log = (msg: string) => console.log(`  ${msg}`)
 
@@ -199,6 +201,18 @@ async function main(): Promise<void> {
     if (!before) added++
     byId.set(extra.id, { ...before, ...extra })
   }
+
+  /*
+   * Ein selbst erzeugtes Vektor-Icon schlaegt das PNG — und zwar dadurch, dass
+   * es da ist. So muss niemand eine Liste pflegen: Bild ablegen, `npm run
+   * world` laufen lassen, fertig.
+   */
+  let svgIcons = 0
+  for (const item of byId.values()) {
+    const svg = join(MEDIA_DIR, 'items', `${item.id}.svg`)
+    if (existsSync(svg)) { item.icon = `/media/items/${item.id}.svg`; svgIcons++ }
+  }
+  if (svgIcons) log(`${svgIcons} Vektor-Icons verknuepft`)
 
   const mergedItems = [...byId.values()].sort((x, y) => x.id.localeCompare(y.id))
   if (added) log(`${added} neue Gegenstände`)

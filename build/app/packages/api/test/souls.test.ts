@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { SOUL_PER_EGG } from '@game/engine'
+import { SOUL_PER_EGG, SOUL_PER_SHINY_EGG } from '@game/engine'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -42,13 +44,15 @@ describe('Verwerten', () => {
     expect(h.ctx.db.prepare('SELECT id FROM creatures WHERE id = ?').get(id)).toBeUndefined()
   })
 
-  it('gibt je Typ ein Fragment', async () => {
-    // Blattmon ist Pflanze — ein Typ, also ein Fragment. Der Test haelt die
-    // Regel fest, nicht die Zahl der Typen der Fixture.
-    const id = addBoxed('blattmon')
+  it('gibt je Typ ein Fragment — auch bei Mischtypen', async () => {
+    // Einzelmon traegt in der Fixture zwei Typen; es muss beide Fragmente
+    // geben, nicht eines fuer das Pokemon.
+    const id = addBoxed('mischmon')
     h.resetRateLimits()
     const r = await h.post('/api/souls/salvage', { creatureId: id }, token)
-    expect(r.body.result.fragments.map((f: any) => f.typeId)).toEqual(['grass'])
+    expect(r.body.result.fragments.map((f: any) => f.typeId).sort()).toEqual(['grass', 'normal'])
+    expect(quantity('soul-normal')).toBe(1)
+    expect(quantity('soul-grass')).toBe(1)
   })
 
   it('laesst das letzte Pokemon in Ruhe', async () => {
@@ -70,9 +74,9 @@ describe('Verwerten', () => {
     expect(r.body.detail.reason).toBe('on_expedition')
   })
 
-  it('tauscht zehn Fragmente gegen ein Ei desselben Typs', async () => {
-    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, 10)')
-      .run(trainerId, 'soul-grass')
+  it('tauscht zwanzig Fragmente gegen ein Ei desselben Typs', async () => {
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)')
+      .run(trainerId, 'soul-grass', SOUL_PER_EGG)
     h.resetRateLimits()
     const r = await h.post('/api/souls/redeem', { typeId: 'grass' }, token)
     expect(r.status).toBe(200)
@@ -82,14 +86,14 @@ describe('Verwerten', () => {
     expect(species.types).toContain('grass')
   })
 
-  it('gibt kein Ei fuer neun Fragmente', async () => {
-    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, 9)')
-      .run(trainerId, 'soul-grass')
+  it('gibt kein Ei fuer eines zu wenig', async () => {
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)')
+      .run(trainerId, 'soul-grass', SOUL_PER_EGG - 1)
     h.resetRateLimits()
     const r = await h.post('/api/souls/redeem', { typeId: 'grass' }, token)
     expect(r.status).toBe(409)
     expect(r.body.error).toBe('insufficient_items')
-    expect(quantity('soul-grass')).toBe(9)
+    expect(quantity('soul-grass')).toBe(SOUL_PER_EGG - 1)
   })
 
   it('zeigt den Fortschritt je Typ', async () => {
@@ -98,6 +102,32 @@ describe('Verwerten', () => {
     h.resetRateLimits()
     const r = await h.get('/api/souls', token)
     const grass = r.body.souls.find((s: any) => s.typeId === 'grass')
-    expect(grass).toMatchObject({ have: 4, need: 10, ready: false })
+    expect(grass).toMatchObject({ have: 4, need: SOUL_PER_EGG, ready: false })
   })
 })
+
+describe('Schillerndes Ei', () => {
+  const give = (n: number) =>
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)')
+      .run(trainerId, 'soul-grass', n)
+
+  it('kostet fuenfundachtzig und schluepft garantiert schillernd', async () => {
+    give(SOUL_PER_SHINY_EGG)
+    h.resetRateLimits()
+    const r = await h.post('/api/souls/redeem', { typeId: 'grass', shiny: true }, token)
+    expect(r.status).toBe(200)
+    expect(r.body.egg.shiny).toBe(true)
+    expect(quantity('soul-grass')).toBe(0)
+  })
+
+  it('gibt sich nicht mit dem Preis des gewoehnlichen zufrieden', async () => {
+    give(SOUL_PER_EGG)
+    h.resetRateLimits()
+    const r = await h.post('/api/souls/redeem', { typeId: 'grass', shiny: true }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.detail.need).toBe(SOUL_PER_SHINY_EGG)
+    // Und es hat nichts abgezogen.
+    expect(quantity('soul-grass')).toBe(SOUL_PER_EGG)
+  })
+})
+

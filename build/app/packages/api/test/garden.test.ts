@@ -283,11 +283,11 @@ describe('Pokedex', () => {
   it('zeigt alle Arten, den Starter als gefangen', async () => {
     await pick()
     const r = await h.get('/api/dex', token)
-    expect(r.body.rows).toHaveLength(7)
+    expect(r.body.rows).toHaveLength(h.ctx.registry.speciesCount)
     expect(r.body.rows.find((x: any) => x.speciesId === 'testmon'))
       .toMatchObject({ caught: true, owned: 1 })
     expect(r.body.rows.filter((x: any) => x.caught)).toHaveLength(1)
-    expect(r.body.counts).toEqual({ seen: 1, caught: 1, total: 7 })
+    expect(r.body.counts).toEqual({ seen: 1, caught: 1, total: h.ctx.registry.speciesCount })
   })
 })
 

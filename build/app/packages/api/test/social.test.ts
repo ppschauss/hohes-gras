@@ -101,7 +101,7 @@ describe('Trainerkarte', () => {
     const r = await h.get('/api/card', ash.token)
     expect(r.body.isSelf).toBe(true)
     expect(r.body.trainerCode).toBeTruthy()
-    expect(r.body.dexTotal).toBe(7)
+    expect(r.body.dexTotal).toBe(h.ctx.registry.speciesCount)
     expect(r.body.teamPreview).toHaveLength(1)
   })
 

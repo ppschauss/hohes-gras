@@ -84,7 +84,8 @@ ausgerechnet in jedem echten Fall leer.
 | | Wert |
 |---|---|
 | Fragmente je verwertetem Pokémon | 1 je Typ |
-| Fragmente für ein Ei | 10 desselben Typs |
+| Fragmente für ein Ei | 15 desselben Typs |
+| Fragmente für ein **schillerndes** Ei | 85 desselben Typs |
 | Ei enthält | eine zufällige **Grundform** dieses Typs |
 
 Eine Box füllt sich mit Pokémon, die man nicht braucht — und wegwerfen ohne
@@ -93,8 +94,12 @@ einem Ei derselben Sorte: aus dem, was man nicht braucht, wird ein Weg zu dem,
 was man sucht.
 
 Je Typ ein Fragment, nicht je Pokémon eines: ein Zwei-Typen-Pokémon gibt zwei
-verschiedene. Das belohnt Vielfalt, ohne die Menge zu verdoppeln — zehn
-Feuer-Fragmente brauchen weiterhin zehn Feuer-Pokémon.
+verschiedene. Das belohnt Vielfalt, ohne die Menge zu verdoppeln — fünfzehn
+Feuer-Fragmente brauchen weiterhin fünfzehn Pokémon mit Feuer-Anteil.
+
+Das schillernde Ei kostet fast das Sechsfache. Bei 1:512 im Freien entspricht
+ein garantiertes Shiny einem sehr langen Atem; 85 Fragmente sind ein Vorhaben,
+kein Nebenbei.
 
 Nur Grundformen schlüpfen. Ein Ei, aus dem eine Entwicklungsstufe käme, wäre
 eine Abkürzung um das Aufziehen herum.

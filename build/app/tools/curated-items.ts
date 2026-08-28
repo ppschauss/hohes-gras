@@ -37,6 +37,12 @@ interface Authored {
 const BAIT_ITEM_ID = 'rocket-bait'
 const BAIT_CHARGES = 5
 
+/** Gegenstaende, deren Bild selbst erzeugt wurde und als Vektor vorliegt. */
+export const SVG_ICONS = new Set([
+  'rocket-bait', 'energy-drink', 'exp-candy-s', 'exp-candy-l',
+  'golden-razz', 'legendary-berry',
+])
+
 export const AUTHORED: Authored[] = [
   {
     /*
@@ -176,8 +182,10 @@ export function lureItems(types: Array<{ id: string; name: { de: string } }>): I
   }))
 }
 
-/** Wie viele Fragmente eines Typs ein Ei kosten. */
-export const SOUL_PER_EGG = 10
+/* Die Zahl kommt aus der Engine — der Text im Pack und die Spielregel duerfen
+   nicht auseinanderlaufen. */
+import { SOUL_PER_EGG, SOUL_PER_SHINY_EGG } from '../packages/engine/dist/index.js'
+export { SOUL_PER_EGG, SOUL_PER_SHINY_EGG }
 
 /**
  * Ein Seelenfragment je Typ.
@@ -193,7 +201,7 @@ export function soulItems(types: Array<{ id: string; name: { de: string } }>): I
     name: { de: `Seelenfragment (${t.name.de})` },
     description: {
       de: `Bleibt zurück, wenn ein ${t.name.de}-Pokémon verwertet wird. `
-        + `${SOUL_PER_EGG} davon werden zu einem Ei.`,
+        + `${SOUL_PER_EGG} davon werden zu einem Ei, ${SOUL_PER_SHINY_EGG} zu einem schillernden.`,
     },
     category: 'material',
     price: null,
@@ -221,7 +229,9 @@ export async function buildItems(
       price: a.price,
       sellPrice: a.sellPrice,
       stackable: a.stackable ?? true,
-      icon: `/media/items/${a.id}.png`,
+      // SVG, wenn es eins gibt — die erzeugten Icons sind Vektoren; alles
+      // andere bleibt beim PNG aus der PokeAPI.
+      icon: SVG_ICONS.has(a.id) ? `/media/items/${a.id}.svg` : `/media/items/${a.id}.png`,
       params: a.params ?? {},
     })
   }

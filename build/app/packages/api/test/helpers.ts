@@ -86,6 +86,9 @@ function writeMinimalPack(dataDir: string): void {
     // Ereignis-Art: nirgends zu fangen, doppelte EP-Kurve, zaehlt nicht in den
     // Dex.
     species('festmon', 8, { event: true, xpFactor: 2 }),
+    // Zwei Typen: nur damit laesst sich pruefen, dass Verwerten je Typ ein
+    // Fragment gibt statt eines je Pokemon.
+    species('mischmon', 9, { types: ['normal', 'grass'] }),
   ])
   // Dieselben Ids wie im echten Pack: Startausruestung und Pflegelogik nennen
   // sie fest, eine abweichende Fixture wuerde am eigentlichen Verhalten

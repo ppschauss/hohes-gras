@@ -15,7 +15,7 @@ describe('GET /api/health', () => {
     const r = await h.get('/api/health')
     expect(r.status).toBe(200)
     expect(r.body.ok).toBe(true)
-    expect(r.body.species).toBe(7)
+    expect(r.body.species).toBe(h.ctx.registry.speciesCount)
   })
 })
 

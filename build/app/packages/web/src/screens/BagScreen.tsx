@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { t } from '../i18n'
 import { api, type BagItem } from '../lib/api'
 import { haptic } from '../lib/telegram'
@@ -24,9 +25,40 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
   const souls = useAsync(() => api.souls(), [])
   const action = useAction()
 
-  const redeem = (typeId: string) => {
+  /*
+   * Erst der Gegenstand, dann das Ziel.
+   *
+   * Was kein Ziel braucht — der Stoersender — wird sofort ausgeloest; alles
+   * andere fragt, auf wen. Ein Trank ohne Ziel waere geraten.
+   */
+  const [target, setTarget] = useState<BagItem | null>(null)
+  const [used, setUsed] = useState<string | null>(null)
+  const box = useAsync(() => api.box(), [])
+
+  const startUse = (item: BagItem) => {
     haptic.tap()
-    void action.run(() => api.redeemSouls(typeId), (res) => {
+    if (NEEDS_TARGET.has(item.category)) { setTarget(item); return }
+    void action.run(() => api.useItem(item.id), (res) => {
+      setUsed(t('bag.used.jammer', { n: res.result.charges ?? 0 }))
+      bag.reload(); haptic.success()
+    })
+  }
+
+  const useOn = (item: BagItem, creatureId: string) => {
+    haptic.tap()
+    void action.run(() => api.useItem(item.id, creatureId), (res) => {
+      const r = res.result
+      setTarget(null)
+      setUsed(r.kind === 'xp'
+        ? t('bag.used.xp', { name: r.creatureName ?? '', n: r.xpGained ?? 0 })
+        : t('bag.used.heal', { name: r.creatureName ?? '', item: r.itemName }))
+      bag.reload(); box.reload(); haptic.success()
+    })
+  }
+
+  const redeem = (typeId: string, shiny = false) => {
+    haptic.tap()
+    void action.run(() => api.redeemSouls(typeId, shiny), (res) => {
       souls.set({ souls: res.souls })
       bag.reload()
       haptic.success()
@@ -44,6 +76,30 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
     <Screen eyebrow={t('bag.eyebrow')} title={t('bag.title')} onBack={onBack}>
       <main className="content">
         {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
+        {used && <p className="notice notice--ok" role="status">{used}</p>}
+
+        {target && (
+          <section className="section">
+            <h2>{t('bag.target', { item: target.name })}</h2>
+            <div className="switchList">
+              {(box.data?.creatures ?? []).map((c) => (
+                <button key={c.id} type="button" className="switchRow" disabled={action.busy}
+                  onClick={() => useOn(target, c.id)}>
+                  <img src={c.sprite} alt="" width={40} height={40} />
+                  <span className="switchRow__text">
+                    <span className="switchRow__name">{c.displayName}</span>
+                    <span className="switchRow__hp num">
+                      {t('creature.level', { n: c.level })} · {c.hpCurrent}/{c.hpMax} KP
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <button type="button" className="btn btn--ghost btn--block" onClick={() => setTarget(null)}>
+              {t('app.back')}
+            </button>
+          </section>
+        )}
 
         {/* Fragmente stehen oben und nicht zwischen den Materialien: sie sind
             kein Gegenstand, den man benutzt, sondern ein Zaehler, auf den man
@@ -63,11 +119,19 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
                         style={{ width: `${Math.min(100, (s.have / s.need) * 100)}%` }} />
                     </span>
                   </span>
-                  <span className="soulRow__count num">{t('souls.progress', { have: s.have, need: s.need })}</span>
-                  {s.ready && (
-                    <button type="button" className="btn btn--primary btn--sm" disabled={action.busy}
-                      onClick={() => redeem(s.typeId)}>{t('souls.eggReady')}</button>
-                  )}
+                  <span className="soulRow__count num">
+                    {t('souls.progress', { have: s.have, need: s.ready ? s.needShiny : s.need })}
+                  </span>
+                  <span className="soulRow__buttons">
+                    {s.ready && (
+                      <button type="button" className="btn btn--ghost btn--sm" disabled={action.busy}
+                        onClick={() => redeem(s.typeId)}>{t('souls.egg', { n: s.need })}</button>
+                    )}
+                    {s.readyShiny && (
+                      <button type="button" className="btn btn--primary btn--sm" disabled={action.busy}
+                        onClick={() => redeem(s.typeId, true)}>{t('souls.shinyEgg', { n: s.needShiny })}</button>
+                    )}
+                  </span>
                 </article>
               ))}
             </div>
@@ -82,7 +146,9 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
                 <section key={group.category} className="section">
                   <h2>{t(`shop.section.${SECTION_KEY[group.category] ?? group.category}`)}</h2>
                   <div className="stack">
-                    {group.items.map((item) => <BagRow key={item.id} item={item} />)}
+                    {group.items.map((item) => (
+                      <BagRow key={item.id} item={item} busy={action.busy} onUse={startUse} />
+                    ))}
                   </div>
                 </section>
               ))}
@@ -97,7 +163,14 @@ const SECTION_KEY: Record<string, string> = {
   xp: 'xp', stone: 'stones', background: 'backgrounds', key: 'key',
 }
 
-function BagRow({ item }: { item: BagItem }) {
+/** Kategorien, die sich aus dem Beutel heraus benutzen lassen. */
+const USABLE = new Set(['medicine', 'xp', 'key'])
+/** ... und die, die dafür ein Ziel brauchen. */
+const NEEDS_TARGET = new Set(['medicine', 'xp'])
+
+function BagRow(
+  { item, onUse, busy }: { item: BagItem; onUse: (item: BagItem) => void; busy: boolean },
+) {
   return (
     <article className="bagRow">
       <ItemIcon src={item.icon} category={item.category} size={36} />
@@ -106,6 +179,10 @@ function BagRow({ item }: { item: BagItem }) {
         <span className="bagRow__desc">{item.description}</span>
       </span>
       <span className="bagRow__count num">{item.quantity}×</span>
+      {USABLE.has(item.category) && (
+        <button type="button" className="btn btn--ghost btn--sm" disabled={busy}
+          onClick={() => onUse(item)}>{t('bag.use')}</button>
+      )}
     </article>
   )
 }

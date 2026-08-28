@@ -1,5 +1,5 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
-import { createRng, produceEgg, randomIvs } from '@game/engine'
+import { createRng, produceEgg, randomIvs, SOUL_PER_EGG, SOUL_PER_SHINY_EGG } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import * as creatures from '../repos/creatures.js'
@@ -20,10 +20,9 @@ import { bonuses } from './progression.js'
  *
  * Ein Pokémon gibt **je ein Fragment pro Typ** — ein Zwei-Typen-Pokémon also
  * zwei verschiedene. Das belohnt Vielfalt in der Box, ohne die Menge zu
- * verdoppeln: zehn Feuer-Fragmente brauchen weiterhin zehn Feuer-Pokémon.
+ * verdoppeln: zwanzig Feuer-Fragmente brauchen weiterhin zwanzig Pokémon mit
+ * Feuer-Anteil.
  */
-export const SOUL_PER_EGG = 10
-
 export const soulItemId = (typeId: string): string => `soul-${typeId}`
 
 export interface SalvageResult {
@@ -80,6 +79,9 @@ export interface SoulView {
   have: number
   need: number
   ready: boolean
+  /** Was ein schillerndes Ei desselben Typs kostet. */
+  needShiny: number
+  readyShiny: boolean
 }
 
 export function overview(ctx: AppContext, trainer: Trainer): SoulView[] {
@@ -97,6 +99,8 @@ export function overview(ctx: AppContext, trainer: Trainer): SoulView[] {
         have,
         need: SOUL_PER_EGG,
         ready: have >= SOUL_PER_EGG,
+        needShiny: SOUL_PER_SHINY_EGG,
+        readyShiny: have >= SOUL_PER_SHINY_EGG,
       }
     })
     .filter((s) => s.have > 0)
@@ -110,12 +114,13 @@ export function overview(ctx: AppContext, trainer: Trainer): SoulView[] {
  * denen, die man noch nie gesehen hat. Das ist der Reiz: ein Ei aus Fragmenten
  * ist die einzige Quelle für Arten, die in keinem erreichbaren Gebiet wohnen.
  */
-export function redeem(ctx: AppContext, trainer: Trainer, typeId: string) {
+export function redeem(ctx: AppContext, trainer: Trainer, typeId: string, shiny = false) {
   return tx(ctx.db, () => {
     const item = ctx.registry.tryItem(soulItemId(typeId))
     if (!item) throw new GameError('not_found', { typeId }, 404)
-    if (inventory.quantityOf(ctx.db, trainer.id, item.id) < SOUL_PER_EGG) {
-      throw new GameError('insufficient_items', { itemId: item.id, need: SOUL_PER_EGG }, 409)
+    const cost = shiny ? SOUL_PER_SHINY_EGG : SOUL_PER_EGG
+    if (inventory.quantityOf(ctx.db, trainer.id, item.id) < cost) {
+      throw new GameError('insufficient_items', { itemId: item.id, need: cost }, 409)
     }
     if (eggs.openOf(ctx.db, trainer.id).length >= eggs.MAX_OPEN_EGGS) {
       throw new GameError('invalid_state', { reason: 'too_many_eggs', max: eggs.MAX_OPEN_EGGS }, 409)
@@ -137,20 +142,21 @@ export function redeem(ctx: AppContext, trainer: Trainer, typeId: string) {
       species, rng,
     )
 
-    inventory.consume(ctx.db, trainer.id, item.id, SOUL_PER_EGG)
+    inventory.consume(ctx.db, trainer.id, item.id, cost)
     const speedUp = 1 - bonuses(ctx, trainer.id).hatchSpeedBonus / 100
     const created = eggs.create(ctx.db, {
       trainerId: trainer.id,
       speciesId: result.speciesId,
       nature: result.nature,
       ivs: result.ivs,
-      shiny: result.shiny,
+      // Das teure Ei schluepft garantiert schillernd — dafuer ist es teuer.
+      shiny: shiny || result.shiny,
       hatchMinutes: Math.max(5, Math.round(result.hatchMinutes * Math.max(0.4, speedUp))),
       startedAt: Date.now(),
       parentA: null,
       parentB: null,
     })
-    logEvent(ctx.db, trainer.id, 'soul.redeemed', { typeId, speciesId: result.speciesId })
+    logEvent(ctx.db, trainer.id, 'soul.redeemed', { typeId, speciesId: result.speciesId, shiny, cost })
     return created
   })
 }
