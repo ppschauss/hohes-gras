@@ -287,7 +287,7 @@ function TenderPicker({ data, busy, onPick }: { data: PlotsState; busy: boolean;
     return <p className="plot__hint">{t('plots.noTenders')}</p>
   }
   return (
-    <label className="plot__tenderPick">
+    <div className="plot__tenderPick">
       <span className="plot__hint">{t('plots.tender.assign')}</span>
       <select
         className="field field--inline field--text"
@@ -303,7 +303,7 @@ function TenderPicker({ data, busy, onPick }: { data: PlotsState; busy: boolean;
           </option>
         ))}
       </select>
-    </label>
+    </div>
   )
 }
 

@@ -216,19 +216,28 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
                 })}
               </span>
               <span className="chain__odds num">
-                {t('safari.chain.odds', {
-                  odds: (safari.data.chain.odds * 100).toFixed(2),
-                  base: (safari.data.chain.baseOdds * 100).toFixed(2),
-                })}
+                {/* Nur vergleichen, wenn es etwas zu vergleichen gibt: bei
+                    Serie 1 stand hier "0,20 % statt 0,20 %" — eine Aussage
+                    ohne Inhalt. */}
+                {safari.data.chain.odds >= safari.data.chain.baseOdds * 1.5
+                  ? t('safari.chain.odds', {
+                      odds: oddsPercent(safari.data.chain.odds),
+                      base: oddsPercent(safari.data.chain.baseOdds),
+                    })
+                  : t('safari.chain.oddsPlain', { odds: oddsPercent(safari.data.chain.odds) })}
               </span>
               <span className="bar">
                 <span className="bar__fill bar__fill--xp"
                   style={{ width: `${Math.min(100, (safari.data.chain.streak / safari.data.chain.cap) * 100)}%` }} />
               </span>
               <span className="chain__hint">
+                {/* Am Anfang ist die Zusage weit weg; dann hilft der naechste
+                    Meilenstein mehr als die Endzahl. */}
                 {safari.data.chain.streak >= safari.data.chain.cap
                   ? t('safari.chain.maxed')
-                  : t('safari.chain.toGo', { n: safari.data.chain.cap - safari.data.chain.streak })}
+                  : safari.data.chain.streak < 20
+                    ? t('safari.chain.milestone', { n: 20 - safari.data.chain.streak })
+                    : t('safari.chain.toGo', { n: safari.data.chain.cap - safari.data.chain.streak })}
               </span>
             </span>
           </section>
@@ -382,12 +391,13 @@ function Picker({ label, options, value, onChange, emptyLabel, className }: {
 }) {
   const selected = options.find((o) => o.id === value)
   return (
-    <label className={`picker${className ? ` ${className}` : ''}`}>
-      <span className="picker__label">{label}</span>
+    <div className={`picker${className ? ` ${className}` : ''}`}>
+      <span className="picker__label" id={`picker-${label}`}>{label}</span>
       <span className="picker__body">
         {selected && <ItemIcon src={selected.icon} category={selected.category} size={22} />}
         <select
           className="picker__select"
+          aria-labelledby={`picker-${label}`}
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
         >
@@ -397,6 +407,19 @@ function Picker({ label, options, value, onChange, emptyLabel, className }: {
           ))}
         </select>
       </span>
-    </label>
+    </div>
   )
+}
+
+/**
+ * Prozent mit so vielen Stellen, wie die Zahl braucht.
+ *
+ * 0,20 % und 0,21 % unterscheiden sich erst in der zweiten Stelle, 59 % und
+ * 60 % gar nicht mehr sinnvoll. Eine feste Nachkommazahl macht die Anzeige
+ * entweder unlesbar oder nichtssagend.
+ */
+function oddsPercent(value: number): string {
+  const pct = value * 100
+  const digits = pct < 1 ? 2 : pct < 10 ? 1 : 0
+  return `${pct.toFixed(digits).replace('.', ',')} %`
 }
