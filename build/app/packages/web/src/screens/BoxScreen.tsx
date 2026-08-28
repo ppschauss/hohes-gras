@@ -170,7 +170,7 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
                     <CreatureCard
                       creature={c}
                       onChanged={reloadBoth}
-                      actions={[
+                      actions={picking ? [] : [
                         movesAction(c.id),
                         {
                           label: teamFull ? t('box.teamFull') : t('box.addToTeam'),
@@ -204,35 +204,36 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
           {picking && (
             <div className="pickBar">
               <span className="pickBar__count num">
-                {t('box.pick.count', { n: picked.length, max: BULK_MAX })}
+                {bulkAsk
+                  ? t('souls.confirmBulk', { n: picked.length })
+                  : t('box.pick.count', { n: picked.length, max: BULK_MAX })}
               </span>
               <span className="pickBar__actions">
-                <button type="button" className="btn btn--ghost btn--sm"
-                  disabled={boxed.length === 0}
-                  onClick={() => setPicked(boxed.slice(0, BULK_MAX).map((c) => c.id))}>
-                  {t('box.pick.all')}
-                </button>
-                <button type="button" className="btn btn--danger btn--sm"
-                  disabled={picked.length === 0 || action.busy}
-                  onClick={() => setBulkAsk(true)}>
-                  {t('souls.salvage')}
-                </button>
+                {bulkAsk ? (
+                  <>
+                    <button type="button" className="btn btn--danger btn--sm" disabled={action.busy}
+                      onClick={salvagePicked}>{t('app.yes')}</button>
+                    <button type="button" className="btn btn--ghost btn--sm" disabled={action.busy}
+                      onClick={() => setBulkAsk(false)}>{t('app.no')}</button>
+                  </>
+                ) : (
+                  <>
+                    <button type="button" className="btn btn--ghost btn--sm"
+                      disabled={boxed.length === 0}
+                      onClick={() => setPicked(boxed.slice(0, BULK_MAX).map((c) => c.id))}>
+                      {t('box.pick.all')}
+                    </button>
+                    <button type="button" className="btn btn--danger btn--sm"
+                      disabled={picked.length === 0 || action.busy}
+                      onClick={() => setBulkAsk(true)}>
+                      {t('souls.salvage')}
+                    </button>
+                  </>
+                )}
               </span>
             </div>
           )}
-
-          {bulkAsk && (
-            <div className="evoAsk">
-              <span className="evoAsk__text">{t('souls.confirmBulk', { n: picked.length })}</span>
-              <span className="chain__hint">{t('souls.hint')}</span>
-              <span className="evoAsk__buttons">
-                <button type="button" className="btn btn--danger btn--sm" disabled={action.busy}
-                  onClick={salvagePicked}>{t('app.yes')}</button>
-                <button type="button" className="btn btn--ghost btn--sm" disabled={action.busy}
-                  onClick={() => setBulkAsk(false)}>{t('app.no')}</button>
-              </span>
-            </div>
-          )}
+          {picking && bulkAsk && <p className="chain__hint">{t('souls.hint')}</p>}
         </section>
       </main>
     </Screen>

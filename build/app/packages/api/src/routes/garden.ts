@@ -22,6 +22,7 @@ import * as plots from '../services/plots.js'
 import * as themes from '../services/themes.js'
 import * as travel from '../services/travel.js'
 import * as creatures from '../repos/creatures.js'
+import * as eggsRepo from '../repos/eggs.js'
 import * as dexRepo from '../repos/dex.js'
 import * as inventory from '../repos/inventory.js'
 import { findById } from '../repos/trainers.js'
@@ -65,7 +66,14 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
 
   /* -------------------------------------------------------- Verwerten */
 
-  app.get('/api/souls', auth, async (req) => ({ souls: souls.overview(ctx, req.trainer!) }))
+  app.get('/api/souls', auth, async (req) => ({
+    souls: souls.overview(ctx, req.trainer!),
+    // Ohne die Brutplaetze steht die Oberflaeche vor einem Knopf, der nichts
+    // tut: wer drei offene Eier hat, bekommt kein viertes — egal wie viele
+    // Fragmente er hat.
+    eggsOpen: eggsRepo.openOf(ctx.db, req.trainer!.id).length,
+    eggsMax: eggsRepo.MAX_OPEN_EGGS,
+  }))
 
   /* Einzeln oder als Auswahl — ein alter Client schickt weiter `creatureId`. */
   app.post('/api/souls/salvage', write, async (req) => {

@@ -256,6 +256,41 @@ describe('PvP', () => {
     expect(r.body.gold).toBeGreaterThan(0)
   })
 
+  it('zahlt einen Gegner nur einmal am Tag', async () => {
+    // Ash gewinnt sicher: Level 60 gegen Level 5.
+    h.ctx.db.prepare('UPDATE creatures SET level = 60, xp = 300000 WHERE owner_id = ?').run(ash.id)
+    h.ctx.db.prepare('UPDATE creatures SET level = 5 WHERE owner_id = ?').run(misty.id)
+    await h.get('/api/pvp', misty.token)
+
+    h.resetRateLimits()
+    const first = await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)
+    expect(first.body.won).toBe(true)
+    expect(first.body.repeat).toBe(false)
+    expect(first.body.gold).toBeGreaterThan(0)
+    expect(first.body.delta).not.toBe(0)
+
+    const goldAfterFirst = (await h.get('/api/bag', ash.token)).body.gold
+    const ratingAfterFirst = first.body.ratingAfter
+
+    h.resetRateLimits()
+    const second = await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)
+    expect(second.body.won).toBe(true)
+    expect(second.body.repeat).toBe(true)
+    expect(second.body.gold).toBe(0)
+    expect(second.body.delta).toBe(0)
+    expect(second.body.ratingAfter).toBe(ratingAfterFirst)
+    h.resetRateLimits()
+    expect((await h.get('/api/bag', ash.token)).body.gold).toBe(goldAfterFirst)
+
+    // Und die Gegenseite verliert nicht zweimal Wertung fuer denselben Tag.
+    const mistyRating = h.ctx.db.prepare('SELECT rating FROM pvp_ratings WHERE trainer_id = ?')
+      .get(misty.id) as { rating: number }
+    const mistyAfterFirst = 1000 + (h.ctx.db.prepare(
+      'SELECT rating_delta AS d FROM pvp_duels WHERE challenger_id = ? ORDER BY fought_at LIMIT 1',
+    ).get(ash.id) as { d: number }).d * -1
+    expect(mistyRating.rating).toBe(mistyAfterFirst)
+  })
+
   it('verweigert ein Duell gegen sich selbst', async () => {
     const r = await h.post('/api/pvp/duel', { opponentId: ash.id }, ash.token)
     expect(r.status).toBe(400)

@@ -205,7 +205,7 @@ export const api = {
       method: 'POST', body: JSON.stringify({ itemId, creatureId }),
     }),
 
-  souls: () => request<{ souls: SoulView[] }>('/api/souls'),
+  souls: () => request<{ souls: SoulView[]; eggsOpen: number; eggsMax: number }>('/api/souls'),
   salvage: (creatureId: string) =>
     request<{ result: SalvageResult; souls: SoulView[] }>('/api/souls/salvage', {
       method: 'POST', body: JSON.stringify({ creatureId }),
@@ -897,6 +897,8 @@ export interface PvpHistoryEntry {
 }
 
 export interface DuelResult {
+  /** Zweiter Sieg am selben Tag gegen denselben Gegner: ohne Ertrag. */
+  repeat: boolean
   duelId: string
   won: boolean
   ratingBefore: number

@@ -54,6 +54,9 @@ export function PvpPanel() {
           <p className="center__body">{t('battle.vs', { name: result.opponentName })} · {t('battle.turn', { n: result.turns })}</p>
           <p className="num">{t('pvp.delta', { n: result.delta > 0 ? `+${result.delta}` : result.delta })}</p>
           <p className="num">{t('battle.reward.gold', { n: result.gold })}</p>
+          {/* Sonst sieht der zweite Sieg wie ein Fehler aus: gewonnen, aber
+              null Gold und null Wertung. */}
+          {result.repeat && <p className="chain__hint">{t('pvp.repeat')}</p>}
         </section>
       )}
 

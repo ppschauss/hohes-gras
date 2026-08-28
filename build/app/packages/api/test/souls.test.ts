@@ -107,6 +107,13 @@ describe('Verwerten', () => {
     expect(r.body.detail.reason).toBe('last_creature')
   })
 
+  it('nennt die Brutplaetze, damit die Sperre erklaerbar ist', async () => {
+    const r = await h.get('/api/souls', token)
+    expect(r.status).toBe(200)
+    expect(r.body.eggsMax).toBeGreaterThan(0)
+    expect(r.body.eggsOpen).toBe(0)
+  })
+
   it('tauscht zwanzig Fragmente gegen ein Ei desselben Typs', async () => {
     h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)')
       .run(trainerId, 'soul-grass', SOUL_PER_EGG)

@@ -58,8 +58,10 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
 
   const redeem = (typeId: string, shiny = false) => {
     haptic.tap()
-    void action.run(() => api.redeemSouls(typeId, shiny), (res) => {
-      souls.set({ souls: res.souls })
+    void action.run(() => api.redeemSouls(typeId, shiny), () => {
+      // Neu laden statt einsetzen: nach einem Tausch hat sich nicht nur die
+      // Fragmentzahl geaendert, sondern auch ein Brutplatz belegt.
+      souls.reload()
       bag.reload()
       haptic.success()
     })
@@ -68,6 +70,7 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
   // Fragmente stehen oben in ihrem eigenen Abschnitt — in der Materialliste
   // waeren sie ein zweites Mal dieselbe Sache.
   const items = (bag.data?.items ?? []).filter((i) => i.quantity > 0 && !i.id.startsWith('soul-'))
+  const eggsFull = Boolean(souls.data && souls.data.eggsOpen >= souls.data.eggsMax)
   const groups = ORDER
     .map((category) => ({ category, items: items.filter((i) => i.category === category) }))
     .filter((g) => g.items.length > 0)
@@ -108,6 +111,16 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
           <section className="section">
             <h2>{t('souls.title')}</h2>
             <p className="center__body">{t('souls.subtitle')}</p>
+            {/* Der Fehler stand ganz oben am Bildschirm, die Knoepfe stehen
+                hier unten — bei einer langen Beutelliste sieht man ihn nie. */}
+            {action.error && (
+              <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>
+            )}
+            {eggsFull && (
+              <p className="notice" role="status">
+                {t('souls.eggsFull', { n: souls.data!.eggsOpen, max: souls.data!.eggsMax })}
+              </p>
+            )}
             <div className="stack">
               {souls.data!.souls.map((s) => (
                 <article key={s.itemId} className="soulRow">
@@ -124,13 +137,21 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
                   </span>
                   <span className="soulRow__buttons">
                     {s.ready && (
-                      <button type="button" className="btn btn--ghost btn--sm" disabled={action.busy}
+                      <button type="button" className="btn btn--ghost btn--sm"
+                        disabled={action.busy || eggsFull}
                         onClick={() => redeem(s.typeId)}>{t('souls.egg', { n: s.need })}</button>
                     )}
-                    {s.readyShiny && (
-                      <button type="button" className="btn btn--primary btn--sm" disabled={action.busy}
-                        onClick={() => redeem(s.typeId, true)}>{t('souls.shinyEgg', { n: s.needShiny })}</button>
-                    )}
+                    {/* Der schillernde Knopf steht immer da, nur gesperrt.
+                        Erschien er erst ab 85 Fragmenten, wusste niemand, dass
+                        es ihn ueberhaupt gibt — genau so wurde es gemeldet. */}
+                    <button type="button"
+                      className={`btn btn--sm ${s.readyShiny ? 'btn--primary' : 'btn--ghost'}`}
+                      disabled={action.busy || eggsFull || !s.readyShiny}
+                      onClick={() => redeem(s.typeId, true)}>
+                      {s.readyShiny
+                        ? t('souls.shinyEgg', { n: s.needShiny })
+                        : t('souls.shinyLocked', { n: s.needShiny - s.have })}
+                    </button>
                   </span>
                 </article>
               ))}

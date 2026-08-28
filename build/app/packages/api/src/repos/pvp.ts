@@ -112,6 +112,23 @@ export function markDefencesSeen(db: Db, trainerId: string): void {
   db.prepare('UPDATE pvp_duels SET seen_by_defender = 1 WHERE defender_id = ? AND seen_by_defender = 0').run(trainerId)
 }
 
+/**
+ * Hat dieser Trainer heute schon gegen genau diesen Gegner gewonnen?
+ *
+ * `winner = 0` heisst: der Herausforderer hat gewonnen — und Herausforderer
+ * ist in dieser Zeile immer der, der das Duell gestartet hat.
+ */
+export function wonAgainstSince(
+  db: Db, challengerId: string, defenderId: string, sinceMs: number,
+): boolean {
+  const row = db.prepare(
+    `SELECT 1 AS hit FROM pvp_duels
+      WHERE challenger_id = ? AND defender_id = ? AND winner = 0 AND fought_at >= ?
+      LIMIT 1`,
+  ).get(challengerId, defenderId, sinceMs) as { hit: number } | undefined
+  return row !== undefined
+}
+
 /** Duels started today, used to cap how often the ladder can be farmed. */
 export function duelsToday(db: Db, trainerId: string, sinceMs: number): number {
   const row = db

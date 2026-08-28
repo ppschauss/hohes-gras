@@ -11,6 +11,9 @@ import * as inventory from '../repos/inventory.js'
 import { findById } from '../repos/trainers.js'
 import { logEvent } from '../repos/events.js'
 import { worldClock, gameDate } from '../worldClock.js'
+
+/** Mitternacht der Spielzeitzone — die Grenze, an der Tageslimits umspringen. */
+const dayStart = (): number => new Date(`${gameDate()}T00:00:00`).getTime()
 import { ENERGY_COSTS } from '@game/engine'
 import { battleContent } from './battle.js'
 import { contributeToGoal } from './guilds.js'
@@ -39,7 +42,7 @@ export function findMatches(ctx: AppContext, trainer: Trainer) {
     candidates = pvp.findOpponents(ctx.db, trainer.id, low, high, 5)
   }
 
-  const sinceMidnight = new Date(`${gameDate()}T00:00:00`).getTime()
+  const sinceMidnight = dayStart()
   return {
     rating: rating.rating,
     tier: tierOf(rating.rating),
@@ -135,20 +138,41 @@ export function duel(ctx: AppContext, trainer: Trainer, opponentId: string): Due
     }
 
     const won = state.outcome?.winner === 0
+
+    /*
+     * Ein Gegner zahlt einmal am Tag.
+     *
+     * Derselbe Gegner liess sich beliebig oft herausfordern, und jeder Sieg
+     * brachte Rang und Gold — wer einen schwaecheren Gegner in der Liste
+     * hatte, konnte ihn den ganzen Abend abarbeiten. Der zweite Sieg am selben
+     * Tag gegen dieselbe Person wird deshalb ausgetragen und aufgezeichnet,
+     * aber nicht mehr bezahlt: kein Rang, kein Gold, keine Saisonpunkte.
+     *
+     * Niederlagen bleiben unangetastet. Sie sind kein Sieg, also greift die
+     * Sperre nicht — und damit bleibt die Wiederholung ein Risiko statt einer
+     * risikolosen Wette.
+     */
+    const repeat = won && pvp.wonAgainstSince(ctx.db, trainer.id, opponent.id, dayStart())
+
     const myRating = pvp.ratingOf(ctx.db, trainer.id)
     const theirRating = pvp.ratingOf(ctx.db, opponent.id)
 
-    const mine = applyResult(myRating.rating, theirRating.rating, won, myRating.wins + myRating.losses)
+    const mine = repeat
+      ? { rating: myRating.rating, delta: 0 }
+      : applyResult(myRating.rating, theirRating.rating, won, myRating.wins + myRating.losses)
     const theirs = applyResult(theirRating.rating, myRating.rating, !won, theirRating.wins + theirRating.losses)
 
-    pvp.updateRating(ctx.db, trainer.id, mine.rating, won)
-    pvp.updateRating(ctx.db, opponent.id, theirs.rating, !won)
+    if (!repeat) {
+      pvp.updateRating(ctx.db, trainer.id, mine.rating, won)
+      pvp.updateRating(ctx.db, opponent.id, theirs.rating, !won)
+    }
 
-    const gold = won ? WIN_GOLD : LOSS_GOLD
+    const gold = repeat ? 0 : (won ? WIN_GOLD : LOSS_GOLD)
     inventory.earnGold(ctx.db, trainer.id, gold)
-    if (won) energy.reward(ctx, trainer.id, 'duelWon')
+    if (won && !repeat) energy.reward(ctx, trainer.id, 'duelWon')
+    // Das Gildenziel zaehlt Teilnahme, nicht Ertrag — es bleibt.
     contributeToGoal(ctx, trainer.id, 'battles', 1)
-    if (won) { awardSeasonPoints(ctx, trainer.id, 'duelWin'); bumpMetric(ctx, trainer.id, 'duelsWon') }
+    if (won && !repeat) { awardSeasonPoints(ctx, trainer.id, 'duelWin'); bumpMetric(ctx, trainer.id, 'duelsWon') }
 
     const record = pvp.recordDuel(ctx.db, {
       challengerId: trainer.id,
@@ -160,7 +184,7 @@ export function duel(ctx: AppContext, trainer: Trainer, opponentId: string): Due
       foughtAt: Date.now(),
     })
 
-    logEvent(ctx.db, trainer.id, 'pvp.duel', { opponentId: opponent.id, won, delta: mine.delta })
+    logEvent(ctx.db, trainer.id, 'pvp.duel', { opponentId: opponent.id, won, delta: mine.delta, repeat })
 
     return {
       duelId: record.id,
@@ -169,6 +193,8 @@ export function duel(ctx: AppContext, trainer: Trainer, opponentId: string): Due
       ratingAfter: mine.rating,
       delta: mine.delta,
       gold,
+      /** Zweiter Sieg am selben Tag gegen denselben Gegner: ohne Ertrag. */
+      repeat,
       opponentName: opponent.displayName,
       events,
       turns: state.turn,
