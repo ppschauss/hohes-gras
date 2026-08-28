@@ -148,13 +148,27 @@ describe('Zucht', () => {
   })
 
   it('vererbt gute Werte spuerbar', async () => {
-    const a = addCreature('wildmon', 30, 31)
-    const b = addCreature('nachtmon', 30, 31)
-    const egg = await h.post('/api/eggs/pair', { creatureIdA: a, creatureIdB: b }, token)
-    finishEgg(egg.body.egg.id)
-    const r = await h.post('/api/eggs/hatch', { id: egg.body.egg.id }, token)
-    // Drei von sechs Werten werden vom besseren Elternteil uebernommen, also
-    // muss das Ergebnis deutlich ueber einem Zufallswurf liegen.
-    expect(r.body.creature.ivPercent).toBeGreaterThan(55)
+    /*
+     * Ueber mehrere Eier gemittelt, nicht an einem einzelnen gemessen.
+     *
+     * Drei von sechs Werten kommen vom besseren Elternteil, die anderen drei
+     * sind ein Wurf zwischen 0 und 31 — der Erwartungswert liegt bei 75 %, ein
+     * einzelnes Ei kann aber auch mal bei 54 % landen. Genau das ist im
+     * Gesamtlauf passiert, und ein Test, der gelegentlich ohne Grund rot wird,
+     * macht den ganzen Lauf wertlos.
+     */
+    const percents: number[] = []
+    for (let i = 0; i < 5; i++) {
+      const a = addCreature('wildmon', 30, 31)
+      const b = addCreature('nachtmon', 30, 31)
+      h.resetRateLimits()
+      const egg = await h.post('/api/eggs/pair', { creatureIdA: a, creatureIdB: b }, token)
+      finishEgg(egg.body.egg.id)
+      h.resetRateLimits()
+      const r = await h.post('/api/eggs/hatch', { id: egg.body.egg.id }, token)
+      percents.push(r.body.creature.ivPercent)
+    }
+    const mean = percents.reduce((x, y) => x + y, 0) / percents.length
+    expect(mean).toBeGreaterThan(55)
   })
 })

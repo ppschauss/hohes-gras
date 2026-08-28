@@ -91,7 +91,8 @@ function writeMinimalPack(dataDir: string): void {
     { id: 'poke-ball', name: { de: 'Pokéball' }, description: { de: 'Fängt.' }, category: 'ball', price: 30, sellPrice: 15, icon: '/media/ball.png', params: { catchMultiplier: 1 } },
     { id: 'great-ball', name: { de: 'Superball' }, description: { de: 'Fängt besser.' }, category: 'ball', price: 90, sellPrice: 45, icon: '/media/ball2.png', params: { catchMultiplier: 1.5 } },
     { id: 'oran-berry', name: { de: 'Oranbeere' }, description: { de: 'Snack.' }, category: 'berry', price: 50, sellPrice: 25, icon: '/media/berry.png' },
-    { id: 'legendary-berry', name: { de: 'Sagenbeere' }, description: { de: 'Gegen Legendäre.' }, category: 'berry', price: 0, sellPrice: 0, icon: '/media/lberry.png', params: { legendaryBonus: 0.25 } },
+    // Nicht kaeuflich: sie faellt nur bei Ueberfaellen.
+    { id: 'legendary-berry', name: { de: 'Sagenbeere' }, description: { de: 'Gegen Legendäre.' }, category: 'berry', price: null, sellPrice: null, icon: '/media/lberry.png', params: { legendaryBonus: 0.25 } },
     { id: 'razz-berry', name: { de: 'Himmihbeere' }, description: { de: 'Lenkt ab.' }, category: 'berry', price: 40, sellPrice: 20, icon: '/media/berry2.png', params: { catchBonus: 1.5 } },
     { id: 'potion', name: { de: 'Trank' }, description: { de: 'Heilt.' }, category: 'medicine', price: 100, sellPrice: 50, icon: '/media/potion.png', params: { heal: 20 } },
     { id: 'bg-classic', name: { de: 'Klassisch' }, description: { de: 'Wiese.' }, category: 'background', price: 0, sellPrice: null, stackable: false, icon: '/media/bg.png' },

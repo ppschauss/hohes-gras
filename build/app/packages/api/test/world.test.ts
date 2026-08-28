@@ -306,3 +306,26 @@ describe('Lockduft', () => {
     expect(withLure).toBeGreaterThan(without)
   })
 })
+
+describe('Was der Laden nicht führt', () => {
+  it('bietet die Sagenbeere nicht an', async () => {
+    // Sie stand mit Preis 0 im Laden, und "0 Gold" ist ein Preis: zwei
+    // Mitspieler haben sich 34 und 117 Stueck geholt. Sie faellt nur bei
+    // Ueberfaellen.
+    const r = await h.get('/api/shop', token)
+    const ids = (r.body.sections ?? []).flatMap((s: any) => s.items.map((i: any) => i.id))
+    expect(ids).not.toContain('legendary-berry')
+  })
+
+  it('fuehrt ueberhaupt nichts Verkaeufliches zum Nulltarif', async () => {
+    // Die Regel dahinter: `price: null` heisst "nicht kaeuflich". Ein Preis von
+    // 0 heisst "geschenkt" — das darf nur fuer Hintergruende gelten.
+    const r = await h.get('/api/shop', token)
+    for (const section of r.body.sections ?? []) {
+      for (const item of section.items) {
+        if (section.category === 'background') continue
+        expect(item.price).toBeGreaterThan(0)
+      }
+    }
+  })
+})

@@ -77,9 +77,16 @@ export const AUTHORED: Authored[] = [
   { id: 'golden-razz', category: 'berry', price: 250, sellPrice: 90,  params: { catchBonus: 2.5 },
     name: 'Goldene Himmihbeere', description: 'Die wirksamste Beere überhaupt. Selten und teuer.' },
   // Die einzige Beere, die gegen Legendäre wirkt — und die einzige, die man
-  // nicht kaufen kann. Sie fällt nur bei Überfällen. Preis 0 heißt: taucht im
-  // Laden nicht auf.
-  { id: 'legendary-berry', category: 'berry', price: 0, sellPrice: 0, params: { legendaryBonus: 0.25 },
+  /*
+   * Nicht käuflich, nicht verkäuflich: sie fällt nur bei Überfällen.
+   *
+   * Hier stand `price: 0` mit dem Kommentar "taucht im Laden nicht auf" — eine
+   * Behauptung, die der Laden nicht kannte. Er listet alles, was einen Preis
+   * hat, und null Gold ist ein Preis. Ein Mitspieler hat sich so 34 Sagenbeeren
+   * geholt, ein anderer 117. `null` heißt "kein Preis" und ist das, was hier
+   * gemeint war.
+   */
+  { id: 'legendary-berry', category: 'berry', price: null, sellPrice: null, params: { legendaryBonus: 0.25 },
     name: 'Sagenbeere', description: 'Uralt und bitter. Nur sie beeindruckt ein Legendäres — höchstens drei auf einmal.' },
   { id: 'oran-berry',  category: 'berry', price: 50,  sellPrice: 25,  params: { careValue: 1, friendship: 3 },
     description: 'Lieblingssnack im Garten. Gibt Freundschaft und etwas Energie.' },

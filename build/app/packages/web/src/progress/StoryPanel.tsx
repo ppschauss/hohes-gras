@@ -61,7 +61,17 @@ export function StoryPanel() {
           <li key={c.id}
             className={`chapterStep${c.reached ? ' chapterStep--done' : ''}${c.isCurrent ? ' chapterStep--current' : ''}`}>
             <span className="chapterStep__num num">{c.order}</span>
-            <span className="chapterStep__title">{c.title}</span>
+            <span className="chapterStep__text">
+              <span className="chapterStep__title">{c.title}</span>
+              {/* Was zu tun ist, stand nur beim aktuellen Kapitel. In der Liste
+                  waren es nummerierte Titel ohne Auftrag — "Der Sammler" sagt
+                  niemandem, was er sammeln soll. */}
+              <span className="chapterStep__task">
+                {c.requirements
+                  .map((req) => t(`story.req.${req.kind}`, { have: req.have, need: req.need, label: req.label }))
+                  .join(' · ')}
+              </span>
+            </span>
             <span className="chapterStep__state">
               {c.claimed
                 ? <span className="tag tag--done">{t('story.claimed')}</span>

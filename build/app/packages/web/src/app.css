@@ -618,6 +618,11 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .evoAsk__error { font-size: var(--t-xs); color: var(--danger); }
 .evoAsk__buttons { display: flex; gap: var(--s2); }
 
+/* Kapitelliste: Titel und Auftrag untereinander, damit jede Zeile fuer sich
+   verstaendlich ist. */
+.chapterStep__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.chapterStep__task { font-size: var(--t-xs); color: var(--ink-faint); line-height: 1.35; }
+
 /* Ersatz fuer ein fehlendes Trainerbild. Kein grauer Kasten: ein Emblem, dessen
    Farbe die Art des Gegners traegt. */
 .avatar {
@@ -1445,7 +1450,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .chapterTrail { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s1); }
 .chapterStep {
   display: grid; grid-template-columns: 28px minmax(0, 1fr) auto;
-  align-items: center; gap: var(--s3);
+  /* Oben ausgerichtet: die Zeile ist jetzt zweizeilig, und eine mittig
+     gesetzte Nummer neben zwei Textzeilen sieht verrutscht aus. */
+  align-items: start; gap: var(--s3);
   padding: var(--s2) var(--s3);
   background: var(--surface-sunken); border: 1px solid var(--edge); border-radius: var(--radius-sm);
   opacity: 0.6;
