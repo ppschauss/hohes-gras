@@ -79,6 +79,7 @@ Erreichbarkeit garantiert die Pipeline.
 ```
 tools/curated-kanto.ts    Kanto: Regionen, Orden, Trainer, 15 Gebiete
 tools/curated-johto.ts    Johto: dasselbe, 10 Gebiete
+tools/curated-hoenn.ts    Hoenn: dasselbe, 13 Gebiete
 tools/curated-items.ts    Gegenstände (AUTHORED) + abgeleitete Steine
 tools/curated-story.ts    Story-Kapitel
 ```
@@ -88,10 +89,28 @@ Freischaltbedingungen und Dialoge stehen hier — und nur hier.
 
 ### Eine neue Region hinzufügen
 
-1. Datei nach dem Muster von `curated-johto.ts` anlegen.
+1. Datei nach dem Muster von `curated-hoenn.ts` anlegen. Drei Dinge gehören
+   dazu, die leicht vergessen werden:
+   - **Eigene Starter** am Regionsobjekt (`starterSpeciesIds`) — sonst beginnt
+     man Hoenn mit einem Kanto-Starter.
+   - **Erstes Gebiet ohne Vorbedingung**, wenn die Region als Startregion
+     wählbar sein soll.
+   - **Ein Meister** (`kind: 'champion'` als `gymId` eines Gebiets). Ohne ihn
+     gilt die Region nie als bezwungen und hebt die Reisegrenze nicht.
 2. In `rebuild-world.ts` und `import-pokeapi.ts` importieren und an die Listen
-   anhängen.
-3. `npm run world`, dann Server neu starten. Der Loader meldet jeden Bruch.
+   anhängen. Im Importer zusätzlich an den Dex-Bereich koppeln (`withHoenn`) —
+   eine Region ohne ihre Arten wären Gebiete ohne Bewohner.
+3. Wenn die Region neue Arten braucht: `import-pokeapi.ts --dex 1-<n>` statt
+   `npm run world`. Der Cache macht bereits geladene Generationen billig.
+4. Der Loader meldet jeden Bruch beim Start — Querbezüge, Erreichbarkeit,
+   unbekannte Arten.
+
+**Zum Levelentwurf:** eine Region ist eine eigene Stufe, keine Fortsetzung. Die
+entworfenen Level sagen, für wen sie gedacht ist, wenn er auf Augenhöhe
+ankommt; für alle anderen senkt die Skalierung sie einmalig beim Betreten. Als
+Faustregel: Einstieg dort, wo die vorige Region endet, und rund 50 Level
+Steigung bis zum Meister — mehr, als eine Reisegrenze pro Region hergibt, wäre
+eine Liga, die man nicht erreichen kann.
 
 Wichtig: **Gebiete hinten anhängen, nicht in die Kette einschieben.** Eine
 Umnummerierung verschiebt jede Freischaltbedingung dahinter, und wer schon

@@ -134,13 +134,13 @@ describe('Dynamische Levelskalierung', () => {
 
   it('stoesst nicht ueber die Reisegrenze hinaus', async () => {
     // Wer noch keine Region bezwungen hat, hebt auch kein Gebiet ueber
-    // Level 50 — sonst holte man sich Level-100-Gegner in die erste Region
-    // und damit Beute, fuer die die Reise noch nicht bezahlt ist.
-    setTeamLevel(100)
+    // Level 100 — sonst holte man sich Gegner in die erste Region, fuer die
+    // die Reise noch nicht bezahlt ist.
+    setTeamLevel(200)
     const route = (await h.get('/api/world', token)).body.regions[0].areas[0]
-    expect(route.levels.max).toBe(50)
+    expect(route.levels.max).toBe(100)
     const levels = await exploreLevels(6)
-    for (const level of levels) expect(level).toBeLessThanOrEqual(50)
+    for (const level of levels) expect(level).toBeLessThanOrEqual(100)
   })
 
   it('gibt die Reisegrenze frei, sobald eine Region bezwungen ist', async () => {
@@ -156,15 +156,15 @@ describe('Dynamische Levelskalierung', () => {
       }
     }
 
-    setTeamLevel(100)
-    expect((await h.get('/api/world', token)).body.travel.cap).toBe(50)
+    setTeamLevel(200)
+    expect((await h.get('/api/world', token)).body.travel.cap).toBe(100)
 
     clear()
     h.resetRateLimits()
     const after = await h.get('/api/world', token)
-    expect(after.body.travel.cap).toBe(100)
+    expect(after.body.travel.cap).toBe(150)
     expect(after.body.travel.clearedRegions).toBe(1)
-    expect(after.body.regions[0].areas[0].levels.max).toBe(100)
+    expect(after.body.regions[0].areas[0].levels.max).toBe(150)
   })
 })
 

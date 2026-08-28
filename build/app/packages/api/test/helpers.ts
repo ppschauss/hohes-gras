@@ -101,7 +101,9 @@ function writeMinimalPack(dataDir: string): void {
     // Zweite Region, bewusst weit oben entworfen: nur mit ihr laesst sich
     // pruefen, dass eine Region ihren Besucher empfaengt statt ihn auszusperren
     // — und dass sie danach nicht mit ihm mitwaechst.
-    { id: 'hochland', order: 2, name: { de: 'Hochland' }, tagline: { de: 'Hoch' } },
+    // Eigene Starter: dieselbe Wahl darf in zwei Regionen zwei verschiedene
+    // Listen bedeuten.
+    { id: 'hochland', order: 2, name: { de: 'Hochland' }, tagline: { de: 'Hoch' }, starterSpeciesIds: ['blattmon'] },
   ])
   put('areas.json', [
     {

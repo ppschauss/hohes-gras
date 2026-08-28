@@ -95,6 +95,8 @@ export const StartRegionSchema = z.object({
   areaId: z.string(),
   areaName: z.string(),
   areaCount: z.number().int(),
+  /** Die Partner, die in dieser Region zur Wahl stehen. */
+  starters: z.array(z.object({ speciesId: z.string(), name: z.string(), sprite: z.string() })),
 })
 export type StartRegion = z.infer<typeof StartRegionSchema>
 

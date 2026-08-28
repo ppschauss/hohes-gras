@@ -20,6 +20,7 @@ import { mirrorItemIcons, mirrorSprites } from './import-sprites.ts'
 import { AREAS, BADGES, REGIONS, TRAINERS } from './curated-kanto.ts'
 import { CHAPTERS } from './curated-story.ts'
 import { JOHTO_AREAS, JOHTO_BADGES, JOHTO_CHAPTERS, JOHTO_REGION, JOHTO_TRAINERS } from './curated-johto.ts'
+import { HOENN_AREAS, HOENN_BADGES, HOENN_CHAPTERS, HOENN_REGION, HOENN_TRAINERS } from './curated-hoenn.ts'
 
 const args = process.argv.slice(2)
 const argValue = (flag: string, fallback: string): string => {
@@ -108,14 +109,16 @@ async function main(): Promise<void> {
   step('Welt zusammensetzen')
   const inPack = new Set(species.map((s) => s.id))
   const missingSpawns = new Set<string>()
-  // Johto wird nur aufgenommen, wenn seine Arten im Dex-Bereich liegen —
-  // sonst waere die Region ein leeres Versprechen.
-  const includeJohto = dex.some((n) => n > 151)
-  const allAreas = includeJohto ? [...AREAS, ...JOHTO_AREAS] : AREAS
-  const allTrainerDefs = includeJohto ? [...TRAINERS, ...JOHTO_TRAINERS] : TRAINERS
-  const allBadges = includeJohto ? [...BADGES, ...JOHTO_BADGES] : BADGES
-  const allRegions = includeJohto ? [...REGIONS, JOHTO_REGION] : REGIONS
-  const allChapters = includeJohto ? [...CHAPTERS, ...JOHTO_CHAPTERS] : CHAPTERS
+  // Eine Region kommt nur mit, wenn ihre Arten im Dex-Bereich liegen — sonst
+  // waere sie ein leeres Versprechen: der Loader wirft ihre Spawn-Tabellen
+  // heraus und uebrig blieben Gebiete ohne Bewohner.
+  const withJohto = dex.some((n) => n > 151)
+  const withHoenn = dex.some((n) => n > 251)
+  const allAreas = [...AREAS, ...(withJohto ? JOHTO_AREAS : []), ...(withHoenn ? HOENN_AREAS : [])]
+  const allTrainerDefs = [...TRAINERS, ...(withJohto ? JOHTO_TRAINERS : []), ...(withHoenn ? HOENN_TRAINERS : [])]
+  const allBadges = [...BADGES, ...(withJohto ? JOHTO_BADGES : []), ...(withHoenn ? HOENN_BADGES : [])]
+  const allRegions = [...REGIONS, ...(withJohto ? [JOHTO_REGION] : []), ...(withHoenn ? [HOENN_REGION] : [])]
+  const allChapters = [...CHAPTERS, ...(withJohto ? JOHTO_CHAPTERS : []), ...(withHoenn ? HOENN_CHAPTERS : [])]
 
   const areas = allAreas.map((a) => ({
     ...a,

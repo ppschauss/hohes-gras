@@ -8,12 +8,24 @@ import { clamp } from './stats.js'
  * dass jedes Level darueber *gratis* gewesen waere: die Kurve lieferte fuer
  * 150 und fuer 450 denselben Wert. Seit die Reisegrenze mit jeder bezwungenen
  * Region waechst, laeuft die Kurve weiter. 500 ist das Ende der Fahnenstange:
- * neun Regionen zu je fuenfzig Leveln.
+ * die erste Region plus acht weitere zu je fuenfzig Leveln.
  */
 export const ABSOLUTE_MAX_LEVEL = 500
 
-/** Die Grenze einer einzelnen Region — und der Startwert der Reisegrenze. */
+/** Was jede bezwungene Region an Spielraum dazugibt. */
 export const LEVELS_PER_REGION = 50
+
+/**
+ * Der Spielraum, mit dem man anfängt.
+ *
+ * Nicht 50, und das ist gemessen und nicht geraten: Kantos Champion steht mit
+ * seinem Team auf Level 78–84, Johtos Meister auf 90. Eine erste Grenze von 50
+ * machte die erste Liga unschlagbar — nicht schwer, sondern unmöglich, weil
+ * auch das perfekte Team dreißig Level darunter bliebe. Die erste Region gibt
+ * deshalb den Spielraum, den ihr Inhalt verlangt; erst danach beginnt die
+ * Leiter.
+ */
+export const FIRST_REGION_LEVELS = 100
 
 /** @deprecated Nur noch fuer Aufrufer ohne eigene Grenze. Wer eine
  *  Reisegrenze kennt, soll sie uebergeben. */
@@ -155,7 +167,7 @@ export function grantXpTo(
  */
 export function travelCap(clearedRegions: number): number {
   const regions = Math.max(0, Math.floor(clearedRegions))
-  return Math.min(ABSOLUTE_MAX_LEVEL, LEVELS_PER_REGION * (regions + 1))
+  return Math.min(ABSOLUTE_MAX_LEVEL, FIRST_REGION_LEVELS + LEVELS_PER_REGION * regions)
 }
 
 /** XP a defeated opponent yields. Scales with the level gap so that grinding

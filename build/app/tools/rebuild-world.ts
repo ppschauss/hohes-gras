@@ -19,6 +19,7 @@ import { AUTHORED } from './curated-items.ts'
 import { AREAS, BADGES, REGIONS, TRAINERS } from './curated-kanto.ts'
 import { CHAPTERS } from './curated-story.ts'
 import { JOHTO_AREAS, JOHTO_BADGES, JOHTO_CHAPTERS, JOHTO_REGION, JOHTO_TRAINERS } from './curated-johto.ts'
+import { HOENN_AREAS, HOENN_BADGES, HOENN_CHAPTERS, HOENN_REGION, HOENN_TRAINERS } from './curated-hoenn.ts'
 
 const args = process.argv.slice(2)
 const arg = (flag: string, fallback: string): string => {
@@ -36,11 +37,11 @@ async function main(): Promise<void> {
   const inPack = new Set(species.map((s) => s.id))
   console.log(`Welt neu erzeugen · Pack "${PACK}" · ${inPack.size} bekannte Arten\n`)
 
-  const allAreas = [...AREAS, ...JOHTO_AREAS]
-  const allRegions = [...REGIONS, JOHTO_REGION]
-  const allBadges = [...BADGES, ...JOHTO_BADGES]
-  const allTrainerDefs = [...TRAINERS, ...JOHTO_TRAINERS]
-  const allChapters = [...CHAPTERS, ...JOHTO_CHAPTERS]
+  const allAreas = [...AREAS, ...JOHTO_AREAS, ...HOENN_AREAS]
+  const allRegions = [...REGIONS, JOHTO_REGION, HOENN_REGION]
+  const allBadges = [...BADGES, ...JOHTO_BADGES, ...HOENN_BADGES]
+  const allTrainerDefs = [...TRAINERS, ...JOHTO_TRAINERS, ...HOENN_TRAINERS]
+  const allChapters = [...CHAPTERS, ...JOHTO_CHAPTERS, ...HOENN_CHAPTERS]
 
   const missingSpawns = new Set<string>()
   const areas = allAreas.map((a) => ({

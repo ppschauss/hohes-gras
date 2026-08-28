@@ -221,6 +221,9 @@ export function startRegions(ctx: AppContext, trainer: Trainer) {
     if (!first || first.unlock.previousAreaId !== null || first.unlock.requiredBadgeIds.length > 0) {
       return []
     }
+    const starters = region.starterSpeciesIds.length > 0
+      ? region.starterSpeciesIds
+      : ctx.registry.manifest.starterSpeciesIds
     return [{
       regionId: region.id,
       name: ctx.registry.localized(region.name, trainer.locale),
@@ -228,12 +231,35 @@ export function startRegions(ctx: AppContext, trainer: Trainer) {
       areaId: first.id,
       areaName: ctx.registry.localized(first.name, trainer.locale),
       areaCount: ctx.registry.allAreas.filter((a) => a.regionId === region.id).length,
+      starters: starters.map((id) => {
+        const sp = ctx.registry.species(id)
+        return { speciesId: id, name: ctx.registry.localized(sp.name, trainer.locale), sprite: sp.sprite }
+      }),
     }]
   })
 }
 
-export function starterOptions(ctx: AppContext, trainer: Trainer) {
-  return ctx.registry.manifest.starterSpeciesIds.map((id) => {
+/**
+ * Die Starter einer Region — oder die des Packs, wenn sie keine eigenen hat.
+ *
+ * Ohne Region ist die Antwort die Vereinigung aller wählbaren Startregionen:
+ * so sieht man auf dem ersten Bildschirm, was überhaupt zur Wahl steht.
+ */
+export function starterSpeciesFor(ctx: AppContext, trainer: Trainer, regionId?: string): string[] {
+  const fallback = ctx.registry.manifest.starterSpeciesIds
+  if (regionId) {
+    const own = ctx.registry.allRegions.find((r) => r.id === regionId)?.starterSpeciesIds ?? []
+    return own.length > 0 ? own : fallback
+  }
+  const all = startRegions(ctx, trainer).flatMap((r) => {
+    const own = ctx.registry.allRegions.find((x) => x.id === r.regionId)?.starterSpeciesIds ?? []
+    return own.length > 0 ? own : fallback
+  })
+  return all.length > 0 ? [...new Set(all)] : fallback
+}
+
+export function starterOptions(ctx: AppContext, trainer: Trainer, regionId?: string) {
+  return starterSpeciesFor(ctx, trainer, regionId).map((id) => {
     const s = ctx.registry.species(id)
     return {
       speciesId: id,
@@ -252,14 +278,16 @@ export function starterOptions(ctx: AppContext, trainer: Trainer) {
 export function chooseStarter(
   ctx: AppContext, trainer: Trainer, speciesId: string, regionId?: string,
 ): void {
-  if (!ctx.registry.manifest.starterSpeciesIds.includes(speciesId)) {
-    throw new GameError('validation_failed', { field: 'speciesId' })
-  }
   const regions = startRegions(ctx, trainer)
   const start = regionId
     ? regions.find((r) => r.regionId === regionId)
     : regions[0]
   if (!start) throw new GameError('validation_failed', { field: 'regionId' })
+  // Erst die Region, dann der Starter: welche Arten zur Wahl stehen, haengt
+  // daran, wo man aufwacht.
+  if (!starterSpeciesFor(ctx, trainer, start.regionId).includes(speciesId)) {
+    throw new GameError('validation_failed', { field: 'speciesId' })
+  }
   tx(ctx.db, () => {
     // Re-check inside the transaction: two taps on a slow connection must not
     // produce two starters.

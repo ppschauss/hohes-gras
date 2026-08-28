@@ -19,8 +19,8 @@ describe('Starter', () => {
   it('meldet, dass noch keiner gewaehlt wurde', async () => {
     const r = await h.get('/api/starter', token)
     expect(r.body.needsStarter).toBe(true)
-    expect(r.body.options).toHaveLength(1)
-    expect(r.body.options[0].speciesId).toBe('testmon')
+    // Ohne gewaehlte Region alles, was ueberhaupt zur Wahl steht.
+    expect(r.body.options.map((o: any) => o.speciesId)).toEqual(['testmon', 'blattmon'])
   })
 
   it('legt Starter, Startausruestung und Dex-Eintrag an', async () => {
@@ -66,6 +66,31 @@ describe('Starter', () => {
     })
     // Die Testhoehle verlangt Orden und Vorgaenger — sie taugt nicht als Anfang.
     expect(r.body.regions.map((x: any) => x.areaId)).not.toContain('test-cave')
+  })
+
+  it('bietet je Region ihre eigenen Starter an', async () => {
+    const kanto = await h.get('/api/starter', token)
+    expect(kanto.body.options.map((o: any) => o.speciesId)).toContain('testmon')
+
+    const hoch = await h.get('/api/starter?regionId=hochland', token)
+    expect(hoch.body.options.map((o: any) => o.speciesId)).toEqual(['blattmon'])
+
+    // Und die Regionskarte zeigt sie schon vor der Wahl.
+    const region = kanto.body.regions.find((r: any) => r.regionId === 'hochland')
+    expect(region.starters.map((st: any) => st.speciesId)).toEqual(['blattmon'])
+  })
+
+  it('weist einen Starter ab, der nicht zur gewaehlten Region gehoert', async () => {
+    const r = await h.post('/api/starter', { speciesId: 'testmon', regionId: 'hochland' }, token)
+    expect(r.status).toBe(400)
+    expect((await h.get('/api/starter', token)).body.needsStarter).toBe(true)
+  })
+
+  it('nimmt den regionseigenen Starter an', async () => {
+    const r = await h.post('/api/starter', { speciesId: 'blattmon', regionId: 'hochland' }, token)
+    expect(r.status).toBe(200)
+    expect(r.body.team[0].speciesId).toBe('blattmon')
+    expect((await h.get('/api/world', token)).body.currentAreaId).toBe('hoch-tal')
   })
 
   it('setzt den Trainer in die gewaehlte Startregion', async () => {

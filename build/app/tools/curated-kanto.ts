@@ -37,7 +37,10 @@ export interface AreaOut {
 }
 
 export const REGIONS = [
-  { id: 'kanto', order: 1, name: { de: 'Kanto' }, tagline: { de: 'Wo jede Reise beginnt.' } },
+  {
+    id: 'kanto', order: 1, name: { de: 'Kanto' }, tagline: { de: 'Wo jede Reise beginnt.' },
+    starterSpeciesIds: ['bulbasaur', 'charmander', 'squirtle'],
+  },
 ]
 
 export const BADGES = [

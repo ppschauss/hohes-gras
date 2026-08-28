@@ -592,6 +592,12 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .region__name { font-size: var(--t-xl); font-weight: 700; }
 .region__tagline { font-size: var(--t-sm); color: var(--ink-muted); line-height: 1.4; }
 .region__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+.region__starters { display: flex; gap: var(--s1); margin-top: var(--s1); }
+.region__starter {
+  width: 48px; height: 48px;
+  /* Pixelart ganzzahlig skalieren, sonst franst sie aus. */
+  image-rendering: pixelated;
+}
 
 .pickedRegion {
   display: flex; align-items: center; justify-content: space-between; gap: var(--s2);

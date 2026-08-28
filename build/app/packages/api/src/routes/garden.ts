@@ -45,9 +45,10 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
 
   app.get('/api/starter', auth, async (req) => {
     const owned = creatures.countOwned(ctx.db, req.trainer!.id).total
+    const regionId = (req.query as { regionId?: string } | undefined)?.regionId
     return {
       needsStarter: owned === 0,
-      options: garden.starterOptions(ctx, req.trainer!),
+      options: garden.starterOptions(ctx, req.trainer!, regionId),
       regions: garden.startRegions(ctx, req.trainer!),
     }
   })

@@ -207,6 +207,11 @@ export function crossValidate(pack: ContentPack): string[] {
   for (const id of pack.manifest.starterSpeciesIds) {
     if (!has(pack.species, id)) issues.push(`pack.json: Starter "${id}" existiert nicht`)
   }
+  for (const region of pack.regions.values()) {
+    for (const id of region.starterSpeciesIds) {
+      if (!has(pack.species, id)) issues.push(`region/${region.id}: Starter "${id}" existiert nicht`)
+    }
+  }
   if (!has(pack.areas, pack.manifest.startingArea)) {
     issues.push(`pack.json: Startgebiet "${pack.manifest.startingArea}" existiert nicht`)
   }

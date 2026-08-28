@@ -9,8 +9,9 @@ import { CenterState } from '../ui/States'
 interface Props { onDone: () => void }
 
 export function StarterPicker({ onDone }: Props) {
-  const info = useAsync(() => api.starterInfo(), [])
   const [region, setRegion] = useState<StartRegion | null>(null)
+  // Die Starterliste haengt an der Region, also wird sie mit ihr neu geladen.
+  const info = useAsync(() => api.starterInfo(region?.regionId), [region?.regionId])
   const [chosen, setChosen] = useState<string | null>(null)
   const action = useAction()
 
@@ -54,6 +55,12 @@ export function StarterPicker({ onDone }: Props) {
               <span className="region__tagline">{r.tagline}</span>
               <span className="region__meta">
                 {t('start.region.meta', { area: r.areaName, count: String(r.areaCount) })}
+              </span>
+              <span className="region__starters">
+                {r.starters.map((st) => (
+                  <img key={st.speciesId} className="region__starter" src={st.sprite} alt={st.name}
+                       title={st.name} width={48} height={48} loading="lazy" />
+                ))}
               </span>
             </button>
           ))}

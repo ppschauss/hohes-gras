@@ -6,18 +6,20 @@ import {
 } from './leveling.js'
 
 describe('Reisegrenze', () => {
-  it('gibt der ersten Region fuenfzig Level', () => {
-    expect(travelCap(0)).toBe(50)
+  it('gibt der ersten Region genug Luft fuer ihre eigene Liga', () => {
+    // Kantos Champion steht auf 78–84. Alles darunter waere keine Grenze,
+    // sondern eine Sperre.
+    expect(travelCap(0)).toBe(100)
   })
 
   it('legt je bezwungener Region fuenfzig drauf', () => {
-    expect(travelCap(1)).toBe(100)
-    expect(travelCap(2)).toBe(150)
-    expect(travelCap(8)).toBe(450)
+    expect(travelCap(1)).toBe(150)
+    expect(travelCap(2)).toBe(200)
+    expect(travelCap(7)).toBe(450)
   })
 
   it('endet bei der absoluten Grenze', () => {
-    expect(travelCap(9)).toBe(ABSOLUTE_MAX_LEVEL)
+    expect(travelCap(8)).toBe(ABSOLUTE_MAX_LEVEL)
     expect(travelCap(99)).toBe(ABSOLUTE_MAX_LEVEL)
   })
 })

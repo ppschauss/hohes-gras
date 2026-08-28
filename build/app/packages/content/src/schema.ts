@@ -1,4 +1,14 @@
 import { z } from 'zod'
+
+/**
+ * Die hoechste Levelzahl, die in einem Pack stehen darf.
+ *
+ * Frueher stand hier ueberall 100 — die alte Levelkappe. Seit die Reisegrenze
+ * mit jeder bezwungenen Region waechst, sind Regionen entworfen, die darueber
+ * hinausgehen: Hoenn endet bei 150. Die Zahl gehoert bewusst nicht in die
+ * Engine importiert, sonst haenge das Inhaltsschema an der Spiellogik.
+ */
+const MAX_CONTENT_LEVEL = 500
 import { GROWTH_RATES, TIMES_OF_DAY, WEATHERS } from '@game/shared'
 
 /* ---------------------------------------------------------------------------
@@ -62,7 +72,7 @@ export const MoveDefSchema = z.object({
 export type MoveDef = z.infer<typeof MoveDefSchema>
 
 export const EvolutionSchema = z.discriminatedUnion('trigger', [
-  z.object({ trigger: z.literal('level'), to: Id, level: z.number().int().min(2).max(100) }),
+  z.object({ trigger: z.literal('level'), to: Id, level: z.number().int().min(2).max(MAX_CONTENT_LEVEL) }),
   z.object({ trigger: z.literal('stone'), to: Id, itemId: Id }),
   z.object({ trigger: z.literal('friendship'), to: Id, minFriendship: z.number().int().min(1).max(255), timeOfDay: z.enum(TIMES_OF_DAY).optional() }),
   z.object({ trigger: z.literal('trade'), to: Id, heldItemId: Id.optional() }),
@@ -89,7 +99,7 @@ export const SpeciesDefSchema = z.object({
   hatchCycles: z.number().int().min(1),
   eggGroups: z.array(Id),
   /** Moves the species can learn, with the level at which they unlock. */
-  learnset: z.array(z.object({ moveId: Id, level: z.number().int().min(0).max(100) })),
+  learnset: z.array(z.object({ moveId: Id, level: z.number().int().min(0).max(MAX_CONTENT_LEVEL) })),
   evolutions: z.array(EvolutionSchema).default([]),
   sprite: z.string(),
   spriteShiny: z.string(),
@@ -114,8 +124,8 @@ export type ItemDef = z.infer<typeof ItemDefSchema>
 export const SpawnEntrySchema = z.object({
   speciesId: Id,
   weight: z.number().min(0),
-  minLevel: z.number().int().min(1).max(100),
-  maxLevel: z.number().int().min(1).max(100),
+  minLevel: z.number().int().min(1).max(MAX_CONTENT_LEVEL),
+  maxLevel: z.number().int().min(1).max(MAX_CONTENT_LEVEL),
   timeOfDay: z.array(z.enum(TIMES_OF_DAY)).optional(),
   weather: z.array(z.enum(WEATHERS)).optional(),
 })
@@ -147,7 +157,7 @@ export type AreaDef = z.infer<typeof AreaDefSchema>
  *  the four most recent level-up moves for that level. */
 export const NpcTeamMemberSchema = z.object({
   speciesId: Id,
-  level: z.number().int().min(1).max(100),
+  level: z.number().int().min(1).max(MAX_CONTENT_LEVEL),
   moves: z.array(Id).max(4).optional(),
   heldItemId: Id.optional(),
 })
@@ -159,7 +169,7 @@ export const BadgeDefSchema = z.object({
   description: LocalizedText,
   icon: z.string(),
   /** Creatures above this level stop obeying without the badge. */
-  obedienceLevel: z.number().int().min(1).max(100),
+  obedienceLevel: z.number().int().min(1).max(MAX_CONTENT_LEVEL),
 })
 export type BadgeDef = z.infer<typeof BadgeDefSchema>
 
@@ -188,6 +198,10 @@ export const RegionDefSchema = z.object({
   order: z.number().int().min(1),
   name: LocalizedText,
   tagline: LocalizedText,
+  /** Starter dieser Region. Leer heißt: es gelten die des Packs. Seit die
+   *  Startregion frei wählbar ist, gehört die Wahl des ersten Partners zur
+   *  Region — sonst begänne man Hoenn mit einem Kanto-Starter. */
+  starterSpeciesIds: z.array(Id).default([]),
 })
 export type RegionDef = z.infer<typeof RegionDefSchema>
 

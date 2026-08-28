@@ -13,6 +13,8 @@
     "build": "npm run build -w @game/shared && npm run build -w @game/content && npm run build -w @game/engine && npm run build -w @game/api && npm run build -w @game/web",
     "dev:api": "npm run dev -w @game/api",
     "dev:web": "npm run dev -w @game/web",
+    "_comment_pretest": "Ohne diesen Schritt testet vitest gegen ein altes dist/: paketuebergreifende Importe kommen aus den gebauten Dateien, nicht aus den Quellen. Ein gruener Lauf sagte dann nichts.",
+    "pretest": "tsc -b",
     "test": "vitest run",
     "typecheck": "tsc -b --force",
     "world": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/rebuild-world.ts",

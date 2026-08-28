@@ -135,11 +135,17 @@ Die einzige Zahl, die sagt, wie weit jemand gekommen ist:
 
 | Bezwungene Regionen | Grenze |
 |---|---|
-| 0 (Start) | 50 |
-| 1 | 100 |
-| 2 | 150 |
+| 0 (Start) | 100 |
+| 1 | 150 |
+| 2 | 200 |
 | … | +50 je Region |
-| 9 | 500 (absolutes Ende) |
+| 8 | 500 (absolutes Ende) |
+
+Der Startwert ist 100 und nicht 50, und das ist gemessen: Kantos Champion tritt
+mit Level 78–84 an, Johtos Meister mit 90. Eine erste Grenze von 50 machte die
+erste Liga nicht schwer, sondern unmöglich — auch das perfekte Team bliebe
+dreißig Level darunter. Die erste Region gibt deshalb den Spielraum, den ihr
+Inhalt verlangt; die Leiter beginnt danach.
 
 Bezwungen heißt: **alle Orden der Region plus ihr Meister**. Bewusst an
 bezwungene Regionen gebunden, nicht an betretene — sonst tourte man neun
@@ -157,12 +163,19 @@ Reisekilometer.
 
 ## Levelkurve
 
-| Region | Von | Bis |
-|---|---|---|
-| Kanto Route 1 → Indigo-Plateau | 2 | 64 |
-| Kanto nach der Liga | 60 | 78 |
-| Johto Route 29 → Silberberg | 58 | 94 |
-| Johto nach der Liga | 86 | 100 |
+| Region | Von | Bis | Meister |
+|---|---|---|---|
+| Kanto Route 1 → Indigo-Plateau | 2 | 64 | 78–84 |
+| Kanto nach der Liga | 60 | 78 | — |
+| Johto Route 29 → Silberberg | 58 | 94 | 86–90 |
+| Johto nach der Liga | 86 | 100 | — |
+| Hoenn Route 101 → Siegesstraße | 96 | 146 | 150–156 |
+| Hoenn nach der Liga | 138 | 150 | — |
+
+Hoenn ist als eigene Stufe entworfen, nicht als Fortsetzung: gedacht für
+jemanden, der Kanto und Johto hinter sich hat. Wer Hoenn als Erstes wählt,
+findet sie um 94 Level gesenkt vor — Route 101 auf 2–8, den Meister auf 62 —
+und bleibt damit innerhalb seiner ersten Reisegrenze von 100.
 
 Das sind die **Entwurfslevel**. Wer Johto zuerst wählt, spielt dieselben
 Gebiete auf sein eigenes Niveau gesenkt; die Abstände zwischen ihnen bleiben.

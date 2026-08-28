@@ -74,8 +74,10 @@ export const api = {
   setBackground: (itemId: string) =>
     request<GardenState>('/api/garden/background', { method: 'POST', body: JSON.stringify({ itemId }) }),
 
-  starterInfo: () =>
-    request<{ needsStarter: boolean; options: StarterOption[]; regions: StartRegion[] }>('/api/starter'),
+  starterInfo: (regionId?: string) =>
+    request<{ needsStarter: boolean; options: StarterOption[]; regions: StartRegion[] }>(
+      regionId ? `/api/starter?regionId=${encodeURIComponent(regionId)}` : '/api/starter',
+    ),
   chooseStarter: (speciesId: string, regionId: string | null) =>
     request<GardenState>('/api/starter', {
       method: 'POST',
