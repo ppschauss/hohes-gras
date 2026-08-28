@@ -21,7 +21,17 @@ export interface BuildingSpec {
     | 'energyCapBonus'     // hoehere Obergrenze der Trainer-Energie
     | 'careLimitBonus'     // zusaetzliche Pflegeaktionen je Viertelstunde
     | 'centerSpeedBonus'   // Stufen, um die die Abklingzeit des Centers sinkt
+    | 'boxSlotBonus'       // zusaetzliche Plaetze in der Box
 }
+
+/**
+ * Was die Box ohne jeden Ausbau fasst.
+ *
+ * Verdreifacht von 300, weil aus einer Region drei geworden sind: wer Kanto,
+ * Johto und Hoenn bereist, sammelt dreimal so viele Arten und stand sonst nach
+ * der ersten Region vor einer vollen Box.
+ */
+export const BOX_BASE_LIMIT = 900
 
 export const BUILDINGS: BuildingSpec[] = [
   {
@@ -76,6 +86,20 @@ export const BUILDINGS: BuildingSpec[] = [
     id: 'nurse-station', maxLevel: 4, effectKind: 'centerSpeedBonus',
     cost: (level) => 600 * level ** 2,
     effect: (level) => level,
+  },
+  {
+    /*
+     * Depot: mehr Platz in der Box.
+     *
+     * Der einzige Ausbau mit gleichbleibendem Preis. Die anderen wachsen
+     * quadratisch, weil ihre Wirkung sich auf alles Kommende legt — Platz
+     * dagegen ist eine Ware: fuenfzig Plaetze sind fuenfzig Plaetze, egal ob
+     * es die ersten oder die letzten sind. 5.000 Gold je Stufe, 25 Stufen,
+     * am Ende 1.250 zusaetzliche Plaetze.
+     */
+    id: 'storage', maxLevel: 25, effectKind: 'boxSlotBonus',
+    cost: () => 5000,
+    effect: (level) => level * 50,
   },
   {
     id: 'greenhouse', maxLevel: 3, effectKind: 'energyCapBonus',

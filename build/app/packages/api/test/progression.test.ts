@@ -126,6 +126,26 @@ describe('Basisausbau', () => {
     expect(after).toBe(before + 20)
   })
 
+  it('erweitert mit dem Depot die Box um 50 Plaetze je Stufe', async () => {
+    const before = (await h.get('/api/box', token)).body.boxCapacity
+    h.resetRateLimits()
+    await h.post('/api/buildings/upgrade', { buildingId: 'storage' }, token)
+    h.resetRateLimits()
+    const after = (await h.get('/api/box', token)).body.boxCapacity
+    expect(before).toBe(900)
+    expect(after).toBe(950)
+  })
+
+  it('haelt den Depotpreis auf jeder Stufe gleich', async () => {
+    // Der einzige Ausbau ohne Preissteigerung: Platz ist eine Ware, keine
+    // Wirkung, die sich auf alles Weitere legt.
+    const first = await h.post('/api/buildings/upgrade', { buildingId: 'storage' }, token)
+    h.resetRateLimits()
+    const second = await h.post('/api/buildings/upgrade', { buildingId: 'storage' }, token)
+    expect(first.body.cost).toBe(5000)
+    expect(second.body.cost).toBe(5000)
+  })
+
   it('weist ein unbekanntes Gebaeude ab', async () => {
     expect((await h.post('/api/buildings/upgrade', { buildingId: 'raumhafen' }, token)).status).toBe(404)
   })

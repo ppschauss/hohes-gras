@@ -114,10 +114,16 @@ describe('Kosten und Belohnungen', () => {
     expect(EXPEDITION_ENERGY.medium).toBeLessThan(EXPEDITION_ENERGY.long!)
   })
 
-  it('gibt fuer einen gewonnenen Kampf mehr zurueck, als er gekostet hat', () => {
-    // Sonst waere Kaempfen ein Verlustgeschaeft und niemand wuerde es tun.
+  it('macht aus einem gewonnenen Duell kein Plusgeschaeft', () => {
+    // Gemeldet: Duell kostete 3 und gab 5 — beliebig oft +2. Der Sieg soll
+    // den Einsatz abfedern, nicht uebertreffen.
+    expect(ENERGY_REWARDS.duelWon).toBeLessThan(ENERGY_COSTS.duel)
+  })
+
+  it('macht den ersten Sieg ueber einen Gegner lohnend', () => {
+    // Der *erste* Sieg zahlt mehr, als der Kampf kostet — die Wiederholung
+    // zahlt gar nichts mehr, das steht im Kampfdienst.
     expect(ENERGY_REWARDS.battleWon).toBeGreaterThanOrEqual(ENERGY_COSTS.battle)
-    expect(ENERGY_REWARDS.duelWon).toBeGreaterThanOrEqual(ENERGY_COSTS.duel)
   })
 })
 

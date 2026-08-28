@@ -21,13 +21,18 @@ soll früh spürbar sein und sich später *wegspielen* lassen.
 | Kosten | | Erträge | |
 |---|---|---|---|
 | Pflege, Erkundung | 1 | Erster Sieg über einen Gegner | +4 |
-| Kampf, Raid-Angriff | 2 | Gewonnenes Duell | +5 |
+| Kampf, Raid-Angriff | 2 | Gewonnenes Duell | +2 (Einsatz: 3) |
 | Duell, Expedition | 3 (2–6) | Entwicklung | +15 |
 | | | Raid-Boss besiegt | +20 |
 | | | Neuer Orden | +60 |
 | | | Gebiet vollständig | +120 |
 
 Kaufbar: siehe „Energie kaufen".
+
+**Ein Duell kostet mehr, als es zahlt.** 3 Energie Einsatz, 2 zurueck beim
+Sieg. Vorher waren es 5 — wer gewinnt, gewann damit auch Energie, und PvP wurde
+zur zweiten Druckerpresse neben den Wiederholungskämpfen. Der Sieg federt den
+Einsatz jetzt ab, statt ihn zu übertreffen.
 
 **Energie gibt es einmal je Gegner, nicht je Kampf.** Ein Kampf kostet 2 und gab
 4 zurück — auch beim hundertsten Mal gegen denselben Trainer. Wer die Skalierung

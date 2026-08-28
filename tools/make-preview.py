@@ -13,7 +13,18 @@ init = sys.argv[1] if len(sys.argv) > 1 else ''
 # signiertes initData und wuerde als offene Hintertuer ins Image wandern.
 out = sys.argv[2] if len(sys.argv) > 2 else '/tmp/__preview.html'
 
-idx = open(os.path.join(APP, 'index.html')).read()
+# Die Seite muss aus dem *laufenden* Container kommen.
+#
+# Im Quellbaum liegt das Ergebnis des letzten Host-Builds; der Container baut
+# sein eigenes und vergibt andere Hashnamen. Wer die Datei vom Host nimmt,
+# verweist auf Dateien, die es unter dieser Adresse nicht gibt — und bekommt
+# eine weisse Seite ohne jede Fehlermeldung.
+HOST = os.environ.get('PREVIEW_HOST', '172.17.0.1:3010')
+try:
+    import urllib.request
+    idx = urllib.request.urlopen(f'http://{HOST}/', timeout=5).read().decode()
+except Exception:
+    idx = open(os.path.join(APP, 'index.html')).read()
 tags = "".join(re.findall(
     r'<(?:script|link)[^>]*(?:src|href)="/assets/[^"]+"[^>]*>(?:</script>)?', idx
 )).replace('crossorigin', '')

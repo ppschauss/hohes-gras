@@ -96,7 +96,9 @@ export const api = {
       body: JSON.stringify(regionId ? { speciesId, regionId } : { speciesId }),
     }),
 
-  box: () => request<{ creatures: CreatureLike[]; teamCapacity: number }>('/api/box'),
+  box: () => request<{
+    creatures: CreatureLike[]; teamCapacity: number; boxCapacity: number; boxUsed: number
+  }>('/api/box'),
   setTeam: (creatureIds: string[]) =>
     request<GardenState>('/api/team', { method: 'POST', body: JSON.stringify({ creatureIds }) }),
 
@@ -207,6 +209,10 @@ export const api = {
   salvage: (creatureId: string) =>
     request<{ result: SalvageResult; souls: SoulView[] }>('/api/souls/salvage', {
       method: 'POST', body: JSON.stringify({ creatureId }),
+    }),
+  salvageMany: (creatureIds: string[]) =>
+    request<{ bulk: BulkSalvageResult; souls: SoulView[] }>('/api/souls/salvage', {
+      method: 'POST', body: JSON.stringify({ creatureIds }),
     }),
   redeemSouls: (typeId: string, shiny = false) =>
     request<{ egg: { id: string; speciesId: string }; souls: SoulView[] }>('/api/souls/redeem', {
@@ -1046,6 +1052,12 @@ export interface SoulView {
 export interface SalvageResult {
   creatureName: string
   fragments: Array<{ itemId: string; typeId: string; name: string; quantity: number }>
+}
+
+export interface BulkSalvageResult {
+  count: number
+  names: string[]
+  fragments: SalvageResult['fragments']
 }
 
 export interface SessionView {

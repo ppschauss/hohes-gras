@@ -3,6 +3,7 @@ import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import * as social from '../repos/social.js'
 import * as creatures from '../repos/creatures.js'
+import { boxLimit } from './safari.js'
 import * as teamsRepo from '../repos/teams.js'
 import * as inventory from '../repos/inventory.js'
 import * as world from '../repos/world.js'
@@ -263,8 +264,11 @@ export function buyListing(ctx: AppContext, trainer: Trainer, listingId: string)
     if (!creature || creature.ownerId !== listing.sellerId) {
       throw new GameError('invalid_state', { reason: 'creature_gone' }, 409)
     }
-    if (creatures.countOwned(ctx.db, trainer.id).total >= 300) {
-      throw new GameError('invalid_state', { reason: 'box_full' }, 409)
+    // Dieselbe Grenze wie beim Fangen — sie stand hier als nackte 300 und
+    // waere beim Ausbau der Box zurueckgeblieben.
+    const limit = boxLimit(ctx, trainer.id)
+    if (creatures.countOwned(ctx.db, trainer.id).total >= limit) {
+      throw new GameError('invalid_state', { reason: 'box_full', limit }, 409)
     }
 
     inventory.spendGold(ctx.db, trainer.id, listing.price)

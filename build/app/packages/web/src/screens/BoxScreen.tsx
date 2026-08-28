@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { t } from '../i18n'
 import { errorText } from '../lib/errors'
-import { api, type CreatureLike, type SalvageResult } from '../lib/api'
+import { api, type BulkSalvageResult, type CreatureLike, type SalvageResult } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
 import { CenterState } from '../ui/States'
@@ -18,6 +18,18 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
   // Verwerten ist endgueltig — deshalb erst fragen, dann handeln.
   const [salvaging, setSalvaging] = useState<string | null>(null)
   const [salvaged, setSalvaged] = useState<SalvageResult | null>(null)
+  /*
+   * Sammelverwerten.
+   *
+   * `picking` schaltet die Auswahl frei, `picked` haelt sie. Getrennt, damit
+   * die Box im Normalfall aussieht wie vorher — Haekchen an jeder Zeile waeren
+   * fuer den haeufigen Fall (ein Pokemon ansehen) nur Rauschen.
+   */
+  const [picking, setPicking] = useState(false)
+  const [picked, setPicked] = useState<string[]>([])
+  const [bulkAsk, setBulkAsk] = useState(false)
+  const [bulkDone, setBulkDone] = useState<BulkSalvageResult | null>(null)
+  const BULK_MAX = 50
 
   const salvage = (id: string) => {
     haptic.tap()
@@ -40,6 +52,26 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
 
   const reloadBoth = () => { box.reload(); garden.reload() }
 
+  const toggle = (id: string) => {
+    haptic.tap()
+    setPicked((prev) => prev.includes(id)
+      ? prev.filter((x) => x !== id)
+      : prev.length >= BULK_MAX ? prev : [...prev, id])
+  }
+
+  const endPicking = () => { setPicking(false); setPicked([]); setBulkAsk(false) }
+
+  const salvagePicked = () => {
+    haptic.tap()
+    void action.run(() => api.salvageMany(picked), (res) => {
+      setBulkDone(res.bulk)
+      setSalvaged(null)
+      endPicking()
+      reloadBoth()
+      haptic.success()
+    })
+  }
+
   const move = (id: string, into: boolean) => {
     haptic.tap()
     setPending(id)
@@ -61,7 +93,11 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
       eyebrow={t('box.eyebrow')}
       title={t('box.title')}
       onBack={onBack}
-      aside={<span className="num">{t('garden.inGarden', { n: team.length, max: capacity })}</span>}
+      aside={
+        <span className="num">
+          {t('box.capacity', { n: box.data?.boxUsed ?? 0, max: box.data?.boxCapacity ?? 0 })}
+        </span>
+      }
     >
       <main className="content">
         {salvaged && (
@@ -69,6 +105,14 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
             {t('souls.done', {
               name: salvaged.creatureName,
               list: salvaged.fragments.map((f) => `${f.name} (${f.quantity})`).join(', '),
+            })}
+          </p>
+        )}
+        {bulkDone && (
+          <p className="notice notice--ok" role="status">
+            {t('souls.doneBulk', {
+              n: bulkDone.count,
+              list: bulkDone.fragments.map((f) => `${f.name} (${f.quantity})`).join(', '),
             })}
           </p>
         )}
@@ -99,12 +143,30 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
         </section>
 
         <section className="section">
-          <h2>{t('box.title')}</h2>
+          <div className="sectionHead">
+            <h2>{t('box.title')}</h2>
+            {boxed.length > 0 && (
+              <button type="button" className="btn btn--ghost btn--sm"
+                onClick={() => (picking ? endPicking() : setPicking(true))}>
+                {picking ? t('box.pick.cancel') : t('box.pick.start')}
+              </button>
+            )}
+          </div>
           {boxed.length === 0
             ? <CenterState glyph="📦" title={t('box.empty.title')} body={t('box.empty.body')} />
             : <div className="stack">
                 {boxed.map((c) => (
                   <div key={c.id}>
+                    <div className={picking ? 'pickRow' : undefined}>
+                    {picking && (
+                      <button type="button" className="pickRow__box" role="checkbox"
+                        aria-checked={picked.includes(c.id)}
+                        aria-label={c.displayName}
+                        disabled={!picked.includes(c.id) && picked.length >= BULK_MAX}
+                        onClick={() => toggle(c.id)}>
+                        {picked.includes(c.id) ? '✓' : ''}
+                      </button>
+                    )}
                     <CreatureCard
                       creature={c}
                       onChanged={reloadBoth}
@@ -122,7 +184,8 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
                         },
                       ]}
                     />
-                    {salvaging === c.id && (
+                    </div>
+                    {!picking && salvaging === c.id && (
                       <div className="evoAsk">
                         <span className="evoAsk__text">{t('souls.confirm', { name: c.displayName })}</span>
                         <span className="chain__hint">{t('souls.hint')}</span>
@@ -138,6 +201,38 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
                   </div>
                 ))}
               </div>}
+          {picking && (
+            <div className="pickBar">
+              <span className="pickBar__count num">
+                {t('box.pick.count', { n: picked.length, max: BULK_MAX })}
+              </span>
+              <span className="pickBar__actions">
+                <button type="button" className="btn btn--ghost btn--sm"
+                  disabled={boxed.length === 0}
+                  onClick={() => setPicked(boxed.slice(0, BULK_MAX).map((c) => c.id))}>
+                  {t('box.pick.all')}
+                </button>
+                <button type="button" className="btn btn--danger btn--sm"
+                  disabled={picked.length === 0 || action.busy}
+                  onClick={() => setBulkAsk(true)}>
+                  {t('souls.salvage')}
+                </button>
+              </span>
+            </div>
+          )}
+
+          {bulkAsk && (
+            <div className="evoAsk">
+              <span className="evoAsk__text">{t('souls.confirmBulk', { n: picked.length })}</span>
+              <span className="chain__hint">{t('souls.hint')}</span>
+              <span className="evoAsk__buttons">
+                <button type="button" className="btn btn--danger btn--sm" disabled={action.busy}
+                  onClick={salvagePicked}>{t('app.yes')}</button>
+                <button type="button" className="btn btn--ghost btn--sm" disabled={action.busy}
+                  onClick={() => setBulkAsk(false)}>{t('app.no')}</button>
+              </span>
+            </div>
+          )}
         </section>
       </main>
     </Screen>

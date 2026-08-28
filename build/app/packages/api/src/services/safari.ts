@@ -1,6 +1,6 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
 import {
-  attemptCatch, catchProbability, catchReward, computeStats, createRng, deriveSeed,
+  attemptCatch, BOX_BASE_LIMIT, catchProbability, catchReward, computeStats, createRng, deriveSeed,
   ENERGY_REWARDS, LEGENDARY_CATCH_RATE, LEGENDARY_LEVEL_BONUS, randomIvs, rollEncounter,
   isEventTrainer, LEGENDARY_BERRY_ID, LEGENDARY_MAX_BERRIES, isLegendaryCatchRate,
   legendaryCatchChance, rollEvent, rollLegendary, xpForLevel, type Rng,
@@ -36,7 +36,15 @@ import { awardSeasonPoints, bonuses, bumpMetric } from './progression.js'
  */
 export const EXPLORE_COUNTER = 'explore'
 
-export const BOX_LIMIT = 300
+/**
+ * Wie viele Pokemon jemand halten kann.
+ *
+ * Grundstock plus Depot. Frueher stand hier eine feste 300 — die reichte fuer
+ * eine Region und wurde zur Wand, sobald es drei wurden.
+ */
+export function boxLimit(ctx: AppContext, trainerId: string): number {
+  return BOX_BASE_LIMIT + bonuses(ctx, trainerId).boxSlotBonus
+}
 
 export interface EncounterView {
   /** Art schon im Dex — die Safari zeigt dann einen Ball neben dem Level. */
@@ -603,7 +611,8 @@ export function throwBall(
     }
 
     const owned = creatures.countOwned(ctx.db, trainer.id).total
-    if (owned >= BOX_LIMIT) throw new GameError('invalid_state', { reason: 'box_full', limit: BOX_LIMIT }, 409)
+    const limit = boxLimit(ctx, trainer.id)
+    if (owned >= limit) throw new GameError('invalid_state', { reason: 'box_full', limit }, 409)
 
     const catchRng = createRng(deriveSeed(e.seed, 'creature'))
     const ivs = randomIvs(catchRng)

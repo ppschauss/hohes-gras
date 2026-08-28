@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { SOUL_PER_EGG } from '@game/engine'
 import { SOUL_PER_EGG, SOUL_PER_SHINY_EGG } from '@game/engine'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
@@ -72,6 +71,40 @@ describe('Verwerten', () => {
     const r = await h.post('/api/souls/salvage', { creatureId: id }, token)
     expect(r.status).toBe(409)
     expect(r.body.detail.reason).toBe('on_expedition')
+  })
+
+  it('verwertet eine ganze Auswahl auf einmal', async () => {
+    const ids = [addBoxed('wildmon'), addBoxed('wildmon'), addBoxed('mischmon')]
+    h.resetRateLimits()
+    const r = await h.post('/api/souls/salvage', { creatureIds: ids }, token)
+    expect(r.status).toBe(200)
+    expect(r.body.bulk.count).toBe(3)
+    // Drei Pokemon, aber vier Fragmente: Mischmon traegt zwei Typen.
+    expect(quantity('soul-normal')).toBe(3)
+    expect(quantity('soul-grass')).toBe(1)
+    for (const id of ids) {
+      expect(h.ctx.db.prepare('SELECT id FROM creatures WHERE id = ?').get(id)).toBeUndefined()
+    }
+  })
+
+  it('verwertet die Auswahl ganz oder gar nicht', async () => {
+    // Das zweite gehoert jemand anderem: dann darf auch das erste bleiben.
+    const mine = addBoxed('wildmon')
+    h.resetRateLimits()
+    const r = await h.post('/api/souls/salvage', { creatureIds: [mine, crypto.randomUUID()] }, token)
+    expect(r.status).toBe(404)
+    expect(h.ctx.db.prepare('SELECT id FROM creatures WHERE id = ?').get(mine)).toBeDefined()
+    expect(quantity('soul-normal')).toBe(0)
+  })
+
+  it('laesst auch der Auswahl das letzte Pokemon', async () => {
+    // Einzeln waere jedes erlaubt — die Grenze gilt fuer die Summe.
+    const own = h.ctx.db.prepare('SELECT id FROM creatures WHERE owner_id = ?').all(trainerId) as Array<{ id: string }>
+    const ids = [...own.map((c) => c.id), addBoxed('wildmon')]
+    h.resetRateLimits()
+    const r = await h.post('/api/souls/salvage', { creatureIds: ids }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.detail.reason).toBe('last_creature')
   })
 
   it('tauscht zwanzig Fragmente gegen ein Ei desselben Typs', async () => {

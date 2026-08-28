@@ -99,13 +99,21 @@ export type EnergySource =
 
 /** Wofuer es Energie zurueckgibt. Alles hier ist ein Fortschritt, den man nicht
  *  beliebig oft wiederholen kann — sonst waere die Ressource wertlos. */
+/*
+ * Was das Spiel an Energie zurueckgibt.
+ *
+ * Zwei Zahlen darin sind bewusst kleiner als ihre Kosten: ein Duell kostet 3
+ * und zahlt 2, ein Kampf kostet 2 und zahlt nur beim ersten Sieg ueber einen
+ * Gegner. Beides war vorher ein Plusgeschaeft und damit eine Maschine, die
+ * Energie druckt, statt sie zu einer Entscheidung zu machen.
+ */
 export const ENERGY_REWARDS: Record<EnergySource, number> = {
   evolution: 15,
   badge: 60,
   battleWon: 4,
   areaCompleted: 120,
   raidVictory: 20,
-  duelWon: 5,
+  duelWon: 2,
 }
 
 export interface EnergyPack {

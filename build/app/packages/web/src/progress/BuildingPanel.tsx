@@ -22,6 +22,11 @@ export function BuildingPanel() {
       <div className="stack">
         {buildings.data?.buildings.map((b) => (
           <article key={b.id} className="building">
+            {/* Ungebautes bleibt grau — der Zustand steht damit im Bild und
+                nicht nur in der Zeile darunter. */}
+            <img className={`building__icon${b.level === 0 ? ' building__icon--off' : ''}`}
+              src={`/media/buildings/${b.id}.svg`} alt="" width={44} height={44} loading="lazy" />
+            <div className="building__body">
             <div className="building__head">
               <span className="building__name">{t(`build.name.${b.id}`)}</span>
               <span className="building__level num">
@@ -29,11 +34,19 @@ export function BuildingPanel() {
               </span>
             </div>
 
-            <div className="building__pips" aria-hidden="true">
-              {Array.from({ length: b.maxLevel }, (_, i) => (
-                <span key={i} className={`pip${i < b.level ? ' pip--on' : ''}`} />
-              ))}
-            </div>
+            {/* Ab einem Dutzend Stufen werden aus Pips Splitter — dann ist ein
+                Balken die ehrlichere Anzeige. */}
+            {b.maxLevel > 12 ? (
+              <div className="bar" aria-hidden="true">
+                <span className="bar__fill" style={{ width: `${(b.level / b.maxLevel) * 100}%` }} />
+              </div>
+            ) : (
+              <div className="building__pips" aria-hidden="true">
+                {Array.from({ length: b.maxLevel }, (_, i) => (
+                  <span key={i} className={`pip${i < b.level ? ' pip--on' : ''}`} />
+                ))}
+              </div>
+            )}
 
             {b.level > 0 && (
               <p className="building__effect">{t(`build.effect.${b.effectKind}`, { n: b.currentEffect })}</p>
@@ -48,6 +61,7 @@ export function BuildingPanel() {
               disabled={b.maxed || !b.affordable || action.busy} onClick={() => upgrade(b.id)}>
               {b.maxed ? t('build.maxed') : t('build.cost', { n: number(b.upgradeCost ?? 0) })}
             </button>
+            </div>
           </article>
         ))}
       </div>

@@ -71,6 +71,91 @@ export function salvage(ctx: AppContext, trainer: Trainer, creatureId: string): 
   })
 }
 
+/**
+ * Wie viele Pokemon eine Sammelverwertung hoechstens umfasst.
+ *
+ * Nicht die Box in einem Rutsch: alles laeuft in einer Transaktion, und ein
+ * Fehlgriff bei 900 Tieren waere nicht mehr zu ueberblicken — bei fuenfzig
+ * schon.
+ */
+export const SALVAGE_BATCH_LIMIT = 50
+
+export interface BulkSalvageResult {
+  count: number
+  names: string[]
+  fragments: Array<{ itemId: string; typeId: string; name: string; quantity: number }>
+}
+
+/**
+ * Mehrere auf einmal verwerten.
+ *
+ * Eine Transaktion fuer alle: entweder gehen sie zusammen oder keines. Wer
+ * fuenfzig Haekchen setzt, soll nicht hinterher raten muessen, welche davon
+ * durchgekommen sind.
+ */
+export function salvageMany(
+  ctx: AppContext, trainer: Trainer, creatureIds: string[],
+): BulkSalvageResult {
+  const ids = [...new Set(creatureIds)]
+  if (ids.length === 0) throw new GameError('validation_failed', { field: 'creatureIds' })
+  if (ids.length > SALVAGE_BATCH_LIMIT) {
+    throw new GameError('validation_failed', { field: 'creatureIds', limit: SALVAGE_BATCH_LIMIT })
+  }
+
+  return tx(ctx.db, () => {
+    if (battles.activeOf(ctx.db, trainer.id)) {
+      throw new GameError('invalid_state', { reason: 'battle_in_progress' }, 409)
+    }
+    /*
+     * Erst pruefen, dann zaehlen, dann handeln.
+     *
+     * Die Reihenfolge ist keine Kosmetik: zaehlte man zuerst, machte eine
+     * fremde Id die Auswahl scheinbar zu gross und man bekaeme "letztes
+     * Pokemon" zu lesen, wo "gibt es nicht" gemeint ist.
+     */
+    const busy = expeditions.busyCreatureIds(ctx.db, trainer.id)
+    const chosen = ids.map((creatureId) => {
+      const c = creatures.byId(ctx.db, creatureId)
+      if (!c || c.ownerId !== trainer.id) throw new GameError('not_found', { creatureId }, 404)
+      if (busy.has(c.id)) {
+        throw new GameError('invalid_state', { reason: 'on_expedition', creatureId }, 409)
+      }
+      return c
+    })
+
+    // Die Grenze gilt fuer die Summe, nicht je Stueck: fuenfzig einzeln
+    // erlaubte Verwertungen duerfen die Box nicht gemeinsam leeren.
+    if (creatures.countOwned(ctx.db, trainer.id).total - chosen.length < 1) {
+      throw new GameError('invalid_state', { reason: 'last_creature' }, 409)
+    }
+
+    const names: string[] = []
+    const totals = new Map<string, { itemId: string; typeId: string; name: string; quantity: number }>()
+    for (const c of chosen) {
+      const creatureId = c.id
+      const species = ctx.registry.species(c.speciesId)
+      for (const typeId of species.types) {
+        const item = ctx.registry.tryItem(soulItemId(typeId))
+        if (!item) continue
+        inventory.grant(ctx.db, trainer.id, item.id, 1)
+        totals.set(item.id, {
+          itemId: item.id,
+          typeId,
+          name: ctx.registry.localized(item.name, trainer.locale),
+          quantity: inventory.quantityOf(ctx.db, trainer.id, item.id),
+        })
+      }
+      names.push(c.nickname ?? ctx.registry.localized(species.name, trainer.locale))
+      creatures.release(ctx.db, c.id, trainer.id)
+      logEvent(ctx.db, trainer.id, 'creature.salvaged', {
+        creatureId, speciesId: c.speciesId, level: c.level, types: species.types, bulk: ids.length,
+      })
+    }
+
+    return { count: ids.length, names, fragments: [...totals.values()] }
+  })
+}
+
 export interface SoulView {
   typeId: string
   typeName: string

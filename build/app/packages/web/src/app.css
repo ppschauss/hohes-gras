@@ -1505,11 +1505,43 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .evoTarget__name { font-size: var(--t-xs); font-weight: 600; }
 .evoTarget__how { font-size: 10px; color: var(--ink-faint); }
 
+.sectionHead { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+.sectionHead h2 { margin: 0; }
+
+/* Auswahl in der Box. Das Kaestchen ist ein Button und kein <input> in einem
+   <label> — dieselbe doppelte Aktivierung, die die Auswahlfelder lahmgelegt
+   hat, wuerde ein Haekchen sofort wieder entfernen. */
+.pickRow { display: flex; align-items: flex-start; gap: var(--s2); }
+.pickRow > :last-child { flex: 1; min-width: 0; }
+.pickRow__box {
+  flex: none; width: 28px; height: 28px; margin-top: var(--s2);
+  display: grid; place-items: center;
+  font-size: var(--t-sm); font-weight: 700; line-height: 1;
+  color: var(--bg); background: var(--surface-sunken);
+  border: 2px solid var(--edge); border-radius: var(--radius-sm);
+  cursor: pointer; transition: background 150ms ease, border-color 150ms ease;
+}
+.pickRow__box[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+.pickRow__box:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.pickBar {
+  position: sticky; bottom: var(--s2); z-index: 2;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s2);
+  margin-top: var(--s3); padding: var(--s2) var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+  box-shadow: var(--shadow-1, 0 6px 18px rgb(0 0 0 / 0.35));
+}
+.pickBar__count { font-size: var(--t-xs); color: var(--ink-faint); }
+.pickBar__actions { display: flex; gap: var(--s2); }
+
 .building {
-  display: flex; flex-direction: column; gap: var(--s2);
+  display: flex; align-items: flex-start; gap: var(--s3);
   padding: var(--s3);
   background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
 }
+.building__body { display: flex; flex-direction: column; gap: var(--s2); flex: 1; min-width: 0; }
+.building__icon { width: 44px; height: 44px; flex: none; }
+.building__icon--off { opacity: 0.4; filter: grayscale(1); }
 .building__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
 .building__name { font-weight: 650; font-size: var(--t-md); }
 .building__level { font-size: var(--t-xs); color: var(--ink-faint); }

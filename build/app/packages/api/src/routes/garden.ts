@@ -13,6 +13,7 @@ import * as garden from '../services/garden.js'
 import * as souls from '../services/souls.js'
 import { useItem } from '../services/useItem.js'
 import * as shop from '../services/shop.js'
+import * as safari from '../services/safari.js'
 import * as teams from '../services/teams.js'
 import * as energy from '../services/energy.js'
 import * as moves from '../services/moves.js'
@@ -66,9 +67,19 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
 
   app.get('/api/souls', auth, async (req) => ({ souls: souls.overview(ctx, req.trainer!) }))
 
+  /* Einzeln oder als Auswahl — ein alter Client schickt weiter `creatureId`. */
   app.post('/api/souls/salvage', write, async (req) => {
-    const { creatureId } = z.object({ creatureId: z.string().uuid() }).parse(req.body)
-    const result = souls.salvage(ctx, req.trainer!, creatureId)
+    const { creatureId, creatureIds } = z.object({
+      creatureId: z.string().uuid().optional(),
+      creatureIds: z.array(z.string().uuid()).min(1).max(souls.SALVAGE_BATCH_LIMIT).optional(),
+    }).refine((b) => b.creatureId || b.creatureIds, { message: 'creatureId oder creatureIds' })
+      .parse(req.body)
+
+    if (creatureIds) {
+      const bulk = souls.salvageMany(ctx, req.trainer!, creatureIds)
+      return { bulk, souls: souls.overview(ctx, req.trainer!) }
+    }
+    const result = souls.salvage(ctx, req.trainer!, creatureId!)
     return { result, souls: souls.overview(ctx, req.trainer!) }
   })
 
@@ -98,6 +109,12 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
     return {
       creatures: box.map((c) => creatureView(ctx.registry, c, trainer.locale, clock.timeOfDay, cap)),
       teamCapacity: garden.TEAM_CAPACITY,
+      // Die Box hat eine Grenze, und sie ist ausbaubar — dann gehoert sie auch
+      // auf den Bildschirm und nicht erst in die Fehlermeldung.
+      boxCapacity: safari.boxLimit(ctx, trainer.id),
+      // Gezaehlt wird alles, was einem gehoert — die Grenze gilt fuer Box
+      // *und* Team, sonst zeigte der Zaehler weniger an, als er verbraucht.
+      boxUsed: creatures.countOwned(ctx.db, trainer.id).total,
     }
   })
 
