@@ -148,11 +148,12 @@ function buildModifiers(
  * Pokemon. Diskriminiert ueber `kind`, damit der Client nicht raten muss.
  */
 export type ExploreResult =
-  | { kind: 'encounter'; encounter: EncounterView; legendary: boolean }
-  | { kind: 'nothing' }
+  | { kind: 'encounter'; encounter: EncounterView; legendary: boolean; lure: LureUse | null }
+  | { kind: 'nothing'; lure: LureUse | null }
   | {
       kind: 'event'
-      opponent: { id: string; name: string; title: string; sprite: string; intro: string }
+      opponent: { id: string; name: string; title: string; kind: string; sprite: string; intro: string }
+      lure: LureUse | null
     }
 
 export function explore(
@@ -185,7 +186,8 @@ export function explore(
      * waere er ein Wunschautomat: fand man nichts Passendes, bliebe die
      * Anwendung erhalten und man wuerfelte gratis weiter.
      */
-    const lure = useLure(ctx, trainer, lureId)
+    const lureUsed: { current: LureUse | null } = { current: null }
+    const lure = useLure(ctx, trainer, lureId, lureUsed)
     const rolled = rollEncounter(
       area, clock, rng,
       chainSpecies ? { speciesId: chainSpecies.s, streak: chainSpecies.streak } : null,
@@ -212,6 +214,7 @@ export function explore(
           kind: 'encounter' as const,
           encounter: encounterView(ctx, trainer, rare, ballId, berryId),
           legendary: true,
+          lure: lureUsed.current,
         }
       }
     }
@@ -234,11 +237,11 @@ export function explore(
         logEvent(ctx.db, trainer.id, 'safari.event', {
           areaId: area.id, opponentId: opponent.id, jammed,
         })
-        return { kind: 'event' as const, opponent }
+        return { kind: 'event' as const, opponent, lure: lureUsed.current }
       }
     }
 
-    if (!rolled) return { kind: 'nothing' as const }
+    if (!rolled) return { kind: 'nothing' as const, lure: lureUsed.current }
 
     world.bumpAreaStat(ctx.db, trainer.id, area.id, 'encounters')
     dex.markSeen(ctx.db, trainer.id, rolled.speciesId)
@@ -259,6 +262,7 @@ export function explore(
       kind: 'encounter' as const,
       encounter: encounterView(ctx, trainer, e, ballId, berryId),
       legendary: false,
+      lure: lureUsed.current,
     }
   })
 }
@@ -390,7 +394,17 @@ export function useJammer(ctx: AppContext, trainer: Trainer): { charges: number 
  * mitschicken, und eine Erkundung soll nicht daran scheitern, dass die Packung
  * gerade leer geworden ist.
  */
-function useLure(ctx: AppContext, trainer: Trainer, lureId: string | null): LureEffect | null {
+export interface LureUse {
+  itemId: string
+  name: string
+  typeName: string
+  /** Wie viele Anwendungen nach dieser noch im Beutel liegen. */
+  left: number
+}
+
+function useLure(
+  ctx: AppContext, trainer: Trainer, lureId: string | null, used: { current: LureUse | null },
+): LureEffect | null {
   if (!lureId) return null
   const item = ctx.registry.tryItem(lureId)
   if (!item || item.category !== 'lure') return null
@@ -400,6 +414,13 @@ function useLure(ctx: AppContext, trainer: Trainer, lureId: string | null): Lure
 
   inventory.consume(ctx.db, trainer.id, lureId, 1)
   logEvent(ctx.db, trainer.id, 'safari.lure', { itemId: lureId, typeId })
+  const type = ctx.registry.tryType(typeId)
+  used.current = {
+    itemId: lureId,
+    name: ctx.registry.localized(item.name, trainer.locale),
+    typeName: type ? ctx.registry.localized(type.name, trainer.locale) : typeId,
+    left: inventory.quantityOf(ctx.db, trainer.id, lureId),
+  }
   return { typeId, typesOf: (speciesId) => ctx.registry.species(speciesId).types }
 }
 

@@ -29,6 +29,7 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
   // Der Lockduft gilt genau fuer die naechste Erkundung und wird dabei
   // verbraucht — deshalb steht er neben Ball und Beere, nicht in der Tasche.
   const [lureId, setLureId] = useState<string | null>(null)
+  const [lureNote, setLureNote] = useState<string | null>(null)
   const safari = useAsync(() => api.safari(ballId, berryId), [ballId, berryId])
   const action = useAction()
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' })
@@ -54,6 +55,12 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
   const explore = () => {
     haptic.tap()
     void action.run(() => api.explore(ballId, berryId, lureId), (res) => {
+      // Ohne Rueckmeldung sieht ein verbrauchter Lockduft aus wie einer, der
+      // nichts getan hat — genau so ist es gemeldet worden.
+      setLureNote(res.lure
+        ? t('safari.lure.used', { name: res.lure.name, n: res.lure.left })
+        : null)
+      if (res.lure && res.lure.left === 0) setLureId(null)
       if (res.kind === 'encounter') {
         setPhase({ kind: 'encounter', encounter: res.encounter, legendary: res.legendary })
         if (res.legendary) haptic.success(); else haptic.select()
@@ -185,6 +192,7 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
           />
           {lures.length > 0 && (
             <Picker
+              className="picker--wide"
               label={t('safari.lure')}
               options={lures.map((b) => ({ id: b.id, name: b.name, icon: b.icon, category: b.category, quantity: b.quantity }))}
               value={lureId}
@@ -193,6 +201,9 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
             />
           )}
         </div>
+
+        {lureNote && <p className="notice notice--ok" role="status">{lureNote}</p>}
+        {lureId && !lureNote && <p className="chain__hint">{t('safari.lure.armed')}</p>}
 
         {safari.data?.chain && (
           <section className="chain">
@@ -361,16 +372,17 @@ function Stage({ phase, busy, onFight }: { phase: Phase; busy: boolean; onFight:
 
 interface PickerOption { id: string; name: string; icon: string; category: string; quantity: number }
 
-function Picker({ label, options, value, onChange, emptyLabel }: {
+function Picker({ label, options, value, onChange, emptyLabel, className }: {
   label: string
   options: PickerOption[]
   value: string | null
   onChange: (id: any) => void
   emptyLabel?: string
+  className?: string
 }) {
   const selected = options.find((o) => o.id === value)
   return (
-    <label className="picker">
+    <label className={`picker${className ? ` ${className}` : ''}`}>
       <span className="picker__label">{label}</span>
       <span className="picker__body">
         {selected && <ItemIcon src={selected.icon} category={selected.category} size={22} />}

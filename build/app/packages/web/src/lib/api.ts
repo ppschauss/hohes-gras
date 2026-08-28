@@ -506,10 +506,17 @@ export interface SafariState {
   } | null
 }
 
+export interface LureUse {
+  itemId: string
+  name: string
+  typeName: string
+  left: number
+}
+
 export type ExploreResponse =
-  | { kind: 'encounter'; encounter: EncounterView; legendary: boolean }
-  | { kind: 'nothing' }
-  | { kind: 'event'; opponent: { id: string; name: string; title: string; kind: string; sprite: string; intro: string } }
+  | { kind: 'encounter'; encounter: EncounterView; legendary: boolean; lure: LureUse | null }
+  | { kind: 'nothing'; lure: LureUse | null }
+  | { kind: 'event'; opponent: { id: string; name: string; title: string; kind: string; sprite: string; intro: string }; lure: LureUse | null }
 
 export interface ThrowResult {
   caught: boolean

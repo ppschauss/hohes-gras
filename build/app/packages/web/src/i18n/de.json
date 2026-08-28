@@ -763,6 +763,8 @@
   "safari.jammer.idle": "Ein Störsender liegt im Beutel. Fünf Erkundungen, fünf Überfälle.",
   "safari.jammer.use": "Einschalten ({n})",
   "safari.lure": "Lockduft",
+  "safari.lure.armed": "Wird bei der nächsten Erkundung verbraucht.",
+  "safari.lure.used": "{name} eingesetzt — noch {n} übrig.",
   "safari.noLure": "Kein Lockduft",
   "safari.noBerry": "Keine Beere",
   "safari.noEnergy": "Deine Energie reicht gerade nicht zum Erkunden.",

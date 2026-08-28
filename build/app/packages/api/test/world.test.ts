@@ -256,10 +256,14 @@ describe('Lockduft', () => {
       .run('test-route', trainerId)
   })
 
-  it('verbraucht je Erkundung genau eine Anwendung', async () => {
+  it('verbraucht je Erkundung genau eine Anwendung und sagt es', async () => {
     give('lure-grass', 3)
     h.resetRateLimits(); h.resetPacing()
-    expect((await h.post('/api/safari/explore', { ballId: 'poke-ball', lureId: 'lure-grass' }, token)).status).toBe(200)
+    const r = await h.post('/api/safari/explore', { ballId: 'poke-ball', lureId: 'lure-grass' }, token)
+    expect(r.status).toBe(200)
+    // Ohne Rueckmeldung sieht ein verbrauchter Duft aus wie einer, der nichts
+    // getan hat — genau so wurde es gemeldet.
+    expect(r.body.lure).toMatchObject({ itemId: 'lure-grass', left: 2 })
 
     const left = h.ctx.db
       .prepare('SELECT quantity FROM inventory WHERE trainer_id = ? AND item_id = ?')
@@ -270,7 +274,8 @@ describe('Lockduft', () => {
   it('verbraucht nichts, wenn keiner gewaehlt ist', async () => {
     give('lure-grass', 3)
     h.resetRateLimits(); h.resetPacing()
-    await h.post('/api/safari/explore', { ballId: 'poke-ball' }, token)
+    const r = await h.post('/api/safari/explore', { ballId: 'poke-ball' }, token)
+    expect(r.body.lure).toBeNull()
     const left = h.ctx.db
       .prepare('SELECT quantity FROM inventory WHERE trainer_id = ? AND item_id = ?')
       .get(trainerId, 'lure-grass') as { quantity: number }

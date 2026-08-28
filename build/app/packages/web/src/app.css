@@ -1004,6 +1004,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .softenBtn:disabled { opacity: 0.45; cursor: default; }
 
 .pickers { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+/* Der Lockduft steht ueber die volle Breite: in der zweiten Reihe neben einer
+   Luecke sah er aus wie ein Rest und wurde uebersehen. */
+.picker--wide { grid-column: 1 / -1; }
 .picker { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .picker__label { font-size: var(--t-xs); color: var(--ink-faint); }
 .picker__body {
