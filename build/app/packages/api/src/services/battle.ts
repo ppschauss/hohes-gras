@@ -43,7 +43,29 @@ export function battleContent(ctx: AppContext): BattleContent {
   return {
     move: (id) => ctx.registry.move(id),
     effectiveness: (attackingType, defTypes) => ctx.registry.effectiveness(attackingType, defTypes),
+    item: (id) => battleItemEffect(ctx, id),
   }
+}
+
+/**
+ * Was ein Gegenstand im Kampf tut — oder null, wenn er dort nichts tut.
+ *
+ * Nur Medizin: Bälle fangen keine Trainerpokémon, und ein Entwicklungsstein
+ * mitten im Kampf wäre eine andere Baustelle. Die Zahlen stehen im Pack, nicht
+ * hier — ein Trank heilt so viel, wie sein `heal` sagt.
+ */
+export function battleItemEffect(ctx: AppContext, itemId: string) {
+  const item = ctx.registry.tryItem(itemId)
+  if (!item || item.category !== 'medicine') return null
+  const p = item.params
+  const effect = {
+    heal: typeof p.heal === 'number' ? p.heal : undefined,
+    healFull: p.healFull === true,
+    cureAll: p.cureAll === true,
+    revive: typeof p.revive === 'number' ? p.revive : undefined,
+  }
+  const usable = effect.heal !== undefined || effect.healFull || effect.cureAll || effect.revive !== undefined
+  return usable ? effect : null
 }
 
 /* ------------------------------------------------------------------- Views */
@@ -358,6 +380,23 @@ export function submit(ctx: AppContext, trainer: Trainer, action: PlayerAction):
 
     validateAction(record.state, action)
 
+    /*
+     * Gegenstand aus dem Beutel nehmen, bevor die Runde laeuft.
+     *
+     * Verbraucht wird er auch dann, wenn er nichts bewirkt — wer einen Trank
+     * auf ein volles Pokemon kippt, hat ihn ausgegeben. Die Oberflaeche zeigt
+     * deshalb nur an, was gerade sinnvoll ist.
+     */
+    if (action.kind === 'item') {
+      if (!battleItemEffect(ctx, action.itemId)) {
+        throw new GameError('validation_failed', { field: 'itemId' })
+      }
+      if (inventory.quantityOf(ctx.db, trainer.id, action.itemId) < 1) {
+        throw new GameError('insufficient_items', { itemId: action.itemId }, 409)
+      }
+      inventory.consume(ctx.db, trainer.id, action.itemId, 1)
+    }
+
     // The AI commits before the turn resolves and cannot see the player's
     // choice — the rng stream is derived from the turn number, so the same
     // battle always plays out the same way.
@@ -387,6 +426,10 @@ function validateAction(state: BattleState, action: PlayerAction): void {
     const slot = fighter.moves[action.moveIndex]
     if (!slot) throw new GameError('validation_failed', { field: 'moveIndex' })
     if (slot.pp <= 0) throw new GameError('invalid_state', { reason: 'no_pp' }, 409)
+  }
+  if (action.kind === 'item') {
+    const target = side.party[action.targetIndex]
+    if (!target) throw new GameError('validation_failed', { field: 'targetIndex' })
   }
   if (action.kind === 'switch') {
     const target = side.party[action.partyIndex]

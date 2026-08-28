@@ -10,6 +10,11 @@ const StartSchema = z.object({ opponentId: z.string() })
 const ActionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('move'), moveIndex: z.number().int().min(0).max(3) }),
   z.object({ kind: z.literal('switch'), partyIndex: z.number().int().min(0).max(4) }),
+  z.object({
+    kind: z.literal('item'),
+    itemId: z.string().min(1).max(64),
+    targetIndex: z.number().int().min(0).max(4),
+  }),
   z.object({ kind: z.literal('forfeit') }),
 ])
 

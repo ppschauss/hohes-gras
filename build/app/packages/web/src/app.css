@@ -611,6 +611,66 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 }
 .jammer__text { font-size: var(--t-sm); color: var(--ink-muted); }
 
+/* ============================================================ Kampfpanels ===
+   Wechseln und Gegenstaende. Diese Klassen hatten wie das Gebietsmenue keine
+   Regeln — die Listen fielen zu schrumpfenden Kaestchen zusammen, in denen
+   Name und KP aneinanderklebten. */
+
+/* Eine Zeile im Beutel: Bild, Text, Anzahl. */
+.bagRow {
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center; gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.bagRow__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bagRow__name { font-size: var(--t-sm); font-weight: 650; }
+.bagRow__desc {
+  font-size: var(--t-xs); color: var(--ink-muted); line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.bagRow__count { font-size: var(--t-md); font-weight: 700; color: var(--ink-muted); }
+
+/* Zusatz auf einem Knopf — etwa der Preis unter "Team heilen". */
+.btn__note { display: block; font-size: var(--t-xs); font-weight: 500; opacity: 0.75; }
+
+/* Vorrat ueber der natuerlichen Energiegrenze. */
+.res__extra { color: var(--ok); font-weight: 700; }
+
+.panel { display: flex; flex-direction: column; gap: var(--s2); }
+.panel__head {
+  font-size: var(--t-xs); font-weight: 650; color: var(--ink-faint);
+  padding: 0 var(--s1);
+}
+/* Hinweis unter der Gegenstandsliste im Kampf: ein Trank ist kein Gratiszug. */
+.panel__hint { font-size: var(--t-xs); color: var(--ink-faint); text-align: center; }
+
+.switchList { display: flex; flex-direction: column; gap: var(--s2); }
+.switchRow {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center; gap: var(--s3);
+  width: 100%; min-height: 52px;
+  padding: var(--s2) var(--s3);
+  background: var(--surface); border: 1px solid var(--edge);
+  border-radius: var(--radius); cursor: pointer;
+  text-align: left; font: inherit; color: var(--ink);
+  transition: background var(--fast) var(--ease), border-color var(--fast) var(--ease);
+}
+.switchRow:hover:not(:disabled), .switchRow:focus-visible:not(:disabled) {
+  background: var(--surface-raised);
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--edge));
+}
+.switchRow:disabled { opacity: 0.45; cursor: default; }
+.switchRow img { image-rendering: pixelated; }
+.switchRow__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.switchRow__name {
+  display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap;
+  font-size: var(--t-sm); font-weight: 650;
+}
+.switchRow__hp { font-size: var(--t-xs); color: var(--ink-muted); }
+
+@media (prefers-reduced-motion: reduce) { .switchRow { transition: none; } }
+
 /* Die Rueckfrage vor einer Entwicklung. Sie sprengt die Zeile der Typen-Chips
    bewusst: eine unumkehrbare Handlung soll kurz im Weg stehen. */
 .chip--action { cursor: pointer; border: 0; font: inherit; font-size: var(--t-xs); }
@@ -654,6 +714,17 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
   background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
 }
 .pickedRegion__label { font-size: var(--t-sm); color: var(--ink-muted); }
+
+/* Der Anmeldebildschirm im Browser. */
+.gate { gap: var(--s3); }
+.gate__mark { color: var(--accent); }
+.gate__hint { font-size: var(--t-xs); color: var(--ink-faint); max-width: 40ch; line-height: 1.4; }
+/* Ein Code wird abgetippt: gleiche Zeichenbreiten, viel Luft dazwischen. */
+.field--code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--t-xl); letter-spacing: 0.18em; text-align: center; text-transform: uppercase;
+}
+.codeCard__hint { font-size: var(--t-xs); color: var(--ink-muted); line-height: 1.4; }
 
 /* ============================================================== Gebietsmenü ===
    Diese Klassen hatten gar keine Regeln: beim UI-Umbau ist der Startbildschirm

@@ -287,3 +287,55 @@ describe('Vergessene Kämpfe', () => {
     expect(old.winner).toBeNull()
   })
 })
+
+describe('Gegenstände im Kampf', () => {
+  const give = (itemId: string, n: number) =>
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)')
+      .run(trainerId, itemId, n)
+
+  const start = async () => {
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('test-route', trainerId)
+    h.resetRateLimits()
+    return h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+  }
+
+  it('heilt das aktive Pokemon und verbraucht den Trank', async () => {
+    h.ctx.db.prepare('UPDATE creatures SET hp_current = 1 WHERE owner_id = ?').run(trainerId)
+    give('potion', 2)
+    const battle = await start()
+    expect(battle.status).toBe(200)
+    const before = battle.body.player.active.hp
+
+    h.resetRateLimits()
+    const r = await h.post('/api/battle/action', { kind: 'item', itemId: 'potion', targetIndex: 0 }, token)
+    expect(r.status).toBe(200)
+    // Der Gegner greift in derselben Runde an, also nicht auf exakt +20
+    // pruefen — geheilt ist es trotzdem.
+    expect(r.body.player.active.hp).toBeGreaterThan(before)
+
+    const left = h.ctx.db.prepare('SELECT quantity FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, 'potion') as { quantity: number }
+    expect(left.quantity).toBe(1)
+  })
+
+  it('weist einen Gegenstand ab, den man nicht hat', async () => {
+    give('potion', 0)
+    await start()
+    h.resetRateLimits()
+    const r = await h.post('/api/battle/action', { kind: 'item', itemId: 'potion', targetIndex: 0 }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.error).toBe('insufficient_items')
+  })
+
+  it('laesst nur Medizin zu', async () => {
+    give('poke-ball', 5)
+    await start()
+    h.resetRateLimits()
+    // Ein Ball faengt kein Trainerpokemon — und verschwindet auch nicht dabei.
+    const r = await h.post('/api/battle/action', { kind: 'item', itemId: 'poke-ball', targetIndex: 0 }, token)
+    expect(r.status).toBe(400)
+    const left = h.ctx.db.prepare('SELECT quantity FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, 'poke-ball') as { quantity: number }
+    expect(left.quantity).toBe(5)
+  })
+})

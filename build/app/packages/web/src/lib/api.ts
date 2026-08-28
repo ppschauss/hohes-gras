@@ -546,6 +546,7 @@ export interface EggOverview {
 export type BattleAction =
   | { kind: 'move'; moveIndex: number }
   | { kind: 'switch'; partyIndex: number }
+  | { kind: 'item'; itemId: string; targetIndex: number }
   | { kind: 'forfeit' }
 
 export interface OpponentEntry {

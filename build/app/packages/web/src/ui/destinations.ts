@@ -24,6 +24,7 @@ export const DESTINATIONS: Destination[] = [
   { screen: 'eggs', icon: 'egg', labelKey: 'menu.eggs.title', feature: 'safari' },
   { screen: 'center', icon: 'center', labelKey: 'menu.center.title', feature: 'center' },
   { screen: 'shop', icon: 'shop', labelKey: 'menu.shop.title', feature: 'shop' },
+  { screen: 'bag', icon: 'bag', labelKey: 'menu.bag.title', feature: 'shop' },
   { screen: 'coop', icon: 'guild', labelKey: 'menu.coop.title', feature: 'guilds' },
   { screen: 'progress', icon: 'progress', labelKey: 'menu.progress.title', feature: 'story' },
   { screen: 'friends', icon: 'friends', labelKey: 'menu.friends.title', feature: 'social' },
@@ -41,6 +42,6 @@ export const DESTINATIONS: Destination[] = [
 export const NAV_GROUPS: Array<{ labelKey: string; screens: Screen[] }> = [
   { labelKey: 'nav.group.play', screens: ['garden', 'map', 'plots'] },
   { labelKey: 'nav.group.team', screens: ['teams', 'center', 'eggs', 'expeditions'] },
-  { labelKey: 'nav.group.world', screens: ['friends', 'coop', 'shop'] },
+  { labelKey: 'nav.group.world', screens: ['friends', 'coop', 'shop', 'bag'] },
   { labelKey: 'nav.group.you', screens: ['progress', 'energy', 'themes'] },
 ]

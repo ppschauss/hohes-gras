@@ -29,6 +29,10 @@ export function AreaScreen({ onBack, onSafari, onBattle }: Props) {
   }
 
   const defeated = data?.trainers.filter((x) => x.defeated).length ?? 0
+  // Dieselbe Rechnung wie auf dem Server: drei Gold je Level der Verletzten.
+  const healCost = (garden.data?.team ?? [])
+    .filter((c) => c.hpCurrent < c.hpMax)
+    .reduce((sum, c) => sum + c.level * 3, 0)
 
   return (
     <Screen
@@ -79,9 +83,13 @@ export function AreaScreen({ onBack, onSafari, onBattle }: Props) {
           )}
         </nav>
 
+        {/* Der bezahlte Weg neben dem Poke-Center: dort ist Heilen kostenlos,
+            aber mit Wartezeit. Der Preis gehoert deshalb auf den Knopf — ohne
+            ihn sieht das hier aus, als umginge es die Abklingzeit gratis. */}
         {hurt && (
           <button type="button" className="btn btn--ghost btn--block" onClick={heal} disabled={action.busy}>
             {t('battle.heal')}
+            {healCost > 0 && <span className="btn__note num">{t('battle.healCost', { n: healCost })}</span>}
           </button>
         )}
       </main>

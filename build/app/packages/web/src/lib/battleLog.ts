@@ -44,6 +44,7 @@ export function describeEvent(event: BattleEventView, view: BattleView): string[
     case 'flinch': return [t('log.flinch', { name: who })]
     case 'faint': return [t('log.faint', { name: who })]
     case 'switch': return [t('log.switch', { name: String(e.name ?? who) })]
+    case 'item': return [t('log.item', { name: who, n: Number(e.healed ?? 0) })]
     case 'no_pp': return [t('log.no_pp')]
     case 'multi_hit': return [t('log.multi_hit', { n: Number(e.hits ?? 0) })]
     case 'end': return []

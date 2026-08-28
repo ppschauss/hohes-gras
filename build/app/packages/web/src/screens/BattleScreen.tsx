@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { BattleFighterView, BattleMoveView, BattleView, OpponentEntry } from '../lib/api'
 import { t } from '../i18n'
 import { errorText } from '../lib/errors'
+import { ItemIcon } from '../ui/ItemIcon'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -9,11 +10,13 @@ import { describeTurn, effectivenessLabel } from '../lib/battleLog'
 import { Screen } from '../ui/Screen'
 import { CenterState } from '../ui/States'
 
-type Panel = 'main' | 'moves' | 'switch'
+type Panel = 'main' | 'moves' | 'switch' | 'items'
 
 export function BattleScreen({ onBack }: { onBack: () => void }) {
   const existing = useAsync(() => api.currentBattle(), [])
   const opponents = useAsync(() => api.opponents(), [])
+  // Nur Medizin: Baelle fangen keine Trainerpokemon.
+  const bag = useAsync(() => api.bag(), [])
   const action = useAction()
   const [battle, setBattle] = useState<BattleView | null>(null)
   const [panel, setPanel] = useState<Panel>('main')
@@ -25,6 +28,8 @@ export function BattleScreen({ onBack }: { onBack: () => void }) {
   }, [existing.data, battle])
 
   useEffect(() => { logEnd.current?.scrollIntoView({ block: 'end' }) }, [log])
+
+  const medicine = (bag.data?.items ?? []).filter((i) => i.category === 'medicine' && i.quantity > 0)
 
   const apply = (view: BattleView) => {
     setBattle(view)
@@ -102,6 +107,8 @@ export function BattleScreen({ onBack }: { onBack: () => void }) {
                   onClick={() => { haptic.tap(); setPanel('moves') }}>{t('battle.fight')}</button>
                 <button type="button" className="btn btn--ghost" disabled={action.busy}
                   onClick={() => { haptic.tap(); setPanel('switch') }}>{t('battle.switch')}</button>
+                <button type="button" className="btn btn--ghost" disabled={action.busy || medicine.length === 0}
+                  onClick={() => { haptic.tap(); setPanel('items') }}>{t('battle.item')}</button>
                 <button type="button" className="btn btn--ghost" disabled={action.busy}
                   onClick={() => act({ kind: 'forfeit' })}>{t('battle.run')}</button>
               </div>
@@ -109,9 +116,16 @@ export function BattleScreen({ onBack }: { onBack: () => void }) {
               ? <MovePanel moves={battle.player.moves} busy={action.busy}
                   onPick={(i) => act({ kind: 'move', moveIndex: i })}
                   onCancel={() => setPanel('main')} />
-              : <SwitchPanel party={battle.player.party} activeId={battle.player.active.id} busy={action.busy}
-                  onPick={(i) => act({ kind: 'switch', partyIndex: i })}
-                  onCancel={() => setPanel('main')} />}
+              : panel === 'switch'
+                ? <SwitchPanel party={battle.player.party} activeId={battle.player.active.id} busy={action.busy}
+                    onPick={(i) => act({ kind: 'switch', partyIndex: i })}
+                    onCancel={() => setPanel('main')} />
+                : <ItemPanel
+                    items={medicine} party={battle.player.party}
+                    activeIndex={battle.player.party.findIndex((p) => p.id === battle.player.active.id)}
+                    busy={action.busy}
+                    onUse={(itemId, targetIndex) => { bag.reload(); act({ kind: 'item', itemId, targetIndex }) }}
+                    onCancel={() => setPanel('main')} />}
       </main>
     </Screen>
   )
@@ -231,5 +245,69 @@ function Result({ battle, onLeave }: { battle: BattleView; onLeave: () => void }
       ))}
       <button type="button" className="btn btn--primary btn--block" onClick={onLeave}>{t('battle.back')}</button>
     </section>
+  )
+}
+
+/**
+ * Gegenstände mitten im Kampf.
+ *
+ * Erst das Mittel, dann das Ziel — auch ein besiegtes Mitglied lässt sich
+ * wählen, dafür gibt es Beleber. Der Einsatz kostet den Zug; das steht
+ * darunter, damit niemand ihn für geschenkt hält.
+ */
+function ItemPanel({ items, party, activeIndex, busy, onUse, onCancel }: {
+  items: Array<{ id: string; name: string; icon: string; category: string; quantity: number }>
+  party: BattleFighterView[]
+  activeIndex: number
+  busy: boolean
+  onUse: (itemId: string, targetIndex: number) => void
+  onCancel: () => void
+}) {
+  const [picked, setPicked] = useState<string | null>(null)
+
+  if (picked) {
+    return (
+      <div className="panel">
+        <span className="panel__head">{t('battle.item.target')}</span>
+        <div className="switchList">
+          {party.map((p, index) => (
+            <button key={p.id} type="button" className="switchRow" disabled={busy}
+              onClick={() => onUse(picked, index)}>
+              <img src={p.sprite} alt="" width={40} height={40} />
+              <span className="switchRow__text">
+                <span className="switchRow__name">
+                  {p.name}
+                  {index === activeIndex && <span className="tag tag--active">{t('battle.active')}</span>}
+                </span>
+                <span className="switchRow__hp num">{p.hp}/{p.hpMax} KP</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <button type="button" className="btn btn--ghost btn--block" onClick={() => setPicked(null)}>
+          {t('app.back')}
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="panel">
+      <span className="panel__head">{t('battle.item')}</span>
+      <div className="switchList">
+        {items.map((i) => (
+          <button key={i.id} type="button" className="switchRow" disabled={busy}
+            onClick={() => { haptic.tap(); setPicked(i.id) }}>
+            <ItemIcon src={i.icon} category={i.category} size={32} />
+            <span className="switchRow__text">
+              <span className="switchRow__name">{i.name}</span>
+              <span className="switchRow__hp num">×{i.quantity}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <p className="panel__hint">{t('battle.item.costsTurn')}</p>
+      <button type="button" className="btn btn--ghost btn--block" onClick={onCancel}>{t('app.back')}</button>
+    </div>
   )
 }

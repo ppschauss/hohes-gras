@@ -27,12 +27,31 @@ const CARE_COUNTER = 'care'
 
 /** What a brand-new trainer starts with. Enough to play for an evening without
  *  the shop, not enough to skip it. */
+/**
+ * Das Startpaket.
+ *
+ * Seit man Gegenstände auch mitten im Kampf einsetzen kann, gehören Medizin
+ * und Beleber dazu: ein Kampf, in dem man nur zusehen kann, wie das Team
+ * fällt, ist kein Kampf, sondern ein Countdown. Die Mengen reichen für die
+ * ersten Gebiete, nicht für die Liga.
+ */
 const STARTER_KIT: Array<{ itemId: string; quantity: number }> = [
   { itemId: 'poke-ball', quantity: 10 },
   { itemId: 'oran-berry', quantity: 8 },
   { itemId: 'razz-berry', quantity: 3 },
-  { itemId: 'potion', quantity: 3 },
+  { itemId: 'potion', quantity: 5 },
+  { itemId: 'super-potion', quantity: 2 },
+  { itemId: 'revive', quantity: 1 },
+  { itemId: 'full-heal', quantity: 1 },
   { itemId: 'bg-classic', quantity: 1 },
+]
+
+/** Was jedes bestehende Konto einmalig nachgereicht bekommt. */
+export const CATCHUP_KIT: Array<{ itemId: string; quantity: number }> = [
+  { itemId: 'potion', quantity: 5 },
+  { itemId: 'super-potion', quantity: 3 },
+  { itemId: 'revive', quantity: 2 },
+  { itemId: 'full-heal', quantity: 2 },
 ]
 
 const STARTER_LEVEL = 5

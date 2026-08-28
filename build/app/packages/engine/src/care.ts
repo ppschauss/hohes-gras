@@ -1,6 +1,6 @@
 import type { CareAction, StatBlock } from '@game/shared'
 import type { SpeciesDef } from '@game/content'
-import { ABSOLUTE_MAX_LEVEL, grantXpTo, type XpGainResult } from './leveling.js'
+import { ABSOLUTE_MAX_LEVEL, grantXpTo, xpForLevel, type XpGainResult } from './leveling.js'
 import { clamp } from './stats.js'
 
 /** Plaetze im aktiven Team. Auch die Obergrenze eines gespeicherten Teams. */
@@ -36,6 +36,22 @@ export interface CareRules {
  * Pflegeaktion kostet einen Punkt. Die EP-Werte bleiben deshalb bewusst klein —
  * Pflege allein traegt ein Team nie bis zur Liga, dafuer gibt es die Weltkarte.
  */
+/**
+ * Bezugsgroesse fuer die levelabhaengige Pflege-EP.
+ *
+ * Die Zahlen in `CARE_RULES` sind flache EP — bei Level 5 grosszuegig, bei
+ * Level 19 laecherlich: dort kostet ein Level ueber tausend EP, und 25 EP je
+ * Pflegeaktion hiessen vierzig Klicks fuer einen Aufstieg. Ab hier zaehlt
+ * deshalb nicht mehr die absolute Zahl, sondern ein *Anteil* der Levelspanne:
+ * `xp / 800` ist der Anteil, den eine Aktion beitraegt. Fuettern (32) sind
+ * damit 4 % eines Levels, also 25 Aktionen — unabhaengig davon, ob das
+ * Pokemon Level 5 oder Level 200 ist.
+ *
+ * Der flache Wert bleibt als Untergrenze: unter Level 17 ist eine Levelspanne
+ * kleiner als 800 EP, und dort waere der Anteil ein Rueckschritt.
+ */
+export const CARE_LEVEL_SPAN = 800
+
 export const CARE_RULES: Record<CareAction, CareRules> = {
   feed: { xp: 32, friendship: 6, energy: 12, costItemId: 'oran-berry', costQuantity: 1 },
   play: { xp: 26, friendship: 9, energy: -8, costItemId: null, costQuantity: 0 },
@@ -101,7 +117,17 @@ export function applyCare(
     // Friendship raises XP gain by up to 20%: caring for a creature you have
     // cared for pays off, which is the point of the mechanic.
     const bond = 1 + (c.friendship / FRIENDSHIP_MAX) * 0.2
-    const gain = Math.max(1, Math.round(rules.xp * share * bond * (1 + xpBonusPercent / 100)))
+    const factor = share * bond * (1 + xpBonusPercent / 100)
+    // Was ein Level auf dieser Stufe kostet — die Bezugsgroesse fuer den
+    // Anteil, den eine Pflegeaktion beitraegt.
+    const span = Math.max(
+      1, xpForLevel(species.growthRate, c.level + 1) - xpForLevel(species.growthRate, c.level),
+    )
+    const gain = Math.max(
+      1,
+      Math.round(rules.xp * factor),
+      Math.round((span * rules.xp / CARE_LEVEL_SPAN) * factor),
+    )
     // Level mitgeben: eine Zeile mit abweichenden EP darf nie zu einer
     // Ruecksufung fuehren.
     const xp = grantXpTo(species.growthRate, c.xp, c.level, gain, levelCap)

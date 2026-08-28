@@ -84,6 +84,7 @@ export type BattleEvent =
   | { type: 'flinch'; side: 0 | 1; fighter: string }
   | { type: 'faint'; side: 0 | 1; fighter: string }
   | { type: 'switch'; side: 0 | 1; fighter: string; name: string }
+  | { type: 'item'; side: 0 | 1; itemId: string; fighter: string; healed: number }
   | { type: 'no_pp'; side: 0 | 1; fighter: string }
   | { type: 'multi_hit'; side: 0 | 1; fighter: string; hits: number }
   | { type: 'end'; outcome: BattleOutcome }

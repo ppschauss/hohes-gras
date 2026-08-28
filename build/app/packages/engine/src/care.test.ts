@@ -4,6 +4,7 @@ import {
   applyCare, condition, currentHpRatio, friendshipTier, regenerateEnergy,
   CARE_RULES, ENERGY_MAX, FRIENDSHIP_MAX, type CareCreature,
 } from './care.js'
+import { xpForLevel } from './leveling.js'
 
 const species = {
   id: 'testmon', growthRate: 'medium_fast',
@@ -182,5 +183,35 @@ describe('applyCare mit EP-Bonus aus dem Trainingsdojo', () => {
     expect(a.ok && b.ok).toBe(true)
     if (!a.ok || !b.ok) return
     expect(b.results[0]!.xpGained).toBe(a.results[0]!.xpGained)
+  })
+})
+
+describe('Pflege-EP wachsen mit dem Level', () => {
+  const speciesOf = () => ({
+    id: 'x', growthRate: 'medium_fast', baseStats: { hp: 45, atk: 49, def: 49, spa: 65, spd: 65, spe: 45 },
+  }) as never
+
+  const feedOnce = (level: number) => {
+    const xp = xpForLevel('medium_fast', level)
+    const res = applyCare('feed', [{ id: 'a', speciesId: 'x', xp, level, friendship: 0, energy: 50 }], speciesOf, 9)
+    if (!res.ok) throw new Error('Pflege abgelehnt')
+    return res.results[0]!.xpGained
+  }
+
+  it('haelt die Zahl der Aktionen je Level konstant', () => {
+    // Vorher waren es bei Level 5 drei Aktionen und bei Level 40 einhundert-
+    // achtzig. Jetzt ueberall rund 25.
+    for (const level of [20, 40, 80]) {
+      const span = xpForLevel('medium_fast', level + 1) - xpForLevel('medium_fast', level)
+      const actions = span / feedOnce(level)
+      expect(actions).toBeGreaterThan(20)
+      expect(actions).toBeLessThan(30)
+    }
+  })
+
+  it('laesst die kleinen Level in Ruhe', () => {
+    // Unter Level 17 ist eine Levelspanne kleiner als die Bezugsgroesse — dort
+    // gilt weiter der flache Wert, sonst waere die Aenderung eine Bremse.
+    expect(feedOnce(5)).toBe(32)
   })
 })

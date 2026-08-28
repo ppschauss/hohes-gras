@@ -14,8 +14,27 @@ import { clamp } from './stats.js'
 
 /** Everything the battle loop needs from the content pack, passed in so the
  *  engine stays free of any content dependency at runtime. */
+/**
+ * Was ein Gegenstand im Kampf bewirkt.
+ *
+ * Die Engine kennt kein Content-Pack: der Aufrufer löst die Kennung auf und
+ * reicht die Wirkung herein — genau wie bei Attacken.
+ */
+export interface BattleItemEffect {
+  /** Feste Kraftpunkte. */
+  heal?: number
+  /** Ganz voll. */
+  healFull?: boolean
+  /** Alle Statusprobleme weg. */
+  cureAll?: boolean
+  /** Anteil der Maximal-KP, mit dem ein besiegtes Pokémon zurückkommt. */
+  revive?: number
+}
+
 export interface BattleContent {
   move: (id: string) => MoveDef
+  /** Wirkung eines Gegenstands; null heißt: im Kampf nutzlos. */
+  item?: (id: string) => BattleItemEffect | null
   effectiveness: (attackingType: string, defenderTypes: readonly string[]) => number
 }
 
@@ -69,8 +88,14 @@ export function resolveTurn(
     return finish(next, events, { winner: 0, reason: 'forfeit' })
   }
 
-  // Switches always happen before any move, on both sides.
+  /*
+   * Gegenstände und Wechsel gehen jedem Angriff voraus.
+   *
+   * Beides kostet den Zug: wer heilt, greift in dieser Runde nicht an. Sonst
+   * wäre ein Trank ein Gratiszug, und jeder Kampf endete in einer Heilschleife.
+   */
   for (const [index, action] of ([[0, playerAction], [1, foeAction]] as const)) {
+    if (action.kind === 'item') useItem(next, index, action, content, events)
     if (action.kind === 'switch') doSwitch(next, index, action.partyIndex, events)
   }
 
@@ -91,6 +116,51 @@ export function resolveTurn(
     return finish(next, events, { winner: null, reason: 'turn_limit' })
   }
   return { state: next, events }
+}
+
+/**
+ * Einen Gegenstand einsetzen.
+ *
+ * Ziel ist ein Mitglied der eigenen Mannschaft, auch ein besiegtes — dafür gibt
+ * es Beleber. Was nicht passt, passiert einfach nicht: ein Trank auf einem
+ * besiegten Pokémon oder ein Beleber auf einem gesunden verpufft, statt einen
+ * Fehler zu werfen. Die Prüfung, ob der Gegenstand überhaupt sinnvoll ist,
+ * gehört an die Oberfläche, nicht in die Kampfrunde.
+ */
+function useItem(
+  state: BattleState,
+  side: 0 | 1,
+  action: { itemId: string; targetIndex: number },
+  content: BattleContent,
+  events: BattleEvent[],
+): void {
+  const party = state.sides[side]!.party
+  const target = party[action.targetIndex]
+  const effect = content.item?.(action.itemId) ?? null
+  if (!target || !effect) return
+
+  const before = target.hp
+  if (target.hp <= 0) {
+    if (!effect.revive) return
+    target.hp = Math.max(1, Math.round(target.hpMax * effect.revive))
+    target.status = 'none'
+  } else {
+    if (effect.healFull) target.hp = target.hpMax
+    else if (effect.heal) target.hp = Math.min(target.hpMax, target.hp + effect.heal)
+    if (effect.cureAll) {
+      target.status = 'none'
+      target.confused = false
+      target.confusionTurns = 0
+    }
+  }
+
+  events.push({
+    type: 'item',
+    side,
+    itemId: action.itemId,
+    fighter: target.name,
+    healed: target.hp - before,
+  })
 }
 
 interface OrderEntry { side: 0 | 1; moveIndex: number }

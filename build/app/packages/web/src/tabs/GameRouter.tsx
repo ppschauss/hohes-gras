@@ -12,6 +12,7 @@ import { BoxScreen } from '../screens/BoxScreen'
 import { TeamsScreen } from '../screens/TeamsScreen'
 import { DexScreen } from '../screens/DexScreen'
 import { ShopScreen } from '../screens/ShopScreen'
+import { BagScreen } from '../screens/BagScreen'
 import { EnergyScreen } from '../screens/EnergyScreen'
 import { CenterScreen } from '../screens/CenterScreen'
 import { PlotsScreen } from '../screens/PlotsScreen'
@@ -65,6 +66,8 @@ export function GameRouter({ boot, onTrainerChanged }: Props) {
           onBackgroundChanged={() => { onTrainerChanged(); setScreen('garden') }}
         />
       )
+    case 'bag':
+      return <BagScreen onBack={back} />
     case 'energy':
       return <EnergyScreen onBack={back} />
     case 'center':

@@ -41,8 +41,12 @@ export function Resources() {
         <button type="button" className="res__chip res__chip--energy"
           onClick={() => { haptic.tap(); setScreen('energy') }}>
           <Icon name="energy" size={15} />
-          <span className="num">{current}</span>
+          {/* Gekaufte und erspielte Energie darf ueber die natuerliche Grenze
+              hinaus liegen — sie verfaellt nicht. Angezeigt als Vorrat neben
+              dem Balken, nicht als Zahl groesser als ihr eigenes Maximum. */}
+          <span className="num">{Math.min(current, energy.cap)}</span>
           <span className="res__cap num">/{energy.cap}</span>
+          {current > energy.cap && <span className="res__extra num">+{current - energy.cap}</span>}
           <span className="sr-only">{t('energy.label')}</span>
         </button>
       )}
