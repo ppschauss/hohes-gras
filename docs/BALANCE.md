@@ -41,6 +41,19 @@ nächste Überfall, der nächste Arenaleiter. Ein Kampf von 13:06 Uhr blockierte
 so um 19:30 Uhr noch das Heilen, und die Meldung dazu lautete „Das geht gerade
 nicht".
 
+## Energie kaufen
+
+| Packung | Energie | Gold | je Punkt |
+|---|---|---|---|
+| klein | 10 | 130 | 13 |
+| mittel | 50 | 575 | 11,5 |
+| groß | 200 | 2.000 | 10 |
+
+Der Preis je Punkt fällt mit der Menge, damit die große Packung eine
+Entscheidung bleibt und nicht bloß die kleine mal zwanzig. Angehoben von
+10/9/8: Energie war das billigste Mittel gegen jede Wartezeit — und was jede
+Wartezeit aufhebt, darf etwas kosten.
+
 ## Taktkontrolle
 
 | | Wert |

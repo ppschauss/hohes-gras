@@ -117,10 +117,18 @@ export interface EnergyPack {
 /** Kaufbare Pakete. Der Grundpreis liegt bei 10 Gold je Energie, groessere
  *  Pakete werden guenstiger — ein angenehmer Preis gemessen an dem, was eine
  *  lange Expedition oder ein Arenakampf einbringt. */
+/*
+ * Energie fuer Gold.
+ *
+ * Der Preis je Punkt faellt mit der Menge — 13, 11,5 und 10 Gold —, damit die
+ * grosse Packung eine Entscheidung bleibt und nicht bloss die kleine mal
+ * zwanzig. Angehoben von 10/9/8: Energie war das billigste Mittel gegen jede
+ * Wartezeit, und was jede Wartezeit aufhebt, darf ruhig etwas kosten.
+ */
 export const ENERGY_PACKS: EnergyPack[] = [
-  { id: 'energy-small', energy: 10, gold: 100 },
-  { id: 'energy-medium', energy: 50, gold: 450 },
-  { id: 'energy-large', energy: 200, gold: 1600 },
+  { id: 'energy-small', energy: 10, gold: 130 },
+  { id: 'energy-medium', energy: 50, gold: 575 },
+  { id: 'energy-large', energy: 200, gold: 2000 },
 ]
 
 export const findEnergyPack = (id: string): EnergyPack | undefined =>

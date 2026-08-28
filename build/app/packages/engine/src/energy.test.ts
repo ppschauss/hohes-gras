@@ -185,3 +185,20 @@ describe('energyCapPrice', () => {
     expect(total).toBeGreaterThan(50_000)
   })
 })
+
+describe('Preise der Energiepackungen', () => {
+  it('wird je Punkt mit der Menge guenstiger', () => {
+    // Die grosse Packung soll eine Entscheidung sein, nicht die kleine mal
+    // zwanzig.
+    const perPoint = ENERGY_PACKS.map((p) => p.gold / p.energy)
+    for (let i = 1; i < perPoint.length; i++) {
+      expect(perPoint[i]!).toBeLessThan(perPoint[i - 1]!)
+    }
+  })
+
+  it('kostet nirgends weniger als zehn Gold je Punkt', () => {
+    // Die Untergrenze nach der Anhebung: darunter war Energie das billigste
+    // Mittel gegen jede Wartezeit.
+    for (const pack of ENERGY_PACKS) expect(pack.gold / pack.energy).toBeGreaterThanOrEqual(10)
+  })
+})
