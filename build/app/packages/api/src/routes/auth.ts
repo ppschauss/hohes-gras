@@ -5,13 +5,59 @@ import { tx } from '../db/index.js'
 import { displayNameOf, verifyInitData } from '../auth/initData.js'
 import { issueSession } from '../auth/session.js'
 import { checkInvite, redeemInvite } from '../repos/invites.js'
-import { countTrainers, createTrainer, findByTelegramId, updateDisplayName } from '../repos/trainers.js'
+import { countTrainers, createTrainer, findById, findByTelegramId, updateDisplayName } from '../repos/trainers.js'
 import { logEvent } from '../repos/events.js'
-import { rateLimit } from './plugin.js'
+import { rateLimit, requireTrainer } from './plugin.js'
+import * as link from '../services/link.js'
+import { listSessions, revokeOtherSessions, revokeSession } from '../auth/session.js'
+import { z } from 'zod'
 
 const STARTING_GOLD = 500
 
 export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void {
+  const auth = { preHandler: [requireTrainer(ctx), rateLimit(ctx, 'action')] }
+
+  /* ------------------------------------------------ Browser verbinden */
+
+  // Code ausstellen: nur aus einer bestehenden, angemeldeten Sitzung heraus.
+  app.post('/api/auth/link/code', auth, async (req) => {
+    const code = link.createCode(ctx, req.trainer!)
+    return { code: code.formatted, expiresAt: code.expiresAt }
+  })
+
+  // Code einloesen: der einzige Endpunkt ohne Anmeldung, entsprechend eng
+  // begrenzt.
+  app.post('/api/auth/link/redeem', { preHandler: [rateLimit(ctx, 'link')] }, async (req) => {
+    const { code } = z.object({ code: z.string().min(1).max(32) }).parse(req.body)
+    const result = link.redeem(ctx, code, String(req.headers['user-agent'] ?? ''))
+
+    // Zwischen Ausstellen und Einloesen kann gesperrt worden sein.
+    const trainer = findById(ctx.db, result.trainerId)
+    if (!trainer) throw new GameError('unauthorized', {}, 401)
+    if (trainer.isBanned) throw new GameError('banned', {}, 403)
+
+    return { token: result.token, expiresAt: result.expiresAt, trainer }
+  })
+
+  /* --------------------------------------------- Verknuepfte Sitzungen */
+
+  app.get('/api/sessions', auth, async (req) => ({
+    sessions: listSessions(ctx.db, req.trainer!.id, req.sessionId ?? null),
+  }))
+
+  app.delete('/api/sessions/:id', auth, async (req) => {
+    const { id } = z.object({ id: z.string() }).parse(req.params)
+    if (!revokeSession(ctx.db, req.trainer!.id, id)) throw new GameError('not_found', {}, 404)
+    logEvent(ctx.db, req.trainer!.id, 'session.revoked', { sessionId: id })
+    return { sessions: listSessions(ctx.db, req.trainer!.id, req.sessionId ?? null) }
+  })
+
+  app.post('/api/sessions/revoke-others', auth, async (req) => {
+    const removed = revokeOtherSessions(ctx.db, req.trainer!.id, req.sessionId ?? '')
+    logEvent(ctx.db, req.trainer!.id, 'session.revoked', { count: removed })
+    return { removed, sessions: listSessions(ctx.db, req.trainer!.id, req.sessionId ?? null) }
+  })
+
   app.post('/api/auth/session', { preHandler: [rateLimit(ctx, 'auth')] }, async (req, reply) => {
     const body = AuthRequestSchema.parse(req.body)
 

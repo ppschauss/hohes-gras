@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
 import { number } from '../lib/format'
+import { SessionsPanel } from './SessionsPanel'
 
 /** Data rights and, for admins, the operator view. Both live here because both
  *  are about the account rather than the game. */
@@ -47,6 +48,8 @@ export function DataPanel() {
   return (
     <>
       {action.error && <p className="notice" role="alert">{t(`error.${action.error}`)}</p>}
+
+      <SessionsPanel />
 
       <section className="section">
         <h2>{t('data.title')}</h2>

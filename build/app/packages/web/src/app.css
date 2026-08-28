@@ -1076,7 +1076,12 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
   background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
 }
 .friend__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.friend__name { font-weight: 600; font-size: var(--t-md); }
+.friend__name {
+  font-weight: 600; font-size: var(--t-md);
+  /* Abzeichen hinter dem Namen brauchen Luft — sonst klebt "Dieses Gerät"
+     direkt am Wort davor. */
+  display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap;
+}
 .friend__meta { font-size: var(--t-xs); color: var(--ink-faint); }
 .friend__actions { display: flex; gap: var(--s2); flex-shrink: 0; }
 

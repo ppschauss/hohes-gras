@@ -112,3 +112,46 @@ aus der Prüfsumme aus — das HMAC-Verfahren nur `hash`. Wer die Ausnahme
 überträgt, sperrt jeden modernen Client aus, während selbstsignierte Testdaten
 weiter durchgehen. Genau das ist passiert, und genau deshalb signiert der
 Testhelfer heute *mit* `signature`.
+
+### Browser: Einmalcode statt zweitem Anmeldesystem
+
+Eine normale Webseite bekommt kein `initData` — die Quelle der Identität fehlt
+dort. Statt Passwörter einzuführen (und damit einen zweiten Weg, ein Konto zu
+verlieren), leiht sich der Browser die Identität einmalig aus dem Chat, der
+ohnehin schon authentifiziert ist:
+
+1. `/browser` im Privatchat oder ein Knopf in der App erzeugt einen Code —
+   acht Zeichen, fünf Minuten gültig, einmal verwendbar.
+2. Der Browser tauscht ihn gegen eine Sitzung. Nur der **Hash** des Codes steht
+   in der Datenbank, wie beim Sitzungstoken.
+3. Jede Sitzung ist in der App sichtbar und einzeln widerrufbar.
+
+Details, die dabei zählen:
+
+- **Das Alphabet lässt O/0 und I/1 weg.** Der Code wird abgetippt, oft vom
+  Handy auf den Rechner; jedes verwechselbare Zeichen ist ein Fehlversuch, der
+  wie ein Angriff aussieht.
+- **Ein neuer Code entwertet den alten.** Wer dreimal tippt, weil nichts zu
+  passieren scheint, hinterlässt sonst drei offene Türen.
+- **Unbekannt, abgelaufen und verbraucht sind dieselbe Antwort.** Zu erklären,
+  *warum* ein Code nicht geht, hilft nur beim Raten.
+- **Nur im Privatchat.** In einer Gruppe wäre der Code für alle lesbar und
+  damit ein Konto zum Mitnehmen.
+- **Eigener, enger Rate-Limit-Eimer** (10/Minute): das Einlösen ist der einzige
+  Endpunkt, an dem sich ohne Anmeldung etwas raten lässt.
+- **Browsersitzungen laufen 30 Tage und gleiten mit.** Ein Tag wie bei Telegram
+  hieße: täglich einen Code holen. Die längere Laufzeit kostet keine Kontrolle,
+  weil jede Sitzung sichtbar und einzeln kündbar ist.
+
+### Eine Sitzung je Gerät, nicht je App-Start
+
+Die Mini-App meldet sich bei jedem Öffnen neu an — richtig so, aber der alte
+Token wurde dabei nur weggeworfen, nicht gelöscht. Gemessen: **304 Sitzungen
+bei 4 Geräten**. Eine Geräteliste wäre damit unlesbar gewesen. Beim Ausstellen
+einer Telegram-Sitzung fliegt deshalb die vorherige mit gleichem User-Agent
+raus.
+
+Bewusst **nur** für Telegram: dort ist der alte Token in derselben Sekunde
+wertlos. Zwei Browser können dieselbe User-Agent-Zeichenkette haben und
+trotzdem auf verschiedenen Rechnern stehen — dort wäre Zusammenfassen ein
+Rauswurf.

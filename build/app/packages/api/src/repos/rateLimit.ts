@@ -13,6 +13,10 @@ export const BUCKETS = {
   // die Schranke soll Skripte bremsen, nicht schnelles Spielen.
   write_heavy: { limit: 300, windowMs: 60_000 },
   social: { limit: 120, windowMs: 60_000 },
+  // Der einzige Endpunkt, an dem sich ohne Anmeldung etwas raten laesst.
+  // Zehn Versuche je Minute und Adresse: bei 32^8 moeglichen Codes und fuenf
+  // Minuten Gueltigkeit ist Raten damit aussichtslos.
+  link: { limit: 10, windowMs: 60_000 },
 } as const satisfies Record<string, Bucket>
 
 export type BucketName = keyof typeof BUCKETS

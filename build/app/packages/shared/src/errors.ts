@@ -18,6 +18,9 @@ export const ERROR_CODES = [
   'not_owner',
   'validation_failed',
   'content_unavailable',
+  // Browsercode: unbekannt, abgelaufen oder schon benutzt — bewusst
+  // ununterscheidbar, das hilft sonst nur beim Raten.
+  'link_invalid',
 ] as const
 export type ErrorCode = (typeof ERROR_CODES)[number]
 

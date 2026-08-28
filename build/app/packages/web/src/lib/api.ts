@@ -173,6 +173,13 @@ export const api = {
     }),
 
   exportUrl: () => '/api/account/export',
+
+  sessions: () => request<{ sessions: SessionView[] }>('/api/sessions'),
+  linkCode: () => request<{ code: string; expiresAt: number }>('/api/auth/link/code', { method: 'POST' }),
+  revokeSession: (id: string) =>
+    request<{ sessions: SessionView[] }>(`/api/sessions/${id}`, { method: 'DELETE' }),
+  revokeOtherSessions: () =>
+    request<{ removed: number; sessions: SessionView[] }>('/api/sessions/revoke-others', { method: 'POST' }),
   deleteAccount: (confirm: string) =>
     request<{ deleted: boolean; deletedRows: number }>('/api/account/delete', {
       method: 'POST', body: JSON.stringify({ confirm }),
@@ -942,4 +949,15 @@ export interface AdminDashboard {
     createdAt: number; lastSeenAt: number; isAdmin: number; isBanned: number; gold: number
   }>
   uptimeSeconds: number
+}
+
+
+export interface SessionView {
+  id: string
+  kind: 'telegram' | 'browser'
+  userAgent: string
+  issuedAt: number
+  lastSeenAt: number
+  expiresAt: number
+  current: boolean
 }

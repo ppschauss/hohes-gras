@@ -9,6 +9,9 @@ import { consume, type BucketName } from '../repos/rateLimit.js'
 declare module 'fastify' {
   interface FastifyRequest {
     trainer?: Trainer
+    /** Kennung der Sitzung, mit der die Anfrage kam. Die Sitzungsliste braucht
+     *  sie, um "dieses Geraet" zu markieren, ohne den Token zu kennen. */
+    sessionId?: string
   }
 }
 
@@ -27,6 +30,7 @@ export function requireTrainer(ctx: AppContext) {
     if (trainer.isBanned) throw new GameError('banned', {}, 403)
 
     req.trainer = trainer
+    req.sessionId = session.id
     touchLastSeen(ctx.db, trainer.id)
   }
 }

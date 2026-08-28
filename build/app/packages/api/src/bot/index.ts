@@ -3,6 +3,7 @@ import type { AppContext } from '../context.js'
 import { createInvite, listInvites } from '../repos/invites.js'
 import { findByTelegramId, setAdmin, countTrainers } from '../repos/trainers.js'
 import { logEvent } from '../repos/events.js'
+import { createCode as createLinkCode, LINK_CODE_TTL_MS } from '../services/link.js'
 import { renderCard } from './card.js'
 import { renderRaidCard } from './raidCard.js'
 import * as guildRepo from '../repos/guilds.js'
@@ -64,6 +65,24 @@ export function createBot(ctx: AppContext): Bot {
     })
   })
 
+  bot.command(['browser', 'web'], async (c) => {
+    const trainer = findByTelegramId(ctx.db, String(c.from?.id ?? ''))
+    if (!trainer) return c.reply('Du hast noch keinen Trainer. Tipp /start.')
+    // Nur im Privatchat: in einer Gruppe waere der Code fuer alle lesbar und
+    // damit ein Konto zum Mitnehmen.
+    if (c.chat.type !== 'private') {
+      return c.reply('Das geht nur im Privatchat mit mir — ein Code in einer Gruppe wäre für alle lesbar.')
+    }
+    const code = createLinkCode(ctx, trainer)
+    const minutes = Math.round(LINK_CODE_TTL_MS / 60_000)
+    await c.reply(
+      `Dein Code für den Browser:\n\n\`${code.formatted}\`\n\n`
+      + `Gib ihn auf ${ctx.config.PUBLIC_URL || 'der Webseite'} ein. Gültig für ${minutes} Minuten, einmal verwendbar.\n`
+      + 'Verbundene Geräte siehst du in der App unter Konto.',
+      { parse_mode: 'Markdown' },
+    )
+  })
+
   bot.command('karte', async (c) => {
     const me = findByTelegramId(ctx.db, String(c.from?.id ?? ''))
     if (!me) return c.reply('Du hast noch keinen Trainer. Tipp /start.')
@@ -108,6 +127,7 @@ export function createBot(ctx: AppContext): Bot {
       '/spielen — öffnet die Mini-App',
       '/karte — teilt deine Trainerkarte',
       '/code — zeigt deinen Trainer-Code',
+      '/browser — Code, um dich im Browser anzumelden',
       '',
       '*In Gruppen*',
       '/gilde — diesen Chat mit deiner Gilde verbinden',

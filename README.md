@@ -58,6 +58,7 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Sozial** | Freunde über Trainer-Code, teilbare Trainerkarte, Marktplatz, Direkttausch, Rangliste |
 | **Koop** | Gilden mit Wochenziel, Raid-Bosse als Karte im Telegram-Gruppenchat, asynchrones PvP mit Elo, Wochenturnier |
 | **Progression** | Entwicklungen, Basisausbau, Handwerk, Saison-Reise, Erfolge, 10 Story-Kapitel |
+| **Anmeldung** | Telegram-`initData`; für den Browser ein Einmalcode aus dem Chat, verbundene Geräte einzeln kündbar |
 | **Designs** | 13 kaufbare Farbwelten plus Tag-/Nacht-Modus, der der Weltuhr folgt |
 | **Fairness** | Taktkontrolle gegen Automatik-Klicker: Fenster, Mindestabstand, Rhythmuserkennung |
 | **Konto** | Telegram-Erinnerungen (max. 1/Tag), DSGVO-Export und -Löschung, Admin-Panel |
