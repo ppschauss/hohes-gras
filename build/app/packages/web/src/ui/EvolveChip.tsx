@@ -24,26 +24,37 @@ export function EvolveChip({ creature: c, onDone }: Props) {
   const [asking, setAsking] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [note, setNote] = useState<string | null>(null)
 
   const target = c.canEvolveTo[0]
   if (!target) return null
 
   if (!asking) {
     return (
-      <button
-        type="button"
-        className="chip chip--evo chip--action"
-        onClick={(e) => { e.stopPropagation(); haptic.tap(); setAsking(true) }}
-      >
-        {t('creature.canEvolve')}
-      </button>
+      <>
+        <button
+          type="button"
+          className="chip chip--evo chip--action"
+          onClick={(e) => { e.stopPropagation(); haptic.tap(); setAsking(true) }}
+        >
+          {t('creature.canEvolve')}
+        </button>
+        {note && <span className="chain__hint">{note}</span>}
+      </>
     )
   }
 
   const evolve = () => {
     setBusy(true); setError(null)
     void api.evolve(c.id, target.speciesId)
-      .then(() => { haptic.success(); setAsking(false); onDone?.() })
+      .then((res) => {
+        haptic.success()
+        setAsking(false)
+        // Nur melden, wenn es etwas zu melden gibt: dass die Energie heute
+        // ausgeschoepft ist, erfaehrt man am besten beim Entwickeln selbst.
+        if (res.energyGained === 0) setNote(t('evolve.noEnergy'))
+        onDone?.()
+      })
       .catch((err: unknown) => {
         haptic.error()
         setError(err instanceof Error ? err.message : 'unknown')

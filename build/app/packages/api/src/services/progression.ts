@@ -1,8 +1,12 @@
 import { GameError, type Trainer } from '@game/shared'
+
+/** Zaehlt die Entwicklungen des Tages, die Energie eingebracht haben. */
+const EVOLUTION_ENERGY_COUNTER = 'evolution_energy'
 import {
   ACHIEVEMENTS, BUILDINGS, RECIPES, SEASON_POINTS, SEASON_LENGTH_DAYS,
   bonusOf, canCraft, computeStats, ENERGY_REWARDS, findBuilding, findRecipe, isUnlocked,
   pointsForTier, rewardForTier, seasonTiers, tierForPoints, upgradeCost, visibleAchievements,
+  EVOLUTION_ENERGY_PER_DAY,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
@@ -10,6 +14,7 @@ import * as progression from '../repos/progression.js'
 import * as creatures from '../repos/creatures.js'
 import * as inventory from '../repos/inventory.js'
 import * as dexRepo from '../repos/dex.js'
+import { bumpCounter, counterValue } from '../repos/counters.js'
 import * as world from '../repos/world.js'
 import * as socialRepo from '../repos/social.js'
 import { logEvent } from '../repos/events.js'
@@ -60,10 +65,22 @@ export function evolve(ctx: AppContext, trainer: Trainer, creatureId: string, ta
     refreshMoves(ctx, creature.id, targetSpeciesId, creature.level, creature.moves)
 
     const newDexEntry = dexRepo.markCaught(ctx.db, trainer.id, targetSpeciesId)
-    // Eine Entwicklung ist ein einmaliger Fortschritt je Kreatur und deshalb
-    // eine ehrliche Energiequelle: sie laesst sich nicht farmen.
-    energy.reward(ctx, trainer.id, 'evolution')
-    const energyGained = ENERGY_REWARDS.evolution
+
+    /*
+     * Energie gibt es fuer die ersten zehn Entwicklungen des Tages.
+     *
+     * Eine Entwicklung ist ein einmaliger Fortschritt je Kreatur — aber nicht
+     * je Spieler: mit Eiern, Bonbons und einer vollen Box entwickelt man
+     * zwanzig am Stueck. Der Deckel laesst den Fortschritt zu und nimmt ihm
+     * nur die Energie; wer mehr braucht, kauft sie.
+     */
+    const rewardedToday = counterValue(ctx.db, trainer.id, EVOLUTION_ENERGY_COUNTER)
+    const rewarded = rewardedToday < EVOLUTION_ENERGY_PER_DAY
+    if (rewarded) {
+      energy.reward(ctx, trainer.id, 'evolution')
+      bumpCounter(ctx.db, trainer.id, EVOLUTION_ENERGY_COUNTER)
+    }
+    const energyGained = rewarded ? ENERGY_REWARDS.evolution : 0
     awardSeasonPoints(ctx, trainer.id, 'evolution')
     if (newDexEntry) awardSeasonPoints(ctx, trainer.id, 'newDexEntry')
     bumpMetric(ctx, trainer.id, 'evolutions')
@@ -73,6 +90,8 @@ export function evolve(ctx: AppContext, trainer: Trainer, creatureId: string, ta
       creature: creatureView(ctx.registry, creatures.byId(ctx.db, creature.id)!, trainer.locale, clock.timeOfDay),
       fromName: ctx.registry.localized(before.name, trainer.locale),
       energyGained,
+      /** Wie viele der zehn taeglichen Energieboni noch offen sind. */
+      energyLeftToday: Math.max(0, EVOLUTION_ENERGY_PER_DAY - (rewarded ? rewardedToday + 1 : rewardedToday)),
       newDexEntry,
     }
   })

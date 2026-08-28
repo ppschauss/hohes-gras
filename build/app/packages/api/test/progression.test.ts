@@ -295,3 +295,49 @@ describe('Story', () => {
     expect(r.body.detail.reason).toBe('not_reached')
   })
 })
+
+describe('Energie fuers Entwickeln', () => {
+  /** Ein entwicklungsbereites Pokemon in der Box. */
+  const readyToEvolve = () => {
+    const id = crypto.randomUUID()
+    h.ctx.db.prepare(
+      `INSERT INTO creatures (id, owner_id, species_id, xp, level, nature,
+         iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, friendship, energy, hp_current,
+         shiny, moves, caught_at, team_slot)
+       VALUES (?, ?, 'testmon', 4096, 16, 'hardy', 20,20,20,20,20,20, 70, 100, 20, 0, '["tackle"]', ?, NULL)`,
+    ).run(id, trainerId, Date.now())
+    return id
+  }
+
+  const evolve = async (id: string) => {
+    h.resetRateLimits()
+    return h.post('/api/evolutions/evolve', { creatureId: id, targetSpeciesId: 'testmon-evo' }, token)
+  }
+
+  it('zahlt die ersten zehn Entwicklungen des Tages aus', async () => {
+    const first = await evolve(readyToEvolve())
+    expect(first.status).toBe(200)
+    expect(first.body.energyGained).toBeGreaterThan(0)
+    expect(first.body.energyLeftToday).toBe(9)
+  })
+
+  it('gibt ab der elften keine Energie mehr — entwickelt aber weiter', async () => {
+    // Zehn ausgezahlte Entwicklungen vortragen, statt sie zu spielen.
+    h.ctx.db.prepare(
+      `INSERT INTO daily_counters (trainer_id, game_date, counter, value)
+       VALUES (?, date('now','localtime'), 'evolution_energy', 10)
+       ON CONFLICT(trainer_id, game_date, counter) DO UPDATE SET value = 10`,
+    ).run(trainerId)
+
+    const before = (await h.get('/api/energy', token)).body.state.current
+    const r = await evolve(readyToEvolve())
+    expect(r.status).toBe(200)
+    expect(r.body.energyGained).toBe(0)
+    expect(r.body.energyLeftToday).toBe(0)
+    // Die Entwicklung selbst hat stattgefunden.
+    expect(r.body.creature.speciesId).toBe('testmon-evo')
+
+    h.resetRateLimits()
+    expect((await h.get('/api/energy', token)).body.state.current).toBe(before)
+  })
+})

@@ -242,7 +242,10 @@ export const api = {
 
   evolutions: () => request<{ candidates: EvolutionCandidate[] }>('/api/evolutions'),
   evolve: (creatureId: string, targetSpeciesId: string) =>
-    request<{ creature: CreatureLike; fromName: string; newDexEntry: boolean }>('/api/evolutions/evolve', {
+    request<{
+      creature: CreatureLike; fromName: string; newDexEntry: boolean
+      energyGained: number; energyLeftToday: number
+    }>('/api/evolutions/evolve', {
       method: 'POST', body: JSON.stringify({ creatureId, targetSpeciesId }),
     }),
 

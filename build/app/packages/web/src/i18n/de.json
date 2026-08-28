@@ -316,6 +316,7 @@
   "error.insufficient_funds": "Dafür reicht dein Gold nicht.",
   "error.insufficient_items": "Davon hast du nicht genug.",
   "error.invalid_state": "Das geht gerade nicht.",
+  "evolve.noEnergy": "Heute schon zehn Entwicklungen — Energie gibt es dafür erst wieder morgen.",
   "error.invalid_state.already_full": "Dem geht es schon blendend.",
   "error.invalid_state.fainted": "Das Pokémon ist besiegt — dafür brauchst du einen Beleber.",
   "error.invalid_state.not_fainted": "Ein Beleber hilft nur einem besiegten Pokémon.",

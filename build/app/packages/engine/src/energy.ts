@@ -17,6 +17,17 @@ import { clamp } from './stats.js'
 export const ENERGY_BASE_CAP = 150
 /** Belohnungen und Kaeufe duerfen darueber hinaus anhaeufen, aber nicht endlos. */
 export const ENERGY_HARD_CAP = 9999
+
+/**
+ * Wie viele Entwicklungen am Tag Energie einbringen.
+ *
+ * Im Code stand einmal, eine Entwicklung sei "eine ehrliche Energiequelle: sie
+ * laesst sich nicht farmen". Das stimmte nur, solange Entwicklungen selten
+ * waren. Mit Eiern, Bonbons und einer vollen Box entwickelt man zwanzig Stueck
+ * am Stueck — und jede gab fuenfzehn Punkte. Ab der elften gibt es am selben
+ * Tag keine Energie mehr; die Entwicklung selbst bleibt natuerlich erlaubt.
+ */
+export const EVOLUTION_ENERGY_PER_DAY = 10
 /**
  * Wie lange ein leeres Konto braucht, bis es wieder voll ist.
  *

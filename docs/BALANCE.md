@@ -79,6 +79,16 @@ Rollback der abgewiesenen Aktion die Pause und den Protokolleintrag mit — das
 Protokoll, mit dem sich die Schwelle überprüfen lässt, blieb deshalb
 ausgerechnet in jedem echten Fall leer.
 
+## Energie fürs Entwickeln
+
+Die ersten **zehn Entwicklungen am Tag** bringen Energie (je 15), danach gibt es
+für weitere keine mehr. Entwickeln selbst bleibt unbegrenzt.
+
+Im Code stand einmal, eine Entwicklung sei „eine ehrliche Energiequelle: sie
+lässt sich nicht farmen". Das galt, solange Entwicklungen selten waren — mit
+Eiern, Bonbons und einer vollen Box entwickelt man zwanzig am Stück. Der Deckel
+nimmt dem Fortschritt nichts, nur die Energie; wer mehr braucht, kauft sie.
+
 ## Verwerten und Seelenfragmente
 
 | | Wert |
