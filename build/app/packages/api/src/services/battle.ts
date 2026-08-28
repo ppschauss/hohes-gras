@@ -2,7 +2,8 @@ import { GameError, NATURES, type Trainer } from '@game/shared'
 import type { AreaDef, TrainerDef } from '@game/content'
 import {
   activeFighter, battleXpYield, chooseAction, computeStats, createBattle, createRng,
-  deriveSeed, ENERGY_REWARDS, eventGold, eventLevels, eventLoot, grantXpTo, isEventTrainer, makeSide,
+  deriveSeed, ENERGY_REWARDS, eventGold, eventLevels, eventLoot, eventPartySize, grantXpTo,
+  isEventTrainer, makeSide,
   rollLureDrop,
   LEGENDARY_BERRY_ID, npcFighter, PERFECT_IV, resolveTurn, rollBerryDrop, rollPerfect,
   toFighter, xpForLevel,
@@ -295,12 +296,16 @@ function beginBattle(ctx: AppContext, trainer: Trainer, def: TrainerDef, area: A
      * Skalierung: wer sie abschaltet, will die Entwurfswerte, auch hier.
      */
     const reference = referenceOf(ctx, trainer)
-    const eventLevelsOf = isEventTrainer(def.id) && reference > 0
-      ? eventLevels(def.team.length, reference)
-      : null
+    const isEvent = isEventTrainer(def.id) && reference > 0
+    // Nie mehr Gegner als eigene Mitglieder: drei gegen zwei ist keine knappe
+    // Sache, sondern Ueberzahl.
+    const foeCount = isEvent
+      ? eventPartySize(def.team.length, playerParty.length)
+      : def.team.length
+    const eventLevelsOf = isEvent ? eventLevels(foeCount, reference) : null
     const cap = capOf(ctx, trainer)
 
-    const foeParty = def.team.map((member, index) => {
+    const foeParty = def.team.slice(0, foeCount).map((member, index) => {
       const species = ctx.registry.species(member.speciesId)
       const level = eventLevelsOf
         ? Math.min(cap, Math.max(2, eventLevelsOf[index] ?? reference))

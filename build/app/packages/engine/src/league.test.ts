@@ -5,6 +5,7 @@ import {
   LEGENDARY_MAX_BERRIES, LEGENDARY_ODDS, PERFECT_IV,
   checkLeagueGate, eventGold, eventLoot, isEventTrainer, isLegendaryCatchRate,
   legendaryCatchChance, regionCleared, rollBerryDrop, rollEvent, rollLegendary, rollPerfect,
+  eventLevels, eventPartySize,
 } from './league.js'
 
 const ELITES = ['e1', 'e2', 'e3', 'e4'] as const
@@ -184,5 +185,27 @@ describe('Ereignis-Haeufigkeit', () => {
   it('liegt im gewuenschten Band von zwei bis fuenf Prozent', () => {
     expect(EVENT_ODDS).toBeGreaterThanOrEqual(0.02)
     expect(EVENT_ODDS).toBeLessThanOrEqual(0.05)
+  })
+})
+
+describe('Überfallteam', () => {
+  it('liegt zwei Level unter dem eigenen Median', () => {
+    // Gemessen an simulierten Kaempfen: exakt auf dem Median gewann ein Team
+    // aus vieren nur 36 % der Ueberfaelle.
+    expect(eventLevels(1, 40)).toEqual([38])
+    expect(eventLevels(3, 40)).toEqual([35, 38, 41])
+  })
+
+  it('bietet nie mehr Gegner auf, als man selbst dabeihat', () => {
+    expect(eventPartySize(3, 1)).toBe(1)
+    expect(eventPartySize(3, 2)).toBe(2)
+    expect(eventPartySize(3, 5)).toBe(3)
+    // Auch mit leerem Team bleibt ein Gegner stehen — sonst gaebe es keinen
+    // Kampf, und der Aufruf kaeme gar nicht erst so weit.
+    expect(eventPartySize(3, 0)).toBe(1)
+  })
+
+  it('faellt nie unter Level 1', () => {
+    expect(Math.min(...eventLevels(3, 2))).toBeGreaterThanOrEqual(1)
   })
 })

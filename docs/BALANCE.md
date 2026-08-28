@@ -150,14 +150,31 @@ Der Störsender kauft Geduld ab. Überfälle sind die einzige Quelle für
 Sagenbeeren und kommen mit 4 % je Erkundung — im Schnitt also alle 25. Die
 Ladung wird nur verbraucht, wenn wirklich ein Gegner zustande kommt.
 
-## Ereignisgegner treten auf Augenhöhe an
+## Ereignisgegner treten auf Augenhöhe an — knapp darunter
 
 Ein Überfall hat keinen Ort im Entwurf — er passiert dort, wo man gerade
 erkundet, quer durch alle Regionen. Feste Level wären deshalb immer für
 jemanden falsch: dieselbe Truppe träfe den einen als Wand und den anderen als
-Übung. Das Team richtet sich am **Median des eigenen Teams ±3** aus, der
-Schwächste drei darunter, der Stärkste drei darüber. Wer die Skalierung
-abschaltet, bekommt auch hier die Entwurfswerte.
+Übung. Das Team richtet sich am **Median des eigenen Teams** aus, um zwei
+Level nach unten versetzt und mit ±3 gestreut — der Schwächste fünf darunter,
+der Stärkste einen darüber. Und es tritt **nie mit mehr Gegnern an, als man
+selbst dabeihat**. Wer die Skalierung abschaltet, bekommt die Entwurfswerte.
+
+Beides ist gemessen, nicht geschätzt. Simulierte Überfälle (ohne Items, ohne
+kluges Wechseln — echte Spieler liegen also höher):
+
+| Teamgröße | genau auf dem Median, 3 Gegner | −2 und Gegner ≤ Team |
+|---|---|---|
+| 2 | 26 % | 77 % |
+| 3 | 31 % | 35 % |
+| 4 | 36 % | 53 % |
+| 6 | 76 % | 99 % |
+
+Der Ausreißer bei drei ist ehrlich: das simulierte Dreierteam besteht aus
+Raupy, Hornliu und Taubsi. Drei schwache Arten bleiben drei schwache Arten.
+
+Ein Überfall unterbricht das Erkunden — er soll ein Kampf sein, den man meistens
+gewinnt, kein Boss.
 
 ## Skalierung
 

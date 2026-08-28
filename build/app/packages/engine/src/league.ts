@@ -108,6 +108,17 @@ export const ROCKET_BAIT_CHARGES = 5
 /** Wahrscheinlichkeit je Erkundung, dass ein Überfall stattfindet. */
 export const EVENT_ODDS = 0.04
 
+/**
+ * Wie viele Gegner ein Überfall aufbietet.
+ *
+ * Höchstens so viele, wie man selbst dabeihat. Der Entwurf sieht drei vor —
+ * gegen ein Team aus zwei ist das kein knapper Kampf, sondern Überzahl, und
+ * genau daran scheiterten die kleinen Teams: nicht am Level, sondern an der
+ * Zahl.
+ */
+export const eventPartySize = (designed: number, teamSize: number): number =>
+  Math.max(1, Math.min(designed, Math.max(1, Math.floor(teamSize))))
+
 /** Wie oft ein besiegter Überfall eine Sagenbeere fallen lässt. */
 export const BERRY_DROP_CHANCE = 0.5
 export const LEGENDARY_BERRY_ID = 'legendary-berry'
@@ -172,6 +183,17 @@ export const isEventTrainer = (id: string): boolean => id.startsWith(EVENT_TRAIN
 export const EVENT_LEVEL_SPREAD = 3
 
 /**
+ * Wie weit die Mitte des Ueberfallteams unter dem eigenen Median liegt.
+ *
+ * Gemessen an simulierten Kaempfen: exakt auf dem Median gewann ein Team aus
+ * vier Mitgliedern nur 36 % der Ueberfaelle, eines aus zweien 26 %. Ein
+ * Ueberfall unterbricht das Erkunden — er soll ein Kampf sein, den man meistens
+ * gewinnt, kein Boss. Zwei Level tiefer bringt dieselben Teams auf 47 %, und
+ * zusammen mit der gedeckelten Truppgroesse (siehe unten) reicht das.
+ */
+export const EVENT_LEVEL_OFFSET = -2
+
+/**
  * Die Level eines Ueberfallteams, gemessen am eigenen Team.
  *
  * Ein Ueberfall hat keinen Ort im Entwurf — er passiert dort, wo man gerade
@@ -183,10 +205,12 @@ export const EVENT_LEVEL_SPREAD = 3
  * Die innere Reihenfolge des Entwurfs bleibt damit erhalten: der letzte im
  * Team ist weiterhin der haerteste.
  */
-export function eventLevels(size: number, reference: number, spread = EVENT_LEVEL_SPREAD): number[] {
+export function eventLevels(
+  size: number, reference: number, spread = EVENT_LEVEL_SPREAD, offset = EVENT_LEVEL_OFFSET,
+): number[] {
   const n = Math.max(0, Math.floor(size))
   if (n === 0) return []
-  const ref = Math.max(1, Math.floor(reference))
+  const ref = Math.max(1, Math.floor(reference) + offset)
   if (n === 1) return [ref]
   return Array.from({ length: n }, (_, i) =>
     Math.max(1, ref - spread + Math.round((2 * spread * i) / (n - 1))))

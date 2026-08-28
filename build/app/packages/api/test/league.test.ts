@@ -247,7 +247,8 @@ describe('Überfall auf Augenhöhe', () => {
     h.resetRateLimits()
     const r = await h.post('/api/battle/event', {}, token)
     expect(r.status).toBe(200)
-    expect(r.body.foe.active.level).toBe(40)
+    // Ein Mitglied im Entwurf, also genau die Mitte: Median minus zwei.
+    expect(r.body.foe.active.level).toBe(38)
   })
 
   it('folgt dem Team auch nach unten', async () => {
@@ -255,7 +256,7 @@ describe('Überfall auf Augenhöhe', () => {
     pendEvent()
     h.resetRateLimits()
     const r = await h.post('/api/battle/event', {}, token)
-    expect(r.body.foe.active.level).toBe(12)
+    expect(r.body.foe.active.level).toBe(10)
   })
 
   it('laesst die Entwurfswerte stehen, wenn die Skalierung aus ist', async () => {
