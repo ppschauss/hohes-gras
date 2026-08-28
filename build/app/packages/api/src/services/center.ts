@@ -3,7 +3,7 @@ import {
   type CenterEvent, type CenterOffer, type CenterState, type CenterVisit, type Trainer,
 } from '@game/shared'
 import {
-  CENTER_COOLDOWN_MS, TRADE_IV_FLOOR, TRADE_MIN_CATCH_RATE, TRADE_OFFER_TTL_MS,
+  centerCooldown, TRADE_IV_FLOOR, TRADE_MIN_CATCH_RATE, TRADE_OFFER_TTL_MS,
   centerReady, centerReadyAt, computeStats, createRng, deriveSeed, foundGold,
   giftQuantity, giftWeight, itemValue, randomIvs, rollCenterEvent, tradeLevel, xpForLevel,
   type Rng,
@@ -11,6 +11,7 @@ import {
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import * as center from '../repos/center.js'
+import { bonuses } from './progression.js'
 import * as creatures from '../repos/creatures.js'
 import * as inventory from '../repos/inventory.js'
 import * as dex from '../repos/dex.js'
@@ -44,16 +45,22 @@ const NPC_NAMES = [
  *  Einmalkaeufe — als Stapelgeschenk waeren sie sinnlos. */
 const GIFT_CATEGORIES = new Set(['ball', 'berry', 'medicine', 'material', 'xp', 'stone'])
 
+/** Wie viele Stufen die Schwesternstation von der Abklingzeit abzieht. */
+function speedSteps(ctx: AppContext, trainerId: string): number {
+  return bonuses(ctx, trainerId).centerSpeedBonus
+}
+
 export function state(ctx: AppContext, trainer: Trainer, now = Date.now()): CenterState {
   const lastUsed = center.lastVisit(ctx.db, trainer.id)
+  const steps = speedSteps(ctx, trainer.id)
   const team = creatures.teamOf(ctx.db, trainer.id)
   const hurt = team.filter((c) => c.hpCurrent < maxHpOf(ctx, c)).length
   const offer = center.openOf(ctx.db, trainer.id, now)
 
   return {
-    ready: centerReady(lastUsed, now),
-    readyAt: centerReadyAt(lastUsed),
-    cooldownMs: CENTER_COOLDOWN_MS,
+    ready: centerReady(lastUsed, now, steps),
+    readyAt: centerReadyAt(lastUsed, steps),
+    cooldownMs: centerCooldown(steps),
     hurt,
     teamSize: team.length,
     offer: offer ? offerView(ctx, trainer, offer) : null,
@@ -74,13 +81,16 @@ export function visit(ctx: AppContext, trainer: Trainer, now = Date.now()): Cent
     }
 
     const lastUsed = center.lastVisit(ctx.db, trainer.id)
-    if (!centerReady(lastUsed, now)) {
+    const steps = speedSteps(ctx, trainer.id)
+    if (!centerReady(lastUsed, now, steps)) {
       throw new GameError('invalid_state', {
-        reason: 'center_cooldown', readyAt: centerReadyAt(lastUsed),
+        reason: 'center_cooldown', readyAt: centerReadyAt(lastUsed, steps),
       }, 409)
     }
     if (!center.markVisited(ctx.db, trainer.id, now, lastUsed)) {
-      throw new GameError('invalid_state', { reason: 'center_cooldown', readyAt: centerReadyAt(lastUsed) }, 409)
+      throw new GameError('invalid_state', {
+        reason: 'center_cooldown', readyAt: centerReadyAt(lastUsed, steps),
+      }, 409)
     }
 
     const healed = healTeam(ctx, trainer)

@@ -76,33 +76,47 @@ async function main(): Promise<void> {
     },
   }))
 
-  const areaById = new Map(repaired.map((a) => [a.id, a]))
-  const clamped: string[] = []
-  const finalAreas = repaired.map((a) => {
-    let minCaught = a.unlock.minCaughtInPrevious
-    const prev = a.unlock.previousAreaId ? areaById.get(a.unlock.previousAreaId) : undefined
-    if (prev && minCaught > 0) {
-      const always = new Set(
-        prev.spawns.filter((sp) => !sp.timeOfDay && !sp.weather).map((sp) => sp.speciesId),
-      ).size
-      if (minCaught > always) {
-        clamped.push(`${a.id}: ${minCaught} → ${always} (${prev.id})`)
-        minCaught = always
-      }
-    }
-    return {
-      ...a,
-      unlock: {
-        ...a.unlock,
-        minCaughtInPrevious: minCaught,
-        requiredBadgeIds: a.unlock.requiredBadgeIds.filter((b) => knownBadges.has(b)),
-      },
-    }
-  })
-  if (clamped.length) {
-    log(`${clamped.length} Freischaltbedingungen geklemmt:`)
-    for (const line of clamped) log(`  ${line}`)
+  /*
+   * Die Dex-Schwelle je Gebiet — als Formel, nicht als 38 Handzahlen.
+   *
+   * Gefordert wird, was im Pokédex steht, nicht was im Vorgängergebiet
+   * gefangen wurde: sonst muss man dasselbe Taubsi auf jeder Route neu fangen.
+   * Je Region ein Sockel und ein Schritt je Gebiet — Kantos fünfzehntes Gebiet
+   * landet so bei knapp hundert Arten, und die späteren Regionen setzen dort
+   * an, wo die vorige aufgehört hat.
+   */
+  const DEX_GATE: Record<string, { base: number; step: number }> = {
+    kanto: { base: 0, step: 7 },
+    johto: { base: 80, step: 6 },
+    hoenn: { base: 150, step: 6 },
   }
+  /*
+   * Das erste Gebiet einer Region verlangt nichts.
+   *
+   * Dort steht schon die Regionssperre — man kommt ohnehin nur herein, wenn
+   * die vorige Region bezwungen ist. Eine Dex-Schwelle obendrauf hiesse: erst
+   * die Liga gewinnen, dann noch hundert Arten nachsammeln, bevor man den Fuss
+   * auf die erste Route setzen darf.
+   */
+  const dexGate = (regionId: string, order: number): number => {
+    if (order <= 1) return 0
+    const g = DEX_GATE[regionId] ?? { base: 0, step: 6 }
+    return g.base + (order - 2) * g.step
+  }
+
+  const areaById = new Map(repaired.map((a) => [a.id, a]))
+  const finalAreas = repaired.map((a) => ({
+    ...a,
+    unlock: {
+      ...a.unlock,
+      // Die alte Bedingung ist abgeloest; sie bleibt im Schema, damit
+      // aeltere Packs weiter laden.
+      minCaughtInPrevious: 0,
+      minDexCaught: dexGate(a.regionId, a.order),
+      requiredBadgeIds: a.unlock.requiredBadgeIds.filter((b) => knownBadges.has(b)),
+    },
+  }))
+  log(`Dex-Schwellen: ${finalAreas.map((a) => a.unlock.minDexCaught).join(', ')}`)
 
   const chapters = allChapters.filter((c) =>
     c.requires.every((r) =>

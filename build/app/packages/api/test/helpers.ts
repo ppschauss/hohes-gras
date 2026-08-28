@@ -134,7 +134,7 @@ function writeMinimalPack(dataDir: string): void {
       name: { de: 'Testhoehle' }, description: { de: 'Dunkel' },
       icon: '/media/c.png', background: '/media/cb.png',
       unlock: {
-        previousAreaId: 'test-route', minCaughtInPrevious: 2,
+        previousAreaId: 'test-route', minDexCaught: 2, minCaughtInPrevious: 0,
         minCreaturesAtLevel: { count: 2, level: 10 },
         requiredBadgeIds: ['test-badge'],
       },
@@ -159,7 +159,7 @@ function writeMinimalPack(dataDir: string): void {
       id: 'hoch-gipfel', regionId: 'hochland', order: 2,
       name: { de: 'Hochgipfel' }, description: { de: 'Das Ende derselben Region.' },
       icon: '/media/h2.png', background: '/media/h2b.png',
-      unlock: { previousAreaId: 'hoch-tal', minCaughtInPrevious: 1, minCreaturesAtLevel: null, requiredBadgeIds: [] },
+      unlock: { previousAreaId: 'hoch-tal', minDexCaught: 1, minCaughtInPrevious: 0, minCreaturesAtLevel: null, requiredBadgeIds: [] },
       spawns: [{ speciesId: 'wildmon', weight: 100, minLevel: 84, maxLevel: 94 }],
       trainerIds: [],
     },

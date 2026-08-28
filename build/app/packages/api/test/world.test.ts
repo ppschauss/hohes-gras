@@ -25,6 +25,11 @@ function seedCatch(speciesId: string, areaId: string, level = 12) {
        shiny, moves, caught_at, caught_area_id, team_slot)
      VALUES (?, ?, ?, 0, ?, 'hardy', 20,20,20,20,20,20, 70, 100, 30, 0, '["tackle"]', ?, ?, NULL)`,
   ).run(crypto.randomUUID(), trainerId, speciesId, level, Date.now(), areaId)
+  // Ein Fang steht auch im Dex — daran haengen jetzt die Gebietsbedingungen.
+  h.ctx.db.prepare(
+    `INSERT INTO dex_entries (trainer_id, species_id, seen_at, caught_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(trainer_id, species_id) DO UPDATE SET caught_at = COALESCE(dex_entries.caught_at, excluded.caught_at)`,
+  ).run(trainerId, speciesId, Date.now(), Date.now())
 }
 
 describe('Weltkarte', () => {
@@ -48,11 +53,12 @@ describe('Weltkarte', () => {
     const cave = r.body.regions[0].areas[1]
     expect(cave.unlocked).toBe(false)
     const kinds = cave.requirements.map((q: any) => q.kind)
-    expect(kinds).toContain('caught_in_previous')
+    expect(kinds).toContain('dex_caught')
     expect(kinds).toContain('creatures_at_level')
     expect(kinds).toContain('badges')
-    const caught = cave.requirements.find((q: any) => q.kind === 'caught_in_previous')
-    expect(caught).toMatchObject({ met: false, have: 0, need: 2 })
+    const caught = cave.requirements.find((q: any) => q.kind === 'dex_caught')
+    // Der Starter zaehlt bereits als Dex-Eintrag.
+    expect(caught).toMatchObject({ met: false, have: 1, need: 2 })
   })
 
   it('schaltet frei, sobald alle Bedingungen erfuellt sind', async () => {
@@ -327,5 +333,50 @@ describe('Was der Laden nicht führt', () => {
         expect(item.price).toBeGreaterThan(0)
       }
     }
+  })
+})
+
+describe('Regionswechsel', () => {
+  const clearTestland = () => {
+    h.ctx.db.prepare(
+      'INSERT OR IGNORE INTO trainer_badges (trainer_id, badge_id, earned_at) VALUES (?, ?, ?)',
+    ).run(trainerId, 'test-badge', Date.now())
+    for (const id of ['elite-eins', 'elite-zwei', 'test-champ']) {
+      h.ctx.db.prepare(
+        `INSERT OR REPLACE INTO trainer_defeats
+           (trainer_id, opponent_id, wins, first_win_at, last_win_at) VALUES (?, ?, 1, ?, ?)`,
+      ).run(trainerId, id, Date.now(), Date.now())
+    }
+  }
+
+  it('sperrt die zweite Region, solange die erste offen ist', async () => {
+    const r = await h.get('/api/world', token)
+    const tal = r.body.regions.flatMap((x: any) => x.areas).find((a: any) => a.id === 'hoch-tal')
+    expect(tal.unlocked).toBe(false)
+    const gate = tal.requirements.find((q: any) => q.kind === 'region_cleared')
+    expect(gate).toMatchObject({ met: false, label: 'Testland' })
+
+    h.resetRateLimits()
+    const travel = await h.post('/api/world/travel', { areaId: 'hoch-tal' }, token)
+    expect(travel.status).toBe(409)
+    expect(travel.body.detail.reason).toBe('area_locked')
+  })
+
+  it('oeffnet sie, sobald Orden, Top Vier und Meister stehen', async () => {
+    clearTestland()
+    h.resetRateLimits()
+    const r = await h.get('/api/world', token)
+    const tal = r.body.regions.flatMap((x: any) => x.areas).find((a: any) => a.id === 'hoch-tal')
+    expect(tal.unlocked).toBe(true)
+
+    h.resetRateLimits()
+    expect((await h.post('/api/world/travel', { areaId: 'hoch-tal' }, token)).status).toBe(200)
+  })
+
+  it('laesst die eigene Region jederzeit offen', async () => {
+    // Die Sperre gilt dem Wechsel, nicht der Rueckkehr.
+    const r = await h.get('/api/world', token)
+    const route = r.body.regions[0].areas[0]
+    expect(route.requirements.some((q: any) => q.kind === 'region_cleared')).toBe(false)
   })
 })

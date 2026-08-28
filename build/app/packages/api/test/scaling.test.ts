@@ -208,6 +208,17 @@ describe('Regionen nebeneinander', () => {
   })
 
   it('schreibt das Niveau beim ersten Betreten fest', async () => {
+    // Eine neue Region betritt nur, wer seine aktuelle bezwungen hat.
+    h.ctx.db.prepare(
+      'INSERT OR IGNORE INTO trainer_badges (trainer_id, badge_id, earned_at) VALUES (?, ?, ?)',
+    ).run(trainerId, 'test-badge', Date.now())
+    for (const id of ['elite-eins', 'elite-zwei', 'test-champ']) {
+      h.ctx.db.prepare(
+        `INSERT OR REPLACE INTO trainer_defeats
+           (trainer_id, opponent_id, wins, first_win_at, last_win_at) VALUES (?, ?, 1, ?, ?)`,
+      ).run(trainerId, id, Date.now(), Date.now())
+    }
+
     setTeamLevel(20)
     h.resetRateLimits()
     expect((await h.post('/api/world/travel', { areaId: 'hoch-tal' }, token)).status).toBe(200)

@@ -142,7 +142,16 @@ export const AreaDefSchema = z.object({
   /** What the trainer must have done elsewhere before this area opens. */
   unlock: z.object({
     previousAreaId: Id.nullable(),
-    minCaughtInPrevious: z.number().int().min(0).default(0),
+    /**
+   * Wie viele Arten insgesamt im Pokédex stehen müssen.
+   *
+   * Löst `minCaughtInPrevious` ab. Fänge im Vorgängergebiet zu verlangen hieß:
+   * wer auf Route 1 ein Taubsi gefangen hat, muss auf Route 2 noch eins
+   * fangen — dieselbe Art, nur woanders. Der Pokédex zählt, was man
+   * tatsächlich erreicht hat, und zählt es einmal.
+   */
+  minDexCaught: z.number().int().min(0).default(0),
+  minCaughtInPrevious: z.number().int().min(0).default(0),
     minCreaturesAtLevel: z.object({ count: z.number().int().min(0), level: z.number().int().min(1) }).nullable(),
     requiredBadgeIds: z.array(Id).default([]),
   }),

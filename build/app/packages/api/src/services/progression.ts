@@ -152,6 +152,7 @@ export function bonuses(ctx: AppContext, trainerId: string) {
     energyRegenBonus: bonusOf(owned, 'energyRegenBonus'),
     energyCapBonus: bonusOf(owned, 'energyCapBonus'),
     careLimitBonus: bonusOf(owned, 'careLimitBonus'),
+    centerSpeedBonus: bonusOf(owned, 'centerSpeedBonus'),
   }
 }
 

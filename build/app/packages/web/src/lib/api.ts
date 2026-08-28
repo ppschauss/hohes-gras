@@ -360,7 +360,7 @@ export interface BagItem {
 export interface TypeChip { id: string; name: string; color: string }
 
 export interface UnlockRequirement {
-  kind: 'previous_area' | 'caught_in_previous' | 'creatures_at_level' | 'badges'
+  kind: 'previous_area' | 'dex_caught' | 'creatures_at_level' | 'badges' | 'region_cleared'
   met: boolean
   label: string
   have: number

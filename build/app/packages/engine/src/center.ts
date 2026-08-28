@@ -12,7 +12,25 @@ import { clamp } from './stats.js'
  * kommt, ist kein Fund mehr, sondern eine Auszahlung.
  */
 
-export const CENTER_COOLDOWN_MS = 15 * 60_000
+/**
+ * Abklingzeit des Poké-Centers.
+ *
+ * Zehn Minuten statt fünfzehn, und mit der Schwesternstation weiter herunter:
+ * das Center heilt, und Heilen ist Voraussetzung fürs Spielen, keine
+ * Belohnung. Wer wartet, spielt nicht.
+ */
+export const CENTER_COOLDOWN_MS = 10 * 60_000
+
+/** Wie viel Sekunden je Stufe der Schwesternstation abgehen. */
+export const CENTER_COOLDOWN_STEP_MS = 90_000
+/** Kürzer als drei Minuten wird es nicht: sonst ist die Abklingzeit weg statt
+ *  kurz, und mit ihr der Grund, überhaupt Tränke zu kaufen. */
+export const CENTER_COOLDOWN_FLOOR_MS = 3 * 60_000
+
+export function centerCooldown(bonusSteps = 0): number {
+  const steps = Math.max(0, Math.floor(bonusSteps))
+  return Math.max(CENTER_COOLDOWN_FLOOR_MS, CENTER_COOLDOWN_MS - steps * CENTER_COOLDOWN_STEP_MS)
+}
 
 export type CenterEventKind = 'none' | 'gold' | 'gift' | 'trade'
 
@@ -89,5 +107,7 @@ export function tradeLevel(givenLevel: number, rng: Rng): number {
   return clamp(givenLevel + rng.int(0, 2), 1, 100)
 }
 
-export const centerReadyAt = (lastUsedAt: number): number => lastUsedAt + CENTER_COOLDOWN_MS
-export const centerReady = (lastUsedAt: number, now: number): boolean => now >= centerReadyAt(lastUsedAt)
+export const centerReadyAt = (lastUsedAt: number, bonusSteps = 0): number =>
+  lastUsedAt + centerCooldown(bonusSteps)
+export const centerReady = (lastUsedAt: number, now: number, bonusSteps = 0): boolean =>
+  now >= centerReadyAt(lastUsedAt, bonusSteps)

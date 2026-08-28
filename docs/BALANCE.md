@@ -49,6 +49,7 @@ nicht".
 | Mindestabstand zwischen Klicks | 180 ms |
 | Rhythmus: Standardabweichung der letzten 12 Abstände | < 15 ms → 30 s Pause |
 | Pflegestation (Ausbau) | +50 Aktionen je Stufe, bis 350 auf Stufe 5 |
+| Poké-Center | 10 Minuten, mit der Schwesternstation bis auf 4 (Untergrenze 3) |
 
 Die Pflegestation hebt **nur die Menge**. Mindestabstand und Rhythmusprüfung
 bleiben unangetastet — sonst wäre der Ausbau ein käuflicher Freibrief für
@@ -192,6 +193,34 @@ steht im Entwurf zwei Level unter der Obergrenze seiner Route, ein Arenaleiter
 darüber. Diese Abstände sind die Aussage des Entwurfs.
 
 Abschaltbar auf der Weltkarte.
+
+## Gebiete freischalten
+
+Verlangt wird, was im **Pokédex** steht, nicht was im Vorgängergebiet gefangen
+wurde. Vorher musste man auf Route 2 noch einmal ein Taubsi fangen, obwohl auf
+Route 1 schon eines im Beutel war — dieselbe Art, nur woanders.
+
+Die Schwellen sind eine Formel, keine 38 Handzahlen: Sockel je Region plus ein
+Schritt je Gebiet.
+
+| Region | Gebiet 2 | Schritt | letztes Gebiet |
+|---|---|---|---|
+| Kanto | 0 | +7 | 91 |
+| Johto | 80 | +6 | 128 |
+| Hoenn | 150 | +6 | 216 |
+
+Das **erste** Gebiet einer Region verlangt nichts: dort steht schon die
+Regionssperre.
+
+## Regionssperre
+
+Eine neue Region betritt nur, wer seine aktuelle bezwungen hat — alle Orden,
+Top Vier und Meister. Die Startregion bleibt frei wählbar; gesperrt ist der
+*Wechsel*, nicht der Anfang. Eine Region, die man schon betreten hat, bleibt
+offen, damit niemand ausgesperrt wird, der zurückreisen will.
+
+Ohne diese Sperre wären die Regionen ein Buffet: man pickt sich aus jeder die
+leichten Gebiete und lässt die Ligen liegen.
 
 ## Reisegrenze
 

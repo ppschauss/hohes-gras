@@ -20,6 +20,7 @@ export interface BuildingSpec {
     | 'energyRegenBonus'   // Prozent schnellere Energieerholung
     | 'energyCapBonus'     // hoehere Obergrenze der Trainer-Energie
     | 'careLimitBonus'     // zusaetzliche Pflegeaktionen je Viertelstunde
+    | 'centerSpeedBonus'   // Stufen, um die die Abklingzeit des Centers sinkt
 }
 
 export const BUILDINGS: BuildingSpec[] = [
@@ -63,6 +64,18 @@ export const BUILDINGS: BuildingSpec[] = [
     id: 'care-station', maxLevel: 5, effectKind: 'careLimitBonus',
     cost: (level) => 2000 * level ** 2,
     effect: (level) => level * 50,
+  },
+  {
+    /*
+     * Schwesternstation: kuerzere Abklingzeit im Poke-Center.
+     *
+     * Bewusst der billigste Ausbau im Spiel. Das Center heilt, und Heilen ist
+     * Voraussetzung fuers Spielen, keine Belohnung — wer darauf wartet, spielt
+     * nicht. Vier Stufen zu je 90 Sekunden fuehren von zehn auf vier Minuten.
+     */
+    id: 'nurse-station', maxLevel: 4, effectKind: 'centerSpeedBonus',
+    cost: (level) => 600 * level ** 2,
+    effect: (level) => level,
   },
   {
     id: 'greenhouse', maxLevel: 3, effectKind: 'energyCapBonus',

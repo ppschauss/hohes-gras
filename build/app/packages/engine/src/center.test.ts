@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createRng } from './rng.js'
 import {
-  CENTER_COOLDOWN_MS, CENTER_EVENT_CHANCES, GIFT_MAX, TRADE_MIN_CATCH_RATE,
+  CENTER_COOLDOWN_MS, centerCooldown, CENTER_EVENT_CHANCES, GIFT_MAX, TRADE_MIN_CATCH_RATE,
   centerReady, centerReadyAt, foundGold, giftQuantity, giftWeight, itemValue,
   rollCenterEvent, tradeLevel,
 } from './center.js'
@@ -98,8 +98,18 @@ describe('foundGold', () => {
 })
 
 describe('Abklingzeit', () => {
-  it('betraegt 15 Minuten', () => {
-    expect(CENTER_COOLDOWN_MS).toBe(15 * 60_000)
+  it('betraegt zehn Minuten', () => {
+    expect(CENTER_COOLDOWN_MS).toBe(10 * 60_000)
+  })
+
+  it('sinkt mit der Schwesternstation, aber nie unter drei Minuten', () => {
+    // Heilen ist Voraussetzung fuers Spielen, keine Belohnung — wer wartet,
+    // spielt nicht. Ganz verschwinden darf die Wartezeit trotzdem nicht,
+    // sonst kauft niemand mehr einen Trank.
+    expect(centerCooldown(0)).toBe(10 * 60_000)
+    expect(centerCooldown(1)).toBe(8.5 * 60_000)
+    expect(centerCooldown(4)).toBe(4 * 60_000)
+    expect(centerCooldown(99)).toBe(3 * 60_000)
   })
   it('gibt erst nach Ablauf wieder frei', () => {
     const used = 1_000_000

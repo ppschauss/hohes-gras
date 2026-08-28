@@ -3,14 +3,16 @@ import type { AreaDef } from '@game/content'
 import { areaBand, availableSpawns } from '@game/engine'
 import type { AppContext } from '../context.js'
 import * as world from '../repos/world.js'
+import * as dex from '../repos/dex.js'
+import * as regionEntries from '../repos/regions.js'
 import * as creatures from '../repos/creatures.js'
 import { worldClock } from '../worldClock.js'
 import { areaOffset, recordRegionEntry, referenceOf } from './scaling.js'
-import { progressOf } from './league.js'
+import { clearedRegions, progressOf } from './league.js'
 import * as travelService from './travel.js'
 
 export interface UnlockRequirement {
-  kind: 'previous_area' | 'caught_in_previous' | 'creatures_at_level' | 'badges'
+  kind: 'previous_area' | 'dex_caught' | 'creatures_at_level' | 'badges' | 'region_cleared'
   met: boolean
   label: string
   have: number
@@ -45,6 +47,39 @@ export interface AreaView {
 }
 
 /**
+ * Die Sperre zwischen zwei Regionen.
+ *
+ * Eine neue Region betritt nur, wer seine aktuelle bezwungen hat — alle Orden
+ * plus Top Vier und Meister. Ohne das waeren die Regionen ein Buffet: man
+ * pickt sich aus jeder die leichten Gebiete und laesst die Ligen liegen.
+ *
+ * Die Startregion bleibt frei waehlbar; gesperrt ist nur der *Wechsel*. Und
+ * eine Region, die man schon betreten hat, bleibt offen — sonst spuerre man
+ * jemanden aus, der zurueckreisen will.
+ */
+export function regionGateFor(
+  ctx: AppContext, trainer: Trainer, area: AreaDef,
+): UnlockRequirement | null {
+  const entered = regionEntries.entriesOf(ctx.db, trainer.id)
+  if (entered.has(area.regionId)) return null
+  // Wer noch gar nichts betreten hat, waehlt gerade seine Startregion.
+  if (entered.size === 0) return null
+
+  const cleared = clearedRegions(ctx, trainer)
+  const open = [...entered.keys()].filter((id) => !cleared.has(id))
+  if (open.length === 0) return null
+
+  const name = ctx.registry.allRegions.find((r) => r.id === open[0])
+  return {
+    kind: 'region_cleared',
+    met: false,
+    label: name ? ctx.registry.localized(name.name, trainer.locale) : open[0]!,
+    have: cleared.size,
+    need: entered.size,
+  }
+}
+
+/**
  * Decide whether an area is open.
  *
  * Every condition is returned with its current and required value, not just a
@@ -58,24 +93,31 @@ export function evaluateArea(
   caughtPerArea: Map<string, number>,
   badges: Set<string>,
   levelCounts: number[],
+  dexCaught = 0,
+  regionGate: UnlockRequirement | null = null,
 ): UnlockRequirement[] {
   const reqs: UnlockRequirement[] = []
   const unlock = area.unlock
 
-  if (unlock.previousAreaId) {
-    const prev = ctx.registry.tryArea(unlock.previousAreaId)
-    const caughtThere = caughtPerArea.get(unlock.previousAreaId) ?? 0
-    const need = unlock.minCaughtInPrevious
-    if (need > 0) {
-      reqs.push({
-        kind: 'caught_in_previous',
-        met: caughtThere >= need,
-        label: prev ? ctx.registry.localized(prev.name, trainer.locale) : unlock.previousAreaId,
-        have: caughtThere,
-        need,
-      })
-    }
+  /*
+   * Der Pokédex, nicht die Fänge im Vorgängergebiet.
+   *
+   * Vorher musste man auf Route 2 noch einmal ein Taubsi fangen, obwohl auf
+   * Route 1 schon eines gefangen war — dieselbe Art, nur woanders. Der Dex
+   * zählt, was man erreicht hat, und zählt es einmal.
+   */
+  if (unlock.minDexCaught > 0) {
+    reqs.push({
+      kind: 'dex_caught',
+      met: dexCaught >= unlock.minDexCaught,
+      label: '',
+      have: dexCaught,
+      need: unlock.minDexCaught,
+    })
   }
+
+  // Eine neue Region betritt nur, wer seine aktuelle bezwungen hat.
+  if (regionGate) reqs.push(regionGate)
 
   if (unlock.minCreaturesAtLevel) {
     const { count, level } = unlock.minCreaturesAtLevel
@@ -116,13 +158,17 @@ export function worldMap(ctx: AppContext, trainer: Trainer): {
     .prepare('SELECT level FROM creatures WHERE owner_id = ?')
     .all(trainer.id)
     .map((r) => (r as { level: number }).level)
+  const dexCaught = dex.dexCounts(ctx.db, trainer.id).caught
 
   const reference = referenceOf(ctx, trainer)
   const areasByRegion = new Map<string, AreaView[]>()
   for (const area of ctx.registry.allAreas) {
     const offset = areaOffset(ctx, trainer, area, reference)
     const band = areaBand(area)
-    const reqs = evaluateArea(ctx, trainer, area, caughtPerArea, badges, levelCounts)
+    const reqs = evaluateArea(
+      ctx, trainer, area, caughtPerArea, badges, levelCounts,
+      dexCaught, regionGateFor(ctx, trainer, area),
+    )
     const prog = progress.get(area.id)
     const view: AreaView = {
       id: area.id,
@@ -178,6 +224,8 @@ export function travelTo(ctx: AppContext, trainer: Trainer, areaId: string): voi
     world.badgesOf(ctx.db, trainer.id),
     ctx.db.prepare('SELECT level FROM creatures WHERE owner_id = ?').all(trainer.id)
       .map((r) => (r as { level: number }).level),
+    dex.dexCounts(ctx.db, trainer.id).caught,
+    regionGateFor(ctx, trainer, area),
   )
   const unmet = reqs.filter((r) => !r.met)
   if (unmet.length > 0) {

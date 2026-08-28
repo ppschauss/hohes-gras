@@ -15,7 +15,7 @@ beforeEach(async () => {
 afterEach(async () => { await h.close() })
 
 const starter = async () => (await h.get('/api/garden', token)).body.team[0]
-/** Abklingzeit zurueckdrehen, statt 15 Minuten zu warten. */
+/** Abklingzeit zurueckdrehen, statt 10 Minuten zu warten. */
 const resetCooldown = () =>
   h.ctx.db.prepare('UPDATE trainers SET center_used_at = 0 WHERE id = ?').run(trainerId)
 const hurt = (id: string, hp: number) =>
@@ -49,7 +49,7 @@ describe('Poké-Center', () => {
     const r = await h.get('/api/center', token)
     expect(r.status).toBe(200)
     expect(r.body.ready).toBe(true)
-    expect(r.body.cooldownMs).toBe(15 * 60_000)
+    expect(r.body.cooldownMs).toBe(10 * 60_000)
     expect(r.body.teamSize).toBe(1)
     expect(r.body.offer).toBeNull()
   })
@@ -75,7 +75,7 @@ describe('Poké-Center', () => {
     expect((await h.get('/api/energy', token)).body.state.current).toBe(before)
   })
 
-  it('sperrt fuer 15 Minuten und nennt den Zeitpunkt der Freigabe', async () => {
+  it('sperrt fuer 10 Minuten und nennt den Zeitpunkt der Freigabe', async () => {
     const first = await h.post('/api/center/visit', {}, token)
     expect(first.status).toBe(200)
     expect(first.body.state.ready).toBe(false)
@@ -88,7 +88,7 @@ describe('Poké-Center', () => {
 
     // Kurz vor Ablauf immer noch gesperrt, danach frei.
     h.ctx.db.prepare('UPDATE trainers SET center_used_at = ? WHERE id = ?')
-      .run(Date.now() - 15 * 60_000 + 5_000, trainerId)
+      .run(Date.now() - 10 * 60_000 + 5_000, trainerId)
     h.resetRateLimits()
     expect((await h.post('/api/center/visit', {}, token)).status).toBe(409)
 
