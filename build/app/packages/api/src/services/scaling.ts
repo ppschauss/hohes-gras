@@ -1,11 +1,12 @@
 import type { Trainer } from '@game/shared'
 import type { AreaDef } from '@game/content'
 import {
-  areaBand, referenceLevel, regionOffset, shiftBand, shiftLevel,
+  areaBand, areaOffset as offsetOf, referenceLevel, shiftBand, shiftLevel,
   type LevelBand,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
 import * as creatures from '../repos/creatures.js'
+import * as regions from '../repos/regions.js'
 import { capOf } from './travel.js'
 
 /**
@@ -20,17 +21,39 @@ export function referenceOf(ctx: AppContext, trainer: Trainer): number {
 }
 
 /**
- * Levelversatz eines Gebiets — bestimmt am Eingang seiner Region.
+ * Levelversatz eines Gebiets: seine Region nach unten, es selbst nach oben.
  *
- * Nicht am Gebiet selbst: sonst wäre jede Region nur über ihren eigenen
- * Einstieg betretbar und die freie Startwahl eine Lüge. So wandert die ganze
- * Region auf das Niveau dessen, der sie betritt, und behält dabei ihre innere
- * Steigung.
+ * Der Eingang der Region entscheidet über den Teil nach unten — sonst wäre
+ * jede Region nur über ihren eigenen Einstieg betretbar und die freie
+ * Startwahl eine Lüge. Nach oben zählt dagegen nur das Gebiet selbst, sonst
+ * liefe einem die eigene Liga davon.
  */
 export function areaOffset(ctx: AppContext, trainer: Trainer, area: AreaDef, reference?: number): number {
   if (!trainer.levelScaling) return 0
   const ref = reference ?? referenceOf(ctx, trainer)
-  return regionOffset(anchorOf(ctx, area.regionId), ref, capOf(ctx, trainer))
+  return offsetOf(
+    anchorOf(ctx, area.regionId), areaBand(area),
+    ref, capOf(ctx, trainer), entryReferenceOf(ctx, trainer, area.regionId, ref),
+  )
+}
+
+/**
+ * Das Niveau, auf dem die Region einen empfangen hat.
+ *
+ * Für eine noch nicht betretene Region gibt es keinen Eintrag — dann gilt das
+ * heutige Niveau. Auf der Weltkarte ist das genau die richtige Vorschau: *so
+ * würde diese Region dich empfangen*. Sobald man wirklich hineingeht, wird die
+ * Zahl festgeschrieben und ändert sich nie wieder.
+ */
+export function entryReferenceOf(
+  ctx: AppContext, trainer: Trainer, regionId: string, reference: number,
+): number {
+  return regions.entryReference(ctx.db, trainer.id, regionId) ?? reference
+}
+
+/** Beim ersten Betreten einer Region ihr Niveau festhalten. */
+export function recordRegionEntry(ctx: AppContext, trainer: Trainer, regionId: string): void {
+  regions.recordEntry(ctx.db, trainer.id, regionId, referenceOf(ctx, trainer))
 }
 
 /** Das Levelband des ersten Gebiets einer Region. */

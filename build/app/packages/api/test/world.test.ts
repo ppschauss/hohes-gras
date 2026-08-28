@@ -31,7 +31,7 @@ describe('Weltkarte', () => {
   it('zeigt Regionen und Gebiete in Reihenfolge', async () => {
     const r = await h.get('/api/world', token)
     expect(r.status).toBe(200)
-    expect(r.body.regions).toHaveLength(1)
+    expect(r.body.regions).toHaveLength(2)
     const areas = r.body.regions[0].areas
     expect(areas.map((a: any) => a.id)).toEqual(['test-route', 'test-cave'])
   })

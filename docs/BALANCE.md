@@ -101,15 +101,27 @@ das stärkste Mitglied: ein Team aus 5/5/5/5/90 hat den Durchschnitt 22, eine
 Zahl, die auf kein einziges davon zutrifft. So macht ein getauschtes
 Level-90-Pokémon nicht die ganze Welt unspielbar.
 
-Der Versatz wird **am Eingang der Region** bestimmt, nicht am einzelnen Gebiet.
-Sonst wäre jede Region nur über ihren eigenen Einstieg betretbar und die freie
-Startwahl eine Lüge. So wandert die ganze Region auf das Niveau dessen, der sie
-betritt, und behält dabei ihre innere Steigung: der Silberberg bleibt härter als
-Route 29, egal wann man kommt.
+Der Versatz hat **zwei Teile**, und sie beantworten verschiedene Fragen:
 
-Und deshalb geht es hier — anders als früher — **auch nach unten**: Johto
-beginnt im Entwurf bei Level 58; wer dort mit Level 5 anfängt, findet Level 5
-vor. Das schwächste Gebiet fällt nie unter Level 2.
+| Teil | Frage | Bezug | Richtung |
+|---|---|---|---|
+| Region senken | Darf ein Anfänger in Johto anfangen? | Eingang der Region, **beim ersten Betreten** | nur nach unten |
+| Gebiet heben | Lohnt es sich, Route 1 ewig abzugrasen? | das Gebiet selbst, **heute** | nur nach oben |
+
+Die Trennung ist teuer bezahlt. Ein einziger Versatz, der auch nach oben geht
+und aus dem heutigen Teamlevel folgt, zieht die ganze Region mit: der Spieler
+steigt von 5 auf 40, und das Indigo-Plateau steigt von 64 auf 98 mit. Die
+eigene Liga wäre nie erreichbar. Deshalb wird der Teil nach unten **einmal**
+festgeschrieben — beim ersten Schritt in die Region — und danach nie wieder
+angefasst (`region_entries`). Nach oben bewegt sich jedes Gebiet für sich, und
+ein Gebiet, das ohnehin über dem Spieler liegt, bewegt sich gar nicht.
+
+Die Regel in einem Satz: **eine Region empfängt dich auf deinem Niveau und
+wächst dann nicht mehr mit dir — du wächst in sie hinein.**
+
+Johto beginnt im Entwurf bei Level 58; wer dort mit Level 5 anfängt, findet
+Route 29 auf 2–8 und den Silberberg auf 28–38 vor. Das schwächste Gebiet fällt
+nie unter Level 2.
 
 Trainer erben den Versatz **ihres Gebiets**, nicht ihren eigenen: der Rivale
 steht im Entwurf zwei Level unter der Obergrenze seiner Route, ein Arenaleiter

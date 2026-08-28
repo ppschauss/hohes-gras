@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AreaDef } from '@game/content'
 import {
-  LEVEL_CAP, areaBand, bandOffset, referenceLevel, regionOffset, shiftBand, shiftLevel,
+  LEVEL_CAP, areaBand, areaOffset, bandOffset, referenceLevel, regionShift, shiftBand, shiftLevel,
 } from './scaling.js'
 import { ABSOLUTE_MAX_LEVEL } from './leveling.js'
 
@@ -74,35 +74,85 @@ describe('bandOffset', () => {
   })
 })
 
-describe('regionOffset', () => {
+describe('regionShift', () => {
   const kanto = { min: 2, max: 6 }
   const johto = { min: 58, max: 64 }
 
-  it('hebt eine Region auf das Niveau ihres Besuchers', () => {
-    expect(regionOffset(kanto, 95)).toBe(89)
-  })
-
-  it('senkt sie auch — das ist der ganze Punkt', () => {
+  it('senkt eine Region auf das Niveau ihres Besuchers', () => {
     // Ohne diese Richtung waere eine frei waehlbare Startregion eine Luege:
     // Johto beginnt bei Level 58, ein Anfaenger hat Level 5.
-    expect(regionOffset(johto, 5)).toBe(-56)
+    expect(regionShift(johto, 5)).toBe(-56)
+  })
+
+  it('hebt nie an', () => {
+    // Der teuer bezahlte Punkt: ginge der Regionsversatz auch nach oben,
+    // stiege mit einem Spieler von 5 auf 40 das Indigo-Plateau von 64 auf 98
+    // mit — die eigene Liga waere nie erreichbar.
+    expect(regionShift(kanto, 40)).toBe(0)
+    expect(regionShift(johto, 400)).toBe(0)
   })
 
   it('laesst das schwaechste Gebiet nie unter Level 2 fallen', () => {
-    const offset = regionOffset(johto, 1)
-    expect(johto.min + offset).toBeGreaterThanOrEqual(2)
+    expect(johto.min + regionShift(johto, 1)).toBeGreaterThanOrEqual(2)
   })
 
   it('haelt die innere Steigung der Region', () => {
     // Der Silberberg bleibt haerter als Route 29, egal wann man kommt.
-    const offset = regionOffset(johto, 20)
+    const offset = regionShift(johto, 20)
     const start = { min: 58 + offset, max: 64 + offset }
     const end = { min: 84 + offset, max: 94 + offset }
     expect(end.min).toBeGreaterThan(start.max)
   })
+})
 
-  it('respektiert die uebergebene Reisegrenze', () => {
-    expect(johto.max + regionOffset(johto, 400, 150)).toBeLessThanOrEqual(150)
+describe('areaOffset', () => {
+  const kanto = { min: 2, max: 6 }
+  const route1 = { min: 2, max: 6 }
+  const indigo = { min: 58, max: 64 }
+  const johto = { min: 58, max: 64 }
+  const silver = { min: 84, max: 94 }
+
+  it('laesst die eigene Liga in Reichweite, waehrend man waechst', () => {
+    // Der Fehlerfall, der diese Aufteilung erzwungen hat.
+    for (const ref of [5, 20, 30, 40, 50]) {
+      expect(indigo.max + areaOffset(kanto, indigo, ref, 50)).toBe(64)
+    }
+  })
+
+  it('hebt trotzdem das Gebiet, das man ueberwachsen hat', () => {
+    expect(areaOffset(kanto, route1, 40, 50)).toBe(34)
+  })
+
+  it('empfaengt einen Anfaenger in Johto auf seinem Niveau', () => {
+    expect(johto.max + areaOffset(johto, johto, 5, 50)).toBe(8)
+    // und der Silberberg bleibt auch dort das Ziel, nicht der Einstieg.
+    expect(silver.max + areaOffset(johto, silver, 5, 50)).toBe(38)
+  })
+
+  it('haelt sich an die Reisegrenze', () => {
+    expect(route1.max + areaOffset(kanto, route1, 400, 50)).toBe(50)
+  })
+
+  it('senkt und hebt im selben Gebiet, wenn beides zutrifft', () => {
+    // Anfaenger, der Johto auf Level 5 betreten hat und jetzt 20 ist: die
+    // Region steht auf 2–8, er darueber — also hebt sich sein Einstiegsgebiet
+    // auf 20 mit.
+    expect(johto.max + areaOffset(johto, johto, 20, 50, 5)).toBe(20)
+    // Der Silberberg zieht dabei nicht mit: dahin waechst man hinein.
+    expect(silver.max + areaOffset(johto, silver, 20, 50, 5)).toBe(38)
+  })
+
+  it('friert den Regionsversatz auf das Niveau beim Betreten ein', () => {
+    // Der zweite Anlauf desselben Fehlers: rechnet man den Versatz jedes Mal
+    // neu, waechst die ganze Region mit — in Johto gestartet, waere der
+    // Silberberg mit Level 5 auf 38, mit Level 20 auf 50 und mit Level 40 auf
+    // 70. Man holt ihn nie ein.
+    // Eingefroren heisst: der Berg bleibt stehen, bis man ihn ueberholt hat —
+    // und laeuft danach nur mit, statt davon.
+    expect(silver.max + areaOffset(johto, silver, 5, 50, 5)).toBe(38)
+    expect(silver.max + areaOffset(johto, silver, 20, 50, 5)).toBe(38)
+    expect(silver.max + areaOffset(johto, silver, 38, 50, 5)).toBe(38)
+    expect(silver.max + areaOffset(johto, silver, 45, 50, 5)).toBe(45)
   })
 })
 

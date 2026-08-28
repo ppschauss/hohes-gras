@@ -8,6 +8,7 @@ import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import * as creatures from '../repos/creatures.js'
 import * as inventory from '../repos/inventory.js'
+import * as regionEntries from '../repos/regions.js'
 import * as dex from '../repos/dex.js'
 import { bumpCounter, counterValue } from '../repos/counters.js'
 import * as energy from './energy.js'
@@ -297,6 +298,9 @@ export function chooseStarter(
     // Startgebiet setzen: die gewaehlte Region ist der Ort, an dem alles
     // beginnt.
     ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run(start.areaId, trainer.id)
+    // Die Startregion empfaengt einen auf Starterniveau — festgeschrieben,
+    // bevor das erste Level dazukommt.
+    regionEntries.recordEntry(ctx.db, trainer.id, start.regionId, STARTER_LEVEL)
 
     for (const kit of STARTER_KIT) inventory.grant(ctx.db, trainer.id, kit.itemId, kit.quantity)
     dex.markCaught(ctx.db, trainer.id, speciesId)

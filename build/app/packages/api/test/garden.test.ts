@@ -60,7 +60,7 @@ describe('Starter', () => {
 
   it('bietet nur Regionen an, deren erstes Gebiet ohne Vorbedingung offensteht', async () => {
     const r = await h.get('/api/starter', token)
-    expect(r.body.regions).toHaveLength(1)
+    expect(r.body.regions.map((x: any) => x.regionId)).toEqual(['testland', 'hochland'])
     expect(r.body.regions[0]).toMatchObject({
       regionId: 'testland', areaId: 'test-route', areaCount: 2,
     })

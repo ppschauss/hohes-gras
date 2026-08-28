@@ -167,3 +167,73 @@ describe('Dynamische Levelskalierung', () => {
     expect(after.body.regions[0].areas[0].levels.max).toBe(100)
   })
 })
+
+describe('Regionen nebeneinander', () => {
+  const areaOf = async (id: string) => {
+    const w = await h.get('/api/world', token)
+    return w.body.regions.flatMap((r: any) => r.areas).find((a: any) => a.id === id)
+  }
+
+  it('empfaengt einen Anfaenger im Hochland auf seinem Niveau', async () => {
+    // Entworfen ist das Hochtal mit 58–64. Ohne Senkung waere es fuer einen
+    // Starter auf Level 5 keine Region, sondern eine Wand.
+    const tal = await areaOf('hoch-tal')
+    expect(tal.levels).toEqual({ min: 2, max: 8 })
+    expect(tal.levelBoost).toBe(-56)
+  })
+
+  it('haelt den Gipfel dabei ueber dem Tal', async () => {
+    const [tal, gipfel] = [await areaOf('hoch-tal'), await areaOf('hoch-gipfel')]
+    expect(gipfel.levels.min).toBeGreaterThan(tal.levels.max)
+    // 84–94, um 56 gesenkt.
+    expect(gipfel.levels).toEqual({ min: 28, max: 38 })
+  })
+
+  it('laesst die Region nicht mitwachsen, wenn der Spieler waechst', async () => {
+    // Der Fehler, den dieser Test verhindert: rechnet man den Regionsversatz
+    // aus dem heutigen Teamlevel statt aus dem beim Betreten, steigt der Gipfel
+    // mit — von 38 auf 50 auf 70 — und ist nie erreichbar.
+    h.ctx.db.prepare(
+      'INSERT OR IGNORE INTO region_entries (trainer_id, region_id, reference_level, entered_at) VALUES (?, ?, ?, ?)',
+    ).run(trainerId, 'hochland', 5, Date.now())
+
+    for (const level of [5, 20, 30]) {
+      setTeamLevel(level)
+      expect((await areaOf('hoch-gipfel')).levels.max).toBe(38)
+    }
+    // Erst wer den Gipfel ueberholt hat, zieht ihn mit — das ist der Teil nach
+    // oben, und der gilt je Gebiet.
+    setTeamLevel(45)
+    expect((await areaOf('hoch-gipfel')).levels.max).toBe(45)
+  })
+
+  it('schreibt das Niveau beim ersten Betreten fest', async () => {
+    setTeamLevel(20)
+    h.resetRateLimits()
+    expect((await h.post('/api/world/travel', { areaId: 'hoch-tal' }, token)).status).toBe(200)
+
+    const entry = h.ctx.db
+      .prepare('SELECT reference_level AS ref FROM region_entries WHERE trainer_id = ? AND region_id = ?')
+      .get(trainerId, 'hochland') as { ref: number }
+    expect(entry.ref).toBe(20)
+
+    // Ein zweiter Besuch mit staerkerem Team aendert nichts mehr.
+    setTeamLevel(40)
+    h.resetRateLimits()
+    await h.post('/api/world/travel', { areaId: 'hoch-tal' }, token)
+    const again = h.ctx.db
+      .prepare('SELECT reference_level AS ref FROM region_entries WHERE trainer_id = ? AND region_id = ?')
+      .get(trainerId, 'hochland') as { ref: number }
+    expect(again.ref).toBe(20)
+  })
+
+  it('laesst die eigene Liga in Reichweite, waehrend man in ihr aufsteigt', async () => {
+    // Dasselbe fuer die Startregion: die Testhoehle ist mit 8–12 entworfen und
+    // darf nicht davonlaufen, waehrend das Team von 5 auf 12 waechst.
+    for (const level of [5, 8, 11]) {
+      setTeamLevel(level)
+      expect((await areaOf('test-cave')).levels.max).toBe(12)
+    }
+  })
+})
+

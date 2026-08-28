@@ -5,7 +5,7 @@ import type { AppContext } from '../context.js'
 import * as world from '../repos/world.js'
 import * as creatures from '../repos/creatures.js'
 import { worldClock } from '../worldClock.js'
-import { areaOffset, referenceOf } from './scaling.js'
+import { areaOffset, recordRegionEntry, referenceOf } from './scaling.js'
 import { progressOf } from './league.js'
 import * as travelService from './travel.js'
 
@@ -186,6 +186,9 @@ export function travelTo(ctx: AppContext, trainer: Trainer, areaId: string): voi
 
   ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run(areaId, trainer.id)
   world.visitArea(ctx.db, trainer.id, areaId)
+  // Vor dem ersten Schritt in eine Region festhalten, auf welchem Niveau sie
+  // einen empfaengt. Danach waechst sie nicht mehr mit.
+  recordRegionEntry(ctx, trainer, area.regionId)
 }
 
 export function requireCurrentArea(ctx: AppContext, trainer: Trainer): AreaDef {

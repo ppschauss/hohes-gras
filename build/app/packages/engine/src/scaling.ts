@@ -9,11 +9,18 @@ import { clamp } from './stats.js'
  * Silberberg mit 84–94. Wer mit einem stärkeren Team hineingeht, hebt das Band
  * mit: die Wildnis und die Trainer dort steigen auf sein Niveau.
  *
+ * Der Versatz hat zwei Teile, die verschiedene Fragen beantworten:
+ *
+ *  - **Die Region nach unten** (`regionShift`): darf ein Anfänger in Johto
+ *    anfangen? Einmal am Eingang der Region bestimmt, auf alle ihre Gebiete
+ *    angewandt, nie nach oben.
+ *  - **Das Gebiet nach oben** (`bandOffset`): lohnt es sich, die erste Route
+ *    ewig abzugrasen? Je Gebiet einzeln, nie nach unten.
+ *
  * Zwei Eigenschaften machen das ungefährlich:
  *
- *  - Es geht nur **nach oben**. Ein Gebiet wird nie leichter, als es entworfen
- *    wurde; wer unterlevelt ankommt, findet genau die Herausforderung vor, für
- *    die es gebaut ist.
+ *  - Ein Gebiet wird nie leichter, als die Region beim Betreten war; und die
+ *    Region wird nie schwerer, als sie entworfen wurde.
  *  - Der Bezugswert ist der **Median** des Teams, nicht das stärkste Mitglied.
  *    Ein einzelnes getauschtes Pokémon auf Level 90 zieht damit nicht die
  *    ganze Welt hoch und macht dem Rest des Teams das Leben unmöglich.
@@ -54,7 +61,7 @@ export function areaBand(area: AreaDef): LevelBand {
 }
 
 /**
- * Um wie viele Level ein Band angehoben wird. 0 heißt: unverändert.
+ * Um wie viele Level ein einzelnes Band angehoben wird. 0 heißt: unverändert.
  *
  * Die Obergrenze des Bandes wandert auf den Bezugswert. Damit bleibt der
  * Abstand erhalten, den der Entwurf vorsieht — Route 1 liegt mit 2–6 knapp
@@ -62,34 +69,52 @@ export function areaBand(area: AreaDef): LevelBand {
  * mit Level 90.
  *
  * Geht nur nach oben: ein einzelnes Gebiet wird nie leichter, als es entworfen
- * wurde. Für ganze Regionen gilt das nicht — siehe `regionOffset`.
+ * wurde. Nach unten bewegt sich nur die Region als Ganzes — siehe
+ * `regionShift`.
  */
-export function bandOffset(band: LevelBand, reference: number): number {
+export function bandOffset(band: LevelBand, reference: number, cap = LEVEL_CAP): number {
   if (reference <= band.max) return 0
-  return Math.min(reference - band.max, LEVEL_CAP - band.max)
+  return Math.max(0, Math.min(reference - band.max, cap - band.max))
 }
 
 /**
- * Der Versatz einer ganzen Region, gemessen an ihrem Eingang.
+ * Wie weit eine ganze Region nach unten rutscht, damit ihr Eingang zu dem
+ * passt, der sie betritt. Nie nach oben.
  *
  * Das ist der Unterschied zwischen "die Regionen sind eine Kette" und "die
- * Regionen sind parallel". Solange jedes Gebiet für sich skaliert und nur nach
- * oben, ist Johto mit seinem Einstieg auf Level 58 für einen Anfänger
+ * Regionen sind parallel". Solange jedes Gebiet nur für sich und nur nach oben
+ * skaliert, ist Johto mit seinem Einstieg auf Level 58 für einen Anfänger
  * verschlossen — und eine frei wählbare Startregion wäre eine Lüge.
  *
- * Deshalb: der Versatz wird **einmal am ersten Gebiet der Region** bestimmt und
- * auf alle ihre Gebiete angewandt, nach oben wie nach unten. Die innere
- * Steigung bleibt dabei unangetastet — die erste Route bleibt die leichteste,
- * der Silberberg der härteste. Nur wandert die ganze Region auf das Niveau
- * dessen, der sie betritt.
+ * **Nur nach unten**, und das ist die entscheidende Einschränkung. Ein Versatz,
+ * der auch nach oben ginge, würde die ganze Region mitziehen, sobald ihr
+ * Besucher wächst: der Spieler steigt von 5 auf 40, und das Indigo-Plateau
+ * steigt von 64 auf 98 mit. Die eigene Liga wäre dann nie erreichbar. Nach oben
+ * bewegt sich deshalb jedes Gebiet einzeln — und ein Gebiet, das schon über dem
+ * Spieler liegt, bewegt sich gar nicht.
  */
-export function regionOffset(anchor: LevelBand, reference: number, cap = LEVEL_CAP): number {
+export function regionShift(anchor: LevelBand, reference: number): number {
   if (reference <= 0) return 0
-  const raw = reference - anchor.max
-  // Nach unten nur so weit, dass das schwächste Gebiet bei Level 2 endet:
+  // Nach unten nur so weit, dass das schwächste Gebiet bei Level 2 anfängt:
   // eine Region voller Level-1-Gegner wäre keine Region mehr.
-  const floor = 2 - anchor.min
-  return clamp(raw, floor, cap - anchor.max)
+  return clamp(Math.min(0, reference - anchor.max), 2 - anchor.min, 0)
+}
+
+/**
+ * Der gesamte Versatz eines Gebiets: Region nach unten, Gebiet nach oben.
+ *
+ * Beide Teile zusammen ergeben die Regel, die man dem Spieler erklären kann:
+ * *eine Region empfängt dich auf deinem Niveau und wächst dann nicht mehr mit
+ * dir — du wächst in sie hinein.*
+ */
+export function areaOffset(
+  anchor: LevelBand, band: LevelBand, reference: number, cap = LEVEL_CAP,
+  /** Niveau beim ersten Betreten der Region. Der Teil nach unten haengt daran
+   *  und nur daran — sonst waechst die Region mit ihrem Besucher mit. */
+  entryReference = reference,
+): number {
+  const down = regionShift(anchor, entryReference)
+  return down + bandOffset(shiftBand(band, down), reference, cap)
 }
 
 export const shiftLevel = (level: number, offset: number): number =>

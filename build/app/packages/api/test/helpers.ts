@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto'
-import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs'
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { FastifyInstance } from 'fastify'
@@ -96,7 +96,13 @@ function writeMinimalPack(dataDir: string): void {
     { id: 'potion', name: { de: 'Trank' }, description: { de: 'Heilt.' }, category: 'medicine', price: 100, sellPrice: 50, icon: '/media/potion.png', params: { heal: 20 } },
     { id: 'bg-classic', name: { de: 'Klassisch' }, description: { de: 'Wiese.' }, category: 'background', price: 0, sellPrice: null, stackable: false, icon: '/media/bg.png' },
   ])
-  put('regions.json', [{ id: 'testland', order: 1, name: { de: 'Testland' }, tagline: { de: 'Test' } }])
+  put('regions.json', [
+    { id: 'testland', order: 1, name: { de: 'Testland' }, tagline: { de: 'Test' } },
+    // Zweite Region, bewusst weit oben entworfen: nur mit ihr laesst sich
+    // pruefen, dass eine Region ihren Besucher empfaengt statt ihn auszusperren
+    // — und dass sie danach nicht mit ihm mitwaechst.
+    { id: 'hochland', order: 2, name: { de: 'Hochland' }, tagline: { de: 'Hoch' } },
+  ])
   put('areas.json', [
     {
       id: 'test-route', regionId: 'testland', order: 1,
@@ -126,6 +132,26 @@ function writeMinimalPack(dataDir: string): void {
       // Der Meister sitzt hier: eine Region gilt erst mit ihm als bezwungen,
       // und ohne bezwungene Region liesse sich die Reisegrenze nicht pruefen.
       gymId: 'test-champ',
+    },
+    {
+      id: 'hoch-tal', regionId: 'hochland', order: 1,
+      name: { de: 'Hochtal' }, description: { de: 'Der Einstieg, weit oben entworfen.' },
+      icon: '/media/h1.png', background: '/media/h1b.png',
+      // Ohne Vorbedingung: das Hochland ist eine eigene Startregion.
+      unlock: { previousAreaId: null, minCaughtInPrevious: 0, minCreaturesAtLevel: null, requiredBadgeIds: [] },
+      spawns: [
+        { speciesId: 'wildmon', weight: 60, minLevel: 58, maxLevel: 64 },
+        { speciesId: 'nachtmon', weight: 40, minLevel: 58, maxLevel: 64 },
+      ],
+      trainerIds: [],
+    },
+    {
+      id: 'hoch-gipfel', regionId: 'hochland', order: 2,
+      name: { de: 'Hochgipfel' }, description: { de: 'Das Ende derselben Region.' },
+      icon: '/media/h2.png', background: '/media/h2b.png',
+      unlock: { previousAreaId: 'hoch-tal', minCaughtInPrevious: 1, minCreaturesAtLevel: null, requiredBadgeIds: [] },
+      spawns: [{ speciesId: 'wildmon', weight: 100, minLevel: 84, maxLevel: 94 }],
+      trainerIds: [],
     },
   ])
   put('trainers.json', [
@@ -277,6 +303,14 @@ export async function makeTestApp(overrides: Record<string, string> = {}): Promi
       if (!body.token) throw new Error(`addTrainer fehlgeschlagen: ${res.body}`)
       return { token: body.token, id: body.trainer.id }
     },
-    close: async () => { await app.close(); ctx.db.close() },
+    close: async () => {
+      await app.close()
+      ctx.db.close()
+      // Das Pack-Verzeichnis wieder wegräumen. Ohne das bleibt je Testfall ein
+      // Ordner von ~660 kB liegen — bei ~750 Tests pro Lauf und einer RAM-Disk
+      // als /tmp ist der Host nach ein paar Wochen voll. Genau so ist es auch
+      // gekommen: 19.512 Ordner, 9,8 GB.
+      rmSync(dataDir, { recursive: true, force: true })
+    },
   }
 }
