@@ -27,8 +27,9 @@ export function natureMultiplier(nature: Nature, stat: StatKey): number {
   return 1
 }
 
-export function randomIvs(rng: Rng): StatBlock {
-  return Object.fromEntries(STATS.map((s) => [s, rng.int(0, IV_MAX)])) as StatBlock
+export function randomIvs(rng: Rng, floor = 0): StatBlock {
+  const min = Math.max(0, Math.min(IV_MAX, Math.floor(floor)))
+  return Object.fromEntries(STATS.map((s) => [s, rng.int(min, IV_MAX)])) as StatBlock
 }
 
 export function zeroEvs(): StatBlock {

@@ -65,10 +65,14 @@ async function main(): Promise<void> {
       name: ev.name,
       description: ev.description,
       types: ev.types,
-      evolutions: [],
+      evolutions: ev.evolvesTo ? [{ trigger: 'level', to: ev.evolvesTo.to, level: ev.evolvesTo.level }] : [],
       learnset: [...learnset].map(([moveId, level]) => ({ moveId, level })).sort((a, b) => a.level - b.level),
       xpFactor: ev.xpFactor,
-      event: true,
+      // Nur die unfangbaren sind Ereignis-Arten. Was man findet, gehoert in
+      // den Dex und in die Summe — sonst bliebe er fuer alle unvollstaendig,
+      // die es nicht gefunden haben, und fuer die Finder unlogisch.
+      event: ev.eventOnly === true,
+      ivFloor: ev.ivFloor ?? 0,
       sprite: ev.sprite,
       spriteShiny: ev.sprite,
     }
@@ -116,6 +120,39 @@ async function main(): Promise<void> {
     })
   })
   log(`${allChapters.length} Kapitel über ${allRegions.length} Regionen`)
+
+  /*
+   * Wilde Vorkommen der besonderen Arten.
+   *
+   * Dieselbe Stelle in jeder Region — das zehnte Gebiet —, und der Anteil wird
+   * aus den vorhandenen Gewichten gerechnet: `w = p/(100-p) * Summe`. Ein
+   * festes Gewicht waere in jedem Gebiet ein anderer Prozentsatz.
+   */
+  let wildPlacements = 0
+  for (const ev of EVENT_SPECIES) {
+    if (!ev.wild) continue
+    for (const region of allRegions) {
+      const own = allAreas
+        .filter((a) => a.regionId === region.id)
+        .sort((a, b) => a.order - b.order)
+      const area = own[ev.wild.areaOrder - 1] ?? own[own.length - 1]
+      if (!area) continue
+      if (area.spawns.some((sp) => sp.speciesId === ev.id)) continue
+      const sum = area.spawns.reduce((n, sp) => n + sp.weight, 0)
+      const band = area.spawns.reduce(
+        (acc, sp) => ({ min: Math.min(acc.min, sp.minLevel), max: Math.max(acc.max, sp.maxLevel) }),
+        { min: 99, max: 1 },
+      )
+      area.spawns.push({
+        speciesId: ev.id,
+        weight: Math.max(1, Math.round((ev.wild.chance / (100 - ev.wild.chance)) * sum)),
+        minLevel: band.min,
+        maxLevel: band.max,
+      })
+      wildPlacements++
+    }
+  }
+  if (wildPlacements) log(`${wildPlacements} seltene Vorkommen gesetzt`)
 
   const missingSpawns = new Set<string>()
   const areas = allAreas.map((a) => ({

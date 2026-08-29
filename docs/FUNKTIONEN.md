@@ -178,6 +178,21 @@ unabhängig vom Ergebnis — sonst wäre er ein Wunschautomat.
 Dazu der **Legendäre Lockduft**: ein Prüfgegenstand ohne Preis, den nur ein
 Admin vergibt. Er überspringt beides, was ein Legendäres sonst verlangt.
 
+### Die Prisma-Linie
+
+Neben dem Prisma-Abra, das man nur geschenkt bekommt, gibt es eine Linie zum
+**Finden**: **Prisma-Glumanda → Prisma-Glutexo → Prisma-Glurak**, mit eigenen
+Bildern und den Entwicklungsstufen des Vorbilds (16 und 36).
+
+Sie erscheint mit **2 % im zehnten Gebiet jeder Region** — dieselbe Stelle
+überall, damit niemand die Welt absuchen muss. Ihre Werte haben eine
+Untergrenze von **20 von 31** je Wert: spürbar besser als der Durchschnitt,
+aber nicht makellos. Ein makelloser Fund wäre das Ende der Suche und nicht ihr
+Anfang.
+
+Anders als das Abra zählt sie in den Pokédex: was man finden kann, gehört auch
+in die Summe.
+
 ### Legendäre
 
 **0,1 % je Erkundung**, und nur in einer Region, die vollständig bezwungen ist.

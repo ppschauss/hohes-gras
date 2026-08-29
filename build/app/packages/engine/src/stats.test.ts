@@ -100,3 +100,25 @@ describe('powerRating', () => {
     expect(high).toBeGreaterThan(low * 5)
   })
 })
+
+describe('randomIvs mit Untergrenze', () => {
+  it('wuerfelt ohne Grenze das ganze Feld aus', () => {
+    const rng = createRng('ivs')
+    let min = 31
+    for (let i = 0; i < 500; i++) {
+      for (const v of Object.values(randomIvs(rng))) min = Math.min(min, v)
+    }
+    expect(min).toBeLessThan(3)
+  })
+
+  it('bleibt mit Grenze nie darunter', () => {
+    // Besondere Arten sollen spuerbar besser sein, aber nicht makellos.
+    const rng = createRng('ivs')
+    for (let i = 0; i < 500; i++) {
+      for (const v of Object.values(randomIvs(rng, 20))) {
+        expect(v).toBeGreaterThanOrEqual(20)
+        expect(v).toBeLessThanOrEqual(31)
+      }
+    }
+  })
+})

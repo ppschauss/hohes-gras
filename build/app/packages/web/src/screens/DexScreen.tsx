@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import { useAsync } from '../lib/useAsync'
 import { Screen } from '../ui/Screen'
 
-type Filter = 'all' | 'caught' | 'missing'
+type Filter = 'all' | 'seen' | 'caught' | 'missing'
 
 export function DexScreen({ onBack }: { onBack: () => void }) {
   const dex = useAsync(() => api.dex(), [])
@@ -12,8 +12,11 @@ export function DexScreen({ onBack }: { onBack: () => void }) {
 
   const rows = useMemo(() => {
     const all = dex.data?.rows ?? []
+    // "Gesehen" heisst: begegnet, aber noch nicht im Team gelandet — der
+    // Zwischenstand, den der Dex vorher nicht zeigen konnte.
+    if (filter === 'seen') return all.filter((r) => r.seen && !r.caught)
     if (filter === 'caught') return all.filter((r) => r.caught)
-    if (filter === 'missing') return all.filter((r) => !r.caught)
+    if (filter === 'missing') return all.filter((r) => !r.seen && !r.caught)
     return all
   }, [dex.data, filter])
 
@@ -32,12 +35,16 @@ export function DexScreen({ onBack }: { onBack: () => void }) {
             <div className="bar bar--lg">
               <span className="bar__fill bar__fill--dex" style={{ width: `${(counts.caught / counts.total) * 100}%` }} />
             </div>
-            <p className="center__body">{t('dex.progress', { caught: counts.caught, total: counts.total })}</p>
+            <p className="center__body">
+              {t('dex.progress', { caught: counts.caught, total: counts.total })}
+              {' · '}
+              {t('dex.seenCount', { n: counts.seen })}
+            </p>
           </div>
         )}
 
         <div className="segmented" role="tablist">
-          {(['all', 'caught', 'missing'] as Filter[]).map((f) => (
+          {(['all', 'seen', 'caught', 'missing'] as Filter[]).map((f) => (
             <button
               key={f}
               type="button"

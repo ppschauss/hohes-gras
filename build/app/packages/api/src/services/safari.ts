@@ -616,7 +616,8 @@ export function throwBall(
     if (owned >= limit) throw new GameError('invalid_state', { reason: 'box_full', limit }, 409)
 
     const catchRng = createRng(deriveSeed(e.seed, 'creature'))
-    const ivs = randomIvs(catchRng)
+    // Besondere Arten bringen eine Untergrenze mit; alle anderen haben 0.
+    const ivs = randomIvs(catchRng, species.ivFloor ?? 0)
     const nature = catchRng.pick(NATURES)
     const stats = computeStats(species, e.level, ivs, { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, nature)
 

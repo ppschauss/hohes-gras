@@ -122,6 +122,14 @@ export const SpeciesDefSchema = z.object({
    * unvollständig, die bei der Verteilung nicht dabei waren.
    */
   event: z.boolean().default(false),
+  /**
+   * Untergrenze für die Werte eines wild gefangenen Exemplars, 0 bis 31.
+   *
+   * Für besondere Arten, die man findet statt geschenkt zu bekommen: sie
+   * sollen spürbar besser sein als der Durchschnitt, aber nicht makellos —
+   * sonst wäre der Fund das Ende der Suche und nicht ihr Anfang.
+   */
+  ivFloor: z.number().int().min(0).max(31).default(0),
   evolutions: z.array(EvolutionSchema).default([]),
   sprite: z.string(),
   spriteShiny: z.string(),
