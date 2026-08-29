@@ -133,8 +133,15 @@ export function EnergyScreen({ onBack }: { onBack: () => void }) {
           <ul className="ledger">
             {COST_ORDER.filter((key) => d?.costs[key] !== undefined).map((key) => (
               <li key={key} className="ledger__row">
-                <span>{t(`energy.cost.${key}`)}</span>
-                <span className="ledger__value ledger__value--out num">−{d!.costs[key]}</span>
+                <span className="ledger__text">
+                  {t(`energy.cost.${key}`)}
+                  <Note id={`energy.cost.${key}.note`} />
+                </span>
+                {/* Die Expedition kostet nach Dauer, nicht pauschal — eine
+                    einzelne Zahl waere hier schlicht falsch. */}
+                <span className="ledger__value ledger__value--out num">
+                  {key === 'expedition' ? '−2 … −6' : `−${d!.costs[key]}`}
+                </span>
               </li>
             ))}
           </ul>
@@ -145,14 +152,32 @@ export function EnergyScreen({ onBack }: { onBack: () => void }) {
           <ul className="ledger">
             {REWARD_ORDER.filter((key) => d?.rewards[key] !== undefined).map((key) => (
               <li key={key} className="ledger__row">
-                <span>{t(`energy.reward.${key}`)}</span>
+                <span className="ledger__text">
+                  {t(`energy.reward.${key}`)}
+                  <Note id={`energy.reward.${key}.note`} />
+                </span>
                 <span className="ledger__value ledger__value--in num">+{d!.rewards[key]}</span>
               </li>
             ))}
           </ul>
-          <p className="explain">{t('energy.explain')}</p>
+          <p className="explain">{t('energy.explain', { limit: format(d?.toGoldLimit ?? 0) })}</p>
         </section>
       </main>
     </Screen>
   )
+}
+
+/**
+ * Die Einschränkung unter einer Zeile.
+ *
+ * Die Zahlen allein logen nicht, sie sagten nur die halbe Wahrheit: "+4 für
+ * einen gewonnenen Kampf" stimmt genau einmal je Gegner, "+15 fürs Entwickeln"
+ * zehnmal am Tag. Wer danach plant, plant falsch.
+ *
+ * Fehlt der Schlüssel, gibt `t` ihn zurück — dann steht hier nichts.
+ */
+function Note({ id }: { id: string }) {
+  const text = t(id)
+  if (text === id) return null
+  return <span className="ledger__note">{text}</span>
 }

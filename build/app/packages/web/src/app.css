@@ -1526,6 +1526,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .earnRow__what { font-size: var(--t-sm); color: var(--ink-dim, var(--ink)); }
 .earnRow__pts { font-size: var(--t-sm); font-weight: 650; color: var(--accent); }
 
+.ledger__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ledger__note { font-size: var(--t-xs); color: var(--ink-faint); }
+
 .spawn {
   display: flex; align-items: center; gap: var(--s2);
   padding: var(--s2) var(--s3);

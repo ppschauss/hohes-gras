@@ -36,6 +36,7 @@ interface Props {
 export function GameRouter({ boot, onTrainerChanged }: Props) {
   const screen = useGame((s) => s.screen)
   const setScreen = useGame((s) => s.setScreen)
+  const goBack = useGame((s) => s.goBack)
 
   const starter = useAsync(() => api.starterInfo(), [])
   const [background, setBackground] = useState(boot.trainer.gardenBackground)
@@ -48,17 +49,24 @@ export function GameRouter({ boot, onTrainerChanged }: Props) {
     return <StarterPicker onDone={() => { starter.reload(); onTrainerChanged() }} />
   }
 
-  const back = () => { haptic.tap(); setScreen('home'); onTrainerChanged() }
+  /*
+   * Zurueck heisst: einen Schritt zurueck, nicht "irgendwohin".
+   *
+   * Vorher trug jeder Fall sein Ziel fest: die Box fuehrte immer zu den Teams,
+   * die Expeditionen immer zur Karte — obwohl beide vom Startbildschirm aus
+   * geoeffnet werden. Man landete, wo man nie war.
+   */
+  const back = () => { haptic.tap(); goBack(); onTrainerChanged() }
 
   switch (screen) {
     case 'garden':
-      return <GardenScreen onBack={back} onOpenBox={() => setScreen('teams')} onOpenDex={() => setScreen('dex')} />
+      return <GardenScreen onBack={back} onOpenBox={() => setScreen('box')} onOpenDex={() => setScreen('dex')} />
     case 'teams':
       return <TeamsScreen onBack={back} onOpenBox={() => setScreen('box')} />
     case 'box':
-      return <BoxScreen onBack={() => setScreen('teams')} />
+      return <BoxScreen onBack={back} />
     case 'dex':
-      return <DexScreen onBack={() => setScreen('garden')} />
+      return <DexScreen onBack={back} />
     case 'shop':
       return (
         <ShopScreen
@@ -82,19 +90,19 @@ export function GameRouter({ boot, onTrainerChanged }: Props) {
     case 'area':
       return (
         <AreaScreen
-          onBack={() => setScreen('map')}
+          onBack={back}
           onSafari={() => setScreen('safari')}
           onBattle={() => setScreen('battle')}
         />
       )
     case 'safari':
-      return <SafariScreen onBack={() => setScreen('area')} onEventBattle={() => setScreen('battle')} />
+      return <SafariScreen onBack={back} onEventBattle={() => setScreen('battle')} />
     case 'battle':
-      return <BattleScreen onBack={() => setScreen('area')} onArena={() => setScreen('arena')} />
+      return <BattleScreen onBack={back} onArena={() => setScreen('arena')} />
     case 'expeditions':
-      return <ExpeditionScreen onBack={() => setScreen('map')} />
+      return <ExpeditionScreen onBack={back} />
     case 'eggs':
-      return <EggScreen onBack={() => setScreen('garden')} />
+      return <EggScreen onBack={back} />
     case 'friends':
       return <SocialScreen onBack={back} />
     case 'coop':

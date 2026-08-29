@@ -46,12 +46,23 @@ interface GameState {
   auth: AuthPhase
   boot: Bootstrap | null
   screen: Screen
+  /**
+   * Woher man kam.
+   *
+   * Vorher trug jeder Bildschirm sein Zurück fest im Router: die Box führte
+   * immer zu den Teams, die Expeditionen immer zur Karte — auch wenn man sie
+   * vom Startbildschirm aus geöffnet hatte. Zurück landete dann irgendwo, wo
+   * man nie war. Der Stapel merkt sich stattdessen den Weg.
+   */
+  history: Screen[]
   submitting: boolean
 
   start: () => Promise<void>
   submitInvite: (code: string) => Promise<void>
   refresh: () => Promise<void>
   setScreen: (screen: Screen) => void
+  /** Einen Schritt zurück — oder zum Start, wenn der Stapel leer ist. */
+  goBack: () => void
   submitLinkCode: (code: string) => Promise<void>
   signOut: () => void
   syncScreenFromLocation: () => void
@@ -64,6 +75,7 @@ export const useGame = create<GameState>((set, get) => ({
   auth: { status: 'booting' },
   boot: null,
   screen: screenFromLocation(),
+  history: [],
   submitting: false,
 
   async start() {
@@ -120,11 +132,22 @@ export const useGame = create<GameState>((set, get) => ({
   },
 
   setScreen: (screen) => {
-    const hash = screen === 'home' ? '' : `#${screen}`
-    if (window.location.hash !== hash) {
-      window.history.replaceState(null, '', hash || window.location.pathname)
-    }
-    set({ screen })
+    const current = get().screen
+    if (current === screen) return
+    writeHash(screen)
+    set({
+      screen,
+      // Der Start ist der Boden: von dort führt Zurück aus der App heraus,
+      // nicht in einen Kreis. Mehr als zehn Schritte merkt sich niemand.
+      history: screen === 'home' ? [] : [...get().history, current].slice(-10),
+    })
+  },
+
+  goBack: () => {
+    const stack = [...get().history]
+    const previous = stack.pop() ?? 'home'
+    writeHash(previous)
+    set({ screen: previous, history: stack })
   },
 
   async submitLinkCode(code) {
@@ -149,8 +172,15 @@ export const useGame = create<GameState>((set, get) => ({
     set({ auth: { status: 'needs_link', message: null }, boot: null })
   },
 
-  syncScreenFromLocation: () => set({ screen: screenFromLocation() }),
+  syncScreenFromLocation: () => set({ screen: screenFromLocation(), history: [] }),
 }))
+
+function writeHash(screen: Screen): void {
+  const hash = screen === 'home' ? '' : `#${screen}`
+  if (window.location.hash !== hash) {
+    window.history.replaceState(null, '', hash || window.location.pathname)
+  }
+}
 
 type Setter = (partial: Partial<GameState>) => void
 
