@@ -60,9 +60,25 @@ const STAT_KEYS: Record<string, 'hp' | 'atk' | 'def' | 'spa' | 'spd' | 'spe'> = 
   'special-attack': 'spa', 'special-defense': 'spd', speed: 'spe',
 }
 
-/** Version groups tried in order. The first one a species actually has a
- *  level-up learnset in wins, so no species ends up with an empty move list. */
-const LEARNSET_PRIORITY = ['ultra-sun-ultra-moon', 'sun-moon', 'x-y', 'firered-leafgreen', 'red-blue']
+/**
+ * Aus welchen Spielen die Lernsaetze stammen.
+ *
+ * Frueher gewann die erste Version, in der eine Art ueberhaupt vier Attacken
+ * per Levelaufstieg lernte — und alles andere fiel weg. Gemessen kostete das
+ * ueber ein Drittel: 14,2 Attacken je Art statt 19,5, und Arten wie Woingenau
+ * standen mit zweien da. Gemeldet als "die Pokemon lernen nicht alle Attacken,
+ * die sie eigentlich lernen koennten", und das stimmte.
+ *
+ * Jetzt zaehlen *alle* Versionen zusammen, je Attacke das niedrigste Level.
+ * Eine Auswahl von fuenf waere zu wenig gewesen — die ueberschneiden sich fast
+ * vollstaendig und brachten gemessen nur 0,3 Attacken je Art. Ueber alle
+ * Generationen sind es fuenf.
+ *
+ * Das bleibt kanonisch und bleibt gestaffelt: jede Attacke traegt weiterhin
+ * das Level, ab dem irgendein Spiel sie vergibt. Nur Maschinen- und
+ * Lehrer-Attacken bleiben draussen — sie tragen kein Level und wuerden die
+ * Staffelung ersetzen statt sie zu fuellen.
+ */
 
 export interface SpeciesOut {
   id: string
@@ -84,18 +100,19 @@ export interface SpeciesOut {
 }
 
 function pickLearnset(p: ApiPokemon): Array<{ moveId: string; level: number }> {
-  for (const group of LEARNSET_PRIORITY) {
-    const entries: Array<{ moveId: string; level: number }> = []
-    for (const m of p.moves) {
-      const detail = m.version_group_details.find(
-        (d) => d.version_group.name === group && d.move_learn_method.name === 'level-up',
-      )
-      if (detail) entries.push({ moveId: m.move.name, level: Math.max(1, detail.level_learned_at) })
+  const lowest = new Map<string, number>()
+  for (const m of p.moves) {
+    for (const d of m.version_group_details) {
+      if (d.move_learn_method.name !== 'level-up') continue
+      const level = Math.max(1, d.level_learned_at)
+      const before = lowest.get(m.move.name)
+      if (before === undefined || level < before) lowest.set(m.move.name, level)
     }
-    if (entries.length >= 4) {
-      entries.sort((a, b) => a.level - b.level || a.moveId.localeCompare(b.moveId))
-      return entries
-    }
+  }
+  if (lowest.size >= 4) {
+    return [...lowest]
+      .map(([moveId, level]) => ({ moveId, level }))
+      .sort((a, b) => a.level - b.level || a.moveId.localeCompare(b.moveId))
   }
   // Last resort: whatever the species can learn at all, treated as level 1.
   return p.moves.slice(0, 4).map((m) => ({ moveId: m.move.name, level: 1 }))

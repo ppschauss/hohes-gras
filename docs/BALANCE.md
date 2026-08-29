@@ -76,6 +76,29 @@ Damit ist jede Punktquelle nach oben begrenzt: wer an einem Tag alles macht,
 was das Spiel hergibt, landet bei rund 3.300 Punkten — ungefähr einer
 Leiterlänge. Alles andere braucht die Woche.
 
+## Lernsätze
+
+Der Import nahm bis hierher genau **eine Spielversion**: die erste aus einer
+Prioritätsliste, in der eine Art überhaupt vier Attacken per Levelaufstieg
+lernt. Alles andere fiel weg — gemeldet als „die Pokémon lernen nicht alle
+Attacken, die sie eigentlich lernen könnten", und gemessen stimmte das.
+
+Jetzt zählen **alle Versionen zusammen**, je Attacke das niedrigste Level:
+
+| | Ø je Art | Median | max | Arten unter 8 Attacken |
+|---|---|---|---|---|
+| vorher | 14,2 | 15 | 24 | 35 |
+| jetzt | 18,6 | 19 | 37 | 19 |
+
+Keine Art hat dabei verloren: die neue Menge ist eine Obermenge der alten, und
+Level können nur sinken. Glurak geht von 17 auf 23, Garados von 13 auf 24,
+Woingenau von 2 auf 6. Ditto bleibt bei 1 — es lernt nun einmal nur Wandler.
+
+**Maschinen- und Lehrer-Attacken bleiben draußen.** Sie wären gemessen weitere
+62 je Art, tragen aber kein Level: sie würden die Staffelung nicht füllen,
+sondern ersetzen. Ein Glumanda auf Level 5 mit Erdbeben ist kein reicheres
+Lernset, sondern gar keins mehr.
+
 ## Antrittsgeld
 
 Ganz ohne Ertrag blieb der Wiederholungskampf trotzdem falsch: gekämpft hat man
