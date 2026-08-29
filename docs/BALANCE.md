@@ -42,11 +42,15 @@ gibt Gold und EP, aber keine Energie mehr.
 
 ## Saison-Reise
 
-Eine Saison dauert **sieben Tage** (vorher 28) und hat **12 Stufen** (vorher 30).
+Eine Saison dauert **sieben Tage** (vorher 28) und hat **25 Stufen** (vorher 30).
+Die Stufen kosten `40·n + 4·n²` Punkte (n = Stufe − 1): 44 für die zweite, 228
+für die letzte, insgesamt 3.264. Das ist an echten Werten gemessen — ein
+gelegentlicher Spieler kommt auf rund 450 Punkte am Tag, kommt also in der
+Woche gerade durch; ein sehr aktiver ist nach gut einem Tag durch. Auf 13 der
+25 Stufen liegt ein Gegenstand, sonst Gold.
 Vier Wochen waren zu lang, um ein Ziel zu sein: wer in Woche eins zurückfiel,
 holte den Rest nicht mehr auf, und wer vorne lag, hatte drei Wochen nichts mehr
-zu tun. Die Leiter musste mitschrumpfen, sonst wäre sie in einer Woche nur zu
-einem Viertel begehbar.
+zu tun.
 
 Die **letzte Stufe** wirft ein **Schillerndes Seelenfragment** ab — die einzige
 Quelle dafür. **Fünf** davon werden zu einem schillernden Ei eines frei

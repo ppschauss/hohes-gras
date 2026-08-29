@@ -311,6 +311,29 @@ describe('Saison', () => {
     expect(SEASON_LENGTH_DAYS).toBe(7)
   })
 
+  it('haelt die ersten Stufen billig und die letzten teuer', () => {
+    // Gemessen an echten Werten: ein gelegentlicher Spieler kommt auf rund 450
+    // Punkte am Tag, die Leiter endet bei seiner Wochenleistung.
+    const tiers = seasonTiers()
+    expect(tiers).toHaveLength(25)
+    expect(tiers[1]!.pointsRequired).toBeLessThan(60)
+    expect(tiers[24]!.pointsRequired).toBeGreaterThan(3000)
+    expect(tiers[24]!.pointsRequired).toBeLessThan(3600)
+    // Die Abstaende wachsen, kein einziger schrumpft.
+    for (let i = 2; i < tiers.length; i++) {
+      const step = tiers[i]!.pointsRequired - tiers[i - 1]!.pointsRequired
+      const before = tiers[i - 1]!.pointsRequired - tiers[i - 2]!.pointsRequired
+      expect(step).toBeGreaterThan(before)
+    }
+  })
+
+  it('verteilt Gegenstaende ueber die ganze Leiter', () => {
+    // Zwoelf Stufen waren zu wenige Momente fuer eine Woche; jetzt soll auf
+    // mindestens jeder dritten etwas Greifbares liegen.
+    const items = seasonTiers().filter((t) => t.reward.kind === 'item')
+    expect(items.length).toBeGreaterThanOrEqual(seasonTiers().length / 3)
+  })
+
   it('legt auf die letzte Stufe das schillernde Fragment', () => {
     expect(rewardForTier(MAX_SEASON_TIER)).toEqual({ kind: 'item', itemId: SHINY_SOUL_ID, quantity: 1 })
     const shinyTiers = seasonTiers().filter(

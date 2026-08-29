@@ -3,7 +3,7 @@ import { GameError, type Trainer } from '@game/shared'
 /** Zaehlt die Entwicklungen des Tages, die Energie eingebracht haben. */
 const EVOLUTION_ENERGY_COUNTER = 'evolution_energy'
 import {
-  ACHIEVEMENTS, BUILDINGS, RECIPES, SEASON_POINTS, SEASON_LENGTH_DAYS,
+  ACHIEVEMENTS, BUILDINGS, MAX_SEASON_TIER, RECIPES, SEASON_POINTS, SEASON_LENGTH_DAYS,
   bonusOf, canCraft, computeStats, ENERGY_REWARDS, findBuilding, findRecipe, isUnlocked,
   pointsForTier, rewardForTier, seasonTiers, tierForPoints, upgradeCost, visibleAchievements,
   EVOLUTION_ENERGY_PER_DAY,
@@ -268,8 +268,21 @@ export function seasonView(ctx: AppContext, trainer: Trainer) {
     endsAt: seasonEndsAt(),
     points: row.points,
     tier,
-    nextTierPoints: tier < 30 ? pointsForTier(tier + 1) : null,
+    // Stand fest auf 30, waehrend die Leiter aus der Engine kommt: bei einer
+    // kuerzeren Leiter zeigte die Anzeige eine naechste Stufe, die es nicht
+    // gibt.
+    nextTierPoints: tier < MAX_SEASON_TIER ? pointsForTier(tier + 1) : null,
     currentTierPoints: pointsForTier(tier),
+    /*
+     * Woher die Punkte kommen.
+     *
+     * Ohne diese Liste ist der Pass eine Leiter ohne Sprossen: man sieht, wo
+     * es hingeht, aber nicht, was einen dahin bringt. Sie kommt aus derselben
+     * Tabelle, die die Punkte vergibt — zwei Listen wuerden auseinanderlaufen.
+     */
+    earn: Object.entries(SEASON_POINTS)
+      .map(([action, points]) => ({ action, points }))
+      .sort((a, b) => b.points - a.points),
     tiers: seasonTiers().map((t) => ({
       ...t,
       reached: row.points >= t.pointsRequired,

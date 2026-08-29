@@ -1505,6 +1505,15 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .evoTarget__name { font-size: var(--t-xs); font-weight: 600; }
 .evoTarget__how { font-size: 10px; color: var(--ink-faint); }
 
+.earnGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s2); }
+.earnRow {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius-sm);
+}
+.earnRow__what { font-size: var(--t-sm); color: var(--ink-dim, var(--ink)); }
+.earnRow__pts { font-size: var(--t-sm); font-weight: 650; color: var(--accent); }
+
 .sectionHead { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
 .sectionHead h2 { margin: 0; }
 

@@ -963,6 +963,7 @@ export interface CraftingView {
 }
 
 export interface SeasonView {
+  earn: Array<{ action: string; points: number }>
   seasonKey: string
   endsAt: number
   points: number

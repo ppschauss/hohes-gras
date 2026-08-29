@@ -21,7 +21,16 @@ export interface SeasonTier {
  * Viertel weit begehbar.
  */
 export const SEASON_LENGTH_DAYS = 7
-export const MAX_SEASON_TIER = 12
+/*
+ * Fuenfundzwanzig Stufen in sieben Tagen.
+ *
+ * Zwoelf waren zu wenige: eine Woche mit nur einem Dutzend Momenten ist eine
+ * Woche, in der lange nichts passiert. Die Zahl ist an echten Werten gemessen
+ * — ein gelegentlicher Spieler kommt auf rund 450 Punkte am Tag, ein sehr
+ * aktiver auf das Sechsfache. Die Leiter endet bei 3.264 Punkten, also genau
+ * an der Wochenleistung des gelegentlichen Spielers.
+ */
+export const MAX_SEASON_TIER = 25
 
 /** Das Fragment, das die letzte Stufe einer Saison abwirft. */
 export const SHINY_SOUL_ID = 'soul-shiny'
@@ -30,7 +39,10 @@ export const SHINY_SOUL_ID = 'soul-shiny'
  *  a real target without becoming unreachable for a casual player. */
 export function pointsForTier(tier: number): number {
   if (tier <= 1) return 0
-  return Math.round(120 * (tier - 1) + 6 * (tier - 1) ** 1.6)
+  // 44 Punkte fuer die zweite Stufe, 228 fuer die letzte: die ersten Stufen
+  // fallen nebenbei, die letzten muss man wollen.
+  const n = tier - 1
+  return 40 * n + 4 * n ** 2
 }
 
 export function tierForPoints(points: number): number {

@@ -41,6 +41,20 @@ export function SeasonPanel() {
 
       <p className="explain">{t('season.explain')}</p>
 
+      {d && (
+        <section className="section">
+          <h2>{t('season.earn.title')}</h2>
+          <div className="earnGrid">
+            {d.earn.map((e) => (
+              <span key={e.action} className="earnRow">
+                <span className="earnRow__what">{t(`season.earn.${e.action}`)}</span>
+                <span className="earnRow__pts num">+{e.points}</span>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
+
       <ol className="seasonTrack">
         {d?.tiers.map((tier) => (
           <li key={tier.tier}
