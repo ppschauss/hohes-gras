@@ -35,8 +35,11 @@ export interface ArenaTier {
    * Wie viele Gegner antreten, gemessen am eigenen Team.
    *
    * Der wirksamste Hebel und der, der zuerst gefehlt hat: vier volle Teams
-   * hintereinander mit zehn Prozent Erholung dazwischen sind auch mit
-   * schwachen Gegnern eine Wand. Auf „leicht" tritt die Haelfte an.
+   * hintereinander sind auch mit schwachen Gegnern eine Wand. Gerechnet wird
+   * nicht je Kampf, sondern je Durchlauf: bei fünf eigenen Mitgliedern waren
+   * das sechzehn Gegner am Stück — genau so wurde es gemeldet („12 oder 16
+   * Pokémon besiegt und noch welche vor mir"). Mit 0,4 sind es acht, mit 0,6
+   * zwölf, und „schwer" bleibt die volle Wand.
    */
   foeShare: number
   /**
@@ -65,12 +68,12 @@ export interface ArenaTier {
 
 export const ARENA_TIERS: ArenaTier[] = [
   {
-    id: 'easy', levelDelta: -5, maxStage: 0, maxBst: 330, foeIv: 0, foeShare: 0.5,
+    id: 'easy', levelDelta: -5, maxStage: 0, maxBst: 330, foeIv: 0, foeShare: 0.4,
     xpMultiplier: 1.5, goldPerWin: 60,
     bonusGold: 400, bonus: [{ itemId: 'exp-candy-s', quantity: 2 }],
   },
   {
-    id: 'even', levelDelta: -3, maxStage: 1, maxBst: 430, foeIv: 8, foeShare: 0.75,
+    id: 'even', levelDelta: -3, maxStage: 1, maxBst: 430, foeIv: 8, foeShare: 0.6,
     xpMultiplier: 2, goldPerWin: 120,
     bonusGold: 900, bonus: [{ itemId: 'exp-candy-l', quantity: 1 }],
   },

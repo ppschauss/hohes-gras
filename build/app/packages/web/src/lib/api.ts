@@ -1146,6 +1146,7 @@ export interface ArenaView {
   tiers: Array<{
     id: string; levelDelta: number; levels: number[]
     goldPerWin: number; bonusGold: number; xpMultiplier: number
+    foesPerBattle: number; foesTotal: number
     bonus: Array<{ itemId: string; quantity: number; name: string }>
     clearedToday: boolean
   }>

@@ -153,6 +153,23 @@ describe('Trainingsarena', () => {
     }
   })
 
+  it('nennt die Zahl der Gegner je Kampf und im ganzen Durchlauf', async () => {
+    /*
+     * Die Zahl, die man wirklich spuert: gemeldet wurde "12 oder 16 Pokemon
+     * besiegt und noch welche vor mir" — vier Kaempfe klingen wenig, sechzehn
+     * Gegner sind viel.
+     */
+    h.resetRateLimits()
+    const r = await h.get('/api/arena', token)
+    for (const tier of r.body.tiers) {
+      expect(tier.foesTotal).toBe(tier.foesPerBattle * ARENA_ROUNDS)
+      expect(tier.foesPerBattle).toBeGreaterThanOrEqual(1)
+    }
+    const [easy, even, hard] = r.body.tiers
+    expect(easy.foesPerBattle).toBeLessThanOrEqual(even.foesPerBattle)
+    expect(even.foesPerBattle).toBeLessThanOrEqual(hard.foesPerBattle)
+  })
+
   it('schickt auf leicht weniger Gegner als eigene Mitglieder', async () => {
     h.resetRateLimits()
     await h.post('/api/arena/start', { tier: 'easy' }, token)

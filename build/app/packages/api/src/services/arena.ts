@@ -81,8 +81,7 @@ function buildOpponent(
    * nicht: das eigene Team tritt viermal an, die Gegner je einmal frisch.
    * Auf „leicht" ist es die Hälfte, auf „ausgeglichen" drei Viertel.
    */
-  const own = creatures.teamOf(ctx.db, trainer.id).length
-  const size = Math.max(1, Math.min(5, Math.round(own * tier.foeShare)))
+  const size = foeCount(ctx, trainer, tier)
 
   const type = ctx.registry.tryType(typeId)
   const typeName = type ? ctx.registry.localized(type.name, trainer.locale) : typeId
@@ -109,6 +108,12 @@ function buildOpponent(
       lose: { de: 'Sauber gekämpft.' },
     },
   }
+}
+
+/** Wie viele Gegner diese Stufe gegen das aktuelle Team aufstellt. */
+function foeCount(ctx: AppContext, trainer: Trainer, tier: ArenaTier): number {
+  const own = creatures.teamOf(ctx.db, trainer.id).length
+  return Math.max(1, Math.min(5, Math.round(own * tier.foeShare)))
 }
 
 /** Anteil der KP, die das Team gerade noch hat — 0 bis 100. */
@@ -190,6 +195,10 @@ export function view(ctx: AppContext, trainer: Trainer) {
       levels: [1, ARENA_ROUNDS].map((r) => arenaLevel(average, t, r, cap)),
       goldPerWin: t.goldPerWin,
       xpMultiplier: t.xpMultiplier,
+      // Wie viele Gegner je Kampf antreten — und wie viele im ganzen
+      // Durchlauf. Die zweite Zahl ist die, die man wirklich spuert.
+      foesPerBattle: foeCount(ctx, trainer, t),
+      foesTotal: foeCount(ctx, trainer, t) * ARENA_ROUNDS,
       bonusGold: t.bonusGold,
       bonus: t.bonus.map((b) => ({
         ...b,

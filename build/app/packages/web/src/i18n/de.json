@@ -68,6 +68,7 @@
   "arena.explain": "Heute treten {type}-Pokémon an. Vier Kämpfe in Folge, Gegenstände erlaubt, zwischen den Kämpfen bekommt dein Team {heal} % seiner KP zurück. Die Stufen richten sich nach deinem Teamdurchschnitt (Level {avg}) — und je schwerer, desto mehr Erfahrung.",
   "arena.eyebrow": "Üben statt hoffen",
   "arena.finish": "Durchlauf abschließen",
+  "arena.foes": "{perBattle} Gegner je Kampf · {total} im ganzen Durchlauf",
   "arena.hurt": "Dein Team steht bei {n} % KP. Heil es erst — zwischen den Kämpfen gibt es nur 10 % zurück.",
   "arena.levels": "Lv {from}–{to}",
   "arena.next": "Weiter",

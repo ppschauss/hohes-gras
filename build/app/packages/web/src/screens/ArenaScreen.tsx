@@ -93,6 +93,11 @@ export function ArenaScreen({ onBack, onBattle }: { onBack: () => void; onBattle
                     {' · '}{t('arena.perWin', { n: tier.goldPerWin })}
                     {' · '}{t('arena.xp', { n: tier.xpMultiplier })}
                   </p>
+                  {/* Die Zahl, die man wirklich spuert: wie viele Pokemon im
+                      ganzen Durchlauf zu besiegen sind. */}
+                  <p className="tierCard__meta">
+                    {t('arena.foes', { perBattle: tier.foesPerBattle, total: tier.foesTotal })}
+                  </p>
                   <p className="tierCard__reward">
                     {t('arena.bonus', {
                       gold: number(tier.bonusGold),
