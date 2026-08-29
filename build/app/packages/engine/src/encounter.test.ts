@@ -76,8 +76,21 @@ describe('rollEncounter', () => {
     expect(sawGated).toBe(true)
   })
 
-  it('liefert null, wenn nichts spawnen kann', () => {
-    const empty = { id: 'leer', spawns: [{ speciesId: 'x', weight: 1, minLevel: 1, maxLevel: 1, weather: ['snow'] }] } as unknown as AreaDef
+  it('greift auf alle Eintraege zurueck, statt leer auszugehen', () => {
+    // Waeren alle Eintraege an Wetter oder Tageszeit gebunden, stuende hier
+    // ein leerer Beutel und die Erkundung endete im Nichts. Gemeldet wurde
+    // genau das als stoerend; im Pack kommt es zwar nicht vor, aber ein
+    // Inhaltspaket, das es einmal tut, soll niemanden leer ausgehen lassen.
+    const gatedOnly = {
+      id: 'nur-schnee',
+      spawns: [{ speciesId: 'x', weight: 1, minLevel: 1, maxLevel: 1, weather: ['snow'] }],
+    } as unknown as AreaDef
+    const out = rollEncounter(gatedOnly, { timeOfDay: 'day', weather: 'clear' }, createRng('n'))
+    expect(out?.speciesId).toBe('x')
+  })
+
+  it('liefert null nur bei einem Gebiet ganz ohne Eintraege', () => {
+    const empty = { id: 'leer', spawns: [] } as unknown as AreaDef
     expect(rollEncounter(empty, { timeOfDay: 'day', weather: 'clear' }, createRng('n'))).toBeNull()
   })
 

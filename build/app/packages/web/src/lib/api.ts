@@ -37,6 +37,28 @@ export const setToken = (value: string | null, persist = false): void => {
 
 export const hasToken = (): boolean => token !== null
 
+/**
+ * Einmal neu laden, wenn der Server einen neuen Bau ausliefert.
+ *
+ * Eine Mini-App bleibt tagelang offen. Wer sie ueber einen Deploy hinweg nicht
+ * neu laedt, spricht mit einem neuen Server und einer alten Oberflaeche — und
+ * bekommt fuer jede Antwortart, die es beim Laden noch nicht gab, irgendetwas
+ * Falsches angezeigt. Genau so gemeldet: neue Fundstuecke kamen als "nichts
+ * gefunden" an, obwohl sie laengst im Beutel lagen.
+ *
+ * Das Flag verhindert eine Schleife, falls das Neuladen selbst scheitert.
+ */
+let seenBuild: string | null = null
+let reloading = false
+
+function checkBuild(build: string | null): void {
+  if (!build) return
+  if (seenBuild === null) { seenBuild = build; return }
+  if (build === seenBuild || reloading) return
+  reloading = true
+  window.location.reload()
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   headers.set('accept', 'application/json')
@@ -44,6 +66,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (token) headers.set('authorization', `Bearer ${token}`)
 
   const res = await fetch(path, { ...init, headers })
+  checkBuild(res.headers.get('x-app-build'))
   const text = await res.text()
   const body: unknown = text ? JSON.parse(text) : {}
 
@@ -287,6 +310,19 @@ export const api = {
   upgradeBuilding: (buildingId: string) =>
     request<{ buildingId: string; level: number; cost: number; buildings: BuildingsView }>('/api/buildings/upgrade', {
       method: 'POST', body: JSON.stringify({ buildingId }),
+    }),
+
+  habitat: (speciesId: string) =>
+    request<HabitatView>(`/api/dex/habitat?speciesId=${encodeURIComponent(speciesId)}`),
+
+  boarding: () => request<BoardingView>('/api/boarding'),
+  dropBoarding: (creatureId: string) =>
+    request<{ boarding: BoardingView }>('/api/boarding/drop', {
+      method: 'POST', body: JSON.stringify({ creatureId }),
+    }),
+  pickBoarding: (id: string) =>
+    request<{ result: BoardingPickup; boarding: BoardingView }>('/api/boarding/pick', {
+      method: 'POST', body: JSON.stringify({ id }),
     }),
 
   research: () => request<ResearchView>('/api/research'),
@@ -670,6 +706,62 @@ export interface ResearchView {
     xp: number
   }>
   projects: ResearchProjectView[]
+}
+
+export interface HabitatArea {
+  areaId: string
+  areaName: string
+  regionId: string
+  regionName: string
+  chance: number
+  minLevel: number
+  maxLevel: number
+  timeOfDay: string[] | null
+  weather: string[] | null
+  visited: boolean
+  availableNow: boolean
+}
+
+export interface HabitatView {
+  speciesId: string
+  known: boolean
+  name: string | null
+  sprite: string | null
+  areas: HabitatArea[]
+}
+
+export interface BoardingEntry {
+  id: string
+  creatureId: string
+  name: string
+  sprite: string
+  level: number
+  levelAtStart: number
+  startedAt: number
+  readyAt: number
+  ready: boolean
+  progress: number
+  levelsEarned: number
+  levelsMax: number
+  energyCost: number
+}
+
+export interface BoardingView {
+  slots: number
+  used: number
+  hours: number
+  maxLevels: number
+  abortCost: number
+  levelCap: number
+  entries: BoardingEntry[]
+}
+
+export interface BoardingPickup {
+  name: string
+  levelsGained: number
+  newLevel: number
+  early: boolean
+  energySpent: number
 }
 
 export interface ExpeditionView {

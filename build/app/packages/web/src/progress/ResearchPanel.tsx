@@ -139,6 +139,15 @@ export function ResearchPanel() {
               n: d.evPerTraining, hours: d.training.hours, gold: number(d.training.gold),
             })}
           </p>
+          <ul className="recipe__in">
+            {d.training.inputs.map((i) => (
+              <li key={i.itemId} className={i.have >= i.quantity ? 'recipe__have' : 'recipe__missing'}>
+                <ItemIcon src={i.icon} category="material" size={20} />
+                <span>{i.name}</span>
+                <span className="num">{i.have}/{i.quantity}</span>
+              </li>
+            ))}
+          </ul>
           <div className="chipRow">
             {STAT_KEYS.map((stat) => (
               <button key={stat} type="button" className="btn btn--ghost btn--sm" disabled={action.busy}
@@ -153,15 +162,18 @@ export function ResearchPanel() {
       <section className="section">
         <h2>{t('research.projects')}</h2>
         <div className="stack">
-          {d.projects.map((p) => <Project key={p.id} p={p} busy={action.busy} onStart={setPicking} />)}
+          {d.projects.map((p) => (
+            <Project key={p.id} p={p} gold={d.gold} busy={action.busy} onStart={setPicking} />
+          ))}
         </div>
       </section>
     </>
   )
 }
 
-function Project({ p, busy, onStart }: {
+function Project({ p, gold, busy, onStart }: {
   p: ResearchProjectView
+  gold: number
   busy: boolean
   onStart: (v: { projectId: string }) => void
 }) {
@@ -184,14 +196,22 @@ function Project({ p, busy, onStart }: {
         ? <span className="tag tag--done">{t('research.complete')}</span>
         : (
           <>
+            {/* Symbol, Name, Bestand — dieselbe Zeile wie im Handwerk. Ohne
+                den Namen stand da ein Symbol und "3/6", und welcher Werkstoff
+                gemeint war, musste man raten. */}
             <ul className="recipe__in">
               {p.inputs.map((i) => (
                 <li key={i.itemId} className={i.have >= i.quantity ? 'recipe__have' : 'recipe__missing'}>
-                  <ItemIcon src={i.icon} category="material" size={18} />
+                  <ItemIcon src={i.icon} category="material" size={20} />
+                  <span>{i.name}</span>
                   <span className="num">{i.have}/{i.quantity}</span>
                 </li>
               ))}
-              <li className="recipe__gold num">🪙 {number(p.goldCost)}</li>
+              <li className={p.goldCost <= gold ? 'recipe__have' : 'recipe__missing'}>
+                <span aria-hidden="true">🪙</span>
+                <span>Gold</span>
+                <span className="num">{number(p.goldCost)}</span>
+              </li>
             </ul>
             <p className="recipe__meta num">
               {t('research.duration', { n: p.hours })} · {t('research.xp', { n: number(p.xp) })}

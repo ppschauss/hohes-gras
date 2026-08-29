@@ -232,6 +232,16 @@ gilt: der volle Siegbetrag einmal am Tag, danach das Antrittsgeld. Wie beim
 Überfall verdrängt er die Begegnung — zwei offene Dinge gleichzeitig gibt es
 hier nicht.
 
+### Wo eine Art lebt
+
+Im Pokédex lässt sich jede **schon gesehene** Art antippen: dahinter stehen
+alle Gebiete, in denen sie vorkommt — nach Häufigkeit sortiert, mit Levelband,
+Region und den Bedingungen (Tageszeit, Wetter), falls es welche gibt. Gebiete,
+in denen man noch nie war, sind als solche gekennzeichnet.
+
+Nicht gesehene Arten verraten nichts. Ein Pokédex, der die Fundorte von allem
+ausplaudert, nimmt dem Entdecken den Sinn.
+
 ### Fundstücke
 
 **3 % je Erkundung** liegt etwas im Unterholz. Es wandert sofort in Beutel oder
@@ -253,6 +263,41 @@ teuren genau eines.
 Der **Metalldetektor** (500 Gold, 10 Anwendungen) ersetzt den Wurf: solange
 Ladungen übrig sind, endet jede Erkundung in einem Fund. Er gräbt dafür anderes
 aus als der Zufall — Schrott und Fragmente statt Geldbeutel.
+
+### Labor und Forschung
+
+Fünfzehn Projekte über sechsundzwanzig Stufen. Jedes kostet Werkstoffe und
+Gold, läuft über Stunden, belegt einen **Laborplatz** (einen je Laborstufe) und
+braucht ein **Pokémon**, das solange nicht verfügbar ist und am Ende die
+Erfahrung bekommt.
+
+- **Sieben Rezeptprojekte** schalten Bauanleitungen frei: Hyperball,
+  Sonderbonbon, die sechs Entwicklungssteine — und vier neue, die Kreisläufe
+  schließen (Metalldetektor, Sternenstaub, EP-Bonbons, Störsender).
+- **Sieben Bonusprojekte** wirken dauerhaft: Fundchance (3 → 6 %), Werkstoff je
+  Fang (12,5 → 20 %), Expeditionsbeute (+30 %), Kampf-EP (+15 %), Kampf-Gold
+  (+30 %), Fangchance (+9 %), Shiny-Grundchance (0,20 → 0,30 %).
+- **Trainingslehre** schaltet das Fleißpunkte-Training frei.
+
+Abbrechen kostet 2 Energie und gibt Material und Gold nicht zurück.
+
+### Fleißpunkte
+
+Die Datenbank führt sie seit dem ersten Tag und die Werteformel liest sie —
+aber bis hierher hat nichts sie je erhöht. Ein Trainingsdurchlauf gibt **+32
+Fleißpunkte** auf einen frei gewählten Wert, dauert 3 Stunden und ist beliebig
+wiederholbar. Grenzen wie im Vorbild: 252 je Wert, 510 insgesamt.
+
+### Pension
+
+Bis zu **fünf Pokémon für 24 Stunden**. Sie trainieren durchgehend und schaffen
+in einem vollen Aufenthalt **zehn Level** — dieselben zehn für ein frisch
+geschlüpftes wie für ein ausgewachsenes, weil über Level gerechnet wird und
+nicht über EP.
+
+**Früher abholen kostet 4 Energie, aber nie Fortschritt:** was bis dahin
+verdient ist, wird gutgeschrieben. Nach dem Tag hört die Pension auf zu
+arbeiten — wer drei Tage stehen lässt, bekommt trotzdem zehn Level.
 
 ---
 

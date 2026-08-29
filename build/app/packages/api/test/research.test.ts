@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { EV_PER_TRAINING, researchSlots } from '@game/engine'
+import { EV_PER_TRAINING, findResearch, researchCost, researchSlots } from '@game/engine'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -60,9 +60,13 @@ describe('Forschung', () => {
 
     const after = h.ctx.db.prepare('SELECT gold FROM trainers WHERE id = ?').get(trainerId) as { gold: number }
     expect(after.gold).toBeLessThan(goldBefore)
+    // Der Werkstoff ist weg, nicht nur das Gold — die Menge steht in
+    // `RESEARCH_PROJECTS` und nicht hier, damit eine Preisaenderung nicht den
+    // Test bricht.
+    const cost = researchCost(findResearch('res-find')!, 1)
     const iron = h.ctx.db.prepare("SELECT quantity FROM inventory WHERE trainer_id = ? AND item_id = 'iron-shard'")
       .get(trainerId) as { quantity: number }
-    expect(iron.quantity).toBe(95)
+    expect(iron.quantity).toBe(99 - cost.inputs.find((i) => i.itemId === 'iron-shard')!.quantity)
 
     // Gebunden: dieselbe Kreatur geht jetzt nicht mehr auf Expedition.
     h.resetRateLimits()

@@ -79,9 +79,18 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
         // Der Fund liegt schon im Beutel; die Anzeige muss nachziehen.
         bag.reload()
         haptic.success()
-      } else {
+      } else if (res.kind === 'nothing') {
         setPhase({ kind: 'nothing' })
       }
+      /*
+       * Eine unbekannte Art bleibt ohne Anzeige — und genau das ist die
+       * Absicht.
+       *
+       * Vorher fiel alles Unbekannte in den "nichts gefunden"-Zweig. Wer die
+       * App ueber einen Deploy hinweg offen liess, bekam damit fuer jeden
+       * neuen Ausgang die Meldung, er habe nichts gefunden, waehrend der
+       * Server laengst etwas gutgeschrieben hatte. Genau so gemeldet.
+       */
       safari.reload()
     })
   }

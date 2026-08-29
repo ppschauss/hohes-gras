@@ -328,6 +328,77 @@ export function availableTeam(ctx: AppContext, trainer: Trainer, busy: Set<strin
  * erscheinen, zählen bei Sonne nicht mit — sonst stünde dort eine Chance, die
  * es gerade nicht gibt.
  */
+/**
+ * Wo eine Art vorkommt.
+ *
+ * Die Umkehrung von `spawnsOf`: dort steht, was in einem Gebiet lebt, hier,
+ * in welchen Gebieten eine Art lebt. Gemeldet wurde, dass der Pokedex zwar
+ * sagt, was es gibt, aber nicht, wo man es findet — und ohne das ist ein
+ * fehlender Eintrag eine Aufgabe ohne Anleitung.
+ *
+ * Nur fuer Arten, die man schon gesehen hat. Ein Pokedex, der die Fundorte von
+ * allem verraet, was es gibt, nimmt dem Entdecken den Sinn.
+ */
+export function habitatsOf(ctx: AppContext, trainer: Trainer, speciesId: string) {
+  const entry = dex.dexOf(ctx.db, trainer.id).get(speciesId)
+  const species = ctx.registry.trySpecies(speciesId)
+  if (!species) throw new GameError('not_found', { speciesId }, 404)
+  if (!entry) {
+    return { speciesId, known: false, name: null, sprite: null, areas: [] as HabitatArea[] }
+  }
+
+  const clock = worldClock()
+  const visited = new Set(world.progressOf(ctx.db, trainer.id).keys())
+  const reference = referenceOf(ctx, trainer)
+
+  const areas: HabitatArea[] = []
+  for (const area of ctx.registry.allAreas) {
+    const spawn = area.spawns.find((sp) => sp.speciesId === speciesId)
+    if (!spawn) continue
+    const total = area.spawns.reduce((sum, sp) => sum + sp.weight, 0)
+    const offset = areaOffset(ctx, trainer, area, reference)
+    const availableNow = availableSpawns(area, clock).some((sp) => sp.speciesId === speciesId)
+    areas.push({
+      areaId: area.id,
+      areaName: ctx.registry.localized(area.name, trainer.locale),
+      regionId: area.regionId,
+      regionName: ctx.registry.localized(ctx.registry.region(area.regionId).name, trainer.locale),
+      /** Anteil an allem, was das Gebiet ueberhaupt hervorbringt. */
+      chance: total > 0 ? Math.round((spawn.weight / total) * 1000) / 10 : 0,
+      minLevel: shiftLevel(spawn.minLevel, offset),
+      maxLevel: shiftLevel(spawn.maxLevel, offset),
+      timeOfDay: spawn.timeOfDay ?? null,
+      weather: spawn.weather ?? null,
+      /** Schon einmal dort gewesen — sonst ist der Ort selbst noch ein Ziel. */
+      visited: visited.has(area.id),
+      availableNow,
+    })
+  }
+  areas.sort((a, b) => b.chance - a.chance)
+
+  return {
+    speciesId,
+    known: true,
+    name: ctx.registry.localized(species.name, trainer.locale),
+    sprite: entry.caughtAt ? species.sprite : species.sprite,
+    areas,
+  }
+}
+
+export interface HabitatArea {
+  areaId: string
+  areaName: string
+  regionId: string
+  regionName: string
+  chance: number
+  minLevel: number
+  maxLevel: number
+  timeOfDay: string[] | null
+  weather: string[] | null
+  visited: boolean
+  availableNow: boolean
+}
+
 export function spawnsOf(ctx: AppContext, trainer: Trainer, areaId: string) {
   const area = ctx.registry.area(areaId)
   const clock = worldClock()

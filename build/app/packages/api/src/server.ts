@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify'
 import cors from '@fastify/cors'
 import fastifyStatic from '@fastify/static'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { AppContext } from './context.js'
@@ -40,6 +40,24 @@ export async function buildServer(ctx: AppContext): Promise<FastifyInstance> {
     },
     methods: ['GET', 'POST', 'DELETE'],
     credentials: false,
+  })
+
+  /*
+   * Die Kennung des ausgelieferten Baus, auf jeder API-Antwort.
+   *
+   * Eine Mini-App bleibt tagelang offen. Wer sie ueber einen Deploy hinweg
+   * nicht neu laedt, spricht mit einem neuen Server und einer alten Oberflaeche
+   * — und bekommt fuer jede Antwortart, die es beim Laden noch nicht gab,
+   * irgendetwas Falsches angezeigt. Genau so gemeldet: neue Fundstuecke kamen
+   * beim Spieler als "nichts gefunden" an, obwohl sie laengst im Beutel lagen.
+   *
+   * Der Dateiname des Haupt-Bundles traegt einen Inhalts-Hash und ist damit
+   * genau die Kennung, die sich bei jedem echten Deploy aendert. Der Client
+   * vergleicht sie und laedt einmal neu.
+   */
+  const buildId = readBuildId(join(here, '..', 'public'))
+  app.addHook('onSend', async (req, reply) => {
+    if (req.url.startsWith('/api/')) reply.header('x-app-build', buildId)
   })
 
   registerAuthRoutes(app, ctx)
@@ -111,4 +129,14 @@ export async function buildServer(ctx: AppContext): Promise<FastifyInstance> {
   })
 
   return app
+}
+
+/** Der Inhalts-Hash des Haupt-Bundles, aus der index.html gelesen. */
+function readBuildId(webRoot: string): string {
+  try {
+    const html = readFileSync(join(webRoot, 'index.html'), 'utf8')
+    return /assets\/(index-[A-Za-z0-9_-]+\.js)/.exec(html)?.[1] ?? 'dev'
+  } catch {
+    return 'dev'
+  }
 }

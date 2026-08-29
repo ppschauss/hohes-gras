@@ -7,6 +7,7 @@ import * as progression from '../services/progression.js'
 import * as story from '../services/story.js'
 import * as login from '../services/login.js'
 import * as research from '../services/research.js'
+import * as boarding from '../services/boarding.js'
 
 const EvolveSchema = z.object({ creatureId: z.string().uuid(), targetSpeciesId: z.string() })
 const BuildingSchema = z.object({ buildingId: z.string() })
@@ -19,6 +20,7 @@ const TrainSchema = z.object({
   stat: z.enum(['hp', 'atk', 'def', 'spa', 'spd', 'spe']),
 })
 const ResearchIdSchema = z.object({ id: z.string().uuid() })
+const CreatureIdSchema = z.object({ creatureId: z.string().uuid() })
 
 export function registerProgressionRoutes(app: FastifyInstance, ctx: AppContext): void {
   const auth = { preHandler: [requireTrainer(ctx), rateLimit(ctx, 'action')] }
@@ -71,6 +73,20 @@ export function registerProgressionRoutes(app: FastifyInstance, ctx: AppContext)
     const { id } = ResearchIdSchema.parse(req.body)
     research.abort(ctx, req.trainer!, id)
     return { research: research.view(ctx, findById(ctx.db, req.trainer!.id)!) }
+  })
+
+  app.get('/api/boarding', auth, async (req) => boarding.view(ctx, req.trainer!))
+
+  app.post('/api/boarding/drop', write, async (req) => {
+    const { creatureId } = CreatureIdSchema.parse(req.body)
+    boarding.drop(ctx, req.trainer!, creatureId)
+    return { boarding: boarding.view(ctx, findById(ctx.db, req.trainer!.id)!) }
+  })
+
+  app.post('/api/boarding/pick', write, async (req) => {
+    const { id } = ResearchIdSchema.parse(req.body)
+    const result = boarding.pick(ctx, req.trainer!, id)
+    return { result, boarding: boarding.view(ctx, findById(ctx.db, req.trainer!.id)!) }
   })
 
   app.get('/api/login', auth, async (req) => login.view(ctx, req.trainer!))

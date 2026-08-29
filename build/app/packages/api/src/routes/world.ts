@@ -57,6 +57,12 @@ export function registerWorldRoutes(app: FastifyInstance, ctx: AppContext): void
     return worldService.spawnsOf(ctx, req.trainer!, area.id)
   })
 
+  // Wo eine Art vorkommt — nur fuer schon gesehene.
+  app.get('/api/dex/habitat', auth, async (req) => {
+    const { speciesId } = z.object({ speciesId: z.string() }).parse(req.query)
+    return worldService.habitatsOf(ctx, req.trainer!, speciesId)
+  })
+
   app.get('/api/safari', auth, async (req) => {
     const q = SafariSelectionSchema.parse(req.query ?? {})
     const trainer = req.trainer!

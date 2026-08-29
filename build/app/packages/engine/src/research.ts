@@ -81,31 +81,31 @@ export const researchSlots = (labLevel: number): number => Math.max(1, Math.min(
 export const EV_PER_TRAINING = 32
 /** Und was er kostet und dauert. */
 export const TRAINING_HOURS = 3
-export const TRAINING_GOLD = 400
+export const TRAINING_GOLD = 900
 export const TRAINING_XP_PER_HOUR = 260
 export const TRAINING_INPUTS = [
-  { itemId: 'silk-thread', quantity: 3 },
-  { itemId: 'soft-sand', quantity: 3 },
+  { itemId: 'silk-thread', quantity: 8 },
+  { itemId: 'soft-sand', quantity: 8 },
 ]
 
 export const RESEARCH_PROJECTS: ResearchProject[] = [
   /* ------------------------------------------------------------- Rezepte */
   {
     id: 'res-ultra-ball', kind: 'recipe', tiers: 1, lab: 2, unlocks: null,
-    step: 0, hours: 4, gold: 600,
-    inputs: [{ itemId: 'iron-shard', quantity: 6 }, { itemId: 'star-piece', quantity: 1 }],
+    step: 0, hours: 4, gold: 1500,
+    inputs: [{ itemId: 'iron-shard', quantity: 12 }, { itemId: 'star-piece', quantity: 2 }],
     xpPerHour: 180,
   },
   {
     id: 'res-stones', kind: 'recipe', tiers: 1, lab: 2, unlocks: null,
-    step: 0, hours: 8, gold: 1200,
-    inputs: [{ itemId: 'star-piece', quantity: 3 }, { itemId: 'dew-drop', quantity: 8 }],
+    step: 0, hours: 8, gold: 3000,
+    inputs: [{ itemId: 'star-piece', quantity: 6 }, { itemId: 'dew-drop', quantity: 16 }],
     xpPerHour: 200,
   },
   {
     id: 'res-rare-candy', kind: 'recipe', tiers: 1, lab: 3, unlocks: null,
-    step: 0, hours: 12, gold: 2500,
-    inputs: [{ itemId: 'star-piece', quantity: 5 }, { itemId: 'iron-shard', quantity: 10 }],
+    step: 0, hours: 12, gold: 6000,
+    inputs: [{ itemId: 'star-piece', quantity: 10 }, { itemId: 'iron-shard', quantity: 20 }],
     xpPerHour: 240,
   },
 
@@ -118,8 +118,8 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
      * naechsten verdienen, statt ihn zu kaufen.
      */
     id: 'res-detector', kind: 'recipe', tiers: 1, lab: 2, unlocks: null,
-    step: 0, hours: 5, gold: 800,
-    inputs: [{ itemId: 'iron-shard', quantity: 10 }, { itemId: 'soft-sand', quantity: 5 }],
+    step: 0, hours: 5, gold: 2000,
+    inputs: [{ itemId: 'iron-shard', quantity: 20 }, { itemId: 'soft-sand', quantity: 10 }],
     xpPerHour: 180,
   },
   {
@@ -131,14 +131,14 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
      * teuer genug, dass der Zufall die bequemere Quelle bleibt.
      */
     id: 'res-star-piece', kind: 'recipe', tiers: 1, lab: 3, unlocks: null,
-    step: 0, hours: 10, gold: 1800,
-    inputs: [{ itemId: 'dew-drop', quantity: 12 }, { itemId: 'iron-shard', quantity: 12 }],
+    step: 0, hours: 10, gold: 4500,
+    inputs: [{ itemId: 'dew-drop', quantity: 24 }, { itemId: 'iron-shard', quantity: 24 }],
     xpPerHour: 220,
   },
   {
     id: 'res-exp-candy', kind: 'recipe', tiers: 1, lab: 1, unlocks: null,
-    step: 0, hours: 3, gold: 400,
-    inputs: [{ itemId: 'silk-thread', quantity: 5 }, { itemId: 'dew-drop', quantity: 3 }],
+    step: 0, hours: 3, gold: 1000,
+    inputs: [{ itemId: 'silk-thread', quantity: 10 }, { itemId: 'dew-drop', quantity: 6 }],
     xpPerHour: 140,
   },
   {
@@ -147,8 +147,8 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
      * Nachmittag Arbeit und eine Handvoll Sternenstaub.
      */
     id: 'res-bait', kind: 'recipe', tiers: 1, lab: 4, unlocks: null,
-    step: 0, hours: 16, gold: 4000,
-    inputs: [{ itemId: 'star-piece', quantity: 6 }, { itemId: 'iron-shard', quantity: 15 }],
+    step: 0, hours: 16, gold: 10000,
+    inputs: [{ itemId: 'star-piece', quantity: 12 }, { itemId: 'iron-shard', quantity: 30 }],
     xpPerHour: 260,
   },
 
@@ -159,38 +159,38 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
      * es früh und ist billig — es ist das Projekt, das die anderen bezahlt.
      */
     id: 'res-find', kind: 'bonus', tiers: 3, lab: 1, unlocks: 'findChance',
-    step: 1, hours: 3, gold: 500,
-    inputs: [{ itemId: 'iron-shard', quantity: 4 }, { itemId: 'soft-sand', quantity: 4 }],
+    step: 1, hours: 3, gold: 1200,
+    inputs: [{ itemId: 'iron-shard', quantity: 8 }, { itemId: 'soft-sand', quantity: 8 }],
     xpPerHour: 150,
   },
   {
     id: 'res-catch-drop', kind: 'bonus', tiers: 3, lab: 1, unlocks: 'catchDrop',
-    step: 2.5, hours: 4, gold: 700,
-    inputs: [{ itemId: 'silk-thread', quantity: 6 }, { itemId: 'dew-drop', quantity: 3 }],
+    step: 2.5, hours: 4, gold: 1600,
+    inputs: [{ itemId: 'silk-thread', quantity: 12 }, { itemId: 'dew-drop', quantity: 6 }],
     xpPerHour: 160,
   },
   {
     id: 'res-expedition', kind: 'bonus', tiers: 3, lab: 2, unlocks: 'expeditionLoot',
-    step: 10, hours: 6, gold: 900,
-    inputs: [{ itemId: 'dew-drop', quantity: 6 }, { itemId: 'soft-sand', quantity: 6 }],
+    step: 10, hours: 6, gold: 2000,
+    inputs: [{ itemId: 'dew-drop', quantity: 12 }, { itemId: 'soft-sand', quantity: 12 }],
     xpPerHour: 180,
   },
   {
     id: 'res-battle-xp', kind: 'bonus', tiers: 3, lab: 2, unlocks: 'battleXp',
-    step: 5, hours: 8, gold: 1500,
-    inputs: [{ itemId: 'iron-shard', quantity: 8 }, { itemId: 'star-piece', quantity: 1 }],
+    step: 5, hours: 8, gold: 3500,
+    inputs: [{ itemId: 'iron-shard', quantity: 16 }, { itemId: 'star-piece', quantity: 3 }],
     xpPerHour: 220,
   },
   {
     id: 'res-battle-gold', kind: 'bonus', tiers: 3, lab: 2, unlocks: 'battleGold',
-    step: 10, hours: 6, gold: 1200,
-    inputs: [{ itemId: 'star-piece', quantity: 2 }],
+    step: 10, hours: 6, gold: 2800,
+    inputs: [{ itemId: 'star-piece', quantity: 4 }],
     xpPerHour: 200,
   },
   {
     id: 'res-catch-rate', kind: 'bonus', tiers: 3, lab: 3, unlocks: 'catchRate',
-    step: 3, hours: 10, gold: 2000,
-    inputs: [{ itemId: 'golden-razz', quantity: 3 }, { itemId: 'star-piece', quantity: 2 }],
+    step: 3, hours: 10, gold: 5000,
+    inputs: [{ itemId: 'golden-razz', quantity: 6 }, { itemId: 'star-piece', quantity: 5 }],
     xpPerHour: 240,
   },
   {
@@ -199,8 +199,8 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
      * die Grundchance von 0,20 auf 0,30 Prozent. Mehr wäre keine Jagd mehr.
      */
     id: 'res-shiny', kind: 'bonus', tiers: 2, lab: 4, unlocks: 'shinyOdds',
-    step: 0.05, hours: 24, gold: 8000,
-    inputs: [{ itemId: 'star-piece', quantity: 10 }, { itemId: 'golden-razz', quantity: 5 }],
+    step: 0.05, hours: 24, gold: 20000,
+    inputs: [{ itemId: 'star-piece', quantity: 20 }, { itemId: 'golden-razz', quantity: 10 }],
     xpPerHour: 300,
   },
 
@@ -213,8 +213,8 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
      * bestimmtes Exemplar zu behalten statt es zu verwerten.
      */
     id: 'res-training', kind: 'training', tiers: 1, lab: 2, unlocks: null,
-    step: 0, hours: 6, gold: 1000,
-    inputs: [{ itemId: 'dew-drop', quantity: 5 }, { itemId: 'iron-shard', quantity: 5 }],
+    step: 0, hours: 6, gold: 2500,
+    inputs: [{ itemId: 'dew-drop', quantity: 10 }, { itemId: 'iron-shard', quantity: 10 }],
     xpPerHour: 200,
   },
 ]

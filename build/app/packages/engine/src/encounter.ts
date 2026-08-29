@@ -130,7 +130,17 @@ export function rollEncounter(
   /** Erforschter Zuschlag auf die Shiny-Grundchance, in Prozentpunkten. */
   shinyBonus = 0,
 ): WildEncounter | null {
-  const pool = availableSpawns(area, ctx)
+  /*
+   * Ein Gebiet gibt immer etwas her.
+   *
+   * Waeren alle Eintraege an Tageszeit oder Wetter gebunden, stuende hier ein
+   * leerer Beutel und die Erkundung endete im Nichts. Im aktuellen Pack kommt
+   * das in keinem der 38 Gebiete vor — aber ein Inhaltspaket, das es einmal
+   * tut, soll den Spieler nicht mit leeren Haenden dastehen lassen. Dann
+   * gelten eben alle Eintraege.
+   */
+  const gated = availableSpawns(area, ctx)
+  const pool = gated.length > 0 ? gated : area.spawns
   if (pool.length === 0) return null
 
   const factor = lure?.factor ?? LURE_WEIGHT_FACTOR
