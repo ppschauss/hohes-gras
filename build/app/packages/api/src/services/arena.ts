@@ -1,7 +1,7 @@
 import { GameError, type Trainer } from '@game/shared'
 import type { TrainerDef } from '@game/content'
 import {
-  ARENA_HEAL_PERCENT, ARENA_ROUNDS, ARENA_TIERS, arenaLevel, arenaTypeFor,
+  ARENA_HEAL_PERCENT, ARENA_ROUNDS, ARENA_TIERS, arenaLevel, arenaTypeFor, ENERGY_COSTS,
   computeStats, createRng, findArenaTier, LEGENDARY_CATCH_RATE, type ArenaTier,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
@@ -12,6 +12,7 @@ import * as inventory from '../repos/inventory.js'
 import { logEvent } from '../repos/events.js'
 import { gameDate } from '../worldClock.js'
 import { beginBattle, forfeit } from './battle.js'
+import * as energy from './energy.js'
 import { capOf } from './travel.js'
 
 interface RunRow {
@@ -188,6 +189,8 @@ export function view(ctx: AppContext, trainer: Trainer) {
      */
     teamHealth: teamHealthPercent(ctx, trainer.id),
     rounds: ARENA_ROUNDS,
+    /** Was ein ganzer Durchlauf kostet — einmal, nicht je Kampf. */
+    energyCost: ENERGY_COSTS.arena,
     healPercent: ARENA_HEAL_PERCENT,
     tiers: ARENA_TIERS.map((t) => ({
       id: t.id,
@@ -233,10 +236,18 @@ export function start(ctx: AppContext, trainer: Trainer, tierId: string) {
     throw new GameError('invalid_state', { reason: 'already_active' }, 409)
   }
 
+  /*
+   * Die Energie fuer den ganzen Durchlauf, hier und nur hier.
+   *
+   * Reicht sie nicht, faellt der Durchlauf aus, bevor er anfaengt — das ist
+   * die freundlichere Absage als ein Abbruch nach dem dritten Kampf.
+   */
+  energy.spendFor(ctx, trainer.id, 'arena')
+
   const def = buildOpponent(ctx, trainer, tier, typeId, 1, date)
   const area = ctx.registry.tryArea(trainer.currentAreaId ?? '') ?? ctx.registry.allAreas[0]!
   const battle = beginBattle(ctx, trainer, def, area,
-    { exactLevels: true, storeDef: true, foeIv: tier.foeIv })
+    { exactLevels: true, storeDef: true, foeIv: tier.foeIv, freeEnergy: true })
 
   ctx.db.prepare(
     `INSERT INTO arena_runs (trainer_id, game_date, tier, type_id, round, wins, finished, battle_id, started_at)
@@ -303,7 +314,7 @@ export function next(ctx: AppContext, trainer: Trainer) {
     const def = buildOpponent(ctx, trainer, tier, run.typeId, run.round + 1, date)
     const area = ctx.registry.tryArea(trainer.currentAreaId ?? '') ?? ctx.registry.allAreas[0]!
     const battle = beginBattle(ctx, trainer, def, area,
-      { exactLevels: true, storeDef: true, foeIv: tier.foeIv })
+      { exactLevels: true, storeDef: true, foeIv: tier.foeIv, freeEnergy: true })
 
     ctx.db.prepare('UPDATE arena_runs SET round = ?, wins = ?, battle_id = ? WHERE trainer_id = ?')
       .run(run.round + 1, wins, battle.id, trainer.id)

@@ -392,6 +392,28 @@ gewinnt, kein Boss.
 
 ## Skalierung
 
+**Der Schalter regelt nur den Teil nach oben.** Er hieß immer „Gebiete behalten
+ihre Entwurfslevel, frühere Routen bleiben leicht" und tat zwei Dinge: das —
+und er nahm jeder Region ihren Einstieg. Die entworfenen Bänder sind nämlich
+eine Kette:
+
+| Region | Eingang | Ende |
+|---|---|---|
+| Kanto | 2–6 | 66–78 |
+| Johto | 58–64 | 90–100 |
+| Hoenn | 96–102 | 146–150 |
+
+Hinter dem ausgeschalteten Schalter stand damit ein Johto ab Level 58 und ein
+Hoenn ab Level 96. Wer ihn umlegte, verlor die freie Wahl der Startregion, ohne
+dass irgendwo stand, dass er das täte — und ein Überfall, der zu keinem Gebiet
+gehört, fiel gleich mit auf seine Entwurfswerte zurück.
+
+Jetzt gilt: **eine Region empfängt einen immer auf dem eigenen Niveau.** Das ist
+keine Geschmacksfrage, sondern die Bedingung dafür, dass es drei Startregionen
+gibt. Der Schalter entscheidet nur noch, ob die Gebiete danach mitwachsen — aus
+heißt „du wächst in die Region hinein und lässt sie hinter dir", an heißt „sie
+bleibt fordernd".
+
 Gebiete und Trainer treffen den **Median** des aktiven Teams. Der Median, nicht
 das stärkste Mitglied: ein Team aus 5/5/5/5/90 hat den Durchschnitt 22, eine
 Zahl, die auf kein einziges davon zutrifft. So macht ein getauschtes

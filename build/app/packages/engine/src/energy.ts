@@ -88,6 +88,8 @@ export type EnergyAction =
   | 'care' | 'explore' | 'expedition' | 'battle' | 'duel' | 'raid'
   /* Nur fuers Abbrechen: Anfangen kostet Material und Gold, nicht Energie. */
   | 'research' | 'boarding'
+  /* Der ganze Arenadurchlauf auf einmal. */
+  | 'arena'
 
 /**
  * Was eine Aktion kostet.
@@ -113,6 +115,17 @@ export const ENERGY_COSTS: Record<EnergyAction, number> = {
    */
   research: 2,
   boarding: 4,
+  /*
+   * Ein Arenadurchlauf kostet einmal, nicht viermal.
+   *
+   * Vorher zahlte jeder der vier Kaempfe seine zwei Energie einzeln — acht im
+   * Ganzen, und wer mit sechs anfing, stand nach dem dritten Kampf vor einem
+   * Durchlauf, den er nicht zu Ende bringen konnte. Das ist die eigentliche
+   * Aenderung: die Rechnung faellt vorne an, damit sie nie mittendrin
+   * scheitert. Sechs statt acht ist der kleine Nachlass dafuer, dass man sich
+   * im Voraus festlegt.
+   */
+  arena: 6,
 }
 
 /**

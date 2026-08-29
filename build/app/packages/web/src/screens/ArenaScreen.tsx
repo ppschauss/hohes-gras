@@ -49,6 +49,7 @@ export function ArenaScreen({ onBack, onBattle }: { onBack: () => void; onBattle
               rounds: d.rounds,
               heal: d.healPercent,
               avg: d.averageLevel,
+              energy: d.energyCost,
             })}
           </p>
         )}

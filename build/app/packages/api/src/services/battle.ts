@@ -296,7 +296,13 @@ export function beginBattle(
    * Rechnung — und im Ergebnis stuende die Stufe "leicht" mal fuenf Level
    * darueber statt darunter.
    */
-  opts: { exactLevels?: boolean; storeDef?: boolean; foeIv?: number } = {},
+  /*
+   * `freeEnergy` heisst: die Gebuehr ist schon bezahlt.
+   *
+   * Ein Arenadurchlauf zahlt einmal fuer alle vier Kaempfe; die einzelnen
+   * Runden duerfen danach nicht noch einmal abbuchen.
+   */
+  opts: { exactLevels?: boolean; storeDef?: boolean; foeIv?: number; freeEnergy?: boolean } = {},
 ): BattleView {
   {
     if (battles.activeOf(ctx.db, trainer.id)) {
@@ -310,7 +316,7 @@ export function beginBattle(
 
     // Nach allen Pruefungen: ein Kampf, der gar nicht erst zustande kommt,
     // kostet nichts.
-    energy.spendFor(ctx, trainer.id, 'battle')
+    if (!opts.freeEnergy) energy.spendFor(ctx, trainer.id, 'battle')
 
     const ppOf = (id: string) => ctx.registry.tryMove(id)?.pp ?? 10
     const playerParty = usable.map((c) => {

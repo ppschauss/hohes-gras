@@ -121,7 +121,9 @@ describe('Dynamische Levelskalierung', () => {
     expect(off.status).toBe(200)
     expect(off.body.levelScaling).toBe(false)
     expect(off.body.regions[0].areas[0].levels).toEqual({ min: 2, max: 6 })
-    expect(off.body.referenceLevel).toBe(0)
+    // Der Bezugswert bleibt sichtbar: der Eingang einer Region richtet sich
+    // auch bei abgeschalteter Skalierung nach ihm.
+    expect(off.body.referenceLevel).toBe(45)
 
     const levels = await exploreLevels(6)
     for (const level of levels) expect(level).toBeLessThanOrEqual(6)
@@ -130,6 +132,28 @@ describe('Dynamische Levelskalierung', () => {
     const on = await h.post('/api/world/scaling', { enabled: true }, token)
     expect(on.body.levelScaling).toBe(true)
     expect(on.body.regions[0].areas[0].levelBoost).toBe(39)
+  })
+
+  it('empfaengt eine spaetere Region auch bei abgeschalteter Skalierung', async () => {
+    /*
+     * Der Schalter hiess immer "Gebiete behalten ihre Entwurfslevel, fruehere
+     * Routen bleiben leicht" und tat zwei Dinge: das — und er nahm der Region
+     * ihren Einstieg. Die Baender sind eine Kette, das Hochland faengt bei 58
+     * an. Wer den Schalter umlegte, verlor damit die freie Wahl der
+     * Startregion, ohne dass irgendwo stand, dass er das taete.
+     */
+    setTeamLevel(10)
+    h.resetRateLimits()
+    const off = await h.post('/api/world/scaling', { enabled: false }, token)
+    const hochland = off.body.regions.find((r: any) => r.id === 'hochland')
+    const tal = hochland.areas[0]
+    // Entworfen 58–64, empfangen wird man trotzdem auf dem eigenen Niveau.
+    expect(tal.levels.max).toBeLessThanOrEqual(12)
+    expect(tal.levels.min).toBeGreaterThanOrEqual(2)
+
+    // Und die Steigung der Region bleibt: der Gipfel liegt weiter darueber.
+    const gipfel = hochland.areas[1]
+    expect(gipfel.levels.min).toBeGreaterThan(tal.levels.max)
   })
 
   it('stoesst nicht ueber die Reisegrenze hinaus', async () => {

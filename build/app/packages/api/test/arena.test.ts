@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ARENA_HEAL_PERCENT, ARENA_ROUNDS, ARENA_TIERS, arenaTypeFor } from '@game/engine'
+import { ARENA_HEAL_PERCENT, ARENA_ROUNDS, ARENA_TIERS, arenaTypeFor, ENERGY_COSTS } from '@game/engine'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -285,5 +285,41 @@ describe('Trainingsarena', () => {
     const again = await h.post('/api/arena/next', {}, token)
     expect(again.body.done).toBe(true)
     expect(again.body.payout).toBeNull()
+  })
+})
+
+describe('Arena-Energie', () => {
+  const energyNow = () =>
+    (h.ctx.db.prepare('SELECT energy FROM trainers WHERE id = ?')
+      .get(trainerId) as { energy: number }).energy
+
+  it('zahlt einmal fuer den ganzen Durchlauf, nicht je Kampf', async () => {
+    const before = energyNow()
+    h.resetRateLimits()
+    expect((await h.post('/api/arena/start', { tier: 'easy' }, token)).status).toBe(200)
+    const afterStart = energyNow()
+    expect(before - afterStart).toBe(ENERGY_COSTS.arena)
+
+    /*
+     * Den ersten Kampf gewinnen und weiterschalten: die naechste Runde darf
+     * nichts mehr kosten. Vorher zahlte jeder der vier Kaempfe einzeln, und
+     * wer mit sechs Energie anfing, stand nach dem dritten vor einem
+     * Durchlauf, den er nicht zu Ende bringen konnte.
+     */
+    h.ctx.db.prepare("UPDATE battles SET finished_at = ?, winner = 0 WHERE trainer_id = ? AND finished_at IS NULL")
+      .run(Date.now(), trainerId)
+    h.resetRateLimits()
+    const next = await h.post('/api/arena/next', {}, token)
+    expect(next.status).toBe(200)
+    expect(energyNow()).toBe(afterStart)
+  })
+
+  it('sagt vorher ab, statt mittendrin auszugehen', async () => {
+    h.ctx.db.prepare('UPDATE trainers SET energy = ? WHERE id = ?')
+      .run(ENERGY_COSTS.arena - 1, trainerId)
+    h.resetRateLimits()
+    const r = await h.post('/api/arena/start', { tier: 'easy' }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.error).toBe('insufficient_energy')
   })
 })

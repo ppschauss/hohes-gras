@@ -1,7 +1,7 @@
 import type { Trainer } from '@game/shared'
 import type { AreaDef } from '@game/content'
 import {
-  areaBand, areaOffset as offsetOf, referenceLevel, shiftBand, shiftLevel,
+  areaBand, areaOffset as offsetOf, referenceLevel, regionShift, shiftBand, shiftLevel,
   type LevelBand,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
@@ -16,7 +16,6 @@ import { capOf } from './travel.js'
  * absichtlich *nicht* aus der Box: was in der Kiste liegt, kämpft nicht.
  */
 export function referenceOf(ctx: AppContext, trainer: Trainer): number {
-  if (!trainer.levelScaling) return 0
   return referenceLevel(creatures.teamOf(ctx.db, trainer.id).map((c) => c.level))
 }
 
@@ -27,14 +26,30 @@ export function referenceOf(ctx: AppContext, trainer: Trainer): number {
  * jede Region nur über ihren eigenen Einstieg betretbar und die freie
  * Startwahl eine Lüge. Nach oben zählt dagegen nur das Gebiet selbst, sonst
  * liefe einem die eigene Liga davon.
+ *
+ * ---
+ *
+ * Der Schalter regelt nur den Teil nach oben, und das ist eine Korrektur.
+ *
+ * Er hiess immer „Gebiete behalten ihre Entwurfslevel, frühere Routen bleiben
+ * leicht" — und tat zwei Dinge: er liess frühere Routen leicht *und* nahm der
+ * Region ihren Einstieg. Die entworfenen Bänder sind eine Kette (Kanto 2–78,
+ * Johto 58–100, Hoenn 96–150), also stand hinter dem ausgeschalteten Schalter
+ * ein Johto ab Level 58 und ein Hoenn ab Level 96. Wer ihn umlegte, verlor die
+ * freie Wahl der Startregion, ohne dass irgendwo stand, dass er das täte.
+ *
+ * Jetzt gilt: **die Region empfängt einen immer auf dem eigenen Niveau** — das
+ * ist keine Geschmacksfrage, sondern die Bedingung dafür, dass es drei
+ * Startregionen gibt. Der Schalter entscheidet nur noch, ob die Gebiete danach
+ * mitwachsen. Aus heisst: du wächst in die Region hinein und lässt sie hinter
+ * dir. An heisst: sie bleibt fordernd.
  */
 export function areaOffset(ctx: AppContext, trainer: Trainer, area: AreaDef, reference?: number): number {
-  if (!trainer.levelScaling) return 0
   const ref = reference ?? referenceOf(ctx, trainer)
-  return offsetOf(
-    anchorOf(ctx, area.regionId), areaBand(area),
-    ref, capOf(ctx, trainer), entryReferenceOf(ctx, trainer, area.regionId, ref),
-  )
+  const entry = entryReferenceOf(ctx, trainer, area.regionId, ref)
+  const anchor = anchorOf(ctx, area.regionId)
+  if (!trainer.levelScaling) return regionShift(anchor, entry)
+  return offsetOf(anchor, areaBand(area), ref, capOf(ctx, trainer), entry)
 }
 
 /**

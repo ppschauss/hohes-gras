@@ -1348,6 +1348,7 @@ export interface ArenaContext {
 }
 
 export interface ArenaView {
+  energyCost: number
   date: string
   typeId: string | null
   typeName: string | null
