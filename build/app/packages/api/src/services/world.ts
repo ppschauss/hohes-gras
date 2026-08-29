@@ -1,6 +1,6 @@
 import { GameError, type Trainer } from '@game/shared'
 import type { AreaDef } from '@game/content'
-import { areaBand, availableSpawns } from '@game/engine'
+import { areaBand, availableSpawns, shiftLevel } from '@game/engine'
 import type { AppContext } from '../context.js'
 import * as world from '../repos/world.js'
 import * as dex from '../repos/dex.js'
@@ -311,4 +311,61 @@ export function requireCurrentArea(ctx: AppContext, trainer: Trainer): AreaDef {
 /** Team members that are not away on an expedition and still standing. */
 export function availableTeam(ctx: AppContext, trainer: Trainer, busy: Set<string>) {
   return creatures.teamOf(ctx.db, trainer.id).filter((c) => !busy.has(c.id))
+}
+
+/**
+ * Wer hier lebt — soweit man es weiß.
+ *
+ * Gemeldet: man sieht nicht, was in einem Gebiet vorkommt, und weiß deshalb
+ * nie, ob sich das Bleiben lohnt. Die Liste zeigt deshalb, was man hier schon
+ * *gesehen* hat, mit seinem Anteil an den Begegnungen; der Rest bleibt eine
+ * Zahl. Eine vollständige Liste wäre keine Entdeckung mehr, sondern ein
+ * Nachschlagewerk.
+ *
+ * Die Anteile gelten für *jetzt*: Arten, die nur nachts oder bei Regen
+ * erscheinen, zählen bei Sonne nicht mit — sonst stünde dort eine Chance, die
+ * es gerade nicht gibt.
+ */
+export function spawnsOf(ctx: AppContext, trainer: Trainer, areaId: string) {
+  const area = ctx.registry.area(areaId)
+  const clock = worldClock()
+  const seen = dex.dexOf(ctx.db, trainer.id)
+  const offset = areaOffset(ctx, trainer, area, referenceOf(ctx, trainer))
+
+  const now = availableSpawns(area, clock)
+  const total = now.reduce((sum, s) => sum + s.weight, 0)
+  const nowIds = new Set(now.map((s) => s.speciesId))
+
+  const entries = area.spawns.map((spawn) => {
+    const entry = seen.get(spawn.speciesId)
+    const species = ctx.registry.trySpecies(spawn.speciesId)
+    const availableNow = nowIds.has(spawn.speciesId)
+    return {
+      speciesId: spawn.speciesId,
+      known: Boolean(entry),
+      caught: Boolean(entry?.caughtAt),
+      name: entry && species ? ctx.registry.localized(species.name, trainer.locale) : null,
+      sprite: entry && species ? species.sprite : null,
+      types: entry && species ? [...species.types] : [],
+      // Anteil an dem, was gerade erscheinen kann.
+      chance: availableNow && total > 0 ? Math.round((spawn.weight / total) * 1000) / 10 : 0,
+      availableNow,
+      minLevel: shiftLevel(spawn.minLevel, offset),
+      maxLevel: shiftLevel(spawn.maxLevel, offset),
+      timeOfDay: spawn.timeOfDay ?? null,
+      weather: spawn.weather ?? null,
+    }
+  })
+
+  const known = entries.filter((e) => e.known)
+  return {
+    areaId: area.id,
+    areaName: ctx.registry.localized(area.name, trainer.locale),
+    clock,
+    total: entries.length,
+    unknown: entries.length - known.length,
+    caught: known.filter((e) => e.caught).length,
+    // Das Häufigste zuerst; was gerade nicht erscheinen kann, ans Ende.
+    species: known.sort((a, b) => Number(b.availableNow) - Number(a.availableNow) || b.chance - a.chance),
+  }
 }

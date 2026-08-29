@@ -16,6 +16,7 @@ interface Props {
 export function AreaScreen({ onBack, onSafari, onBattle }: Props) {
   const opponents = useAsync(() => api.opponents(), [])
   const garden = useAsync(() => api.garden(), [])
+  const spawns = useAsync(() => api.areaSpawns(), [])
   const action = useAction()
 
   const data = opponents.data
@@ -91,6 +92,56 @@ export function AreaScreen({ onBack, onSafari, onBattle }: Props) {
             {t('battle.heal')}
             {healCost > 0 && <span className="btn__note num">{t('battle.healCost', { n: healCost })}</span>}
           </button>
+        )}
+
+        {/* Wer hier lebt.
+            Gemeldet: man sah nie, was ein Gebiet ueberhaupt hergibt. Gezeigt
+            wird, was man hier schon gesehen hat — der Rest bleibt eine Zahl,
+            sonst waere das Entdecken vorweggenommen. */}
+        {spawns.data && (
+          <section className="section">
+            <div className="sectionHead">
+              <h2>{t('area.spawns')}</h2>
+              <span className="num">
+                {t('area.spawns.count', {
+                  known: spawns.data.species.length,
+                  total: spawns.data.total,
+                  caught: spawns.data.caught,
+                })}
+              </span>
+            </div>
+
+            {spawns.data.species.length === 0
+              ? <p className="center__body">{t('area.spawns.none')}</p>
+              : (
+                <div className="stack">
+                  {spawns.data.species.map((s) => (
+                    <article key={s.speciesId} className={`spawn${s.availableNow ? '' : ' spawn--off'}`}>
+                      <img className="spawn__mon" src={s.sprite ?? ''} alt="" width={40} height={40} />
+                      <span className="spawn__text">
+                        <span className="spawn__name">
+                          {s.name}
+                          {s.caught && <span className="tag tag--done">{t('area.spawns.caught')}</span>}
+                        </span>
+                        <span className="spawn__meta num">
+                          {t('creature.levelRange', { from: s.minLevel, to: s.maxLevel })}
+                          {!s.availableNow && ` · ${s.timeOfDay
+                            ? t(`time.${s.timeOfDay}`)
+                            : s.weather ? t(`weather.${s.weather}`) : t('area.spawns.later')}`}
+                        </span>
+                      </span>
+                      <span className="spawn__chance num">
+                        {s.availableNow ? `${s.chance} %` : '—'}
+                      </span>
+                    </article>
+                  ))}
+                </div>
+              )}
+
+            {spawns.data.unknown > 0 && (
+              <p className="chain__hint">{t('area.spawns.unknown', { n: spawns.data.unknown })}</p>
+            )}
+          </section>
         )}
       </main>
     </Screen>

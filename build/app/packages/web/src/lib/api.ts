@@ -214,6 +214,8 @@ export const api = {
       friends: FriendOverview
     }>('/api/gifts/open', { method: 'POST', body: JSON.stringify({ giftId }) }),
 
+  areaSpawns: () => request<AreaSpawns>('/api/area/spawns'),
+
   arena: () => request<ArenaView>('/api/arena'),
   arenaStart: (tier: string) =>
     request<{ arena: ArenaView }>('/api/arena/start', { method: 'POST', body: JSON.stringify({ tier }) }),
@@ -1100,6 +1102,28 @@ export interface BulkSalvageResult {
   count: number
   names: string[]
   fragments: SalvageResult['fragments']
+}
+
+export interface AreaSpawns {
+  areaId: string
+  areaName: string
+  total: number
+  unknown: number
+  caught: number
+  species: Array<{
+    speciesId: string
+    known: boolean
+    caught: boolean
+    name: string | null
+    sprite: string | null
+    types: string[]
+    chance: number
+    availableNow: boolean
+    minLevel: number
+    maxLevel: number
+    timeOfDay: string | null
+    weather: string | null
+  }>
 }
 
 export interface ArenaContext {

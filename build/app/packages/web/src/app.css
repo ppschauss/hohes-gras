@@ -1526,6 +1526,18 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .earnRow__what { font-size: var(--t-sm); color: var(--ink-dim, var(--ink)); }
 .earnRow__pts { font-size: var(--t-sm); font-weight: 650; color: var(--accent); }
 
+.spawn {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.spawn--off { opacity: 0.55; }
+.spawn__mon { image-rendering: pixelated; flex: none; }
+.spawn__text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.spawn__name { display: flex; align-items: center; gap: var(--s2); font-weight: 600; }
+.spawn__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+.spawn__chance { font-weight: 650; color: var(--accent); }
+
 .tierCard {
   display: flex; flex-direction: column; gap: var(--s1, 4px);
   padding: var(--s3);

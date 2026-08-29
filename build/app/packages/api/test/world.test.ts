@@ -293,6 +293,51 @@ describe('Schon gefangen', () => {
 })
 
 
+describe('Wer hier lebt', () => {
+  it('zeigt nur, was man hier schon gesehen hat', async () => {
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('test-route', trainerId)
+    h.resetRateLimits()
+    const leer = await h.get('/api/area/spawns', token)
+    expect(leer.status).toBe(200)
+    // Vor der ersten Begegnung steht dort nichts als eine Zahl.
+    expect(leer.body.species).toHaveLength(0)
+    expect(leer.body.unknown).toBe(leer.body.total)
+
+    h.ctx.db.prepare(
+      `INSERT OR REPLACE INTO dex_entries (trainer_id, species_id, seen_at, caught_at)
+       VALUES (?, 'wildmon', ?, NULL)`,
+    ).run(trainerId, Date.now())
+
+    h.resetRateLimits()
+    const r = await h.get('/api/area/spawns', token)
+    expect(r.body.species).toHaveLength(1)
+    expect(r.body.species[0]).toMatchObject({ speciesId: 'wildmon', known: true, caught: false })
+    expect(r.body.species[0].chance).toBeGreaterThan(0)
+    expect(r.body.unknown).toBe(r.body.total - 1)
+  })
+
+  it('nennt die Chance nur fuer das, was gerade erscheinen kann', async () => {
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('test-route', trainerId)
+    for (const id of ['wildmon', 'nachtmon', 'blattmon']) {
+      h.ctx.db.prepare(
+        `INSERT OR REPLACE INTO dex_entries (trainer_id, species_id, seen_at, caught_at)
+         VALUES (?, ?, ?, ?)`,
+      ).run(trainerId, id, Date.now(), Date.now())
+    }
+    h.resetRateLimits()
+    const r = await h.get('/api/area/spawns', token)
+    const sum = r.body.species
+      .filter((s: any) => s.availableNow)
+      .reduce((n: number, s: any) => n + s.chance, 0)
+    // Die Anteile der gerade moeglichen Arten ergeben zusammen hoechstens 100.
+    expect(sum).toBeGreaterThan(0)
+    expect(sum).toBeLessThanOrEqual(100.1)
+    for (const s of r.body.species) {
+      if (!s.availableNow) expect(s.chance).toBe(0)
+    }
+  })
+})
+
 describe('Lockduft', () => {
   const give = (itemId: string, n: number) =>
     h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)')

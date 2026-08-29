@@ -51,6 +51,12 @@ export function registerWorldRoutes(app: FastifyInstance, ctx: AppContext): void
     return worldService.worldMap(ctx, findById(ctx.db, req.trainer!.id)!)
   })
 
+  /** Wer im aktuellen Gebiet lebt, soweit man es schon gesehen hat. */
+  app.get('/api/area/spawns', auth, async (req) => {
+    const area = worldService.requireCurrentArea(ctx, req.trainer!)
+    return worldService.spawnsOf(ctx, req.trainer!, area.id)
+  })
+
   app.get('/api/safari', auth, async (req) => {
     const q = SafariSelectionSchema.parse(req.query ?? {})
     const trainer = req.trainer!

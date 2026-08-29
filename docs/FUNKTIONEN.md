@@ -147,6 +147,17 @@ zweimal je Begegnung). Die Fangchance steht als Balken über den Knöpfen.
 Feinsand, Tautropfen, Eisensplitter, selten Sternenstaub — das Bindeglied
 zwischen Erkunden und Werkbank.
 
+### Wer hier lebt
+
+Im Gebiet steht, welche Arten hier vorkommen — **aber nur die, die man hier
+schon gesehen hat**, mit ihrem Anteil an den Begegnungen und ihrem Levelband.
+Der Rest bleibt eine Zahl („und 2, die dir hier noch nicht begegnet sind"): eine
+vollständige Liste wäre kein Entdecken mehr, sondern ein Nachschlagewerk.
+
+Die Anteile gelten für **jetzt**. Arten, die nur nachts oder bei Regen
+erscheinen, stehen ausgegraut mit ihrer Bedingung statt mit einer Chance, die
+es gerade nicht gibt.
+
 ### Fangserie und Schillernde
 
 Wer dieselbe Art hintereinander fängt, baut eine **Serie** auf. Die Anzeige
