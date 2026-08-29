@@ -1099,6 +1099,7 @@ export interface ArenaView {
   typeId: string | null
   typeName: string | null
   averageLevel: number
+  teamHealth: number
   rounds: number
   healPercent: number
   tiers: Array<{

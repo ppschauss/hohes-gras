@@ -53,6 +53,13 @@ export function ArenaScreen({ onBack, onBattle }: { onBack: () => void; onBattle
           </p>
         )}
 
+        {/* Vor dem Antreten, nicht mittendrin: mit einem angeschlagenen Team
+            sind vier Kaempfe nicht zu schaffen, und aus dem Kampf kommt man
+            nur mit einer Niederlage wieder heraus. */}
+        {d && !d.run && d.teamHealth < 60 && (
+          <p className="notice" role="status">{t('arena.hurt', { n: d.teamHealth })}</p>
+        )}
+
         {d?.run
           ? (
             <section className="section">

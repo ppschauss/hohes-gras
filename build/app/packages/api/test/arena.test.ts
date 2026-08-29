@@ -111,6 +111,34 @@ describe('Trainingsarena', () => {
     expect(hp.hp).toBeGreaterThan(1)
   })
 
+  it('laesst beim Abbrechen keinen offenen Kampf zurueck', async () => {
+    /*
+     * Gemeldet: eine Spielerin trat mit angeschlagenem Team an, brach ab und
+     * galt danach als "in einem Kampf" — heilen ging nicht, kaempfen auch
+     * nicht.
+     */
+    h.resetRateLimits()
+    await h.post('/api/arena/start', { tier: 'easy' }, token)
+    expect(h.ctx.db.prepare('SELECT COUNT(*) AS n FROM battles WHERE trainer_id = ? AND finished_at IS NULL')
+      .get(trainerId)).toMatchObject({ n: 1 })
+
+    h.resetRateLimits()
+    await h.post('/api/arena/abandon', {}, token)
+    expect(h.ctx.db.prepare('SELECT COUNT(*) AS n FROM battles WHERE trainer_id = ? AND finished_at IS NULL')
+      .get(trainerId)).toMatchObject({ n: 0 })
+
+    // Und danach geht das, was vorher blockiert war.
+    h.resetRateLimits()
+    expect((await h.post('/api/team/heal', {}, token)).status).toBe(200)
+  })
+
+  it('nennt den Zustand des Teams, bevor man antritt', async () => {
+    h.ctx.db.prepare('UPDATE creatures SET hp_current = 1 WHERE owner_id = ?').run(trainerId)
+    h.resetRateLimits()
+    const r = await h.get('/api/arena', token)
+    expect(r.body.teamHealth).toBeLessThan(20)
+  })
+
   it('zahlt die Praemie eines Durchlaufs einmal am Tag je Stufe', async () => {
     const tier = ARENA_TIERS[0]!
     const goldBefore = (await h.get('/api/bag', token)).body.gold

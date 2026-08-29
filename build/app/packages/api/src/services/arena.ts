@@ -11,7 +11,7 @@ import * as creatures from '../repos/creatures.js'
 import * as inventory from '../repos/inventory.js'
 import { logEvent } from '../repos/events.js'
 import { gameDate } from '../worldClock.js'
-import { beginBattle } from './battle.js'
+import { beginBattle, forfeit } from './battle.js'
 import { capOf } from './travel.js'
 
 interface RunRow {
@@ -91,6 +91,20 @@ function buildOpponent(
   }
 }
 
+/** Anteil der KP, die das Team gerade noch hat — 0 bis 100. */
+function teamHealthPercent(ctx: AppContext, trainerId: string): number {
+  const team = creatures.teamOf(ctx.db, trainerId)
+  if (team.length === 0) return 0
+  let have = 0
+  let max = 0
+  for (const c of team) {
+    const species = ctx.registry.species(c.speciesId)
+    have += c.hpCurrent
+    max += computeStats(species, c.level, c.ivs, c.evs, c.nature).hp
+  }
+  return max === 0 ? 0 : Math.round((have / max) * 100)
+}
+
 /** Zehn Prozent der maximalen KP zurück — für jedes Mitglied, auch besiegte. */
 function healTenPercent(ctx: AppContext, trainerId: string): number {
   let healed = 0
@@ -122,6 +136,15 @@ export function view(ctx: AppContext, trainer: Trainer) {
     typeName: type ? ctx.registry.localized(type.name, trainer.locale) : null,
     typeColor: type?.color ?? null,
     averageLevel: Math.round(average),
+    /*
+     * Wie fit das Team gerade ist, in Prozent.
+     *
+     * Vier Kaempfe mit zehn Prozent Erholung dazwischen sind mit einem
+     * angeschlagenen Team nicht zu schaffen — und wer erst im Kampf merkt,
+     * dass er haette heilen sollen, kommt aus ihm nur mit einer Niederlage
+     * wieder heraus.
+     */
+    teamHealth: teamHealthPercent(ctx, trainer.id),
     rounds: ARENA_ROUNDS,
     healPercent: ARENA_HEAL_PERCENT,
     tiers: ARENA_TIERS.map((t) => ({
@@ -250,8 +273,18 @@ function pay(ctx: AppContext, trainer: Trainer, tier: ArenaTier, date: string) {
   }
 }
 
-/** Aufgeben. Der laufende Kampf bleibt davon unberührt. */
+/**
+ * Aufgeben — und dabei aufräumen.
+ *
+ * Der laufende Kampf muss mit. Gemeldet von einer Spielerin: sie trat mit
+ * einem angeschlagenen Team an, brach den Durchlauf ab und galt danach
+ * stundenlang als "in einem Kampf" — heilen ging nicht, ein neuer Kampf auch
+ * nicht, weil der alte offen stand. Ein abgebrochener Durchlauf, der eine
+ * offene Kampfzeile hinterlässt, ist kein Abbruch, sondern eine Sackgasse.
+ */
 export function abandon(ctx: AppContext, trainer: Trainer) {
+  if (battles.activeOf(ctx.db, trainer.id)) forfeit(ctx, trainer)
   ctx.db.prepare('UPDATE arena_runs SET finished = 1 WHERE trainer_id = ?').run(trainer.id)
+  logEvent(ctx.db, trainer.id, 'arena.abandoned', {})
   return view(ctx, trainer)
 }
