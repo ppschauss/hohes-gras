@@ -365,7 +365,14 @@ jemanden falsch: dieselbe Truppe träfe den einen als Wand und den anderen als
 Übung. Das Team richtet sich am **Median des eigenen Teams** aus, um zwei
 Level nach unten versetzt und mit ±3 gestreut — der Schwächste fünf darunter,
 der Stärkste einen darüber. Und es tritt **nie mit mehr Gegnern an, als man
-selbst dabeihat**. Wer die Skalierung abschaltet, bekommt die Entwurfswerte.
+selbst dabeihat**.
+
+**Auch wer die Skalierung abschaltet.** Das war einmal anders — mit der
+Begründung, wer die Entwurfswerte will, solle sie überall bekommen. Für ein
+Gebiet stimmt das: es hat einen Ort und ein entworfenes Niveau, an dem man
+hängen kann. Ein Überfall hat beides nicht. Im echten Spiel stand deshalb eine
+Rocket-Truppe auf Level 42 bis 46 vor einem Team auf 25, und ausweichen ließ sie
+sich nicht — die Einstellung galt für Gebiete, traf aber etwas, das keines ist.
 
 Beides ist gemessen, nicht geschätzt. Simulierte Überfälle (ohne Items, ohne
 kluges Wechseln — echte Spieler liegen also höher):

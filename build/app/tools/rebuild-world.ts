@@ -58,6 +58,12 @@ async function main(): Promise<void> {
         if (before === undefined || l.level < before) learnset.set(l.moveId, l.level)
       }
     }
+    // Eigene Attacken zuletzt: sie duerfen ein geerbtes Level unterbieten,
+    // aber nie ueberschreiben, was schon frueher zu haben ist.
+    for (const extra of ev.extraMoves ?? []) {
+      const before = learnset.get(extra.moveId)
+      if (before === undefined || extra.level < before) learnset.set(extra.moveId, extra.level)
+    }
     const entry = {
       ...base,
       id: ev.id,

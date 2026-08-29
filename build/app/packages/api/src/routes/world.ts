@@ -144,4 +144,19 @@ export function registerWorldRoutes(app: FastifyInstance, ctx: AppContext): void
     const result = breeding.hatch(ctx, req.trainer!, id)
     return { ...result, overview: breeding.overview(ctx, req.trainer!) }
   })
+
+  app.post('/api/eggs/tend', write, async (req) => {
+    const { id } = IdSchema.parse(req.body)
+    breeding.tend(ctx, req.trainer!, id)
+    return { overview: breeding.overview(ctx, req.trainer!) }
+  })
+
+  app.post('/api/eggs/brooder', write, async (req) => {
+    const { id, creatureId } = z.object({
+      id: z.string().uuid(),
+      creatureId: z.string().uuid().nullable(),
+    }).parse(req.body)
+    breeding.setBrooder(ctx, req.trainer!, id, creatureId)
+    return { overview: breeding.overview(ctx, req.trainer!) }
+  })
 }

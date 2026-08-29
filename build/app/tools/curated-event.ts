@@ -25,6 +25,18 @@ export interface EventSpecies {
    * Fund.
    */
   evolvesTo?: { to: string; level: number }
+  /**
+   * Eigene Attacken über das geerbte Lernset hinaus.
+   *
+   * Gemessen: die Prisma-Glumanda-Linie kam auf 11 Attacken, der Median im
+   * Pack liegt bei 15 und Prisma-Abra bei 20 — für eine Art, die man auf einer
+   * einzigen Route mit zwei Prozent findet, war das zu wenig. Gemeldet wurde
+   * genau das.
+   *
+   * Sie füllen zugleich die Lücken der Vorlage: Glumandas Kurve springt von 10
+   * auf 19 und von 28 auf 34, und dazwischen passierte gar nichts.
+   */
+  extraMoves?: Array<{ moveId: string; level: number }>
   /** Untergrenze der Werte beim Fangen; 0 heißt: ganz normal gewürfelt. */
   ivFloor?: number
   /**
@@ -86,6 +98,22 @@ export const EVENT_SPECIES: EventSpecies[] = [
     xpFactor: 1,
     sprite: '/media/sprites/charmander-prisma.svg',
     evolvesTo: { to: 'charmeleon-prisma', level: 16 },
+    /*
+     * Signaturattacken der Linie.
+     *
+     * Nach dem Thema gewählt, nicht nach Stärke: ein Prisma bricht Licht,
+     * also Metallklaue, Juwelenkraft und Lichtkanone. Der Drachenanteil
+     * kommt vom Vorbild, das am Ende ohnehin Flügel bekommt. Die Level
+     * liegen in den Lücken der Vorlage — 13, 22 und 31 sind genau die
+     * Stellen, an denen sonst nichts passierte.
+     */
+    extraMoves: [
+      { moveId: 'metal-claw', level: 13 },
+      { moveId: 'power-gem', level: 22 },
+      { moveId: 'dragon-breath', level: 31 },
+      { moveId: 'flash-cannon', level: 40 },
+    ],
+
     ivFloor: 20,
     wild: { areaOrder: 10, chance: 2 },
   },
@@ -111,6 +139,16 @@ export const EVENT_SPECIES: EventSpecies[] = [
     xpFactor: 1,
     sprite: '/media/sprites/charmeleon-prisma.svg',
     evolvesTo: { to: 'charizard-prisma', level: 36 },
+    // Dieselben wie in der Vorstufe, damit nichts beim Entwickeln verschwindet
+    // — plus die eigene, die es zur Entwicklung dazubekommt.
+    extraMoves: [
+      { moveId: 'metal-claw', level: 13 },
+      { moveId: 'power-gem', level: 22 },
+      { moveId: 'dragon-breath', level: 31 },
+      { moveId: 'flash-cannon', level: 40 },
+    
+      { moveId: 'dragon-claw', level: 36 },
+    ],
     ivFloor: 20,
   },
   {
@@ -126,6 +164,15 @@ export const EVENT_SPECIES: EventSpecies[] = [
     types: ['fire', 'flying'],
     xpFactor: 1,
     sprite: '/media/sprites/charizard-prisma.svg',
+    extraMoves: [
+      { moveId: 'metal-claw', level: 13 },
+      { moveId: 'power-gem', level: 22 },
+      { moveId: 'dragon-breath', level: 31 },
+      { moveId: 'flash-cannon', level: 40 },
+    
+      { moveId: 'dragon-claw', level: 36 },
+      { moveId: 'ancient-power', level: 48 },
+    ],
     ivFloor: 20,
   },
 ]

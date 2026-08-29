@@ -9,10 +9,14 @@ import { useAction, useAsync } from '../lib/useAsync'
 import { describeTurn, effectivenessLabel } from '../lib/battleLog'
 import { Screen } from '../ui/Screen'
 import { CenterState } from '../ui/States'
+import { useGame } from '../store'
 
 type Panel = 'main' | 'moves' | 'switch' | 'items'
 
 export function BattleScreen({ onBack, onArena }: { onBack: () => void; onArena: () => void }) {
+  /* Der Bildschirm, von dem aus der Kampf begonnen wurde. Einmal beim
+     Betreten festgehalten — der Stapel bewegt sich waehrenddessen weiter. */
+  const cameFrom = useRef(useGame.getState().history.at(-1) ?? null)
   const existing = useAsync(() => api.currentBattle(), [])
   const opponents = useAsync(() => api.opponents(), [])
   // Nur Medizin: Baelle fangen keine Trainerpokemon.
@@ -95,10 +99,18 @@ export function BattleScreen({ onBack, onArena }: { onBack: () => void; onArena:
    * Aus einem Arenakampf war das bisher die Gebietsansicht — man stand auf der
    * Karte statt in der Arena und musste sich zurueckklicken. Gemeldet, und in
    * einem Durchlauf mit vier Kaempfen viermal aergerlich.
+   *
+   * Dasselbe galt fuer die Safari, und dort war es schlimmer: nach einem
+   * Streuner oder Ueberfall stand man vor der Trainerliste des Gebiets. Ist
+   * dort niemand mehr, ist das eine leere Seite ohne einen einzigen Knopf —
+   * genau so gemeldet ("man ist stuck und kann keine Buttons klicken"). Nur
+   * wer wirklich ueber die Trainerliste gekommen ist, bleibt auf ihr: dort
+   * will man den naechsten Gegner.
    */
   const leave = () => {
     setBattle(null); setLog([]); existing.reload(); opponents.reload()
-    if (arena) onArena()
+    if (arena) { onArena(); return }
+    if (cameFrom.current !== 'area') onBack()
   }
 
   if (!battle) {
@@ -115,7 +127,14 @@ export function BattleScreen({ onBack, onArena }: { onBack: () => void; onArena:
           <section className="section">
             <h2>{t('area.trainers')}</h2>
             {opponents.data?.trainers.length === 0
-              ? <CenterState glyph="🕊️" title={t('soon.title')} body={t('area.trainers.hint')} />
+              ? (
+                <CenterState glyph="🕊️" title={t('soon.title')} body={t('area.trainers.hint')}>
+                  {/* Ein Ausweg gehoert auf jede leere Seite. */}
+                  <button type="button" className="btn btn--primary" onClick={onBack}>
+                    {t('app.back')}
+                  </button>
+                </CenterState>
+              )
               : <div className="stack">
                   {opponents.data?.trainers.map((o) => (
                     <OpponentCard key={o.id} entry={o} busy={action.busy} onChallenge={challenge} />

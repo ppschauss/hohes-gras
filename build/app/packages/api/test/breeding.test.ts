@@ -172,3 +172,101 @@ describe('Zucht', () => {
     expect(mean).toBeGreaterThan(55)
   })
 })
+
+describe('Brut-Beet', () => {
+  /** Ein Ei anlegen und die Startzeit so setzen, dass n Schritte faellig sind. */
+  const eggWith = async (phasesDue: number) => {
+    const a = addCreature('wildmon', 20)
+    const b = addCreature('wildmon', 20)
+    h.resetRateLimits()
+    const r = await h.post('/api/eggs/pair', { creatureIdA: a, creatureIdB: b }, token)
+    const id = r.body.egg.id as string
+    const row = h.ctx.db.prepare('SELECT hatch_minutes AS m FROM eggs WHERE id = ?')
+      .get(id) as { m: number }
+    const perPhase = (row.m * 60_000) / 4
+    h.ctx.db.prepare('UPDATE eggs SET started_at = ? WHERE id = ?')
+      .run(Date.now() - perPhase * phasesDue - 1000, id)
+    return id
+  }
+
+  const eggFrom = async (id: string) => {
+    h.resetRateLimits()
+    const view = await h.get('/api/eggs', token)
+    return view.body.eggs.find((e: any) => e.id === id)
+  }
+
+  it('meldet einen faelligen Schritt und erledigt ihn', async () => {
+    const id = await eggWith(1)
+    expect((await eggFrom(id)).phaseDue).toBe(true)
+
+    h.resetRateLimits()
+    expect((await h.post('/api/eggs/tend', { id }, token)).status).toBe(200)
+    const after = await eggFrom(id)
+    expect(after.phasesDone).toBe(1)
+    // Und ein zweiter Tipp bringt nichts: der naechste Schritt ist noch nicht
+    // faellig.
+    expect(after.phaseDue).toBe(false)
+    h.resetRateLimits()
+    const again = await h.post('/api/eggs/tend', { id }, token)
+    expect(again.status).toBe(409)
+    expect(again.body.detail.reason).toBe('not_ready')
+  })
+
+  it('verkuerzt die Brutzeit mit jeder Pflege', async () => {
+    const id = await eggWith(4)
+    const before = await eggFrom(id)
+    expect(before.minutesSaved).toBe(0)
+
+    for (let i = 0; i < 4; i++) {
+      h.resetRateLimits()
+      expect((await h.post('/api/eggs/tend', { id }, token)).status).toBe(200)
+    }
+    const after = await eggFrom(id)
+    expect(after.phasesDone).toBe(4)
+    expect(after.care).toBe(1)
+    // Ein Viertel weniger, nicht mehr.
+    expect(after.hatchMinutes).toBe(Math.round(before.hatchMinutes * 0.75))
+    expect(after.ivBonus).toBe(3)
+    expect(after.shinyFactor).toBeCloseTo(1.5, 5)
+  })
+
+  it('legt die Punkte beim Schluepfen wirklich drauf', async () => {
+    const id = await eggWith(4)
+    for (let i = 0; i < 4; i++) {
+      h.resetRateLimits()
+      await h.post('/api/eggs/tend', { id }, token)
+    }
+    const eggIvs = h.ctx.db.prepare('SELECT iv_hp AS hp FROM eggs WHERE id = ?').get(id) as { hp: number }
+    finishEgg(id)
+    h.resetRateLimits()
+    const hatched = await h.post('/api/eggs/hatch', { id }, token)
+    expect(hatched.status).toBe(200)
+    expect(hatched.body.care.ivBonus).toBe(3)
+    const c = h.ctx.db.prepare('SELECT iv_hp AS hp FROM creatures WHERE id = ?')
+      .get(hatched.body.creature.id) as { hp: number }
+    expect(c.hp).toBe(Math.min(31, eggIvs.hp + 3))
+  })
+
+  it('uebernimmt ein Brueter die Arbeit und ist danach gebunden', async () => {
+    const id = await eggWith(0)
+    const brooder = addCreature('wildmon', 50)
+    h.resetRateLimits()
+    expect((await h.post('/api/eggs/brooder', { id, creatureId: brooder }, token)).status).toBe(200)
+
+    const view = await eggFrom(id)
+    expect(view.brooder.level).toBe(50)
+    // Level 50 von 100 heisst halbe Pflege — ohne einen einzigen Tipp.
+    expect(view.care).toBe(0.5)
+    // Und kein Handgriff mehr noetig.
+    expect(view.phaseDue).toBe(false)
+
+    h.resetRateLimits()
+    expect((await h.get('/api/teams', token)).body.busyCreatureIds).toContain(brooder)
+
+    // Wieder wegnehmen gibt ihn frei.
+    h.resetRateLimits()
+    await h.post('/api/eggs/brooder', { id, creatureId: null }, token)
+    h.resetRateLimits()
+    expect((await h.get('/api/teams', token)).body.busyCreatureIds).not.toContain(brooder)
+  })
+})

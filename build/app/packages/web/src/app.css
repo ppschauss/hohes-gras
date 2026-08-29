@@ -887,6 +887,11 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .boarder__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .boarder__name { font-size: var(--t-sm); font-weight: 650; }
 .boarder__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+
+/* Brut-Beet: die Pflegezeile traegt die Belohnung, deshalb Gold. */
+.egg__care { font-size: var(--t-xs); color: var(--gold); }
+.egg__actions { display: flex; flex-direction: column; gap: var(--s2); align-items: stretch; }
+.egg__pick { grid-column: 1 / -1; margin-top: var(--s2); }
 .dexcell__sprite { image-rendering: pixelated; }
 .dexcell__name {
   font-size: var(--t-xs); text-align: center; line-height: 1.15;
@@ -1173,7 +1178,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .eggs { display: flex; flex-direction: column; gap: var(--s2); }
 .egg {
   display: grid; grid-template-columns: 56px minmax(0, 1fr) auto;
-  align-items: center; gap: var(--s3);
+  /* Oben ausgerichtet: die Zeile traegt jetzt Pflegestand und Knoepfe und ist
+     damit deutlich hoeher als das Ei daneben. */
+  align-items: start; gap: var(--s3);
   padding: var(--s3);
   background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
 }

@@ -259,14 +259,22 @@ describe('Überfall auf Augenhöhe', () => {
     expect(r.body.foe.active.level).toBe(10)
   })
 
-  it('laesst die Entwurfswerte stehen, wenn die Skalierung aus ist', async () => {
-    // Wer die Skalierung abschaltet, will die Zahlen des Entwurfs — ueberall.
+  it('passt sich auch bei abgeschalteter Skalierung an', async () => {
+    /*
+     * Frueher stand hier das Gegenteil: wer die Skalierung abschaltet, wollte
+     * die Zahlen des Entwurfs — ueberall. Fuer ein Gebiet stimmt das, denn es
+     * hat einen Ort und ein entworfenes Niveau. Ein Ueberfall hat beides
+     * nicht: er passiert dort, wo man gerade steht. Im echten Spiel stand
+     * damit eine Rocket-Truppe auf Level 42 bis 46 vor einem Team auf 25, und
+     * ausweichen konnte man ihr nicht.
+     */
     h.ctx.db.prepare('UPDATE trainers SET level_scaling = 0 WHERE id = ?').run(trainerId)
     setTeamLevel(40)
     pendEvent()
     h.resetRateLimits()
     const r = await h.post('/api/battle/event', {}, token)
-    expect(r.body.foe.active.level).toBe(5)
+    expect(r.body.foe.active.level).toBeGreaterThan(30)
+    expect(r.body.foe.active.level).toBeLessThanOrEqual(44)
   })
 })
 

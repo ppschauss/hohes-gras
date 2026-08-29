@@ -312,6 +312,13 @@ export const api = {
       method: 'POST', body: JSON.stringify({ buildingId }),
     }),
 
+  tendEgg: (id: string) =>
+    request<{ overview: EggOverview }>('/api/eggs/tend', { method: 'POST', body: JSON.stringify({ id }) }),
+  setBrooder: (id: string, creatureId: string | null) =>
+    request<{ overview: EggOverview }>('/api/eggs/brooder', {
+      method: 'POST', body: JSON.stringify({ id, creatureId }),
+    }),
+
   habitat: (speciesId: string) =>
     request<HabitatView>(`/api/dex/habitat?speciesId=${encodeURIComponent(speciesId)}`),
 
@@ -807,6 +814,17 @@ export interface EggView {
   minutesLeft: number
   ready: boolean
   ivPercentHint: string
+  /* Brut-Beet */
+  phasesDone: number
+  phases: number
+  phaseDue: boolean
+  phaseKind: 'warm' | 'turn'
+  nextPhaseAt: number | null
+  brooder: { id: string; name: string; sprite: string; level: number } | null
+  care: number
+  minutesSaved: number
+  ivBonus: number
+  shinyFactor: number
 }
 
 export interface EggOverview {

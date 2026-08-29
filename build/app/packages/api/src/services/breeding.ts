@@ -1,7 +1,9 @@
 import { GameError, type Trainer } from '@game/shared'
 import {
   canBreed, computeStats, createRng, hatchProgress, produceEgg, xpForLevel,
-  MIN_BREEDING_LEVEL,
+  BROOD_PHASES, BROOD_SHINY_BONUS, broodCare, broodIvBonus, broodMinutes,
+  broodPhaseKind, broodPhasesDue, broodShinyExtra, nextBroodPhaseAt,
+  IV_MAX, SHINY_BASE_ODDS, MIN_BREEDING_LEVEL,
 } from '@game/engine'
 import type { SpeciesDef } from '@game/content'
 import type { AppContext } from '../context.js'
@@ -13,6 +15,7 @@ import { logEvent } from '../repos/events.js'
 import { worldClock } from '../worldClock.js'
 import { creatureView } from './views.js'
 import { awardSeasonPoints, bonuses, bumpMetric } from './progression.js'
+import { busyCreatureIds } from './busy.js'
 
 const HATCH_LEVEL = 1
 
@@ -52,6 +55,24 @@ export interface EggView {
   minutesLeft: number
   ready: boolean
   ivPercentHint: string
+  /* ---------------------------------------------------------- Brut-Beet */
+  /** Erledigte Pflegeschritte, und wie viele es insgesamt sind. */
+  phasesDone: number
+  phases: number
+  /** Ist gerade einer fällig? */
+  phaseDue: boolean
+  /** Wärmen oder wenden — der nächste Handgriff. */
+  phaseKind: 'warm' | 'turn'
+  /** Wann der nächste fällig wird; null, wenn alle durch sind. */
+  nextPhaseAt: number | null
+  /** Wer das Ei automatisch wärmt. */
+  brooder: { id: string; name: string; sprite: string; level: number } | null
+  /** Wie gut versorgt es ist, 0 bis 1 — daraus folgen die drei Boni. */
+  care: number
+  /** Was die Pflege gerade wert ist. */
+  minutesSaved: number
+  ivBonus: number
+  shinyFactor: number
 }
 
 /** IVs are hinted, not revealed: knowing the exact roll before hatching would
@@ -64,8 +85,17 @@ function ivHint(percent: number): string {
 }
 
 export function eggView(ctx: AppContext, trainer: Trainer, egg: eggs.Egg, now = Date.now()): EggView {
-  const progress = hatchProgress(egg.startedAt, egg.hatchMinutes, now)
+  /*
+   * Die Pflege verkuerzt die Brutzeit, also muss sie vor dem Fortschritt
+   * stehen: sonst zeigte der Balken eine Zeit an, die gar nicht mehr gilt.
+   */
+  const brooder = egg.brooderId ? creatures.byId(ctx.db, egg.brooderId) : null
+  const care = broodCare(egg.phasesDone, brooder?.level ?? null)
+  const minutes = broodMinutes(egg.hatchMinutes, care)
+  const totalMs = egg.hatchMinutes * 60_000
+  const progress = hatchProgress(egg.startedAt, minutes, now)
   const ready = progress >= 1
+  const due = broodPhasesDue(egg.startedAt, now, totalMs)
   const species = ctx.registry.trySpecies(egg.speciesId)
   const ivTotal = Object.values(egg.ivs).reduce((a, b) => a + b, 0)
   return {
@@ -76,11 +106,91 @@ export function eggView(ctx: AppContext, trainer: Trainer, egg: eggs.Egg, now = 
     sprite: ready && species ? (egg.shiny ? species.spriteShiny : species.sprite) : null,
     shiny: ready ? egg.shiny : false,
     progress,
-    hatchMinutes: egg.hatchMinutes,
-    minutesLeft: Math.max(0, Math.ceil(egg.hatchMinutes * (1 - progress))),
+    hatchMinutes: minutes,
+    minutesLeft: Math.max(0, Math.ceil(minutes * (1 - progress))),
     ready,
     ivPercentHint: ivHint(Math.round((ivTotal / (31 * 6)) * 100)),
+    phasesDone: egg.phasesDone,
+    phases: BROOD_PHASES,
+    // Ein Schritt ist faellig, wenn die Zeit ihn freigegeben hat und er noch
+    // nicht erledigt ist — und solange ein Brueter danebenliegt, gar nicht:
+    // der macht die Arbeit.
+    phaseDue: !brooder && !ready && due > egg.phasesDone,
+    phaseKind: broodPhaseKind(egg.phasesDone),
+    nextPhaseAt: brooder ? null : nextBroodPhaseAt(egg.startedAt, egg.phasesDone, totalMs),
+    brooder: brooder
+      ? {
+          id: brooder.id,
+          name: brooder.nickname
+            ?? ctx.registry.localized(ctx.registry.species(brooder.speciesId).name, trainer.locale),
+          sprite: brooder.shiny
+            ? ctx.registry.species(brooder.speciesId).spriteShiny
+            : ctx.registry.species(brooder.speciesId).sprite,
+          level: brooder.level,
+        }
+      : null,
+    care,
+    minutesSaved: egg.hatchMinutes - minutes,
+    ivBonus: broodIvBonus(care),
+    shinyFactor: 1 + BROOD_SHINY_BONUS * care,
   }
+}
+
+/**
+ * Einen Pflegeschritt erledigen.
+ *
+ * Kostet nichts ausser Aufmerksamkeit — wie im Poke-Beet. Der Preis ist, dass
+ * man da sein muss: die Schritte werden ueber die Brutzeit verteilt faellig,
+ * und wer erst am Ende vorbeikommt, holt nur noch einen davon nach.
+ */
+export function tend(ctx: AppContext, trainer: Trainer, eggId: string): EggView {
+  return tx(ctx.db, () => {
+    const egg = eggs.byId(ctx.db, eggId)
+    if (!egg || egg.trainerId !== trainer.id) throw new GameError('not_found', { eggId }, 404)
+    if (egg.hatchedAt) throw new GameError('invalid_state', { reason: 'already_hatched' }, 409)
+    if (egg.brooderId) throw new GameError('invalid_state', { reason: 'already_tended' }, 409)
+
+    const totalMs = egg.hatchMinutes * 60_000
+    const due = broodPhasesDue(egg.startedAt, Date.now(), totalMs)
+    if (due <= egg.phasesDone) {
+      throw new GameError('invalid_state', {
+        reason: 'not_ready',
+        nextAt: nextBroodPhaseAt(egg.startedAt, egg.phasesDone, totalMs),
+      }, 409)
+    }
+    if (!eggs.tend(ctx.db, egg.id, egg.phasesDone)) {
+      throw new GameError('invalid_state', { reason: 'already_tended' }, 409)
+    }
+    logEvent(ctx.db, trainer.id, 'egg.tended', { eggId, phase: egg.phasesDone + 1 })
+    return eggView(ctx, trainer, eggs.byId(ctx.db, egg.id)!)
+  })
+}
+
+/**
+ * Ein Pokemon ans Ei legen — oder wieder wegnehmen.
+ *
+ * Es ist danach nicht mehr verfuegbar, genau wie ein Beetpfleger. Das ist der
+ * Preis dafuer, nicht selbst vorbeischauen zu muessen.
+ */
+export function setBrooder(
+  ctx: AppContext, trainer: Trainer, eggId: string, creatureId: string | null,
+): EggView {
+  return tx(ctx.db, () => {
+    const egg = eggs.byId(ctx.db, eggId)
+    if (!egg || egg.trainerId !== trainer.id) throw new GameError('not_found', { eggId }, 404)
+    if (egg.hatchedAt) throw new GameError('invalid_state', { reason: 'already_hatched' }, 409)
+
+    if (creatureId !== null) {
+      const c = creatures.byId(ctx.db, creatureId)
+      if (!c || c.ownerId !== trainer.id) throw new GameError('not_found', { creatureId }, 404)
+      if (creatureId !== egg.brooderId && busyCreatureIds(ctx, trainer.id).has(creatureId)) {
+        throw new GameError('invalid_state', { reason: 'creature_busy', creatureId }, 409)
+      }
+    }
+    eggs.setBrooder(ctx.db, egg.id, creatureId)
+    logEvent(ctx.db, trainer.id, 'egg.brooder', { eggId, creatureId })
+    return eggView(ctx, trainer, eggs.byId(ctx.db, egg.id)!)
+  })
 }
 
 export function overview(ctx: AppContext, trainer: Trainer) {
@@ -162,15 +272,35 @@ export function hatch(ctx: AppContext, trainer: Trainer, eggId: string) {
     if (egg.hatchedAt) throw new GameError('invalid_state', { reason: 'already_hatched' }, 409)
 
     const now = Date.now()
-    if (hatchProgress(egg.startedAt, egg.hatchMinutes, now) < 1) {
-      throw new GameError('invalid_state', { reason: 'not_ready', minutesLeft: Math.ceil(egg.hatchMinutes * (1 - hatchProgress(egg.startedAt, egg.hatchMinutes, now))) }, 409)
+    const brooder = egg.brooderId ? creatures.byId(ctx.db, egg.brooderId) : null
+    const care = broodCare(egg.phasesDone, brooder?.level ?? null)
+    const minutes = broodMinutes(egg.hatchMinutes, care)
+    if (hatchProgress(egg.startedAt, minutes, now) < 1) {
+      throw new GameError('invalid_state', {
+        reason: 'not_ready',
+        minutesLeft: Math.ceil(minutes * (1 - hatchProgress(egg.startedAt, minutes, now))),
+      }, 409)
     }
     if (!eggs.markHatched(ctx.db, egg.id, now)) {
       throw new GameError('invalid_state', { reason: 'already_hatched' }, 409)
     }
 
     const species = ctx.registry.species(egg.speciesId)
-    const stats = computeStats(species, HATCH_LEVEL, egg.ivs, { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, egg.nature)
+    /*
+     * Was die Pflege eingebracht hat.
+     *
+     * Die Werte steigen hier und nicht beim Legen: sonst stuende das Ergebnis
+     * schon fest, bevor sich jemand gekuemmert hat. Der Shiny-Zuschlag ist ein
+     * eigener, kleiner Wurf — das Ei hatte seinen beim Legen, und wer gepflegt
+     * hat, bekommt die Differenz nachgereicht.
+     */
+    const bonus = broodIvBonus(care)
+    const ivs = Object.fromEntries(
+      Object.entries(egg.ivs).map(([k, v]) => [k, Math.min(IV_MAX, v + bonus)]),
+    ) as typeof egg.ivs
+    const shiny = egg.shiny || (care > 0 && createRng(`brood:${egg.id}`)
+      .chance(broodShinyExtra(SHINY_BASE_ODDS, care) * 100))
+    const stats = computeStats(species, HATCH_LEVEL, ivs, { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }, egg.nature)
 
     const created = creatures.insertCreature(ctx.db, {
       ownerId: trainer.id,
@@ -178,11 +308,11 @@ export function hatch(ctx: AppContext, trainer: Trainer, eggId: string) {
       level: HATCH_LEVEL,
       xp: xpForLevel(species.growthRate, HATCH_LEVEL),
       nature: egg.nature,
-      ivs: egg.ivs,
+      ivs,
       // Hatched creatures start attached — they have known you since birth.
       friendship: 120,
       hpCurrent: stats.hp,
-      shiny: egg.shiny,
+      shiny,
       moves: ctx.registry.learnableAt(egg.speciesId, HATCH_LEVEL).slice(0, 4),
       caughtAreaId: null,
       teamSlot: null,
@@ -191,11 +321,15 @@ export function hatch(ctx: AppContext, trainer: Trainer, eggId: string) {
     awardSeasonPoints(ctx, trainer.id, 'eggHatch')
     if (newDexEntry) awardSeasonPoints(ctx, trainer.id, 'newDexEntry')
     bumpMetric(ctx, trainer.id, 'eggsHatched')
-    logEvent(ctx.db, trainer.id, 'egg.hatched', { speciesId: egg.speciesId, shiny: egg.shiny })
+    logEvent(ctx.db, trainer.id, 'egg.hatched', {
+      speciesId: egg.speciesId, shiny, care, ivBonus: bonus,
+    })
 
     return {
       creature: creatureView(ctx.registry, created, trainer.locale, worldClock().timeOfDay),
       newDexEntry,
+      /** Was die Pflege am Ende ausgemacht hat — sonst sieht man sie nie. */
+      care: { share: care, ivBonus: bonus, shinyByCare: shiny && !egg.shiny },
     }
   })
 }

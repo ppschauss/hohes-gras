@@ -2,6 +2,7 @@ import type { AppContext } from '../context.js'
 import * as expeditions from '../repos/expeditions.js'
 import * as research from '../repos/research.js'
 import * as boarding from '../repos/boarding.js'
+import * as eggs from '../repos/eggs.js'
 
 /**
  * Wer gerade nicht verfügbar ist.
@@ -17,5 +18,6 @@ export function busyCreatureIds(ctx: AppContext, trainerId: string): Set<string>
   const out = expeditions.busyCreatureIds(ctx.db, trainerId)
   for (const id of research.busyCreatures(ctx.db, trainerId)) out.add(id)
   for (const id of boarding.busyCreatures(ctx.db, trainerId)) out.add(id)
+  for (const id of eggs.brooders(ctx.db, trainerId)) out.add(id)
   return out
 }

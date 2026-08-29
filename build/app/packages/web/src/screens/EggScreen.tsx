@@ -13,6 +13,8 @@ export function EggScreen({ onBack }: { onBack: () => void }) {
   const action = useAction()
   const [parents, setParents] = useState<string[]>([])
   const [hatched, setHatched] = useState<CreatureLike | null>(null)
+  /** Welches Ei gerade einen Brueter sucht. */
+  const [brooding, setBrooding] = useState<string | null>(null)
 
   const data = overview.data
 
@@ -80,11 +82,81 @@ export function EggScreen({ onBack }: { onBack: () => void }) {
                     <span className="egg__time num">
                       {egg.ready ? t('egg.ready') : t('egg.readyIn', { n: minutesLabel(egg.minutesLeft) })}
                     </span>
+
+                    {/* Das Brut-Beet: was die Pflege bis jetzt eingebracht
+                        hat, in einer Zeile — sonst sieht man sie nie. */}
+                    <span className="egg__care num">
+                      {t('egg.care', {
+                        done: egg.phasesDone, max: egg.phases,
+                        min: minutesLabel(egg.minutesSaved), iv: egg.ivBonus,
+                        shiny: egg.shinyFactor.toFixed(2).replace(/0$/, '').replace('.', ','),
+                      })}
+                    </span>
+                    {egg.brooder && (
+                      <span className="egg__hint">
+                        {t('egg.brooding', { name: egg.brooder.name, n: egg.brooder.level })}
+                      </span>
+                    )}
                   </span>
-                  <button type="button" className="btn btn--primary btn--sm"
-                    disabled={!egg.ready || action.busy} onClick={() => hatch(egg.id)}>
-                    {t('egg.hatch')}
-                  </button>
+
+                  <span className="egg__actions">
+                    {!egg.ready && !egg.brooder && (
+                      <button type="button" className="btn btn--ghost btn--sm"
+                        disabled={!egg.phaseDue || action.busy}
+                        onClick={() => {
+                          haptic.tap()
+                          void action.run(() => api.tendEgg(egg.id), (res) => {
+                            overview.set(res.overview); haptic.success()
+                          })
+                        }}>
+                        {egg.phasesDone >= egg.phases
+                          ? t('egg.caredFor')
+                          : egg.phaseDue
+                            ? t(`egg.phase.${egg.phaseKind}`)
+                            : t('egg.notDue')}
+                      </button>
+                    )}
+                    {!egg.ready && (
+                      <button type="button" className="btn btn--ghost btn--sm" disabled={action.busy}
+                        onClick={() => {
+                          haptic.tap()
+                          if (egg.brooder) {
+                            void action.run(() => api.setBrooder(egg.id, null), (res) => overview.set(res.overview))
+                          } else {
+                            setBrooding(brooding === egg.id ? null : egg.id)
+                          }
+                        }}>
+                        {egg.brooder ? t('egg.brooderOff') : t('egg.brooderOn')}
+                      </button>
+                    )}
+                    <button type="button" className="btn btn--primary btn--sm"
+                      disabled={!egg.ready || action.busy} onClick={() => hatch(egg.id)}>
+                      {t('egg.hatch')}
+                    </button>
+                  </span>
+
+                  {brooding === egg.id && (
+                    <div className="switchList egg__pick">
+                      {(data?.candidates ?? []).map((c) => (
+                        <button key={c.id} type="button" className="switchRow" disabled={action.busy}
+                          onClick={() => {
+                            haptic.tap()
+                            setBrooding(null)
+                            void action.run(() => api.setBrooder(egg.id, c.id), (res) => {
+                              overview.set(res.overview); haptic.success()
+                            })
+                          }}>
+                          <img src={c.sprite} alt="" width={36} height={36} />
+                          <span className="switchRow__text">
+                            <span className="switchRow__name">{c.name}</span>
+                            <span className="switchRow__hp num">
+                              {t('egg.brooderWorth', { n: Math.min(100, c.level) })}
+                            </span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </article>
               ))}
             </div>}

@@ -4,7 +4,7 @@ import {
   activeFighter, battleXpYield, chooseAction, computeStats, createBattle, createRng,
   deriveSeed, ENERGY_COSTS, ENERGY_REWARDS, eventGold, eventLevels, eventLoot, eventPartySize,
   GOLD_PER_ENERGY_FLOOR, grantXpTo,
-  isEventTrainer, makeSide,
+  isEventTrainer, makeSide, referenceLevel,
   rollLureDrop,
   LEGENDARY_BERRY_ID, npcFighter, PERFECT_IV, resolveTurn, rollBerryDrop, rollPerfect,
   toFighter, xpForLevel,
@@ -328,10 +328,18 @@ export function beginBattle(
      *
      * Anders als ein Arenaleiter hat ein Ueberfall keinen Ort im Entwurf — er
      * passiert dort, wo man gerade erkundet, und quer durch alle Regionen.
-     * Feste Level waeren deshalb immer fuer jemanden falsch. Das haengt an der
-     * Skalierung: wer sie abschaltet, will die Entwurfswerte, auch hier.
+     * Feste Level waeren deshalb immer fuer jemanden falsch.
+     *
+     * Das galt bisher nur fuer Spieler mit eingeschalteter Skalierung, mit der
+     * Begruendung "wer sie abschaltet, will die Entwurfswerte". Fuer einen Ort
+     * stimmt das; fuer einen Ueberfall nicht, denn er hat keinen. Das Ergebnis
+     * war eine Rocket-Truppe auf Level 42 bis 46 vor einem Team auf 25 — genau
+     * so gemeldet, und ohne jede Moeglichkeit, ihr auszuweichen.
+     *
+     * Der Bezug kommt deshalb direkt aus dem antretenden Team und nicht aus
+     * `referenceOf`, das bei abgeschalteter Skalierung null liefert.
      */
-    const reference = referenceOf(ctx, trainer)
+    const reference = referenceLevel(playerParty.map((f) => f.level))
     const isEvent = !opts.exactLevels && isEventTrainer(def.id) && reference > 0
     // Nie mehr Gegner als eigene Mitglieder: drei gegen zwei ist keine knappe
     // Sache, sondern Ueberzahl.
