@@ -94,6 +94,16 @@ export function moveSet(ctx: AppContext, trainer: Trainer, creatureId: string): 
     return known ? [known] : (optionOf(ctx, trainer, id, levelOf.get(id) ?? 0, true) ?? [])
   })
 
+  // Die naechste Attacke oberhalb des eigenen Levels — die niedrigste davon,
+  // denn sie kommt zuerst.
+  let next: { name: string; level: number } | null = null
+  for (const [moveId, level] of levelOf) {
+    if (level <= creature.level) continue
+    if (next && level >= next.level) continue
+    const move = ctx.registry.tryMove(moveId)
+    if (move) next = { name: ctx.registry.localized(move.name, trainer.locale), level }
+  }
+
   return {
     creature: {
       id: creature.id,
@@ -104,6 +114,7 @@ export function moveSet(ctx: AppContext, trainer: Trainer, creatureId: string): 
     capacity: MOVE_SLOTS,
     slots,
     options,
+    next,
   }
 }
 

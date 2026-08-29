@@ -97,7 +97,16 @@ export const EVENT_SPECIES: EventSpecies[] = [
       de: 'Die Kanten sind schärfer geworden, das Licht darin unruhiger. Es '
         + 'sucht den Streit, nicht die Sonne.',
     },
-    basedOn: ['charmeleon'],
+    /*
+     * Zwei Vorbilder, damit die Linie ihrem Namen gerecht wird.
+     *
+     * Werte und Typen kommen vom ersten, das Lernset aus beiden — je Attacke
+     * das niedrigere Level. Damit lernt die Prisma-Linie durchgehend im Takt
+     * eines Glumanda statt im spaeteren eines Glutexo: Feuerzahn mit 25 statt
+     * 28, Feuersturm mit 43 statt 50. Gemeldet wurde die Luecke dazwischen —
+     * zwischen 22 und 28 kam gar nichts.
+     */
+    basedOn: ['charmeleon', 'charmander'],
     types: ['fire'],
     xpFactor: 1,
     sprite: '/media/sprites/charmeleon-prisma.svg',
@@ -112,7 +121,8 @@ export const EVENT_SPECIES: EventSpecies[] = [
       de: 'Im Flug wirft es Farben über ganze Täler. Wer es einmal gesehen '
         + 'hat, sucht danach jeden Sonnenaufgang ab.',
     },
-    basedOn: ['charizard'],
+    // Wie oben: Werte vom Glurak, Zeitpunkte vom Glumanda.
+    basedOn: ['charizard', 'charmander'],
     types: ['fire', 'flying'],
     xpFactor: 1,
     sprite: '/media/sprites/charizard-prisma.svg',

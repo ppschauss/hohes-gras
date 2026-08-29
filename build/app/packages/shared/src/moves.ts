@@ -36,6 +36,15 @@ export const MoveSetSchema = z.object({
   slots: z.array(MoveOptionSchema),
   /** Alles Lernbare, neueste zuerst — inklusive der belegten Attacken. */
   options: z.array(MoveOptionSchema),
+  /**
+   * Was als Naechstes dazukommt, und ab wann.
+   *
+   * Ohne diese Zeile sieht ein Pokemon, das gerade nichts Neues lernen kann,
+   * aus wie eines, das nie wieder etwas lernt — so wurde es auch gemeldet.
+   * Zwischen zwei Attacken liegen ueblicherweise mehrere Level; die Wartezeit
+   * ist normal, aber sie muss sichtbar sein. `null` heisst: das war alles.
+   */
+  next: z.object({ name: z.string(), level: z.number().int() }).nullable(),
 })
 export type MoveSet = z.infer<typeof MoveSetSchema>
 

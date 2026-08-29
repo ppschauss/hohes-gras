@@ -106,6 +106,13 @@ export function MovesPanel({ creatureId }: { creatureId: string }) {
         {d.options.every((m) => m.selected) && (
           <li><p className="center__body">{t('moves.allKnown')}</p></li>
         )}
+        {/* Immer sichtbar, nicht nur wenn nichts offen ist: auch wer noch eine
+            Attacke zur Auswahl hat, will wissen, worauf er zulevelt. */}
+        {d.next && (
+          <li>
+            <p className="center__body">{t('moves.next', { name: d.next.name, n: d.next.level })}</p>
+          </li>
+        )}
       </ul>
     </section>
   )

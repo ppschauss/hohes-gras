@@ -711,6 +711,7 @@
   "moves.fromLevel": "ab Lv. {n}",
   "moves.fullHint": "Alle vier Plätze belegt. Lege erst eine Attacke ab, um eine andere zu lernen.",
   "moves.needOne": "Mindestens eine Attacke muss bleiben",
+  "moves.next": "Nächste Attacke: {name} ab Lv. {n}.",
   "moves.pickHint": "Tippe eine Attacke unten an, um sie zu lernen — oder eine oben, um sie abzulegen.",
   "moves.power": "{n} Stärke",
   "moves.pp": "{n} AP",
