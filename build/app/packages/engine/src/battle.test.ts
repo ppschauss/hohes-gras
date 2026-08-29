@@ -27,6 +27,11 @@ const MOVES: Record<string, MoveDef> = {
   'double-slap': mv('double-slap', 'normal', 'physical', 15, 85, 10, { kind: 'multi_hit', min: 2, max: 5 }, 100),
   bite: mv('bite', 'normal', 'physical', 60, 100, 25, { kind: 'flinch' }, 100),
   'quick-attack': mv('quick-attack', 'normal', 'physical', 40, 100, 30, { kind: 'none' }, 0, 0, 1),
+  // Vorrang 3, sicheres Zurueckschrecken — und nur direkt nach dem Wechsel.
+  'fake-out': {
+    ...mv('fake-out', 'normal', 'physical', 40, 100, 10, { kind: 'flinch' }, 100, 0, 3),
+    firstTurnOnly: true,
+  } as MoveDef,
 }
 
 function mv(
@@ -500,5 +505,41 @@ describe('chooseAction', () => {
     const one = Array.from({ length: 20 }, () => chooseAction(state, 1, 'skilled', content, createRng('same')))
     const two = Array.from({ length: 20 }, () => chooseAction(state, 1, 'skilled', content, createRng('same')))
     expect(one).toEqual(two)
+  })
+})
+
+describe('Zuege nur in der ersten Runde', () => {
+  it('laesst Mogelhieb kein zweites Mal zu', () => {
+    /*
+     * Gemeldet: ein Mauzi setzte Mogelhieb jede Runde ein. Vorrang 3 und
+     * hundert Prozent Zurueckschrecken heisst, der Gegenueber kommt nie zum
+     * Zug — der Kampf sieht eingefroren aus.
+     */
+    const a = fighter('mauzi', ['normal'], 20, ['fake-out'])
+    const b = fighter('ziel', ['normal'], 20, ['tackle'])
+    let state = battle([a], [b])
+
+    const first = resolveTurn(state, useMove(), useMove(), content)
+    expect(first.events.some((e) => e.type === 'flinch')).toBe(true)
+    expect(first.events.some((e) => e.type === 'move_failed')).toBe(false)
+    state = first.state
+
+    const second = resolveTurn(state, useMove(), useMove(), content)
+    expect(second.events.some((e) => e.type === 'move_failed')).toBe(true)
+    // Und der Gegenueber kommt endlich zum Zug: der Treffer landet bei uns.
+    expect(second.events.some((e) => e.type === 'damage' && e.side === 0)).toBe(true)
+  })
+
+  it('erlaubt ihn nach einem Wechsel wieder', () => {
+    const a = fighter('mauzi', ['normal'], 20, ['fake-out'])
+    const zweit = fighter('zweiter', ['normal'], 20, ['fake-out'])
+    const b = fighter('ziel', ['normal'], 20, ['tackle'])
+    let state = battle([a, zweit], [b])
+
+    state = resolveTurn(state, useMove(), useMove(), content).state
+    // Wechseln und wieder einwechseln: die Zaehlung beginnt von vorn.
+    state = resolveTurn(state, { kind: 'switch', partyIndex: 1 }, useMove(), content).state
+    const after = resolveTurn(state, useMove(), useMove(), content)
+    expect(after.events.some((e) => e.type === 'move_failed')).toBe(false)
   })
 })

@@ -281,6 +281,27 @@ async function main(): Promise<void> {
   const mergedItems = [...byId.values()].sort((x, y) => x.id.localeCompare(y.id))
   if (added) log(`${added} neue Gegenstände`)
 
+  /*
+   * Zuege, die nur direkt nach dem Einwechseln gehen.
+   *
+   * PokéAPI liefert die Regel als Satz in der Beschreibung, nicht als Feld.
+   * Ohne die Auswertung setzt ein Mauzi den Mogelhieb jede Runde ein — Vorrang
+   * 3 und hundert Prozent Zurueckschrecken, der Gegenueber kommt nie zum Zug.
+   */
+  const moves = JSON.parse(await readFile(join(OUT, 'moves.json'), 'utf8')) as Array<Record<string, any>>
+  let firstTurn = 0
+  for (const move of moves) {
+    const text = String(move.description?.de ?? '')
+    if (/only be used as the first move|first turn a Pokémon is in battle/i.test(text)) {
+      move.firstTurnOnly = true
+      firstTurn++
+    }
+  }
+  if (firstTurn) {
+    await writeFile(join(OUT, 'moves.json'), JSON.stringify(moves, null, 1))
+    log(`${firstTurn} Zuege nur in der ersten Runde`)
+  }
+
   const write = async (name: string, value: unknown) => {
     await writeFile(join(OUT, name), JSON.stringify(value, null, 1))
     log(name)

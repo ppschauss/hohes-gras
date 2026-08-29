@@ -12,7 +12,7 @@ import { CenterState } from '../ui/States'
 
 type Panel = 'main' | 'moves' | 'switch' | 'items'
 
-export function BattleScreen({ onBack }: { onBack: () => void }) {
+export function BattleScreen({ onBack, onArena }: { onBack: () => void; onArena: () => void }) {
   const existing = useAsync(() => api.currentBattle(), [])
   const opponents = useAsync(() => api.opponents(), [])
   // Nur Medizin: Baelle fangen keine Trainerpokemon.
@@ -40,9 +40,19 @@ export function BattleScreen({ onBack }: { onBack: () => void }) {
 
   const medicine = (bag.data?.items ?? []).filter((i) => i.category === 'medicine' && i.quantity > 0)
 
-  const apply = (view: BattleView & { arena?: ArenaContext | null }) => {
+  const apply = (view: BattleView & {
+    arena?: ArenaContext | null
+    arenaAdvance?: { healed: number; round: number | null }
+    arenaDone?: { payout: { gold: number } | null }
+  }) => {
     setBattle(view)
     if (view.arena !== undefined) setArena(view.arena)
+    // Der Server hat schon weitergeschaltet — das Protokoll sagt es, damit der
+    // Wechsel nicht wie ein Sprung wirkt.
+    if (view.arenaAdvance) {
+      setLog((prev) => [...prev, t('arena.advanced', { round: view.arenaAdvance!.round ?? 0 })])
+    }
+    if (view.arenaDone) setArena(null)
     setPanel('main')
     if (view.lastEvents.length) setLog((prev) => [...prev, ...describeTurn(view.lastEvents, view)].slice(-40))
     if (view.finished) haptic[view.winner === 0 ? 'success' : 'error']()
@@ -77,7 +87,17 @@ export function BattleScreen({ onBack }: { onBack: () => void }) {
     })
   }
 
-  const leave = () => { setBattle(null); setLog([]); existing.reload(); opponents.reload() }
+  /*
+   * Zurueck fuehrt dahin, wo man hergekommen ist.
+   *
+   * Aus einem Arenakampf war das bisher die Gebietsansicht — man stand auf der
+   * Karte statt in der Arena und musste sich zurueckklicken. Gemeldet, und in
+   * einem Durchlauf mit vier Kaempfen viermal aergerlich.
+   */
+  const leave = () => {
+    setBattle(null); setLog([]); existing.reload(); opponents.reload()
+    if (arena) onArena()
+  }
 
   if (!battle) {
     return (

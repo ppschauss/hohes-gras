@@ -45,6 +45,15 @@ export const MoveDefSchema = z.object({
   accuracy: z.number().int().min(0).max(100),
   pp: z.number().int().min(1).max(64),
   priority: z.number().int().min(-7).max(5).default(0),
+  /**
+   * Nur in der ersten Runde nach dem Einwechseln einsetzbar.
+   *
+   * Mogelhieb hat Vorrang 3 und lässt den Gegner zu 100 % zurückschrecken.
+   * Ohne diese Schranke setzt ein Mauzi ihn jede Runde ein, und der Gegenüber
+   * kommt nie zum Zug — der Kampf sieht eingefroren aus. Genau so wurde es
+   * gemeldet.
+   */
+  firstTurnOnly: z.boolean().default(false),
   /** Extra crit stages. 0 = normal (1/24), 1 = high crit (1/8), 3 = always. */
   critRate: z.number().int().min(0).max(3).default(0),
   /** Who the move acts on. Status moves need this; damage always hits the foe. */

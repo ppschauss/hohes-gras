@@ -90,7 +90,7 @@ export function GameRouter({ boot, onTrainerChanged }: Props) {
     case 'safari':
       return <SafariScreen onBack={() => setScreen('area')} onEventBattle={() => setScreen('battle')} />
     case 'battle':
-      return <BattleScreen onBack={() => setScreen('area')} />
+      return <BattleScreen onBack={() => setScreen('area')} onArena={() => setScreen('arena')} />
     case 'expeditions':
       return <ExpeditionScreen onBack={() => setScreen('map')} />
     case 'eggs':

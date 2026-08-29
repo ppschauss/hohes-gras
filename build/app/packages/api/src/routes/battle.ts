@@ -44,8 +44,28 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: AppContext): voi
   app.post('/api/battle/action', write, async (req) => {
     const action = ActionSchema.parse(req.body)
     const view = battle.submit(ctx, req.trainer!, action)
-    // Der Arenastand gehoert an die Antwort: sonst weiss der Bildschirm nach
-    // dem letzten Zug nicht, dass es weitergeht.
+
+    /*
+     * Im Arenadurchlauf geht es von selbst weiter.
+     *
+     * Vorher musste der Bildschirm den naechsten Kampf anfordern — und wer
+     * stattdessen zurueckging, stand vor einem beendeten Kampf und den alten
+     * Gegnern. Der Wechsel gehoert an dieselbe Stelle wie der letzte Zug:
+     * gewonnen, geheilt, naechster Gegner, eine Antwort.
+     */
+    if (view.finished && view.winner === 0 && arena.contextFor(ctx, req.trainer!)) {
+      const step = arena.next(ctx, req.trainer!)
+      if (step.battle) {
+        return {
+          ...step.battle,
+          arena: arena.contextFor(ctx, req.trainer!),
+          arenaAdvance: { healed: step.healed, round: step.arena.run?.round ?? null },
+          previous: { winner: view.winner, reward: view.reward },
+        }
+      }
+      return { ...view, arena: null, arenaDone: { payout: step.payout } }
+    }
+
     return { ...view, arena: arena.contextFor(ctx, req.trainer!) }
   })
 

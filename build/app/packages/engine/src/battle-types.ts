@@ -35,6 +35,8 @@ export interface Fighter {
   confused: boolean
   confusionTurns: number
   flinched: boolean
+  /** Runden seit dem Einwechseln. 0 heißt: gerade erst hereingekommen. */
+  turnsOnField?: number
   moves: Array<{ id: string; pp: number; ppMax: number }>
   sprite: string
   shiny: boolean
@@ -86,6 +88,8 @@ export type BattleEvent =
   | { type: 'switch'; side: 0 | 1; fighter: string; name: string }
   | { type: 'item'; side: 0 | 1; itemId: string; fighter: string; healed: number }
   | { type: 'no_pp'; side: 0 | 1; fighter: string }
+  /** Der Zug war diesmal nicht erlaubt — etwa Mogelhieb nach der ersten Runde. */
+  | { type: 'move_failed'; side: 0 | 1; fighter: string; move: string }
   | { type: 'multi_hit'; side: 0 | 1; fighter: string; hits: number }
   | { type: 'end'; outcome: BattleOutcome }
 

@@ -366,8 +366,13 @@ export const api = {
   startBattle: (opponentId: string) =>
     request<BattleView>('/api/battle/start', { method: 'POST', body: JSON.stringify({ opponentId }) }),
   battleAction: (action: BattleAction) =>
-    request<BattleView & { arena: ArenaContext | null }>(
-      '/api/battle/action', { method: 'POST', body: JSON.stringify(action) }),
+    request<BattleView & {
+      arena: ArenaContext | null
+      /** Der Durchlauf ist weitergegangen: geheilt und naechster Gegner. */
+      arenaAdvance?: { healed: number; round: number | null }
+      /** Der Durchlauf ist zu Ende. */
+      arenaDone?: { payout: { gold: number; items: Array<{ name: string; quantity: number }> } | null }
+    }>('/api/battle/action', { method: 'POST', body: JSON.stringify(action) }),
   forfeitBattle: () => request<BattleView>('/api/battle/forfeit', { method: 'POST', body: '{}' }),
   healTeam: () => request<{ cost: number; healed: number; gold: number }>('/api/team/heal', { method: 'POST', body: '{}' }),
 

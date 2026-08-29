@@ -206,6 +206,14 @@ function doSwitch(state: BattleState, sideIndex: 0 | 1, partyIndex: number, even
   leaving.flinched = false
 
   side.activeIndex = partyIndex
+  /*
+   * Frisch im Feld: Zuege wie Mogelhieb duerfen wieder.
+   *
+   * Minus eins, nicht null: der Wechsel *ist* der Zug dieser Runde, und am
+   * Rundenende zaehlt jeder Kaempfer eins hoch. So steht der Neue in seiner
+   * ersten eigenen Runde bei null.
+   */
+  target.turnsOnField = -1
   events.push({ type: 'switch', side: sideIndex, fighter: target.id, name: target.name })
 }
 
@@ -260,6 +268,19 @@ function performMove(
   const move = safeMove(content, slot.id)
   if (!move) {
     events.push({ type: 'no_pp', side: sideIndex, fighter: attacker.id })
+    return
+  }
+
+  /*
+   * Mogelhieb und Verwandte gehen nur direkt nach dem Einwechseln.
+   *
+   * Ohne diese Schranke setzt ein Mauzi ihn jede Runde ein — Vorrang 3 und
+   * 100 % Zurueckschrecken heisst: der Gegenueber kommt nie zum Zug. Der PP
+   * wird trotzdem verbraucht, sonst waere der Fehlversuch gratis.
+   */
+  if (move.firstTurnOnly && (attacker.turnsOnField ?? 0) > 0) {
+    slot.pp = Math.max(0, slot.pp - 1)
+    events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
     return
   }
 
@@ -408,6 +429,7 @@ function endOfTurn(state: BattleState, rng: Rng, events: BattleEvent[]): void {
       })
     }
     fighter.flinched = false
+    fighter.turnsOnField = (fighter.turnsOnField ?? 0) + 1
   }
   void rng
 }
