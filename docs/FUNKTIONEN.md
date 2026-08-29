@@ -166,8 +166,13 @@ nennt die aktuelle Chance und den nächsten Meilenstein.
 | Serie | Chance auf ein Schillerndes |
 |---|---|
 | 0 | 0,20 % |
-| 20 | 10 % |
+| 1–9 | steigt gleichmäßig auf 10 % |
+| **10 bis 48** | **10 %** |
 | 49 | der 50. Fang ist garantiert schillernd |
+
+Die Kurve stieg vorher spät und dann steil (1,8 % bei zehn Fängen, 28 % bei
+dreißig). Das war als Ziel gedacht und in der Praxis eine Durststrecke: die
+ersten dreißig Fänge fühlten sich an wie gar keine Serie.
 
 **Nach einem Treffer fällt die Serie auf 20 zurück**, also auf die
 Zehn-Prozent-Marke. Vorher fiel sie gar nicht: wer einmal bei 49 stand, fing ab

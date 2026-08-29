@@ -4,6 +4,7 @@ import { createRng } from './rng.js'
 import {
   attemptCatch, availableSpawns, ballMultiplier, catchProbability, catchReward,
   rollEncounter, shinyOdds, SHINY_BASE_ODDS, SHINY_CHAIN_GUARANTEE,
+  SHINY_CHAIN_PLATEAU, SHINY_PLATEAU_ODDS,
   MAX_CALM_STACKS, CATCH_DROP_CHANCE, rollCatchDrop,
   type CatchModifiers, type SpawnContext,
 } from './encounter.js'
@@ -253,27 +254,23 @@ describe('Lockduft', () => {
 
 
 describe('Shiny-Kurve der Fangserie', () => {
-  it('trifft die beiden zugesagten Punkte', () => {
-    // Die Anker, an denen die Kurve haengt: zehn Prozent bei zwanzig, sicher
-    // beim fuenfzigsten Fang.
-    expect(shinyOdds(20)).toBeCloseTo(0.10, 4)
+  it('erreicht bei zehn Faengen zehn Prozent und haelt sie', () => {
+    // Die drei Punkte, auf die es ankommt.
+    expect(shinyOdds(SHINY_CHAIN_PLATEAU)).toBeCloseTo(SHINY_PLATEAU_ODDS, 6)
+    expect(shinyOdds(30)).toBeCloseTo(SHINY_PLATEAU_ODDS, 6)
+    expect(shinyOdds(SHINY_CHAIN_GUARANTEE - 1)).toBeCloseTo(SHINY_PLATEAU_ODDS, 6)
     expect(shinyOdds(SHINY_CHAIN_GUARANTEE)).toBe(1)
   })
 
-  it('steigt streng monoton und ueberschreitet nie eins', () => {
-    for (let s = 1; s <= 60; s++) {
-      const before = shinyOdds(s - 1)
-      const now = shinyOdds(s)
-      expect(now).toBeGreaterThanOrEqual(before)
-      expect(now).toBeLessThanOrEqual(1)
-    }
-  })
-
-  it('bleibt frueh nah an der Grundchance', () => {
-    // Eine flache Kurve waere ein Rabatt statt eines Ziels: nach fuenf Faengen
-    // soll sich noch nichts geschenkt anfuehlen.
+  it('steigt bis zum Plateau gleichmaessig, ohne Durststrecke', () => {
+    // Vorher lag die Chance nach fuenf Faengen noch unter einem Prozent —
+    // die Serie fuehlte sich an wie gar keine.
     expect(shinyOdds(0)).toBeCloseTo(SHINY_BASE_ODDS, 6)
-    expect(shinyOdds(5)).toBeLessThan(0.01)
+    expect(shinyOdds(5)).toBeGreaterThan(0.04)
+    for (let s = 1; s <= 60; s++) {
+      expect(shinyOdds(s)).toBeGreaterThanOrEqual(shinyOdds(s - 1))
+      expect(shinyOdds(s)).toBeLessThanOrEqual(1)
+    }
   })
 
   it('garantiert den Fang auch ueber die Zusage hinaus', () => {

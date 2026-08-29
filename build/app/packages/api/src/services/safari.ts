@@ -6,7 +6,8 @@ import {
   isEventTrainer, LEGENDARY_BERRY_ID, LEGENDARY_MAX_BERRIES, isLegendaryCatchRate,
   legendaryCatchChance, rollEvent, rollLegendary, xpForLevel, type Rng,
   MAX_CALM_STACKS, MAX_WEAKEN_STACKS, ROCKET_BAIT_ID, ROCKET_BAIT_CHARGES,
-  SHINY_BASE_ODDS, SHINY_CHAIN_AFTER_CATCH, SHINY_CHAIN_GUARANTEE, shinyOdds,
+  SHINY_BASE_ODDS, SHINY_CHAIN_AFTER_CATCH, SHINY_CHAIN_GUARANTEE,
+  SHINY_CHAIN_PLATEAU, SHINY_PLATEAU_ODDS, shinyOdds,
   type CatchModifiers, type LureEffect,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
@@ -348,6 +349,10 @@ export interface ChainView {
   odds: number
   /** Was ohne Serie gälte — für den Vergleich. */
   baseOdds: number
+  /** Ab dieser Serie steht die Chance auf ihrem Plateau. */
+  plateau: number
+  /** Und wie hoch das Plateau liegt, als Anteil (0–1). */
+  plateauOdds: number
 }
 
 export function chainOf(ctx: AppContext, trainer: Trainer): ChainView | null {
@@ -364,6 +369,9 @@ export function chainOf(ctx: AppContext, trainer: Trainer): ChainView | null {
     cap: SHINY_CHAIN_GUARANTEE,
     odds: shinyOdds(row.streak),
     baseOdds: SHINY_BASE_ODDS,
+    /** Ab hier steht die Chance auf ihrem Plateau. */
+    plateau: SHINY_CHAIN_PLATEAU,
+    plateauOdds: SHINY_PLATEAU_ODDS,
   }
 }
 

@@ -812,7 +812,7 @@
   "safari.caught": "{name} gefangen!",
   "safari.chain": "Serie: {n}×",
   "safari.chain.maxed": "Der nächste Fang dieser Art ist garantiert schillernd.",
-  "safari.chain.milestone": "Noch {n} Fänge bis 10 % Shiny-Chance.",
+  "safari.chain.milestone": "Noch {n} Fänge bis {odds} % Shiny-Chance.",
   "safari.chain.odds": "Shiny-Chance {odds} statt {base} — nur für diese Art.",
   "safari.chain.oddsPlain": "Shiny-Chance {odds} — die Serie hebt sie nur für diese Art.",
   "safari.chain.title": "Fangserie: {name} ×{n}",

@@ -545,6 +545,8 @@ export interface SafariState {
     cap: number
     odds: number
     baseOdds: number
+    plateau: number
+    plateauOdds: number
   } | null
 }
 

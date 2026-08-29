@@ -235,8 +235,11 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
                     Meilenstein mehr als die Endzahl. */}
                 {safari.data.chain.streak >= safari.data.chain.cap
                   ? t('safari.chain.maxed')
-                  : safari.data.chain.streak < 20
-                    ? t('safari.chain.milestone', { n: 20 - safari.data.chain.streak })
+                  : safari.data.chain.streak < safari.data.chain.plateau
+                    ? t('safari.chain.milestone', {
+                        n: safari.data.chain.plateau - safari.data.chain.streak,
+                        odds: Math.round(safari.data.chain.plateauOdds * 100),
+                      })
                     : t('safari.chain.toGo', { n: safari.data.chain.cap - safari.data.chain.streak })}
               </span>
             </span>

@@ -30,34 +30,42 @@ export const SHINY_CHAIN_AFTER_CATCH = 20
 export const SHINY_CHAIN_CAP = SHINY_CHAIN_GUARANTEE
 
 /**
- * Krümmung der Serienkurve.
+ * Ab hier steht die Chance auf zehn Prozent.
  *
- * Kein gewählter Geschmackswert, sondern die Lösung: die Kurve soll bei zwanzig
- * Fängen zehn Prozent treffen und bei neunundvierzig auf eins landen. Aus
- * beiden Bedingungen folgt der Exponent — geändert wird an den *Ankern*, nicht
- * hier.
+ * Die Kurve stieg vorher spät und dann steil — 1,8 % bei zehn Fängen, 28 % bei
+ * dreißig. Das war als Ziel gedacht und in der Praxis eine lange Durststrecke:
+ * die ersten dreißig Fänge fühlten sich an wie gar keine Serie. Jetzt steigt
+ * sie über die ersten zehn Fänge auf zehn Prozent und bleibt dort, bis die
+ * Zusage greift.
  */
-export const SHINY_CHAIN_EXPONENT = Math.log((0.10 - SHINY_BASE_ODDS) / (1 - SHINY_BASE_ODDS))
-  / Math.log(20 / SHINY_CHAIN_GUARANTEE)
+export const SHINY_CHAIN_PLATEAU = 10
+
+/** Die Chance auf dem Plateau. */
+export const SHINY_PLATEAU_ODDS = 0.10
 
 /**
  * Die Shiny-Chance für eine bestimmte Art, gegeben die laufende Fangserie.
  *
- * Zwei Eigenschaften, beide gewollt:
+ * Drei Abschnitte, und alle drei sind Absicht:
  *
- *  - Die Serie zählt **nur für die Art, die man jagt**. Vorher galt der
- *    Zuschlag für jede Begegnung: wer Abra vierzigmal hintereinander fing, traf
- *    auch überall sonst häufiger auf Schillernde — und musste sie wegwerfen,
- *    weil es die falsche Art war.
- *  - Sie steigt spät und dann steil: 1,8 % bei zehn, 10 % bei zwanzig, 28 %
- *    bei dreißig, 59 % bei vierzig — und beim fünfzigsten Fang ist es sicher.
- *    Eine flache Kurve wäre ein Rabatt, diese hier ist ein Ziel.
+ *  - **Bis zehn Fänge** steigt sie gleichmäßig von 0,2 % auf 10 %. Kein
+ *    Exponent, keine Durststrecke: jeder Fang bringt sichtbar etwas.
+ *  - **Von zehn bis achtundvierzig** bleibt sie bei 10 %. Wer die Serie hält,
+ *    hat gute Chancen — aber sie werden nicht immer besser, sonst wäre die
+ *    Zusage am Ende sinnlos.
+ *  - **Ab neunundvierzig** ist der nächste Fang sicher schillernd.
+ *
+ * Die Serie zählt **nur für die Art, die man jagt**. Vorher galt der Zuschlag
+ * für jede Begegnung: wer Abra vierzigmal hintereinander fing, traf auch
+ * überall sonst häufiger auf Schillernde — und musste sie wegwerfen, weil es
+ * die falsche Art war.
  */
 export function shinyOdds(chainStreak: number): number {
   const streak = Math.max(0, Math.floor(chainStreak))
   if (streak >= SHINY_CHAIN_GUARANTEE) return 1
-  const progress = streak / SHINY_CHAIN_GUARANTEE
-  return SHINY_BASE_ODDS + (1 - SHINY_BASE_ODDS) * progress ** SHINY_CHAIN_EXPONENT
+  if (streak >= SHINY_CHAIN_PLATEAU) return SHINY_PLATEAU_ODDS
+  const progress = streak / SHINY_CHAIN_PLATEAU
+  return SHINY_BASE_ODDS + (SHINY_PLATEAU_ODDS - SHINY_BASE_ODDS) * progress
 }
 
 export interface SpawnContext {
