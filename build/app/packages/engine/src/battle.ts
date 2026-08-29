@@ -105,6 +105,14 @@ export function resolveTurn(
     const side = next.sides[entry.side]!
     const attacker = active(side)
     if (attacker.hp <= 0) continue
+    /*
+     * Wer besiegt wird, verliert seinen Zug.
+     *
+     * Vorher fuehrte der Nachrueckende den Zug des Gefallenen aus: das
+     * Pokemon ging zu Boden und schlug im selben Moment noch zu. Ein
+     * geschenkter Angriff, und fuer die Gegenseite genauso.
+     */
+    if (attacker.id !== entry.fighterId) continue
     performMove(next, entry.side, entry.moveIndex, content, rng, events)
     checkFaints(next, events)
   }
@@ -163,7 +171,12 @@ function useItem(
   })
 }
 
-interface OrderEntry { side: 0 | 1; moveIndex: number }
+interface OrderEntry {
+  side: 0 | 1
+  moveIndex: number
+  /** Wer den Zug angesagt hat — nur der fuehrt ihn auch aus. */
+  fighterId: string
+}
 
 function buildOrder(
   state: BattleState,
@@ -178,13 +191,16 @@ function buildOrder(
     const fighter = active(state.sides[side]!)
     const slot = fighter.moves[action.moveIndex]
     const move = slot ? safeMove(content, slot.id) : null
-    entries.push({ side, moveIndex: action.moveIndex, move, fighter })
+    entries.push({ side, moveIndex: action.moveIndex, move, fighter, fighterId: fighter.id })
   }
-  if (entries.length < 2) return entries.map(({ side, moveIndex }) => ({ side, moveIndex }))
+  if (entries.length < 2) {
+    return entries.map(({ side, moveIndex, fighter }) => ({ side, moveIndex, fighterId: fighter.id }))
+  }
 
   const [a, b] = entries as [typeof entries[0], typeof entries[0]]
   const aFirst = movesFirst(a, b, rng)
-  return (aFirst ? [a, b] : [b, a]).map(({ side, moveIndex }) => ({ side, moveIndex }))
+  return (aFirst ? [a, b] : [b, a])
+    .map(({ side, moveIndex, fighter }) => ({ side, moveIndex, fighterId: fighter.id }))
 }
 
 /** A move id the pack does not know must not crash a battle in progress. */
@@ -206,14 +222,8 @@ function doSwitch(state: BattleState, sideIndex: 0 | 1, partyIndex: number, even
   leaving.flinched = false
 
   side.activeIndex = partyIndex
-  /*
-   * Frisch im Feld: Zuege wie Mogelhieb duerfen wieder.
-   *
-   * Minus eins, nicht null: der Wechsel *ist* der Zug dieser Runde, und am
-   * Rundenende zaehlt jeder Kaempfer eins hoch. So steht der Neue in seiner
-   * ersten eigenen Runde bei null.
-   */
-  target.turnsOnField = -1
+  // Frisch im Feld: seine erste eigene Handlung steht noch aus.
+  target.turnsOnField = 0
   events.push({ type: 'switch', side: sideIndex, fighter: target.id, name: target.name })
 }
 
@@ -280,9 +290,19 @@ function performMove(
    */
   if (move.firstTurnOnly && (attacker.turnsOnField ?? 0) > 0) {
     slot.pp = Math.max(0, slot.pp - 1)
+    attacker.turnsOnField = (attacker.turnsOnField ?? 0) + 1
     events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
     return
   }
+
+  /*
+   * Gezaehlt wird die eigene Handlung, nicht die Runde.
+   *
+   * Sonst haengt "erste Runde" davon ab, wann jemand hereinkam: wer nach einem
+   * besiegten Vorgaenger nachrueckt, betritt das Feld mitten in der Runde und
+   * haette seinen ersten Zug schon verbraucht, bevor er ihn hatte.
+   */
+  attacker.turnsOnField = (attacker.turnsOnField ?? 0) + 1
 
   slot.pp--
   events.push({ type: 'move', side: sideIndex, fighter: attacker.id, moveId: move.id, moveName: move.id })
@@ -429,7 +449,6 @@ function endOfTurn(state: BattleState, rng: Rng, events: BattleEvent[]): void {
       })
     }
     fighter.flinched = false
-    fighter.turnsOnField = (fighter.turnsOnField ?? 0) + 1
   }
   void rng
 }
@@ -455,6 +474,8 @@ function checkFaints(state: BattleState, events: BattleEvent[]): void {
     side.activeIndex = replacement
     const incoming = side.party[replacement]!
     incoming.stages = emptyStages()
+    // Auch der Nachrueckende faengt seine Zaehlung von vorn an.
+    incoming.turnsOnField = 0
     events.push({ type: 'switch', side: sideIndex, fighter: incoming.id, name: incoming.name })
   }
 }

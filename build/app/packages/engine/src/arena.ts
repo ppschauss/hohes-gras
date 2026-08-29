@@ -39,6 +39,14 @@ export interface ArenaTier {
    * schwachen Gegnern eine Wand. Auf „leicht" tritt die Haelfte an.
    */
   foeShare: number
+  /**
+   * Obergrenze der Grundwertsumme; 0 heißt: keine.
+   *
+   * Die Entwicklungsstufe allein reicht nicht. Tauros und Kangama sind
+   * Grundformen und trotzdem stark — auf „leicht" standen sie neben einem
+   * Hoothoot, und der Unterschied war größer als die fünf Level Abstand.
+   */
+  maxBst: number
   /** Gold je gewonnenem Kampf. */
   goldPerWin: number
   /** Was ein vollständiger Durchlauf zusätzlich einbringt. */
@@ -48,15 +56,15 @@ export interface ArenaTier {
 
 export const ARENA_TIERS: ArenaTier[] = [
   {
-    id: 'easy', levelDelta: -5, maxStage: 0, foeIv: 0, foeShare: 0.5, goldPerWin: 60,
+    id: 'easy', levelDelta: -5, maxStage: 0, maxBst: 330, foeIv: 0, foeShare: 0.5, goldPerWin: 60,
     bonusGold: 400, bonus: [{ itemId: 'exp-candy-s', quantity: 2 }],
   },
   {
-    id: 'even', levelDelta: -3, maxStage: 1, foeIv: 8, foeShare: 0.75, goldPerWin: 120,
+    id: 'even', levelDelta: -3, maxStage: 1, maxBst: 430, foeIv: 8, foeShare: 0.75, goldPerWin: 120,
     bonusGold: 900, bonus: [{ itemId: 'exp-candy-l', quantity: 1 }],
   },
   {
-    id: 'hard', levelDelta: -1, maxStage: 2, foeIv: 15, foeShare: 1, goldPerWin: 240,
+    id: 'hard', levelDelta: -1, maxStage: 2, maxBst: 0, foeIv: 15, foeShare: 1, goldPerWin: 240,
     bonusGold: 1800, bonus: [
       { itemId: 'exp-candy-l', quantity: 1 },
       { itemId: 'star-piece', quantity: 2 },

@@ -530,6 +530,24 @@ describe('Zuege nur in der ersten Runde', () => {
     expect(second.events.some((e) => e.type === 'damage' && e.side === 0)).toBe(true)
   })
 
+  it('erlaubt ihn dem Nachrueckenden nach einem besiegten Vorgaenger', () => {
+    // Wer einspringt, hat seinen ersten Zug noch vor sich — auch wenn er
+    // mitten in der Runde aufs Feld kommt.
+    const schwach = fighter('schwach', ['normal'], 5, ['tackle'])
+    const zweit = fighter('zweiter', ['normal'], 20, ['fake-out'])
+    const gegner = fighter('gegner', ['normal'], 40, ['tackle'], 200)
+    let state = battle([schwach, zweit], [gegner])
+
+    // So lange kaempfen, bis der erste faellt und der zweite nachrueckt.
+    for (let i = 0; i < 10 && state.sides[0]!.activeIndex === 0 && !state.outcome; i++) {
+      state = resolveTurn(state, useMove(), useMove(), content).state
+    }
+    expect(state.sides[0]!.activeIndex).toBe(1)
+
+    const after = resolveTurn(state, useMove(), useMove(), content)
+    expect(after.events.some((e) => e.type === 'move_failed')).toBe(false)
+  })
+
   it('erlaubt ihn nach einem Wechsel wieder', () => {
     const a = fighter('mauzi', ['normal'], 20, ['fake-out'])
     const zweit = fighter('zweiter', ['normal'], 20, ['fake-out'])

@@ -67,7 +67,8 @@ function buildOpponent(
     (s) => s.types.includes(typeId)
       && s.catchRate > LEGENDARY_CATCH_RATE
       && !s.event
-      && evolutionStage(ctx, s.id) <= tier.maxStage,
+      && evolutionStage(ctx, s.id) <= tier.maxStage
+      && (tier.maxBst === 0 || baseStatTotal(s) <= tier.maxBst),
   )
   if (pool.length === 0) throw new GameError('invalid_state', { reason: 'no_species_for_tier', typeId }, 409)
 
@@ -121,6 +122,11 @@ function teamHealthPercent(ctx: AppContext, trainerId: string): number {
     max += computeStats(species, c.level, c.ivs, c.evs, c.nature).hp
   }
   return max === 0 ? 0 : Math.round((have / max) * 100)
+}
+
+/** Summe der Grundwerte — das Mass dafuer, wie stark eine Art ueberhaupt ist. */
+function baseStatTotal(species: { baseStats: Record<string, number> }): number {
+  return Object.values(species.baseStats).reduce((sum, v) => sum + v, 0)
 }
 
 /**

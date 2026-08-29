@@ -134,6 +134,35 @@ describe('Trainingsarena', () => {
     }
   })
 
+  it('stellt auf leicht nur schwache Arten auf', async () => {
+    /*
+     * Die Entwicklungsstufe allein reichte nicht: Tauros ist eine Grundform
+     * und stand auf "leicht" neben einem Hoothoot. Gemeldet als "die Gegner
+     * sind immer noch zu stark".
+     */
+    h.resetRateLimits()
+    await h.post('/api/arena/start', { tier: 'easy' }, token)
+    const record = h.ctx.db
+      .prepare('SELECT state FROM battles WHERE trainer_id = ? ORDER BY started_at DESC LIMIT 1')
+      .get(trainerId) as { state: string }
+    const state = JSON.parse(record.state) as { sides: Array<{ party: Array<{ speciesId: string }> }> }
+    for (const foe of state.sides[1]!.party) {
+      const species = h.ctx.registry.species(foe.speciesId)
+      const bst = Object.values(species.baseStats).reduce((a, b) => a + b, 0)
+      expect(bst).toBeLessThanOrEqual(330)
+    }
+  })
+
+  it('schickt auf leicht weniger Gegner als eigene Mitglieder', async () => {
+    h.resetRateLimits()
+    await h.post('/api/arena/start', { tier: 'easy' }, token)
+    const record = h.ctx.db
+      .prepare('SELECT state FROM battles WHERE trainer_id = ? ORDER BY started_at DESC LIMIT 1')
+      .get(trainerId) as { state: string }
+    const state = JSON.parse(record.state) as { sides: Array<{ party: unknown[] }> }
+    expect(state.sides[1]!.party.length).toBeLessThanOrEqual(state.sides[0]!.party.length)
+  })
+
   it('nennt den Arenastand im Kampf, damit es weitergehen kann', async () => {
     h.resetRateLimits()
     await h.post('/api/arena/start', { tier: 'easy' }, token)

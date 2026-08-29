@@ -226,6 +226,11 @@ Die KI kennt vier Stufen; Arenaleiter und Top Vier spielen die stärkste.
 
 - **26 Orden** über drei Regionen, je Region eine **Top Vier mit Champion**.
 - **Jeder bekommt ein Starterpaket** mit Bällen, Beeren und Medizin.
+- **Wer besiegt wird, verliert seinen Zug.** Vorher führte der Nachrückende
+  den Angriff des Gefallenen aus — ein geschenkter Schlag, für beide Seiten.
+- **Ein Wechsel kostet die Runde**, der Gegner greift also das
+  hereinkommende Pokémon an. Das ist die Regel der Vorlage und kein Fehler:
+  ein freier Wechsel wäre der stärkste Zug im Spiel.
 - Ein Kampf **wartet geduldig** — aber nach **zwei Stunden** ohne Zug gilt er
   als verlassen und schließt ohne Sieger. (Vorher blockierte ein vergessener
   Kampf stundenlang Heilen und Überfälle.)
@@ -256,9 +261,13 @@ vorbereiten.
 |---|---|---|---|
 | Stufe | Gegnerlevel | Gegner | Werte | Gold je Sieg | Durchlauf |
 |---|---|---|---|---|---|
-| **Leicht** | Ø **−5** | halbes Team, nur Grundformen | 0 | 60 | 400 Gold + 2× EP-Bonbon S |
-| **Ausgeglichen** | **−3** | drei Viertel, bis zur ersten Entwicklung | 8 | 120 | 900 Gold + 1× EP-Bonbon L |
+| **Leicht** | Ø **−5** | halbes Team, Grundformen bis 330 Grundwerte | 0 | 60 | 400 Gold + 2× EP-Bonbon S |
+| **Ausgeglichen** | **−3** | drei Viertel, bis 1. Entwicklung und 430 Grundwerte | 8 | 120 | 900 Gold + 1× EP-Bonbon L |
 | **Schwer** | **−1** | volles Team, alles | 15 | 240 | 1.800 Gold + 1× EP-Bonbon L + 2× Sternenstaub |
+
+Die Entwicklungsstufe allein reichte als Maß nicht: Tauros ist eine Grundform
+und stand auf „leicht" neben einem Hoothoot. Deshalb zusätzlich eine Obergrenze
+für die Summe der Grundwerte.
 
 Innerhalb eines Durchlaufs steigt das Level je Runde um eins — der vierte
 Gegner steht über dem ersten. Gegenstände sind erlaubt, und **zwischen den
