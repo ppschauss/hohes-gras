@@ -11,8 +11,20 @@ export interface SeasonTier {
   reward: { kind: 'gold'; amount: number } | { kind: 'item'; itemId: string; quantity: number }
 }
 
-export const SEASON_LENGTH_DAYS = 28
-export const MAX_SEASON_TIER = 30
+/**
+ * Eine Saison ist eine Woche.
+ *
+ * Vier Wochen waren zu lang, um ein Ziel zu sein: wer in Woche eins zurueckfiel,
+ * holte den Rest nicht mehr auf, und wer vorne lag, hatte drei Wochen nichts
+ * mehr zu tun. Mit der Woche wird der Pass zu einer Sache, die man ueberblickt
+ * — und die Leiter musste dafuer kuerzer werden, sonst waere sie nur noch ein
+ * Viertel weit begehbar.
+ */
+export const SEASON_LENGTH_DAYS = 7
+export const MAX_SEASON_TIER = 12
+
+/** Das Fragment, das die letzte Stufe einer Saison abwirft. */
+export const SHINY_SOUL_ID = 'soul-shiny'
 
 /** Points needed to reach a tier. Slightly super-linear so the last tiers are
  *  a real target without becoming unreachable for a casual player. */
@@ -29,8 +41,12 @@ export function tierForPoints(points: number): number {
 
 /** Reward for reaching a tier. Every fifth tier is a bigger moment. */
 export function rewardForTier(tier: number): SeasonTier['reward'] {
-  if (tier % 10 === 0) return { kind: 'item', itemId: 'golden-razz', quantity: 3 }
-  if (tier % 5 === 0) return { kind: 'item', itemId: 'ultra-ball', quantity: 5 }
+  // Die letzte Stufe ist der eigentliche Grund, die Woche durchzuspielen: ein
+  // Schillerndes Seelenfragment. Fuenf davon — also fuenf Wochen — werden zu
+  // einem schillernden Ei.
+  if (tier >= MAX_SEASON_TIER) return { kind: 'item', itemId: SHINY_SOUL_ID, quantity: 1 }
+  if (tier % 6 === 0) return { kind: 'item', itemId: 'golden-razz', quantity: 3 }
+  if (tier % 4 === 0) return { kind: 'item', itemId: 'ultra-ball', quantity: 5 }
   if (tier % 3 === 0) return { kind: 'item', itemId: 'exp-candy-s', quantity: 2 }
   return { kind: 'gold', amount: 200 + tier * 40 }
 }

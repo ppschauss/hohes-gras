@@ -8,6 +8,7 @@ import {
   TeamMembersRequestSchema, TeamNameRequestSchema,
 } from '@game/shared'
 import type { AppContext } from '../context.js'
+import { SHINY_SOUL_PER_EGG } from '@game/engine'
 import { rateLimit, requireTrainer, withEnergy } from './plugin.js'
 import * as garden from '../services/garden.js'
 import * as souls from '../services/souls.js'
@@ -74,6 +75,8 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
     // Fragmente er hat.
     eggsOpen: eggsRepo.openOf(ctx.db, req.trainer!.id).length,
     eggsMax: breeding.eggSlots(ctx, req.trainer!.id),
+    shinySouls: souls.shinySoulsOf(ctx, req.trainer!),
+    shinySoulsPerEgg: SHINY_SOUL_PER_EGG,
   }))
 
   /* Einzeln oder als Auswahl — ein alter Client schickt weiter `creatureId`. */

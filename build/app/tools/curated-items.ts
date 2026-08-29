@@ -40,7 +40,7 @@ const BAIT_CHARGES = 5
 /** Gegenstaende, deren Bild selbst erzeugt wurde und als Vektor vorliegt. */
 export const SVG_ICONS = new Set([
   'rocket-bait', 'energy-drink', 'exp-candy-s', 'exp-candy-l',
-  'golden-razz', 'legendary-berry', 'lure-legendary',
+  'golden-razz', 'legendary-berry', 'lure-legendary', 'soul-shiny',
 ])
 
 export const AUTHORED: Authored[] = [
@@ -58,6 +58,21 @@ export const AUTHORED: Authored[] = [
     description: 'Funkt auf der Frequenz der Banden. Die nächsten '
       + `${BAIT_CHARGES} Erkundungen enden in einem Überfall.`,
     params: { rocketCharges: BAIT_CHARGES },
+  },
+  {
+    /*
+     * Das Schillernde Seelenfragment.
+     *
+     * Es fällt nur an einer Stelle: auf der letzten Stufe einer Saison, also
+     * höchstens einmal die Woche. Deshalb ist es weder käuflich noch
+     * verkäuflich — und deshalb reichen fünf, wo es von den gewöhnlichen
+     * Fragmenten fünfundachtzig braucht.
+     */
+    id: 'soul-shiny', category: 'material', price: null, sellPrice: null,
+    name: 'Schillerndes Seelenfragment',
+    description: 'Belohnung der letzten Saisonstufe. '
+      + `${SHINY_SOUL_PER_EGG} davon werden zu einem schillernden Ei — der Typ ist frei wählbar.`,
+    params: { shinySoul: true },
   },
   {
     /*
@@ -207,8 +222,8 @@ export function lureItems(types: Array<{ id: string; name: { de: string } }>): I
 
 /* Die Zahl kommt aus der Engine — der Text im Pack und die Spielregel duerfen
    nicht auseinanderlaufen. */
-import { SOUL_PER_EGG, SOUL_PER_SHINY_EGG } from '../packages/engine/dist/index.js'
-export { SOUL_PER_EGG, SOUL_PER_SHINY_EGG }
+import { SHINY_SOUL_PER_EGG, SOUL_PER_EGG, SOUL_PER_SHINY_EGG } from '../packages/engine/dist/index.js'
+export { SHINY_SOUL_PER_EGG, SOUL_PER_EGG, SOUL_PER_SHINY_EGG }
 
 /**
  * Ein Seelenfragment je Typ.

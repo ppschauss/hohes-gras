@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { SOUL_PER_EGG, SOUL_PER_SHINY_EGG } from '@game/engine'
+import { SHINY_SOUL_PER_EGG, SOUL_PER_EGG, SOUL_PER_SHINY_EGG } from '@game/engine'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -105,6 +105,29 @@ describe('Verwerten', () => {
     const r = await h.post('/api/souls/salvage', { creatureIds: ids }, token)
     expect(r.status).toBe(409)
     expect(r.body.detail.reason).toBe('last_creature')
+  })
+
+  it('zahlt ein schillerndes Ei mit fuenf schillernden Fragmenten', async () => {
+    // Der zweite Weg: nicht 85 gleichfarbige, sondern fuenf aus fuenf Saisons.
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)')
+      .run(trainerId, 'soul-shiny', SHINY_SOUL_PER_EGG)
+    h.resetRateLimits()
+    const r = await h.post('/api/souls/redeem', { typeId: 'grass', shiny: true }, token)
+    expect(r.status).toBe(200)
+    expect(quantity('soul-shiny')).toBe(0)
+    // Und die gleichfarbigen Fragmente bleiben unangetastet.
+    expect(quantity('soul-grass')).toBe(0)
+    const egg = h.ctx.db.prepare('SELECT shiny FROM eggs WHERE trainer_id = ?').get(trainerId) as { shiny: number }
+    expect(egg.shiny).toBe(1)
+  })
+
+  it('verlangt ohne schillernde Fragmente weiter die volle Menge', async () => {
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)')
+      .run(trainerId, 'soul-shiny', SHINY_SOUL_PER_EGG - 1)
+    h.resetRateLimits()
+    const r = await h.post('/api/souls/redeem', { typeId: 'grass', shiny: true }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.detail.need).toBe(SOUL_PER_SHINY_EGG)
   })
 
   it('nennt die Brutplaetze, damit die Sperre erklaerbar ist', async () => {

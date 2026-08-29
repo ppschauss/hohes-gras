@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { MAX_SEASON_TIER } from '@game/engine'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -211,7 +212,9 @@ describe('Saison-Reise', () => {
     expect(r.status).toBe(200)
     expect(r.body.points).toBe(0)
     expect(r.body.tier).toBe(1)
-    expect(r.body.tiers).toHaveLength(30)
+    // Die Zahl kommt aus der Engine: die Leiter ist mit der Wochensaison
+    // kuerzer geworden, und ein fest verdrahtetes 30 haette das verdeckt.
+    expect(r.body.tiers).toHaveLength(MAX_SEASON_TIER)
     expect(r.body.tiers[0].reached).toBe(true)
   })
 

@@ -40,6 +40,33 @@ nach unten drückte und in einem Anfangsgebiet alles mit einem Schlag erledigte,
 machte daraus einen Automaten. Der erste Sieg zahlt weiterhin, die Wiederholung
 gibt Gold und EP, aber keine Energie mehr.
 
+## Saison-Reise
+
+Eine Saison dauert **sieben Tage** (vorher 28) und hat **12 Stufen** (vorher 30).
+Vier Wochen waren zu lang, um ein Ziel zu sein: wer in Woche eins zurückfiel,
+holte den Rest nicht mehr auf, und wer vorne lag, hatte drei Wochen nichts mehr
+zu tun. Die Leiter musste mitschrumpfen, sonst wäre sie in einer Woche nur zu
+einem Viertel begehbar.
+
+Die **letzte Stufe** wirft ein **Schillerndes Seelenfragment** ab — die einzige
+Quelle dafür. **Fünf** davon werden zu einem schillernden Ei eines frei
+wählbaren Typs, also fünf durchgespielte Wochen. Der alte Weg über 85
+gleichfarbige Fragmente bleibt bestehen; wer schillernde Fragmente hat, zahlt
+automatisch mit ihnen.
+
+## Handwerk und Fundstücke
+
+Jeder achte Fang (**12,5 %**) bringt einen Werkstoff mit — Seidenfaden,
+Feinsand, Tautropfen, Eisensplitter, selten Sternenstaub. Vorher kamen
+Werkstoffe ausschließlich von Expeditionen, und damit war die häufigste
+Handlung des Spiels von der Werkbank abgeschnitten.
+
+19 Rezepte statt 6. Die neuen zielen auf genau diesen Kreislauf: Bälle und
+Medizin aus Fundstücken, und **Entwicklungssteine aus Seelenfragmenten** (8
+Fragmente der passenden Sorte + 2 Sternenstaub + 500 Gold, Labor Stufe 2). Im
+Laden kosten dieselben Steine 1.500 Gold — hier kostet es Arbeit statt
+Kontostand.
+
 ## Kapazitäten und ihr Ausbau
 
 | Was | Grundstock | Ausbau | je Stufe | Preis | Ende |

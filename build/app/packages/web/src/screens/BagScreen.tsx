@@ -71,6 +71,8 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
   // waeren sie ein zweites Mal dieselbe Sache.
   const items = (bag.data?.items ?? []).filter((i) => i.quantity > 0 && !i.id.startsWith('soul-'))
   const eggsFull = Boolean(souls.data && souls.data.eggsOpen >= souls.data.eggsMax)
+  // Schillernde Fragmente zahlen jedes schillernde Ei, egal welcher Typ.
+  const shinyPaid = Boolean(souls.data && souls.data.shinySouls >= souls.data.shinySoulsPerEgg)
   const groups = ORDER
     .map((category) => ({ category, items: items.filter((i) => i.category === category) }))
     .filter((g) => g.items.length > 0)
@@ -116,6 +118,13 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
             {action.error && (
               <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>
             )}
+            {souls.data && souls.data.shinySouls > 0 && (
+              <p className="chain__hint">
+                {t('souls.shinyStock', {
+                  n: souls.data.shinySouls, need: souls.data.shinySoulsPerEgg,
+                })}
+              </p>
+            )}
             {eggsFull && (
               <p className="notice" role="status">
                 {t('souls.eggsFull', { n: souls.data!.eggsOpen, max: souls.data!.eggsMax })}
@@ -145,12 +154,14 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
                         Erschien er erst ab 85 Fragmenten, wusste niemand, dass
                         es ihn ueberhaupt gibt — genau so wurde es gemeldet. */}
                     <button type="button"
-                      className={`btn btn--sm ${s.readyShiny ? 'btn--primary' : 'btn--ghost'}`}
-                      disabled={action.busy || eggsFull || !s.readyShiny}
+                      className={`btn btn--sm ${s.readyShiny || shinyPaid ? 'btn--primary' : 'btn--ghost'}`}
+                      disabled={action.busy || eggsFull || !(s.readyShiny || shinyPaid)}
                       onClick={() => redeem(s.typeId, true)}>
-                      {s.readyShiny
-                        ? t('souls.shinyEgg', { n: s.needShiny })
-                        : t('souls.shinyLocked', { n: s.needShiny - s.have })}
+                      {shinyPaid
+                        ? t('souls.shinyFromShards', { n: souls.data!.shinySoulsPerEgg })
+                        : s.readyShiny
+                          ? t('souls.shinyEgg', { n: s.needShiny })
+                          : t('souls.shinyLocked', { n: s.needShiny - s.have })}
                     </button>
                   </span>
                 </article>

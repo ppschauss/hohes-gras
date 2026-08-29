@@ -15,6 +15,16 @@ export const SOUL_PER_EGG = 15
  */
 export const SOUL_PER_SHINY_EGG = 85
 
+/**
+ * Der zweite Weg zum schillernden Ei.
+ *
+ * 85 Fragmente einer Sorte sind ein Marathon; das Schillernde Seelenfragment
+ * ist der Gegenentwurf — es faellt nur am Ende einer Saison, also hoechstens
+ * einmal die Woche, und fuenf davon reichen. Zwei Wege, dieselbe Belohnung:
+ * einer kostet Menge, der andere Ausdauer.
+ */
+export const SHINY_SOUL_PER_EGG = 5
+
 import { STATS, type Nature, type StatBlock } from '@game/shared'
 import type { SpeciesDef } from '@game/content'
 import { NATURES } from '@game/shared'

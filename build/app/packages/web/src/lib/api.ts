@@ -205,7 +205,10 @@ export const api = {
       method: 'POST', body: JSON.stringify({ itemId, creatureId }),
     }),
 
-  souls: () => request<{ souls: SoulView[]; eggsOpen: number; eggsMax: number }>('/api/souls'),
+  souls: () => request<{
+    souls: SoulView[]; eggsOpen: number; eggsMax: number
+    shinySouls: number; shinySoulsPerEgg: number
+  }>('/api/souls'),
   salvage: (creatureId: string) =>
     request<{ result: SalvageResult; souls: SoulView[] }>('/api/souls/salvage', {
       method: 'POST', body: JSON.stringify({ creatureId }),

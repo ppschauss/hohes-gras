@@ -16,6 +16,7 @@
 import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import { RECIPES } from '../packages/engine/dist/index.js'
 import { AUTHORED, lureItems, soulItems } from './curated-items.ts'
 import { EVENT_SPECIES } from './curated-event.ts'
 import { AREAS, BADGES, REGIONS, TRAINERS } from './curated-kanto.ts'
@@ -213,6 +214,21 @@ async function main(): Promise<void> {
     if (existsSync(svg)) { item.icon = `/media/items/${item.id}.svg`; svgIcons++ }
   }
   if (svgIcons) log(`${svgIcons} Vektor-Icons verknuepft`)
+
+  /*
+   * Rezepte gegen den Gegenstandskatalog pruefen.
+   *
+   * `craftingView` faellt bei einer unbekannten Id auf die Id selbst zurueck —
+   * ein Tippfehler im Rezept waere im Spiel als Zeile "star-pice" sichtbar und
+   * sonst nirgends. Hier faellt er auf, bevor das Pack geschrieben wird.
+   */
+  const known = new Set(byId.keys())
+  const unknown = RECIPES.flatMap((r) => [r.output.itemId, ...r.inputs.map((i) => i.itemId)])
+    .filter((id) => !known.has(id))
+  if (unknown.length > 0) {
+    throw new Error(`Rezepte nennen unbekannte Gegenstände: ${[...new Set(unknown)].join(', ')}`)
+  }
+  log(`${RECIPES.length} Rezepte geprüft`)
 
   const mergedItems = [...byId.values()].sort((x, y) => x.id.localeCompare(y.id))
   if (added) log(`${added} neue Gegenstände`)

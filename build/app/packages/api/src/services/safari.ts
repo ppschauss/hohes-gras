@@ -1,6 +1,7 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
 import {
   attemptCatch, BOX_BASE_LIMIT, catchProbability, catchReward, computeStats, createRng, deriveSeed,
+  rollCatchDrop,
   ENERGY_REWARDS, LEGENDARY_CATCH_RATE, LEGENDARY_LEVEL_BONUS, randomIvs, rollEncounter,
   isEventTrainer, LEGENDARY_BERRY_ID, LEGENDARY_MAX_BERRIES, isLegendaryCatchRate,
   legendaryCatchChance, rollEvent, rollLegendary, xpForLevel, type Rng,
@@ -639,6 +640,17 @@ export function throwBall(
     world.bumpAreaStat(ctx.db, trainer.id, e.areaId, 'catches')
     const reward = catchReward(species, e.level, e.shiny)
     inventory.earnGold(ctx.db, trainer.id, reward.gold)
+
+    /*
+     * Ein Fundstueck aus dem Gras.
+     *
+     * Gewuerfelt aus demselben Kern wie der Wurf, nur mit eigenem Anhaengsel:
+     * derselbe Fang gibt damit reproduzierbar dasselbe Fundstueck, und ein
+     * zweiter Wurf laesst sich nicht auf ein besseres hin wiederholen.
+     */
+    const dropId = rollCatchDrop(createRng(deriveSeed(e.seed, 'drop', String(e.startedAt))))
+    const dropItem = dropId ? ctx.registry.tryItem(dropId) : null
+    if (dropItem) inventory.grant(ctx.db, trainer.id, dropItem.id, 1)
     encounters.clear(ctx.db, trainer.id)
 
     teams.syncActiveFromGarden(ctx, trainer.id)
@@ -648,6 +660,7 @@ export function throwBall(
     const areaCompleted = newDexEntry ? completeArea(ctx, trainer, e.areaId) : null
     logEvent(ctx.db, trainer.id, 'safari.catch', {
       speciesId: e.speciesId, level: e.level, shiny: e.shiny, chain, gold: reward.gold,
+      drop: dropItem?.id ?? null,
     })
 
     return {
@@ -658,7 +671,16 @@ export function throwBall(
       creature: creatureView(ctx.registry, created, trainer.locale, worldClock().timeOfDay),
       newDexEntry,
       chain,
-      reward: { gold: reward.gold },
+      reward: {
+        gold: reward.gold,
+        drop: dropItem
+          ? {
+              itemId: dropItem.id,
+              name: ctx.registry.localized(dropItem.name, trainer.locale),
+              icon: dropItem.icon,
+            }
+          : null,
+      },
       areaCompleted,
       encounter: null,
     }

@@ -1,5 +1,8 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
-import { createRng, produceEgg, randomIvs, SOUL_PER_EGG, SOUL_PER_SHINY_EGG } from '@game/engine'
+import {
+  createRng, produceEgg, randomIvs, SHINY_SOUL_ID, SHINY_SOUL_PER_EGG,
+  SOUL_PER_EGG, SOUL_PER_SHINY_EGG,
+} from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import * as creatures from '../repos/creatures.js'
@@ -170,6 +173,11 @@ export interface SoulView {
   readyShiny: boolean
 }
 
+/** Wie viele Schillernde Fragmente jemand hat. */
+export function shinySoulsOf(ctx: AppContext, trainer: Trainer): number {
+  return inventory.quantityOf(ctx.db, trainer.id, SHINY_SOUL_ID)
+}
+
 export function overview(ctx: AppContext, trainer: Trainer): SoulView[] {
   return ctx.registry.allItems
     .filter((i) => typeof i.params.soulType === 'string')
@@ -204,9 +212,22 @@ export function redeem(ctx: AppContext, trainer: Trainer, typeId: string, shiny 
   return tx(ctx.db, () => {
     const item = ctx.registry.tryItem(soulItemId(typeId))
     if (!item) throw new GameError('not_found', { typeId }, 404)
+
+    /*
+     * Zwei Waehrungen fuer dasselbe Ei.
+     *
+     * Schillernde Fragmente haben keinen anderen Verwendungszweck und fallen
+     * hoechstens einmal die Woche — wer welche hat, will sie hier ausgeben.
+     * Deshalb gehen sie zuerst; die 85 gleichfarbigen bleiben der Weg fuer
+     * alle, die keine haben.
+     */
+    const shinySouls = inventory.quantityOf(ctx.db, trainer.id, SHINY_SOUL_ID)
+    const payWithShinySouls = shiny && shinySouls >= SHINY_SOUL_PER_EGG
     const cost = shiny ? SOUL_PER_SHINY_EGG : SOUL_PER_EGG
-    if (inventory.quantityOf(ctx.db, trainer.id, item.id) < cost) {
-      throw new GameError('insufficient_items', { itemId: item.id, need: cost }, 409)
+    if (!payWithShinySouls && inventory.quantityOf(ctx.db, trainer.id, item.id) < cost) {
+      throw new GameError('insufficient_items', {
+        itemId: item.id, need: cost, needShinySouls: SHINY_SOUL_PER_EGG,
+      }, 409)
     }
     const maxEggs = eggSlots(ctx, trainer.id)
     if (eggs.openOf(ctx.db, trainer.id).length >= maxEggs) {
@@ -229,7 +250,8 @@ export function redeem(ctx: AppContext, trainer: Trainer, typeId: string, shiny 
       species, rng,
     )
 
-    inventory.consume(ctx.db, trainer.id, item.id, cost)
+    if (payWithShinySouls) inventory.consume(ctx.db, trainer.id, SHINY_SOUL_ID, SHINY_SOUL_PER_EGG)
+    else inventory.consume(ctx.db, trainer.id, item.id, cost)
     const speedUp = 1 - bonuses(ctx, trainer.id).hatchSpeedBonus / 100
     const created = eggs.create(ctx.db, {
       trainerId: trainer.id,

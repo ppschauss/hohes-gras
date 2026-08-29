@@ -225,3 +225,27 @@ export function catchReward(species: SpeciesDef, level: number, shiny: boolean):
   const gold = Math.round((12 + level * 2.4) * rarityFactor * (shiny ? 4 : 1))
   return { gold, xp: Math.round(species.baseXpYield * (level / 8)) }
 }
+
+/**
+ * Was beim Fangen sonst noch abfaellt.
+ *
+ * Erkunden zahlte bisher nur Gold und Erfahrung; Werkstoffe kamen
+ * ausschliesslich von Expeditionen. Damit war die haeufigste Handlung des
+ * Spiels von der Werkbank abgeschnitten — man erkundete *trotz* des Handwerks,
+ * nicht dafuer. Jeder achte Fang bringt jetzt einen Werkstoff mit, gewichtet
+ * so, dass Sternenstaub die Ausnahme bleibt.
+ */
+export const CATCH_DROP_CHANCE = 12.5
+
+const CATCH_DROPS: Array<{ itemId: string; weight: number }> = [
+  { itemId: 'silk-thread', weight: 30 },
+  { itemId: 'soft-sand', weight: 30 },
+  { itemId: 'dew-drop', weight: 24 },
+  { itemId: 'iron-shard', weight: 12 },
+  { itemId: 'star-piece', weight: 4 },
+]
+
+export function rollCatchDrop(rng: Rng): string | null {
+  if (!rng.chance(CATCH_DROP_CHANCE)) return null
+  return rng.weighted(CATCH_DROPS, (d) => d.weight).itemId
+}

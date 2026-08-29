@@ -4,8 +4,13 @@ import { createRng } from './rng.js'
 import {
   attemptCatch, availableSpawns, ballMultiplier, catchProbability, catchReward,
   rollEncounter, shinyOdds, SHINY_BASE_ODDS, SHINY_CHAIN_GUARANTEE,
-  MAX_CALM_STACKS, type CatchModifiers, type SpawnContext,
+  MAX_CALM_STACKS, CATCH_DROP_CHANCE, rollCatchDrop,
+  type CatchModifiers, type SpawnContext,
 } from './encounter.js'
+import { RECIPES } from './crafting.js'
+import {
+  MAX_SEASON_TIER, rewardForTier, SEASON_LENGTH_DAYS, seasonTiers, SHINY_SOUL_ID,
+} from './progression.js'
 
 const area = {
   id: 'route-1',
@@ -273,5 +278,44 @@ describe('Shiny-Kurve der Fangserie', () => {
 
   it('garantiert den Fang auch ueber die Zusage hinaus', () => {
     expect(shinyOdds(200)).toBe(1)
+  })
+})
+
+describe('Fundstuecke beim Fangen', () => {
+  it('faellt in etwa jedem achten Fang', () => {
+    const rng = createRng('drops')
+    let hits = 0
+    const runs = 4000
+    for (let i = 0; i < runs; i++) if (rollCatchDrop(rng)) hits++
+    const rate = (hits / runs) * 100
+    expect(rate).toBeGreaterThan(CATCH_DROP_CHANCE - 2)
+    expect(rate).toBeLessThan(CATCH_DROP_CHANCE + 2)
+  })
+
+  it('gibt nur Werkstoffe aus, die Rezepte auch verlangen', () => {
+    // Sonst faende man etwas, mit dem sich nichts anfangen laesst.
+    const wanted = new Set(RECIPES.flatMap((r) => r.inputs.map((i) => i.itemId)))
+    const rng = createRng('drop-ids')
+    const seen = new Set<string>()
+    for (let i = 0; i < 2000; i++) {
+      const id = rollCatchDrop(rng)
+      if (id) seen.add(id)
+    }
+    expect(seen.size).toBeGreaterThan(3)
+    for (const id of seen) expect(wanted.has(id)).toBe(true)
+  })
+})
+
+describe('Saison', () => {
+  it('dauert eine Woche', () => {
+    expect(SEASON_LENGTH_DAYS).toBe(7)
+  })
+
+  it('legt auf die letzte Stufe das schillernde Fragment', () => {
+    expect(rewardForTier(MAX_SEASON_TIER)).toEqual({ kind: 'item', itemId: SHINY_SOUL_ID, quantity: 1 })
+    const shinyTiers = seasonTiers().filter(
+      (t) => t.reward.kind === 'item' && t.reward.itemId === SHINY_SOUL_ID,
+    )
+    expect(shinyTiers).toHaveLength(1)
   })
 })
