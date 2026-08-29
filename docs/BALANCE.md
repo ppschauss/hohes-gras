@@ -76,6 +76,21 @@ Damit ist jede Punktquelle nach oben begrenzt: wer an einem Tag alles macht,
 was das Spiel hergibt, landet bei rund 3.300 Punkten — ungefähr einer
 Leiterlänge. Alles andere braucht die Woche.
 
+## Antrittsgeld
+
+Ganz ohne Ertrag blieb der Wiederholungskampf trotzdem falsch: gekämpft hat man
+schließlich. Jeder ausgefochtene Kampf zahlt deshalb ein **Antrittsgeld** von
+10 Gold je aufgewendeter Energie — 20 für einen Trainerkampf, und bei Duellen
+ist es derselbe Betrag, den auch eine Niederlage einbringt. Es gibt ihn auch,
+wenn man verliert; die Energie ist so oder so weg. Nur beim Aufgeben nicht,
+sonst wäre Anfangen-und-Abbrechen der schnellste Weg dazu.
+
+Der Satz ist am unteren Ende der Wirtschaft angesetzt: ein erster
+Arenadurchlauf bringt je Energie das Acht- bis Vierunddreißigfache, ein erster
+Sieg über einen Trainer ein Vielfaches davon. Dieselben 250 Wiederholungssiege,
+die einmal 88.445 Gold brachten, wären damit 5.000 — spürbar, aber nie die
+beste Art, an Gold zu kommen.
+
 ## Handwerk und Fundstücke
 
 Jeder achte Fang (**12,5 %**) bringt einen Werkstoff mit — Seidenfaden,

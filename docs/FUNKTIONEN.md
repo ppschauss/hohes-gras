@@ -437,10 +437,11 @@ niemand muss online sein. Beide Teams treten auf die **niedrigere der beiden
 Reisegrenzen** an, damit die Aufstellung entscheidet und nicht die Zahl der
 bezwungenen Regionen. Das Ergebnis ist ein abspielbares Replay.
 
-**Wertung und Gold gibt es einmal am Tag je Gegner.** Der zweite Sieg gegen
-dieselbe Person wird ausgetragen und aufgezeichnet, zahlt aber nichts mehr —
-weder Elo noch Gold noch Saisonpunkte. Niederlagen bleiben unangetastet, damit
-die Wiederholung ein Risiko bleibt statt einer risikolosen Wette.
+**Wertung und der volle Siegbetrag gibt es einmal am Tag je Gegner.** Der
+zweite Sieg gegen dieselbe Person wird ausgetragen und aufgezeichnet, bringt
+aber weder Elo noch Saisonpunkte — und beim Gold nur noch das **Antrittsgeld**,
+also genau das, was eine Niederlage einbringt. Niederlagen bleiben unangetastet,
+damit die Wiederholung ein Risiko bleibt statt einer risikolosen Wette.
 
 Dazu ein **Wochenturnier** mit automatisch aufgelöstem Bracket.
 
@@ -523,7 +524,7 @@ Anfangen im Osten.
 | **Fenster** | 100 Pflegeaktionen je 15 Minuten (Pflegestation hebt es) |
 | **Rhythmuserkennung** | 12 Proben; liegt die Streuung unter 15 ms, folgen 30 Sekunden Zwangspause |
 | **Rate-Limits** | Je Endpunkt und Trainer, 300 schreibende Anfragen je Minute |
-| **Tagesregeln** | Wertung, Gold und Saisonpunkte einmal am Tag je Gegner — für Kämpfe wie für Duelle; Entwicklungsertrag zehnmal am Tag |
+| **Tagesregeln** | Wertung, voller Goldbetrag und Saisonpunkte einmal am Tag je Gegner — für Kämpfe wie für Duelle; darüber hinaus bleibt das Antrittsgeld; Entwicklungsertrag zehnmal am Tag |
 | **Protokoll** | Jede zustandsändernde Handlung landet im `event_log` — Grundlage für Auswertung und DSGVO-Export |
 
 Der Server ist **autoritativ**: der Client rechnet nichts aus, er schickt

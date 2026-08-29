@@ -152,15 +152,16 @@ describe('Sieg und Belohnung', () => {
     expect(body.winner).toBe(0)
     expect(body.reward.won).toBe(true)
     expect(body.reward.firstWin).toBe(true)
-    expect(body.reward.gold).toBe(100)
+    // 100 fuer den Sieg plus 20 Antrittsgeld.
+    expect(body.reward.gold).toBe(120)
     expect(body.reward.dialogue).toBe('Puh')
 
     h.resetRateLimits()
     const goldAfter = (await h.get('/api/bag', token)).body.gold
-    expect(goldAfter).toBe(goldBefore + 100)
+    expect(goldAfter).toBe(goldBefore + 120)
   })
 
-  it('erkennt den Wiederholungssieg und zahlt am selben Tag nichts', async () => {
+  it('erkennt den Wiederholungssieg und zahlt nur noch das Antrittsgeld', async () => {
     addStrongMember(50)
     await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
     await fightToEnd()
@@ -171,14 +172,16 @@ describe('Sieg und Belohnung', () => {
     const { body } = await fightToEnd()
     expect(body.reward.firstWin).toBe(false)
     expect(body.reward.firstToday).toBe(false)
-    // Der Wiederholungsanteil gilt erst am naechsten Tag wieder; heute null.
-    expect(body.reward.gold).toBe(0)
+    // Der Wiederholungsanteil gilt erst am naechsten Tag wieder. Bleibt das
+    // Antrittsgeld — gekaempft hat man trotzdem.
+    expect(body.reward.gold).toBe(20)
   })
 
-  it('zahlt Gold nur beim ersten Sieg des Tages ueber einen Gegner', async () => {
+  it('zahlt den vollen Betrag nur beim ersten Sieg des Tages ueber einen Gegner', async () => {
     /*
      * Gemessen: 250 Wiederholungssiege gegen einen Kaefersammler brachten
-     * 88.445 Gold. Das war kein Kampf mehr, sondern eine Kurbel.
+     * 88.445 Gold. Das war kein Kampf mehr, sondern eine Kurbel. Uebrig
+     * bleibt das Antrittsgeld — dieselben 250 Siege waeren jetzt 5.000.
      */
     addStrongMember(50)
     await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
@@ -193,9 +196,9 @@ describe('Sieg und Belohnung', () => {
     await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
     const zweiter = await fightToEnd()
     expect(zweiter.body.reward.won).toBe(true)
-    expect(zweiter.body.reward.gold).toBe(0)
+    expect(zweiter.body.reward.gold).toBe(20)
     h.resetRateLimits()
-    expect((await h.get('/api/bag', token)).body.gold).toBe(goldNachher)
+    expect((await h.get('/api/bag', token)).body.gold).toBe(goldNachher + 20)
   })
 
   it('macht aus dem Wiederholungssieg keinen Energie-Automaten', async () => {
@@ -297,6 +300,8 @@ describe('Sieg und Belohnung', () => {
     expect(strong.level).toBeGreaterThanOrEqual(50)
   })
 
+  // Auch kein Antrittsgeld: sonst waere Anfangen-und-Aufgeben der schnellste
+  // Weg dazu.
   it('beendet den Kampf beim Aufgeben ohne Belohnung', async () => {
     await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
     const r = await h.post('/api/battle/forfeit', {}, token)

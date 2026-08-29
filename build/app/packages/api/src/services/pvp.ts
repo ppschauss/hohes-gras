@@ -174,7 +174,14 @@ export function duel(ctx: AppContext, trainer: Trainer, opponentId: string): Due
       pvp.updateRating(ctx.db, opponent.id, theirs.rating, !won)
     }
 
-    const gold = repeat ? 0 : (won ? WIN_GOLD : LOSS_GOLD)
+    /*
+     * Auch die Wiederholung zahlt das Antrittsgeld.
+     *
+     * Bisher exakt nichts, und das war der Punkt, an dem sich die Sperre nach
+     * Strafe anfuehlte statt nach Grenze. Sie bekommt jetzt, was eine
+     * Niederlage bekommt: gekaempft wurde, gewonnen zaehlt nur einmal am Tag.
+     */
+    const gold = won && !repeat ? WIN_GOLD : LOSS_GOLD
     inventory.earnGold(ctx.db, trainer.id, gold)
     if (won && !repeat) energy.reward(ctx, trainer.id, 'duelWon')
     // Das Gildenziel zaehlt Teilnahme, nicht Ertrag — es bleibt.

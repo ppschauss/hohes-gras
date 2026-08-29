@@ -2,7 +2,8 @@ import { GameError, NATURES, type Trainer } from '@game/shared'
 import type { AreaDef, TrainerDef } from '@game/content'
 import {
   activeFighter, battleXpYield, chooseAction, computeStats, createBattle, createRng,
-  deriveSeed, ENERGY_REWARDS, eventGold, eventLevels, eventLoot, eventPartySize, grantXpTo,
+  deriveSeed, ENERGY_COSTS, ENERGY_REWARDS, eventGold, eventLevels, eventLoot, eventPartySize,
+  GOLD_PER_ENERGY_FLOOR, grantXpTo,
   isEventTrainer, makeSide,
   rollLureDrop,
   LEGENDARY_BERRY_ID, npcFighter, PERFECT_IV, resolveTurn, rollBerryDrop, rollPerfect,
@@ -509,20 +510,34 @@ function applyOutcome(
   persistTeamHp(ctx, trainer, record.state)
 
   const won = record.state.outcome?.winner === 0
+  /*
+   * Antrittsgeld: jeder ausgefochtene Kampf zahlt etwas.
+   *
+   * Bemessen an der Energie, die er gekostet hat, nicht am Ansehen des
+   * Gegners — sonst waere der zehnte Kampf gegen einen Arenaleiter wieder die
+   * beste Goldquelle des Spiels. Es gibt ihn auch bei einer Niederlage: die
+   * Energie ist so oder so weg.
+   *
+   * Nur beim Aufgeben nicht. Sonst waere Kampf anfangen und sofort aufgeben
+   * der schnellste Weg zum Antrittsgeld, und das waere kein Kampf mehr.
+   */
+  const gaveUp = record.state.outcome?.reason === 'forfeit' && record.state.outcome.winner === 1
+  const showUp = def && !gaveUp ? ENERGY_COSTS.battle * GOLD_PER_ENERGY_FLOOR : 0
   const empty: BattleReward = {
-    won, gold: 0, energy: 0, event: null, xpPerMember: 0, firstWin: false, firstToday: false, badge: null, levelUps: [],
+    won, gold: showUp, energy: 0, event: null, xpPerMember: 0, firstWin: false, firstToday: false, badge: null, levelUps: [],
     dialogue: def
       ? ctx.registry.localized(won ? def.dialogue.lose : def.dialogue.win, trainer.locale)
       : '',
   }
   if (!def || !won) {
-    if (!battles.markRewarded(ctx.db, record.id)) return empty
+    if (!battles.markRewarded(ctx.db, record.id)) return { ...empty, gold: 0 }
+    inventory.earnGold(ctx.db, trainer.id, showUp)
     logEvent(ctx.db, trainer.id, 'battle.end', { opponentId: def?.id, won })
     return empty
   }
 
   // markRewarded is the guard against paying twice for one victory.
-  if (!battles.markRewarded(ctx.db, record.id)) return empty
+  if (!battles.markRewarded(ctx.db, record.id)) return { ...empty, gold: 0 }
 
   /*
    * Saisonpunkte gibt es einmal am Tag je Gegner.
@@ -550,9 +565,9 @@ function applyOutcome(
    * Kurbel. Kaempfen bleibt erlaubt und bringt weiter EP — nur nicht mehr
    * Gold aus derselben Quelle.
    */
-  const gold = !firstToday
+  const gold = showUp + (!firstToday
     ? 0
-    : Math.round(def.rewardGold * (firstWin ? 1 : def.repeatRewardRatio))
+    : Math.round(def.rewardGold * (firstWin ? 1 : def.repeatRewardRatio)))
   inventory.earnGold(ctx.db, trainer.id, gold)
 
   /*

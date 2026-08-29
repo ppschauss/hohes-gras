@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { LOSS_GOLD } from '../src/services/pvp.js'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -258,7 +259,7 @@ describe('PvP', () => {
     expect(r.body.gold).toBeGreaterThan(0)
   })
 
-  it('zahlt einen Gegner nur einmal am Tag', async () => {
+  it('zahlt den vollen Siegbetrag nur einmal am Tag je Gegner', async () => {
     // Ash gewinnt sicher: Level 60 gegen Level 5.
     h.ctx.db.prepare('UPDATE creatures SET level = 60, xp = 300000 WHERE owner_id = ?').run(ash.id)
     h.ctx.db.prepare('UPDATE creatures SET level = 5 WHERE owner_id = ?').run(misty.id)
@@ -280,11 +281,14 @@ describe('PvP', () => {
     const second = await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)
     expect(second.body.won).toBe(true)
     expect(second.body.repeat).toBe(true)
-    expect(second.body.gold).toBe(0)
+    // Kein Siegbetrag mehr, aber das Antrittsgeld — dasselbe, das eine
+    // Niederlage einbringt.
+    expect(second.body.gold).toBe(LOSS_GOLD)
+    expect(second.body.gold).toBeLessThan(first.body.gold)
     expect(second.body.delta).toBe(0)
     expect(second.body.ratingAfter).toBe(ratingAfterFirst)
     h.resetRateLimits()
-    expect((await h.get('/api/bag', ash.token)).body.gold).toBe(goldAfterFirst)
+    expect((await h.get('/api/bag', ash.token)).body.gold).toBe(goldAfterFirst + LOSS_GOLD)
 
     // Und die Gegenseite verliert nicht zweimal Wertung fuer denselben Tag.
     const mistyRating = h.ctx.db.prepare('SELECT rating FROM pvp_ratings WHERE trainer_id = ?')

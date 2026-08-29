@@ -104,6 +104,21 @@ export const ENERGY_COSTS: Record<EnergyAction, number> = {
   raid: 2,
 }
 
+/**
+ * Was eine Stunde Energie mindestens wert ist, in Gold.
+ *
+ * Aus diesem Wert wird das Antrittsgeld gerechnet: der Betrag, den ein Kampf
+ * abwirft, wenn die eigentliche Belohnung fuer heute schon abgeholt ist. Er
+ * liegt bewusst am unteren Ende der Wirtschaft — ein erster Arenadurchlauf
+ * bringt je Energie das Achtfache, ein erster Sieg ueber einen Trainer ein
+ * Vielfaches davon. So bleibt jeder Kampf etwas wert, ohne dass Wiederholen
+ * je die beste Art wird, an Gold zu kommen.
+ *
+ * Vorher gab es fuer den zweiten Kampf am selben Tag exakt nichts, und das
+ * fuehlte sich falsch an: gekaempft hat man trotzdem.
+ */
+export const GOLD_PER_ENERGY_FLOOR = 10
+
 /** Expeditionen skalieren mit der Dauer: acht Stunden Ertrag kosten mehr als
  *  eine halbe Stunde. */
 export const EXPEDITION_ENERGY: Record<string, number> = {
