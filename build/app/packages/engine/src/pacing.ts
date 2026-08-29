@@ -75,6 +75,24 @@ export const EXPLORE_PACING: PacingRules = {
   minGapMs: MIN_GAP_MS,
 }
 
+/**
+ * Duelle: seltener als Erkunden, und mit spuerbarem Abstand.
+ *
+ * Gemessen im Protokoll: 258 Duelle in 31 Sekunden, Median 92 ms — acht Stueck
+ * je Sekunde. Die Ertraege sind seitdem gedeckelt, die Frequenz war es nicht,
+ * und ein Duell ist der teuerste Vorgang im Spiel: es rechnet einen ganzen
+ * Kampf durch.
+ *
+ * Anderthalb Sekunden Mindestabstand und dreissig je Viertelstunde sind fuer
+ * eine Hand grosszuegig — bei drei Energie je Duell reicht ein volles Konto
+ * ohnehin nur fuer fuenfzig.
+ */
+export const DUEL_PACING: PacingRules = {
+  windowMs: CARE_WINDOW_MS,
+  limit: 30,
+  minGapMs: 1_500,
+}
+
 export type PacingVerdict =
   | { ok: true }
   | { ok: false; reason: 'window'; retryAfterMs: number; limit: number }

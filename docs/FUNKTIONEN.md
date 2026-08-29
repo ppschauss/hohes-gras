@@ -511,11 +511,12 @@ Anfangen im Osten.
 
 | Schranke | Wirkung |
 |---|---|
-| **Mindestabstand** | 180 ms zwischen zwei Handlungen desselben Eimers |
+| **Mindestabstand** | 180 ms zwischen zwei Handlungen; für Duelle 1,5 s |
+| **Duelle** | Höchstens 30 je Viertelstunde — ein Duell rechnet einen ganzen Kampf durch |
 | **Fenster** | 100 Pflegeaktionen je 15 Minuten (Pflegestation hebt es) |
 | **Rhythmuserkennung** | 12 Proben; liegt die Streuung unter 15 ms, folgen 30 Sekunden Zwangspause |
 | **Rate-Limits** | Je Endpunkt und Trainer, 300 schreibende Anfragen je Minute |
-| **Tagesregeln** | Wertung, Gold und Saisonpunkte einmal am Tag je Gegner; Entwicklungsertrag zehnmal am Tag |
+| **Tagesregeln** | Wertung, Gold und Saisonpunkte einmal am Tag je Gegner — für Kämpfe wie für Duelle; Entwicklungsertrag zehnmal am Tag |
 | **Protokoll** | Jede zustandsändernde Handlung landet im `event_log` — Grundlage für Auswertung und DSGVO-Export |
 
 Der Server ist **autoritativ**: der Client rechnet nichts aus, er schickt

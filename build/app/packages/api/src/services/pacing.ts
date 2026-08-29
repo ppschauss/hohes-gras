@@ -1,5 +1,7 @@
 import { GameError, type Trainer } from '@game/shared'
-import { CARE_PACING, EXPLORE_PACING, carePacingWith, checkPacing, type PacingRules } from '@game/engine'
+import {
+  CARE_PACING, DUEL_PACING, EXPLORE_PACING, carePacingWith, checkPacing, type PacingRules,
+} from '@game/engine'
 import type { AppContext } from '../context.js'
 import * as pulse from '../repos/pulse.js'
 import { logEvent } from '../repos/events.js'
@@ -13,9 +15,10 @@ import { bonuses } from './progression.js'
  * nicht wegautomatisieren laesst.
  */
 
-export const BUCKETS: Record<'care' | 'explore', PacingRules> = {
+export const BUCKETS: Record<'care' | 'explore' | 'duel', PacingRules> = {
   care: CARE_PACING,
   explore: EXPLORE_PACING,
+  duel: DUEL_PACING,
 }
 
 export type PacingBucket = keyof typeof BUCKETS

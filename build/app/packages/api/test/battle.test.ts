@@ -160,7 +160,7 @@ describe('Sieg und Belohnung', () => {
     expect(goldAfter).toBe(goldBefore + 100)
   })
 
-  it('zahlt beim Wiederholungssieg weniger', async () => {
+  it('erkennt den Wiederholungssieg und zahlt am selben Tag nichts', async () => {
     addStrongMember(50)
     await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
     await fightToEnd()
@@ -170,7 +170,32 @@ describe('Sieg und Belohnung', () => {
     await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
     const { body } = await fightToEnd()
     expect(body.reward.firstWin).toBe(false)
-    expect(body.reward.gold).toBe(25)
+    expect(body.reward.firstToday).toBe(false)
+    // Der Wiederholungsanteil gilt erst am naechsten Tag wieder; heute null.
+    expect(body.reward.gold).toBe(0)
+  })
+
+  it('zahlt Gold nur beim ersten Sieg des Tages ueber einen Gegner', async () => {
+    /*
+     * Gemessen: 250 Wiederholungssiege gegen einen Kaefersammler brachten
+     * 88.445 Gold. Das war kein Kampf mehr, sondern eine Kurbel.
+     */
+    addStrongMember(50)
+    await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+    const erster = await fightToEnd()
+    expect(erster.body.reward.gold).toBeGreaterThan(0)
+
+    h.resetRateLimits()
+    h.ctx.db.prepare('UPDATE creatures SET hp_current = 9999 WHERE owner_id = ?').run(trainerId)
+    const goldNachher = (await h.get('/api/bag', token)).body.gold
+
+    h.resetRateLimits()
+    await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+    const zweiter = await fightToEnd()
+    expect(zweiter.body.reward.won).toBe(true)
+    expect(zweiter.body.reward.gold).toBe(0)
+    h.resetRateLimits()
+    expect((await h.get('/api/bag', token)).body.gold).toBe(goldNachher)
   })
 
   it('macht aus dem Wiederholungssieg keinen Energie-Automaten', async () => {

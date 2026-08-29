@@ -237,6 +237,7 @@ describe('PvP', () => {
 
   it('kaempft ein Duell aus und passt beide Wertungen an', async () => {
     await h.get('/api/pvp', misty.token)
+    h.resetPacing()
     const r = await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)
     expect(r.status).toBe(200)
     expect(typeof r.body.won).toBe('boolean')
@@ -250,6 +251,7 @@ describe('PvP', () => {
   it('zahlt auch bei Niederlage einen Trostpreis', async () => {
     await h.get('/api/pvp', misty.token)
     const before = (await h.get('/api/bag', ash.token)).body.gold
+    h.resetPacing()
     const r = await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)
     const after = (await h.get('/api/bag', ash.token)).body.gold
     expect(after).toBe(before + r.body.gold)
@@ -263,6 +265,7 @@ describe('PvP', () => {
     await h.get('/api/pvp', misty.token)
 
     h.resetRateLimits()
+    h.resetPacing()
     const first = await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)
     expect(first.body.won).toBe(true)
     expect(first.body.repeat).toBe(false)
@@ -273,6 +276,7 @@ describe('PvP', () => {
     const ratingAfterFirst = first.body.ratingAfter
 
     h.resetRateLimits()
+    h.resetPacing()
     const second = await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)
     expect(second.body.won).toBe(true)
     expect(second.body.repeat).toBe(true)
@@ -291,13 +295,30 @@ describe('PvP', () => {
     expect(mistyRating.rating).toBe(mistyAfterFirst)
   })
 
+  it('bremst eine Duellserie im Maschinentakt aus', async () => {
+    /*
+     * Gemessen im Protokoll: 258 Duelle in 31 Sekunden, Median 92 ms. Die
+     * Ertraege waren danach gedeckelt, die Frequenz nicht.
+     */
+    await h.get('/api/pvp', misty.token)
+    h.resetRateLimits(); h.resetPacing()
+    expect((await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)).status).toBe(200)
+
+    // Direkt hinterher, ohne Pause: der Mindestabstand greift.
+    h.resetRateLimits()
+    const sofort = await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)
+    expect(sofort.status).toBe(429)
+  })
+
   it('verweigert ein Duell gegen sich selbst', async () => {
+    h.resetPacing()
     const r = await h.post('/api/pvp/duel', { opponentId: ash.id }, ash.token)
     expect(r.status).toBe(400)
   })
 
   it('verweigert ein Duell gegen ein leeres Team', async () => {
     h.ctx.db.prepare('UPDATE creatures SET team_slot = NULL WHERE owner_id = ?').run(misty.id)
+    h.resetPacing()
     const r = await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)
     expect(r.status).toBe(409)
     expect(r.body.detail.reason).toBe('opponent_no_team')
@@ -309,12 +330,14 @@ describe('PvP', () => {
     for (let i = 0; i < 12; i++) {
       h.resetRateLimits()
       h.ctx.db.prepare('UPDATE trainers SET energy = 200 WHERE id = ?').run(ash.id)
+      h.resetPacing()
       expect((await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)).status).toBe(200)
     }
 
     h.resetRateLimits()
     h.ctx.db.prepare('UPDATE trainers SET energy = 0, energy_updated_at = ? WHERE id = ?')
       .run(Date.now(), ash.id)
+    h.resetPacing()
     const broke = await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)
     expect(broke.status).toBe(409)
     expect(broke.body.error).toBe('insufficient_energy')
@@ -322,6 +345,7 @@ describe('PvP', () => {
 
   it('fuehrt eine Rangliste', async () => {
     await h.get('/api/pvp', misty.token)
+    h.resetPacing()
     await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)
     const r = await h.get('/api/pvp/ladder', ash.token)
     expect(r.body.rows.length).toBeGreaterThanOrEqual(2)
@@ -331,6 +355,7 @@ describe('PvP', () => {
 
   it('zeigt die Duellhistorie beider Seiten', async () => {
     await h.get('/api/pvp', misty.token)
+    h.resetPacing()
     await h.post('/api/pvp/duel', { opponentId: misty.id }, ash.token)
     const mine = await h.get('/api/pvp/history', ash.token)
     const theirs = await h.get('/api/pvp/history', misty.token)

@@ -17,6 +17,7 @@ import { contributeToGoal } from './guilds.js'
 import { awardSeasonPoints, bumpMetric } from './progression.js'
 import { capOf, duelCap } from './travel.js'
 import * as energy from './energy.js'
+import { assertPace, recordPace } from './pacing.js'
 
 /** Duelle sind unbegrenzt; der Zaehler bleibt als Statistik im UI. */
 export const DUELS_PER_DAY = null
@@ -78,6 +79,14 @@ export interface DuelResult {
 }
 
 export function duel(ctx: AppContext, trainer: Trainer, opponentId: string): DuelResult {
+  /*
+   * Erst der Takt, dann alles andere.
+   *
+   * Ausserhalb der Transaktion, damit die Zwangspause einen Abbruch
+   * ueberlebt. Gemessen im Protokoll: 258 Duelle in 31 Sekunden — die
+   * Ertraege sind seitdem gedeckelt, die Frequenz war es nicht.
+   */
+  assertPace(ctx, trainer, 'duel')
   return tx(ctx.db, () => {
     const opponent = findById(ctx.db, opponentId)
     if (!opponent || opponent.isBanned) throw new GameError('not_found', { opponentId }, 404)
@@ -90,6 +99,7 @@ export function duel(ctx: AppContext, trainer: Trainer, opponentId: string): Due
 
     // Kein Tageslimit mehr: Duelle kosten Energie, und die begrenzt sich selbst.
     energy.spendFor(ctx, trainer.id, 'duel')
+    recordPace(ctx, trainer, 'duel')
 
     /*
      * Beide Teams auf dieselbe Reisegrenze bringen.

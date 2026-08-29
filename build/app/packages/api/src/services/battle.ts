@@ -540,7 +540,19 @@ function applyOutcome(
   const lastWin = battles.lastWinAt(ctx.db, trainer.id, def.id)
   const firstWin = battles.recordWin(ctx.db, trainer.id, def.id)
   const firstToday = firstWin || (lastWin !== null && lastWin < dayStart())
-  const gold = Math.round(def.rewardGold * (firstWin ? 1 : def.repeatRewardRatio))
+  /*
+   * Gold gibt es einmal am Tag je Gegner.
+   *
+   * Der erste Sieg ueberhaupt zahlt voll, der erste an einem spaeteren Tag den
+   * Wiederholungsanteil, jeder weitere am selben Tag nichts. Vorher zahlte
+   * *jede* Wiederholung ihre 15 bis 50 Prozent: 250 Siege gegen denselben
+   * Kaefersammler waren 88.445 Gold, und das war kein Kampf mehr, sondern eine
+   * Kurbel. Kaempfen bleibt erlaubt und bringt weiter EP — nur nicht mehr
+   * Gold aus derselben Quelle.
+   */
+  const gold = !firstToday
+    ? 0
+    : Math.round(def.rewardGold * (firstWin ? 1 : def.repeatRewardRatio))
   inventory.earnGold(ctx.db, trainer.id, gold)
 
   /*
