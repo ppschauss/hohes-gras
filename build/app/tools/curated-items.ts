@@ -46,6 +46,10 @@ export const SVG_ICONS = new Set([
   'rocket-bait', 'energy-drink', 'exp-candy-s', 'exp-candy-l',
   'golden-razz', 'legendary-berry', 'lure-legendary', 'soul-shiny',
   'metal-detector',
+  // Die sechs Gartenhintergruende. Sie waren die einzigen fehlenden Bilder,
+  // die im Spiel wirklich zu sehen waren: im Laden trugen alle sechs
+  // dasselbe Ersatzsymbol und sahen damit identisch aus.
+  'bg-classic', 'bg-beach', 'bg-forest', 'bg-dojo', 'bg-moonlight', 'bg-space',
 ])
 
 export const AUTHORED: Authored[] = [
