@@ -208,6 +208,32 @@ gibt.
 
 ---
 
+## 8a. Trainingsarena
+
+Ein Ort zum Üben: **vier Kämpfe in Folge** gegen Gegner **eines einzigen Typs**,
+der **jeden Tag wechselt**. Der Typ kommt aus dem Datum, nicht aus dem Zufall —
+alle treffen denselben, und wer morgen wiederkommt, kann sich heute darauf
+vorbereiten.
+
+| Stufe | Gegnerlevel | Gold je Sieg | Durchlauf |
+|---|---|---|---|
+| **Leicht** | Teamdurchschnitt **−5** | 60 | 400 Gold + 2× EP-Bonbon S |
+| **Ausgeglichen** | **−3** | 120 | 900 Gold + 1× EP-Bonbon L |
+| **Schwer** | **−1** | 240 | 1.800 Gold + 1× EP-Bonbon L + 2× Sternenstaub |
+
+Innerhalb eines Durchlaufs steigt das Level je Runde um eins — der vierte
+Gegner steht über dem ersten. Gegenstände sind erlaubt, und **zwischen den
+Kämpfen bekommt das Team 10 % seiner KP zurück**: genug, um weiterzukommen, zu
+wenig, um ohne Beutel durchzukommen.
+
+Jeder Kampf kostet die üblichen 2 Energie und zahlt EP wie ein Trainerkampf —
+das ist der eigentliche Ertrag. Die **Durchlauf-Prämie zahlt einmal am Tag je
+Stufe**; danach kann man weiter üben, nur ohne Prämie. Eine Niederlage beendet
+den Durchlauf.
+
+Legendäre und Ereignis-Arten treten nie an: die Arena ist ein Übungsplatz, kein
+Abkürzungsweg.
+
 ## 9. Poké-Center
 
 Kostenlose Vollheilung des Teams, danach **10 Minuten Abklingzeit**. Die

@@ -15,12 +15,21 @@ export interface BattleRecord {
   finishedAt: number | null
   winner: number | null
   rewarded: boolean
+  /**
+   * Der Gegner, wenn er in keinem Pack steht.
+   *
+   * Arenakaempfe erzeugen ihre Gegner aus Typ des Tages und eigenem
+   * Durchschnittslevel. Ohne diese Kopie waere der Gegner nach dem Neuladen
+   * unbekannt — und ein unbekannter Gegner zahlt keine Belohnung aus.
+   */
+  opponentDef: string | null
 }
 
 interface Row {
   id: string; trainer_id: string; kind: string; opponent_id: string | null
   area_id: string | null; seed: string; state: string; events: string
   started_at: number; finished_at: number | null; winner: number | null; rewarded: number
+  opponent_def: string | null
 }
 
 const toRecord = (r: Row): BattleRecord => ({
@@ -30,6 +39,7 @@ const toRecord = (r: Row): BattleRecord => ({
   events: JSON.parse(r.events) as BattleEvent[],
   startedAt: r.started_at, finishedAt: r.finished_at,
   winner: r.winner, rewarded: r.rewarded === 1,
+  opponentDef: r.opponent_def,
 })
 
 /**
@@ -80,14 +90,15 @@ export function byId(db: Db, id: string): BattleRecord | null {
 
 export function create(db: Db, input: {
   trainerId: string; kind: string; opponentId: string | null; areaId: string | null
-  seed: string; state: BattleState
+  seed: string; state: BattleState; opponentDef?: unknown
 }, now = Date.now()): BattleRecord {
   const id = newId()
   db.prepare(
-    `INSERT INTO battles (id, trainer_id, kind, opponent_id, area_id, seed, state, events, started_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, '[]', ?)`,
+    `INSERT INTO battles (id, trainer_id, kind, opponent_id, area_id, seed, state, events, started_at, opponent_def)
+     VALUES (?, ?, ?, ?, ?, ?, ?, '[]', ?, ?)`,
   ).run(id, input.trainerId, input.kind, input.opponentId, input.areaId, input.seed,
-    JSON.stringify(input.state), now)
+    JSON.stringify(input.state), now,
+    input.opponentDef === undefined ? null : JSON.stringify(input.opponentDef))
   return byId(db, id)!
 }
 

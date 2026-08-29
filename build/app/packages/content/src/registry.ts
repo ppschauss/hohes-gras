@@ -18,6 +18,7 @@ export class Registry {
    */
   get obtainableSpecies(): SpeciesDef[] { return this.allSpecies.filter((s) => !s.event) }
   get allItems(): ItemDef[] { return [...this.pack.items.values()] }
+  get allTypes(): TypeDef[] { return [...this.pack.types.values()] }
   /** Areas in the order a player travels them: region by region, and inside a
    *  region by its own order. Sorting by `order` alone interleaves two regions
    *  into a sequence that exists nowhere in the game. */

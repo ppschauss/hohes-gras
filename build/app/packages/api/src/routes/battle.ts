@@ -4,6 +4,7 @@ import type { AppContext } from '../context.js'
 import { rateLimit, requireTrainer, withEnergy } from './plugin.js'
 import { findById } from '../repos/trainers.js'
 import * as battle from '../services/battle.js'
+import * as arena from '../services/arena.js'
 import { requireCurrentArea } from '../services/world.js'
 
 const StartSchema = z.object({ opponentId: z.string() })
@@ -43,6 +44,19 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: AppContext): voi
   })
 
   app.post('/api/battle/forfeit', write, async (req) => battle.forfeit(ctx, req.trainer!))
+
+  /* ---------------------------------------------------- Trainingsarena */
+
+  app.get('/api/arena', auth, async (req) => arena.view(ctx, req.trainer!))
+
+  app.post('/api/arena/start', write, async (req) => {
+    const { tier } = z.object({ tier: z.enum(['easy', 'even', 'hard']) }).parse(req.body)
+    return arena.start(ctx, req.trainer!, tier)
+  })
+
+  app.post('/api/arena/next', write, async (req) => arena.next(ctx, req.trainer!))
+
+  app.post('/api/arena/abandon', write, async (req) => ({ arena: arena.abandon(ctx, req.trainer!) }))
 
   app.post('/api/team/heal', write, async (req) => {
     const result = battle.healTeam(ctx, req.trainer!)

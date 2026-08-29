@@ -205,6 +205,14 @@ export const api = {
       method: 'POST', body: JSON.stringify({ itemId, creatureId }),
     }),
 
+  arena: () => request<ArenaView>('/api/arena'),
+  arenaStart: (tier: string) =>
+    request<{ arena: ArenaView }>('/api/arena/start', { method: 'POST', body: JSON.stringify({ tier }) }),
+  arenaNext: () =>
+    request<{ done: boolean; won: boolean; healed: number; battle: unknown | null; arena: ArenaView }>(
+      '/api/arena/next', { method: 'POST', body: '{}' }),
+  arenaAbandon: () => request<{ arena: ArenaView }>('/api/arena/abandon', { method: 'POST', body: '{}' }),
+
   login: () => request<LoginView>('/api/login'),
   claimLogin: () => request<{
     day: number; streak: number; bonus: boolean; label: string; state: LoginView
@@ -1072,6 +1080,22 @@ export interface BulkSalvageResult {
   count: number
   names: string[]
   fragments: SalvageResult['fragments']
+}
+
+export interface ArenaView {
+  date: string
+  typeId: string | null
+  typeName: string | null
+  averageLevel: number
+  rounds: number
+  healPercent: number
+  tiers: Array<{
+    id: string; levelDelta: number; levels: number[]
+    goldPerWin: number; bonusGold: number
+    bonus: Array<{ itemId: string; quantity: number; name: string }>
+    clearedToday: boolean
+  }>
+  run: { tier: string; round: number; wins: number; battleOpen: boolean } | null
 }
 
 export interface LoginView {

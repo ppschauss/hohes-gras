@@ -1526,6 +1526,18 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .earnRow__what { font-size: var(--t-sm); color: var(--ink-dim, var(--ink)); }
 .earnRow__pts { font-size: var(--t-sm); font-weight: 650; color: var(--accent); }
 
+.tierCard {
+  display: flex; flex-direction: column; gap: var(--s1, 4px);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.tierCard__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2); }
+.tierCard__name { font-weight: 650; font-size: var(--t-md); }
+.tierCard__levels { font-size: var(--t-sm); color: var(--ink-muted); }
+.tierCard__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+.tierCard__reward { font-size: var(--t-sm); color: var(--ok); }
+.tierCard__go { align-self: flex-end; }
+
 /* Anmeldeleiter auf dem Startbildschirm. */
 .daily {
   display: flex; flex-direction: column; gap: var(--s2);

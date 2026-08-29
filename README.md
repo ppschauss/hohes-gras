@@ -57,6 +57,7 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Legendäre** | 0,1 % Fundchance nach vollständig bezwungener Region; gefangen nur mit Sagenbeeren |
 | **Lockdüfte** | Ein Duft je Typ, 50 Gold für 5 Erkundungen; vervierfacht das Gewicht des gesuchten Typs |
 | **Fundstücke** | Jeder achte Fang bringt einen Werkstoff — das Bindeglied zwischen Erkunden und Werkbank |
+| **Arena** | Trainingsmodus: 4 Kämpfe in Folge gegen den Typ des Tages, drei Stufen (−5/−3/−1 Level), 10 % Heilung zwischen den Kämpfen |
 | **Poké-Center** | Alle 15 Minuten kostenlose Vollheilung, gelegentlich mit Fund, Geschenk oder Tauschangebot |
 | **Poké-Beet** | Beeren, Bonbons oder Gold eingraben; Pflege oder ein Pflanzen-Pokémon heben den Ertrag |
 | **Idle** | Expeditionen (4 Arten × 3 Dauern, bis 6 Pokémon), Ei-Zucht mit IV-Vererbung, 3 Brutplätze (ausbaubar auf 8) |

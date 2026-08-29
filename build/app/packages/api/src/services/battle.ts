@@ -283,7 +283,18 @@ export function start(ctx: AppContext, trainer: Trainer, opponentId: string): Ba
  * Kreaturen auf Expedition kaempfen nicht mit; ein besiegtes Team kaempft gar
  * nicht.
  */
-function beginBattle(ctx: AppContext, trainer: Trainer, def: TrainerDef, area: AreaDef): BattleView {
+export function beginBattle(
+  ctx: AppContext, trainer: Trainer, def: TrainerDef, area: AreaDef,
+  /*
+   * `exactLevels` heisst: die Level im Entwurf sind schon die richtigen.
+   *
+   * Ein Arenagegner wird aus dem eigenen Durchschnittslevel gebaut; ihn danach
+   * noch einmal ueber den Gebietsversatz zu schieben, waere zweimal dieselbe
+   * Rechnung — und im Ergebnis stuende die Stufe "leicht" mal fuenf Level
+   * darueber statt darunter.
+   */
+  opts: { exactLevels?: boolean; storeDef?: boolean } = {},
+): BattleView {
   {
     if (battles.activeOf(ctx.db, trainer.id)) {
       throw new GameError('invalid_state', { reason: 'battle_in_progress' }, 409)
@@ -307,7 +318,7 @@ function beginBattle(ctx: AppContext, trainer: Trainer, def: TrainerDef, area: A
     // Der Gegner steigt mit, wenn das eigene Team ueber seinem Band liegt.
     // Die Attacken bleiben die des Entwurfs: ein Kaefersammler soll auch auf
     // Level 80 ein Kaefersammler sein und keine Arenaleiter-Attacken kennen.
-    const offset = trainerOffset(ctx, trainer, area)
+    const offset = opts.exactLevels ? 0 : trainerOffset(ctx, trainer, area)
 
     /*
      * Ueberfaelle treten auf Augenhoehe an: eigener Teammedian ±3.
@@ -318,7 +329,7 @@ function beginBattle(ctx: AppContext, trainer: Trainer, def: TrainerDef, area: A
      * Skalierung: wer sie abschaltet, will die Entwurfswerte, auch hier.
      */
     const reference = referenceOf(ctx, trainer)
-    const isEvent = isEventTrainer(def.id) && reference > 0
+    const isEvent = !opts.exactLevels && isEventTrainer(def.id) && reference > 0
     // Nie mehr Gegner als eigene Mitglieder: drei gegen zwei ist keine knappe
     // Sache, sondern Ueberzahl.
     const foeCount = isEvent
@@ -357,6 +368,7 @@ function beginBattle(ctx: AppContext, trainer: Trainer, def: TrainerDef, area: A
       kind: state.kind,
       opponentId: def.id,
       areaId: area.id,
+      opponentDef: opts.storeDef ? def : undefined,
       seed,
       state,
     })
@@ -367,15 +379,26 @@ function beginBattle(ctx: AppContext, trainer: Trainer, def: TrainerDef, area: A
 
 /* -------------------------------------------------------------------- Zug */
 
+/**
+ * Der Gegner einer Kampfzeile.
+ *
+ * Aus dem Pack, wenn er dort steht — sonst aus der Kopie, die beim Start
+ * mitgeschrieben wurde. Arenagegner gibt es nur in dieser zweiten Form.
+ */
+export function opponentOf(ctx: AppContext, record: battles.BattleRecord): TrainerDef | undefined {
+  if (record.opponentDef) return JSON.parse(record.opponentDef) as TrainerDef
+  return record.opponentId
+    ? ctx.registry.allTrainers.find((t) => t.id === record.opponentId)
+    : undefined
+}
+
 export function submit(ctx: AppContext, trainer: Trainer, action: PlayerAction): BattleView {
   return tx(ctx.db, () => {
     const record = battles.activeOf(ctx.db, trainer.id)
     if (!record) throw new GameError('invalid_state', { reason: 'no_battle' }, 409)
 
     const content = battleContent(ctx)
-    const def = record.opponentId
-      ? ctx.registry.allTrainers.find((t) => t.id === record.opponentId)
-      : undefined
+    const def = opponentOf(ctx, record)
     const ai = def ? AI_BY_KIND[def.kind] : 'basic'
 
     validateAction(record.state, action)

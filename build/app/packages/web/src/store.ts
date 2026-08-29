@@ -16,6 +16,7 @@ import { useTheme } from './lib/theme'
 export const SCREENS = [
   'home', 'garden', 'box', 'teams', 'dex', 'shop', 'map', 'area', 'safari',
   'battle', 'expeditions', 'eggs', 'friends', 'coop', 'progress', 'energy', 'center', 'plots', 'themes',
+  'arena',
   'bag',
 ] as const
 export type Screen = (typeof SCREENS)[number]
