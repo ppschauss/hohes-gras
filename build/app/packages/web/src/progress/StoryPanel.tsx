@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { t } from '../i18n'
 import { errorText } from '../lib/errors'
 import { api } from '../lib/api'
@@ -17,7 +18,15 @@ export function StoryPanel() {
   }
 
   const d = story.data
-  const current = d?.currentChapter
+  // Ohne Wahl: die Region, in der das aktuelle Kapitel steht.
+  const [regionId, setRegionId] = useState<string | null>(null)
+  const regions = d?.regions ?? []
+  const shown = regions.find((r) => r.id === regionId)
+    ?? regions.find((r) => r.id === d?.currentChapter?.regionId)
+    ?? regions.find((r) => r.entered)
+    ?? regions[0]
+  const chapters = (d?.chapters ?? []).filter((c) => c.regionId === shown?.id)
+  const current = d?.currentChapter?.regionId === shown?.id ? d?.currentChapter : null
 
   return (
     <>
@@ -56,11 +65,33 @@ export function StoryPanel() {
         </section>
       )}
 
+      {/* Eine Region auf einmal: einundzwanzig Kapitel untereinander sind
+          keine Reise mehr, sondern eine Liste. */}
+      {shown && regions.length > 1 && (
+        <div className="picker picker--wide">
+          <span className="picker__label" id="story-region">{t('map.region')}</span>
+          <span className="picker__body">
+            <select
+              className="picker__select"
+              aria-labelledby="story-region"
+              value={shown.id}
+              onChange={(e) => { haptic.select(); setRegionId(e.target.value) }}
+            >
+              {regions.map((r) => (
+                <option key={r.id} value={r.id} disabled={!r.entered && !r.cleared}>
+                  {!r.entered && !r.cleared ? `🔒 ${r.name}` : `${r.name} · ${r.done}/${r.chapters}`}
+                </option>
+              ))}
+            </select>
+          </span>
+        </div>
+      )}
+
       <ol className="chapterTrail">
-        {d?.chapters.map((c) => (
+        {chapters.map((c) => (
           <li key={c.id}
             className={`chapterStep${c.reached ? ' chapterStep--done' : ''}${c.isCurrent ? ' chapterStep--current' : ''}`}>
-            <span className="chapterStep__num num">{c.order}</span>
+            <span className="chapterStep__num num">{c.order % 100}</span>
             <span className="chapterStep__text">
               <span className="chapterStep__title">{c.title}</span>
               {/* Was zu tun ist, stand nur beim aktuellen Kapitel. In der Liste

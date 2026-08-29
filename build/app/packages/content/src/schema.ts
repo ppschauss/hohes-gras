@@ -228,13 +228,26 @@ export const RegionDefSchema = z.object({
 export type RegionDef = z.infer<typeof RegionDefSchema>
 
 export const ChapterConditionSchema = z.object({
-  kind: z.enum(['badges', 'dexCaught', 'areaVisited', 'highestLevel', 'defeated']),
+  /*
+   * `regionBadges` und `regionDexCaught` zaehlen nur, was in *dieser* Region
+   * erreicht wurde.
+   *
+   * Die globalen Varianten setzten eine Reihenfolge voraus, die es nicht mehr
+   * gibt: das zweite Kapitel verlangte den Vertania-Wald, und wer in Hoenn
+   * anfaengt, kommt dort erst nach der halben Welt vorbei.
+   */
+  kind: z.enum([
+    'badges', 'dexCaught', 'areaVisited', 'highestLevel', 'defeated',
+    'regionBadges', 'regionDexCaught',
+  ]),
   value: z.union([z.number(), z.string()]),
 })
 
 export const ChapterDefSchema = z.object({
   id: Id,
   order: z.number().int().min(1),
+  /** Zu welcher Region das Kapitel gehört. Leer heißt: regionsübergreifend. */
+  regionId: Id.nullable().default(null),
   /** Wer durch dieses Kapitel führt. Leer heißt: der Name aus der Oberfläche.
    *  Gehört ins Pack, weil er zur Region gehört — Kanto hat einen anderen
    *  Professor als Hoenn. */

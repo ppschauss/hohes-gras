@@ -1024,6 +1024,7 @@ export interface AchievementsView {
 
 
 export interface ChapterView {
+  regionId: string | null
   id: string
   order: number
   /** Wer durch das Kapitel führt — je Region ein anderer. */
@@ -1038,6 +1039,7 @@ export interface ChapterView {
 }
 
 export interface StoryView {
+  regions: Array<{ id: string; name: string; entered: boolean; cleared: boolean; chapters: number; done: number }>
   chapters: ChapterView[]
   currentChapter: ChapterView | null
   completed: number

@@ -20,9 +20,9 @@ import { LOGIN_REWARDS, RECIPES } from '../packages/engine/dist/index.js'
 import { AUTHORED, lureItems, soulItems } from './curated-items.ts'
 import { EVENT_SPECIES } from './curated-event.ts'
 import { AREAS, BADGES, REGIONS, TRAINERS } from './curated-kanto.ts'
-import { CHAPTERS } from './curated-story.ts'
-import { JOHTO_AREAS, JOHTO_BADGES, JOHTO_CHAPTERS, JOHTO_REGION, JOHTO_TRAINERS } from './curated-johto.ts'
-import { HOENN_AREAS, HOENN_BADGES, HOENN_CHAPTERS, HOENN_REGION, HOENN_TRAINERS } from './curated-hoenn.ts'
+import { regionChapters } from './curated-story.ts'
+import { JOHTO_AREAS, JOHTO_BADGES, JOHTO_REGION, JOHTO_TRAINERS } from './curated-johto.ts'
+import { HOENN_AREAS, HOENN_BADGES, HOENN_REGION, HOENN_TRAINERS } from './curated-hoenn.ts'
 
 const args = process.argv.slice(2)
 const arg = (flag: string, fallback: string): string => {
@@ -87,7 +87,35 @@ async function main(): Promise<void> {
   const allRegions = [...REGIONS, JOHTO_REGION, HOENN_REGION]
   const allBadges = [...BADGES, ...JOHTO_BADGES, ...HOENN_BADGES]
   const allTrainerDefs = [...TRAINERS, ...JOHTO_TRAINERS, ...HOENN_TRAINERS]
-  const allChapters = [...CHAPTERS, ...JOHTO_CHAPTERS, ...HOENN_CHAPTERS]
+  /*
+   * Eine Kapitelkette je Region, aus der Welt gebaut statt von Hand gepflegt.
+   *
+   * Die alten Listen (CHAPTERS, JOHTO_CHAPTERS, HOENN_CHAPTERS) waren eine
+   * einzige Kette und setzten die Reihenfolge Kanto → Johto → Hoenn voraus.
+   * Seit die Startregion frei ist, stimmt diese Annahme nicht mehr: Kapitel 2
+   * verlangte den Vertania-Wald, und wer in Hoenn anfaengt, kommt dort erst
+   * nach der halben Welt vorbei.
+   */
+  const guides: Record<string, string> = {
+    kanto: 'Prof. Eich', johto: 'Prof. Lind', hoenn: 'Prof. Birk',
+  }
+  const allChapters = allRegions.flatMap((region, index) => {
+    const own = allAreas
+      .filter((a) => a.regionId === region.id)
+      .sort((a, b) => a.order - b.order)
+    const second = own[1] ?? own[0]!
+    const badgeCount = own.filter((a) => a.gymId).length
+    return regionChapters({
+      regionId: region.id,
+      regionName: region.name.de,
+      guide: guides[region.id] ?? 'Der Professor',
+      tier: index,
+      secondAreaId: second.id,
+      secondAreaName: second.name.de,
+      badgeCount,
+    })
+  })
+  log(`${allChapters.length} Kapitel über ${allRegions.length} Regionen`)
 
   const missingSpawns = new Set<string>()
   const areas = allAreas.map((a) => ({

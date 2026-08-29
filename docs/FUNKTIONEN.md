@@ -439,8 +439,19 @@ Leiterlänge.
 ## 21. Erfolge und Story
 
 **Erfolgsketten** über alle drei Regionen: Arten, Orden, Level, Fänge, Kämpfe,
-Zucht. Dazu **12 Story-Kapitel** mit NPC-Dialogen und Zielbedingungen; die
-Führung übernimmt je Region der zuständige Professor.
+Zucht.
+
+Die **Reise** hat **je Region eine eigene Kette aus sieben Kapiteln** — 21
+insgesamt, geführt vom Professor der jeweiligen Region. Alle Bedingungen zählen
+nur, was *in dieser Region* erreicht wurde: ihre Orden, ihre Arten, ihre
+Gebiete. Vorher war es eine einzige Kette, die Kanto → Johto → Hoenn voraussetzte
+— wer in Hoenn anfing, scheiterte am zweiten Kapitel, weil es den Vertania-Wald
+in Kanto verlangte.
+
+Im Reiter steht eine Region auf einmal, wählbar über ein Auswahlfeld; noch
+verschlossene Regionen stehen mit Schloss darin. Jede Region zahlt dieselben
+Belohnungen — eine Staffelung nach Entwurfsreihenfolge wäre eine Prämie fürs
+Anfangen im Osten.
 
 ---
 
