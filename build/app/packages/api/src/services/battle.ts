@@ -609,7 +609,10 @@ function applyOutcome(
     const stored = creatures.byId(ctx.db, fighter.id)
     if (!stored) continue
     const species = ctx.registry.species(stored.speciesId)
-    const amount = battleXpYield(baseYield, foeLevel, stored.level)
+    // Die Menge der Gegner zaehlt mit — gemessen an dem, was wirklich
+    // angetreten ist, nicht am Entwurf: ein Ueberfall stellt je nach eigenem
+    // Team eine kleinere Truppe.
+    const amount = battleXpYield(baseYield, foeLevel, stored.level, record.state.sides[1]!.party.length)
       * (firstWin ? 1 : 0.5)
       * (def.xpMultiplier ?? 1)
     xpPerMember = Math.round(amount)

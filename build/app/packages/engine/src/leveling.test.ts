@@ -170,6 +170,17 @@ describe('battleXpYield', () => {
   it('gibt nie weniger als 1', () => {
     expect(battleXpYield(1, 1, 100)).toBeGreaterThanOrEqual(1)
   })
+
+  it('zahlt mehr, je mehr Pokemon der Gegner aufbietet', () => {
+    const eins = battleXpYield(100, 50, 50, 1)
+    // Ein Viertel je zusaetzlichem Gegner, multiplikativ.
+    expect(battleXpYield(100, 50, 50, 2) / eins).toBeCloseTo(1.25, 2)
+    expect(battleXpYield(100, 50, 50, 6) / eins).toBeCloseTo(1.25 ** 5, 1)
+    // Ohne Angabe bleibt es beim alten Wert — ein Gegner.
+    expect(battleXpYield(100, 50, 50)).toBe(eins)
+    // Und nicht linear: sechs Gegner sind nicht sechsmal so viel wert.
+    expect(battleXpYield(100, 50, 50, 6)).toBeLessThan(eins * 6)
+  })
 })
 
 

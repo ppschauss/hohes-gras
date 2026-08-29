@@ -34,6 +34,15 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
   const [target, setTarget] = useState<BagItem | null>(null)
   const [used, setUsed] = useState<string | null>(null)
   const box = useAsync(() => api.box(), [])
+  /*
+   * Das Team gehoert dazu.
+   *
+   * Die Auswahl las nur die Box — und damit liess sich ein Trank auf alles
+   * anwenden ausser auf die fuenf Pokemon, die ihn tatsaechlich brauchen.
+   * Genau so gemeldet. Der Dienst konnte es die ganze Zeit; es fehlte nur die
+   * Liste.
+   */
+  const garden = useAsync(() => api.garden(), [])
 
   const startUse = (item: BagItem) => {
     haptic.tap()
@@ -52,7 +61,7 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
       setUsed(r.kind === 'xp'
         ? t('bag.used.xp', { name: r.creatureName ?? '', n: r.xpGained ?? 0 })
         : t('bag.used.heal', { name: r.creatureName ?? '', item: r.itemName }))
-      bag.reload(); box.reload(); haptic.success()
+      bag.reload(); box.reload(); garden.reload(); haptic.success()
     })
   }
 
@@ -86,20 +95,30 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
         {target && (
           <section className="section">
             <h2>{t('bag.target', { item: target.name })}</h2>
-            <div className="switchList">
-              {(box.data?.creatures ?? []).map((c) => (
-                <button key={c.id} type="button" className="switchRow" disabled={action.busy}
-                  onClick={() => useOn(target, c.id)}>
-                  <img src={c.sprite} alt="" width={40} height={40} />
-                  <span className="switchRow__text">
-                    <span className="switchRow__name">{c.displayName}</span>
-                    <span className="switchRow__hp num">
-                      {t('creature.level', { n: c.level })} · {c.hpCurrent}/{c.hpMax} KP
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
+            {/* Erst das Team, dann die Box — und beschriftet, damit man den
+                Uebergang sieht statt eine Liste ohne Ordnung. */}
+            {[
+              { key: 'team', label: t('box.inTeam'), list: garden.data?.team ?? [] },
+              { key: 'box', label: t('box.title'), list: box.data?.creatures ?? [] },
+            ].filter((g) => g.list.length > 0).map((g) => (
+              <div key={g.key}>
+                <p className="section__eyebrow">{g.label}</p>
+                <div className="switchList">
+                  {g.list.map((c) => (
+                    <button key={c.id} type="button" className="switchRow" disabled={action.busy}
+                      onClick={() => useOn(target, c.id)}>
+                      <img src={c.sprite} alt="" width={40} height={40} />
+                      <span className="switchRow__text">
+                        <span className="switchRow__name">{c.displayName}</span>
+                        <span className="switchRow__hp num">
+                          {t('creature.level', { n: c.level })} · {c.hpCurrent}/{c.hpMax} KP
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
             <button type="button" className="btn btn--ghost btn--block" onClick={() => setTarget(null)}>
               {t('app.back')}
             </button>

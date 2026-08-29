@@ -170,10 +170,29 @@ export function travelCap(clearedRegions: number): number {
   return Math.min(ABSOLUTE_MAX_LEVEL, FIRST_REGION_LEVELS + LEVELS_PER_REGION * regions)
 }
 
-/** XP a defeated opponent yields. Scales with the level gap so that grinding
- *  low-level areas stops paying off once the team has outgrown them. */
-export function battleXpYield(baseYield: number, foeLevel: number, winnerLevel: number): number {
+/**
+ * Was ein besiegter Gegner an EP abwirft.
+ *
+ * Der Levelabstand sorgt dafuer, dass sich das Abgrasen niedriger Gebiete
+ * nicht mehr lohnt, sobald das Team ihnen entwachsen ist.
+ *
+ * Die Zahl der gegnerischen Pokemon zaehlt seit einer Meldung mit: ein Kampf
+ * gegen sechs war exakt so viel wert wie einer gegen eines, weil hier das
+ * hoechste Level und der Durchschnitt der Arten eingingen, aber nie die Menge.
+ * Gegen die Top Vier fuehlte sich das falsch an, und das war es auch.
+ *
+ * Multiplikativ und nicht linear: sechs Gegner sind nicht sechsmal so viel
+ * wert, sonst wuerde ein Arenadurchlauf mit fuenf Gegnern je Kampf zum
+ * Levelautomaten. Ein Viertel je zusaetzlichem Gegner ergibt 1,25 bei zweien
+ * und gut das Dreifache bei sechs — spuerbar, ohne die Kurve umzuwerfen.
+ */
+export const XP_PER_EXTRA_FOE = 1.25
+
+export function battleXpYield(
+  baseYield: number, foeLevel: number, winnerLevel: number, foeCount = 1,
+): number {
   const raw = (baseYield * foeLevel) / 7
   const gap = clamp(1 + (foeLevel - winnerLevel) / 20, 0.25, 1.75)
-  return Math.max(1, Math.floor(raw * gap))
+  const party = XP_PER_EXTRA_FOE ** Math.max(0, Math.floor(foeCount) - 1)
+  return Math.max(1, Math.floor(raw * gap * party))
 }
