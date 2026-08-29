@@ -163,6 +163,28 @@ describe('Trainingsarena', () => {
     expect(state.sides[1]!.party.length).toBeLessThanOrEqual(state.sides[0]!.party.length)
   })
 
+  it('zahlt in der Arena mehr Erfahrung als ein gewoehnlicher Kampf', async () => {
+    /*
+     * Gemessen und gemeldet: ein ganzer Durchlauf brachte gut ein halbes
+     * Level je Mitglied — fuer acht Energie und vier Kaempfe der falsche
+     * Tausch, zumal die Arena der Ort zum Trainieren ist.
+     */
+    h.resetRateLimits()
+    await h.post('/api/arena/start', { tier: 'hard' }, token)
+    const record = h.ctx.db
+      .prepare('SELECT opponent_def AS def FROM battles WHERE trainer_id = ? ORDER BY started_at DESC LIMIT 1')
+      .get(trainerId) as { def: string }
+    const def = JSON.parse(record.def) as { xpMultiplier: number }
+    expect(def.xpMultiplier).toBeGreaterThan(1)
+
+    h.resetRateLimits()
+    const view = await h.get('/api/arena', token)
+    const [easy, even, hard] = view.body.tiers
+    // Je schwerer, desto mehr — sonst waere die leichte Stufe immer die beste.
+    expect(easy.xpMultiplier).toBeLessThan(even.xpMultiplier)
+    expect(even.xpMultiplier).toBeLessThan(hard.xpMultiplier)
+  })
+
   it('nennt den Arenastand im Kampf, damit es weitergehen kann', async () => {
     h.resetRateLimits()
     await h.post('/api/arena/start', { tier: 'easy' }, token)

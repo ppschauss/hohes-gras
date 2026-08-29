@@ -89,7 +89,9 @@ export function ArenaScreen({ onBack, onBattle }: { onBack: () => void; onBattle
                     </span>
                   </div>
                   <p className="tierCard__meta">
-                    {t('arena.tierDelta', { n: tier.levelDelta })} · {t('arena.perWin', { n: tier.goldPerWin })}
+                    {t('arena.tierDelta', { n: tier.levelDelta })}
+                    {' · '}{t('arena.perWin', { n: tier.goldPerWin })}
+                    {' · '}{t('arena.xp', { n: tier.xpMultiplier })}
                   </p>
                   <p className="tierCard__reward">
                     {t('arena.bonus', {

@@ -47,6 +47,15 @@ export interface ArenaTier {
    * Hoothoot, und der Unterschied war größer als die fünf Level Abstand.
    */
   maxBst: number
+  /**
+   * Faktor auf die Erfahrung.
+   *
+   * Gemessen: ein Durchlauf brachte gut ein halbes Level je Mitglied — für
+   * acht Energie und vier Kämpfe der falsche Tausch, zumal die Arena der Ort
+   * zum Trainieren *ist*. Mit dem Faktor ist ein Durchlauf etwa ein Level, auf
+   * „schwer" anderthalb.
+   */
+  xpMultiplier: number
   /** Gold je gewonnenem Kampf. */
   goldPerWin: number
   /** Was ein vollständiger Durchlauf zusätzlich einbringt. */
@@ -56,15 +65,18 @@ export interface ArenaTier {
 
 export const ARENA_TIERS: ArenaTier[] = [
   {
-    id: 'easy', levelDelta: -5, maxStage: 0, maxBst: 330, foeIv: 0, foeShare: 0.5, goldPerWin: 60,
+    id: 'easy', levelDelta: -5, maxStage: 0, maxBst: 330, foeIv: 0, foeShare: 0.5,
+    xpMultiplier: 1.5, goldPerWin: 60,
     bonusGold: 400, bonus: [{ itemId: 'exp-candy-s', quantity: 2 }],
   },
   {
-    id: 'even', levelDelta: -3, maxStage: 1, maxBst: 430, foeIv: 8, foeShare: 0.75, goldPerWin: 120,
+    id: 'even', levelDelta: -3, maxStage: 1, maxBst: 430, foeIv: 8, foeShare: 0.75,
+    xpMultiplier: 2, goldPerWin: 120,
     bonusGold: 900, bonus: [{ itemId: 'exp-candy-l', quantity: 1 }],
   },
   {
-    id: 'hard', levelDelta: -1, maxStage: 2, maxBst: 0, foeIv: 15, foeShare: 1, goldPerWin: 240,
+    id: 'hard', levelDelta: -1, maxStage: 2, maxBst: 0, foeIv: 15, foeShare: 1,
+    xpMultiplier: 3, goldPerWin: 240,
     bonusGold: 1800, bonus: [
       { itemId: 'exp-candy-l', quantity: 1 },
       { itemId: 'star-piece', quantity: 2 },

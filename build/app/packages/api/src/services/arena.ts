@@ -99,6 +99,7 @@ function buildOpponent(
     }),
     badgeId: null,
     rewardGold: tier.goldPerWin,
+    xpMultiplier: tier.xpMultiplier,
     // Jeder Gegner tritt genau einmal an; eine Wiederholungsquote hätte hier
     // keine Bedeutung.
     repeatRewardRatio: 1,
@@ -188,6 +189,7 @@ export function view(ctx: AppContext, trainer: Trainer) {
       levelDelta: t.levelDelta,
       levels: [1, ARENA_ROUNDS].map((r) => arenaLevel(average, t, r, cap)),
       goldPerWin: t.goldPerWin,
+      xpMultiplier: t.xpMultiplier,
       bonusGold: t.bonusGold,
       bonus: t.bonus.map((b) => ({
         ...b,

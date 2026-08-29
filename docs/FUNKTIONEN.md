@@ -274,8 +274,12 @@ Gegner steht über dem ersten. Gegenstände sind erlaubt, und **zwischen den
 Kämpfen bekommt das Team 25 % seiner KP zurück**: genug, um weiterzukommen, zu
 wenig, um ohne Beutel durchzukommen.
 
-Jeder Kampf kostet die üblichen 2 Energie und zahlt EP wie ein Trainerkampf —
-das ist der eigentliche Ertrag. Die **Durchlauf-Prämie zahlt einmal am Tag je
+Jeder Kampf kostet die üblichen 2 Energie und zahlt **mehr EP als ein
+gewöhnlicher Trainerkampf**: ×1,5 auf leicht, ×2 auf ausgeglichen, ×3 auf
+schwer. Gemessen war ein Durchlauf vorher gut ein halbes Level je Mitglied —
+für acht Energie und vier Kämpfe der falsche Tausch, zumal die Arena der Ort
+zum Trainieren *ist*. Jetzt ist ein Durchlauf auf „ausgeglichen" etwa ein
+Level, auf „schwer" anderthalb. Die **Durchlauf-Prämie zahlt einmal am Tag je
 Stufe**; danach kann man weiter üben, nur ohne Prämie. Eine Niederlage beendet
 den Durchlauf.
 

@@ -1145,7 +1145,7 @@ export interface ArenaView {
   healPercent: number
   tiers: Array<{
     id: string; levelDelta: number; levels: number[]
-    goldPerWin: number; bonusGold: number
+    goldPerWin: number; bonusGold: number; xpMultiplier: number
     bonus: Array<{ itemId: string; quantity: number; name: string }>
     clearedToday: boolean
   }>

@@ -222,6 +222,13 @@ export const TrainerDefSchema = z.object({
   /** Awarded on first win. Only gym and champion trainers carry one. */
   badgeId: Id.nullable().default(null),
   rewardGold: z.number().int().min(0),
+  /**
+   * Faktor auf die Erfahrung aus diesem Kampf.
+   *
+   * Für die Trainingsarena: dort ist die Erfahrung der Zweck, nicht ein
+   * Nebenprodukt. Vier Kämpfe für ein halbes Level wären der falsche Tausch.
+   */
+  xpMultiplier: z.number().min(0).max(10).default(1),
   /** Repeat wins pay less, so grinding one easy trainer is not a strategy. */
   repeatRewardRatio: z.number().min(0).max(1).default(0.25),
   dialogue: z.object({
