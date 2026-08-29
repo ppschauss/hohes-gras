@@ -72,6 +72,20 @@ describe('Trainingsarena', () => {
     expect(again.body.detail.reason).toBe('already_active')
   })
 
+  it('antwortet auf einen veralteten Knopf mit dem Stand statt mit einem Fehler', async () => {
+    /*
+     * Gemeldet: nach dem letzten Kampf stand unten noch "Naechster Gegner
+     * 2/4", und ein Tipp darauf sagte "du bist in keinem Kampf". Der
+     * Durchlauf war da laengst abgerechnet.
+     */
+    h.resetRateLimits()
+    const r = await h.post('/api/arena/next', {}, token)
+    expect(r.status).toBe(200)
+    expect(r.body.done).toBe(true)
+    expect(r.body.battle).toBeNull()
+    expect(r.body.arena.run).toBeNull()
+  })
+
   it('beendet den Durchlauf nach einer Niederlage', async () => {
     h.resetRateLimits()
     await h.post('/api/arena/start', { tier: 'hard' }, token)

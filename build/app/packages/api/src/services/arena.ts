@@ -261,8 +261,17 @@ export function next(ctx: AppContext, trainer: Trainer) {
   return tx(ctx.db, () => {
     const date = gameDate()
     const run = runOf(ctx, trainer.id)
+    /*
+     * Ein Klick auf einen Knopf, den es nicht mehr gibt, ist kein Fehler.
+     *
+     * Gemeldet: nach dem letzten Kampf stand unten noch "Nächster Gegner 2/4",
+     * und ein Tipp darauf sagte "du bist in keinem Kampf". Der Durchlauf war
+     * da längst abgerechnet — der Bildschirm hinkte nur hinterher. Statt einer
+     * Absage kommt jetzt der aktuelle Stand zurück, und die Anzeige richtet
+     * sich danach.
+     */
     if (!run || run.finished === 1 || run.gameDate !== date) {
-      throw new GameError('invalid_state', { reason: 'no_battle' }, 409)
+      return { done: true, won: false, payout: null, healed: 0, battle: null, arena: view(ctx, trainer) }
     }
     if (battles.activeOf(ctx.db, trainer.id)) {
       throw new GameError('invalid_state', { reason: 'battle_in_progress' }, 409)

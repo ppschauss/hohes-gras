@@ -74,6 +74,8 @@ export function BattleScreen({ onBack, onArena }: { onBack: () => void; onArena:
     haptic.tap()
     setLog([])
     void action.run(() => api.arenaNext(), (res) => {
+      // Meldet der Server "fertig", ist der Durchlauf vorbei — dann raeumt
+      // der Bildschirm seinen Stand auf, statt einen toten Knopf zu behalten.
       if (res.battle) {
         setBattle(res.battle as BattleView)
         setArena(res.arena.run
