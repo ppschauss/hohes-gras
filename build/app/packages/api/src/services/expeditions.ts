@@ -14,6 +14,8 @@ import { requireCurrentArea } from './world.js'
 import * as energy from './energy.js'
 import { capOf } from './travel.js'
 import { awardSeasonPoints, bonuses } from './progression.js'
+import { busyCreatureIds } from './busy.js'
+import { researchBonuses } from './research.js'
 
 /**
  * Wie viele Erkundungen gleichzeitig laufen duerfen: beliebig viele.
@@ -80,7 +82,7 @@ export const trainerEnergyFor = (durationId: string): number =>
 export function overview(ctx: AppContext, trainer: Trainer) {
   const now = Date.now()
   const open = expeditions.openOf(ctx.db, trainer.id)
-  const busy = expeditions.busyCreatureIds(ctx.db, trainer.id)
+  const busy = busyCreatureIds(ctx, trainer.id)
 
   return {
     open: open.map((e) => toView(ctx, trainer, e, now)),
@@ -142,7 +144,7 @@ export function start(
   }
 
   return tx(ctx.db, () => {
-    const busy = expeditions.busyCreatureIds(ctx.db, trainer.id)
+    const busy = busyCreatureIds(ctx, trainer.id)
     const cost = energyCost(duration)
 
     for (const id of unique) {
@@ -244,7 +246,9 @@ export function collect(ctx: AppContext, trainer: Trainer, expeditionId: string)
 
     // Die Beerenfarm erhoeht die Ausbeute anteilig, nicht die Wuerfe selbst —
     // so bleibt das Ergebnis der Expedition durch ihren Seed festgelegt.
-    const lootBonus = 1 + bonuses(ctx, trainer.id).expeditionLootBonus / 100
+    const lootBonus = 1
+      + (bonuses(ctx, trainer.id).expeditionLootBonus
+        + researchBonuses(ctx, trainer.id).expeditionLoot) / 100
     for (const l of outcome.loot) {
       inventory.grant(ctx.db, trainer.id, l.itemId, Math.max(1, Math.round(l.quantity * lootBonus)))
     }

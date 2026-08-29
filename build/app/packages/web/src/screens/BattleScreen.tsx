@@ -295,6 +295,10 @@ function Result({ battle, arena, busy, onNext, onLeave }: {
       {r?.dialogue && <p className="result__dialogue">„{r.dialogue}"</p>}
       {r?.badge && <p className="result__badge">{t('battle.reward.badge', { name: r.badge.name })}</p>}
       {r && r.gold > 0 && <p className="num">{t('battle.reward.gold', { n: r.gold })}</p>}
+      {/* Die Energie stand in der Antwort, aber nie auf dem Bildschirm: nach
+          dem ersten Orden kamen 60 Punkte an, und gemeldet wurde, es seien
+          keine gekommen. */}
+      {r && r.energy > 0 && <p className="num">{t('battle.reward.energy', { n: r.energy })}</p>}
       {r && r.xpPerMember > 0 && <p className="num">{t('battle.reward.xp', { n: r.xpPerMember })}</p>}
       {r?.levelUps.map((l) => (
         <span key={l.creatureId} className="tag tag--level">{l.name} → {t('creature.level', { n: l.newLevel })}</span>

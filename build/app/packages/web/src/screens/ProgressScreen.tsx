@@ -6,12 +6,15 @@ import { StoryPanel } from '../progress/StoryPanel'
 import { EvolutionPanel } from '../progress/EvolutionPanel'
 import { BuildingPanel } from '../progress/BuildingPanel'
 import { CraftingPanel } from '../progress/CraftingPanel'
+import { ResearchPanel } from '../progress/ResearchPanel'
 import { SeasonPanel } from '../progress/SeasonPanel'
 import { AchievementPanel } from '../progress/AchievementPanel'
 import { DataPanel } from '../progress/DataPanel'
 
-type Tab = 'story' | 'evolution' | 'buildings' | 'crafting' | 'season' | 'achievements' | 'data'
-const TABS: Tab[] = ['story', 'evolution', 'buildings', 'crafting', 'season', 'achievements', 'data']
+type Tab = 'story' | 'evolution' | 'buildings' | 'research' | 'crafting' | 'season' | 'achievements' | 'data'
+// Forschung steht vor dem Handwerk: sie schaltet dessen Rezepte frei, und in
+// dieser Reihenfolge liest sich die Leiste wie der Weg, den man geht.
+const TABS: Tab[] = ['story', 'evolution', 'buildings', 'research', 'crafting', 'season', 'achievements', 'data']
 
 export function ProgressScreen({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<Tab>('story')
@@ -31,6 +34,7 @@ export function ProgressScreen({ onBack }: { onBack: () => void }) {
         {tab === 'story' && <StoryPanel />}
         {tab === 'evolution' && <EvolutionPanel />}
         {tab === 'buildings' && <BuildingPanel />}
+        {tab === 'research' && <ResearchPanel />}
         {tab === 'crafting' && <CraftingPanel />}
         {tab === 'season' && <SeasonPanel />}
         {tab === 'achievements' && <AchievementPanel />}

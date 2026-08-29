@@ -86,6 +86,8 @@ export function energyCapPrice(stepsBought: number): number | null {
 
 export type EnergyAction =
   | 'care' | 'explore' | 'expedition' | 'battle' | 'duel' | 'raid'
+  /* Nur fuers Abbrechen: Anfangen kostet Material und Gold, nicht Energie. */
+  | 'research' | 'boarding'
 
 /**
  * Was eine Aktion kostet.
@@ -102,6 +104,15 @@ export const ENERGY_COSTS: Record<EnergyAction, number> = {
   battle: 2,
   duel: 3,
   raid: 2,
+  /*
+   * Abbruchgebuehren.
+   *
+   * Ohne Preis waere das Abbrechen die beste Art, einen Laborplatz oder eine
+   * Pension zu verwalten: anfangen, umentscheiden, kostenlos zurueck. Mit
+   * Preis ist es eine Entscheidung.
+   */
+  research: 2,
+  boarding: 4,
 }
 
 /**

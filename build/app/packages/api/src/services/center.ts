@@ -25,6 +25,7 @@ import { creatureView } from './views.js'
 import { refreshMoves } from './garden.js'
 import { syncActiveFromGarden } from './teams.js'
 import { bumpMetric } from './progression.js'
+import { busyCreatureIds } from './busy.js'
 
 /**
  * Poke-Center.
@@ -166,7 +167,7 @@ function rollGift(ctx: AppContext, trainer: Trainer, rng: Rng) {
  */
 function rollTrade(ctx: AppContext, trainer: Trainer, rng: Rng, now: number): CenterOffer | null {
   const owned = creatures.teamOf(ctx.db, trainer.id).concat(creatures.boxOf(ctx.db, trainer.id, 500))
-  const tradable = owned.filter((c) => !expeditions.busyCreatureIds(ctx.db, trainer.id).has(c.id))
+  const tradable = owned.filter((c) => !busyCreatureIds(ctx, trainer.id).has(c.id))
   if (tradable.length === 0) return null
 
   const given = rng.pick(tradable)
@@ -199,7 +200,7 @@ function rollTrade(ctx: AppContext, trainer: Trainer, rng: Rng, now: number): Ce
 function offerView(ctx: AppContext, trainer: Trainer, row: center.CenterOfferRow): CenterOffer {
   const wanted = ctx.registry.species(row.wantedSpeciesId)
   const offered = ctx.registry.species(row.offeredSpeciesId)
-  const busy = expeditions.busyCreatureIds(ctx.db, trainer.id)
+  const busy = busyCreatureIds(ctx, trainer.id)
 
   const mine = creatures.teamOf(ctx.db, trainer.id)
     .concat(creatures.boxOf(ctx.db, trainer.id, 500))
@@ -254,7 +255,7 @@ export function acceptTrade(
     if (given.speciesId !== row.wantedSpeciesId) {
       throw new GameError('invalid_state', { reason: 'wrong_species', wanted: row.wantedSpeciesId }, 409)
     }
-    if (expeditions.busyCreatureIds(ctx.db, trainer.id).has(creatureId)) {
+    if (busyCreatureIds(ctx, trainer.id).has(creatureId)) {
       throw new GameError('invalid_state', { reason: 'on_expedition', creatureId }, 409)
     }
     // Das letzte eigene Pokemon herzugeben wuerde den Spielstand blockieren:

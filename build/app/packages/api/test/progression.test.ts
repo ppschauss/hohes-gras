@@ -222,12 +222,22 @@ describe('Handwerk', () => {
   })
 
   it('verlangt das noetige Gebaeude', async () => {
+    h.ctx.db.prepare("INSERT INTO inventory (trainer_id, item_id, quantity) VALUES (?, 'exp-candy-s', 20) ON CONFLICT DO UPDATE SET quantity = 20").run(trainerId)
+    h.ctx.db.prepare("INSERT INTO inventory (trainer_id, item_id, quantity) VALUES (?, 'star-piece', 5) ON CONFLICT DO UPDATE SET quantity = 5").run(trainerId)
+    const r = await h.post('/api/crafting/craft', { recipeId: 'craft-exp-candy-l' }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.detail.reason).toBe('missing_building')
+  })
+
+  it('verlangt zuerst die Forschung, dann das Gebaeude', async () => {
+    // Die Erkenntnis steht vor dem Raum: wer das Labor haette, aber das
+    // Rezept nicht kennt, soll das auch als Grund genannt bekommen.
     h.ctx.db.prepare("INSERT INTO inventory (trainer_id, item_id, quantity) VALUES (?, 'great-ball', 20) ON CONFLICT DO UPDATE SET quantity = 20").run(trainerId)
     h.ctx.db.prepare("INSERT INTO inventory (trainer_id, item_id, quantity) VALUES (?, 'iron-shard', 20) ON CONFLICT DO UPDATE SET quantity = 20").run(trainerId)
     h.ctx.db.prepare("INSERT INTO inventory (trainer_id, item_id, quantity) VALUES (?, 'star-piece', 5) ON CONFLICT DO UPDATE SET quantity = 5").run(trainerId)
     const r = await h.post('/api/crafting/craft', { recipeId: 'craft-ultra-ball' }, token)
     expect(r.status).toBe(409)
-    expect(r.body.detail.reason).toBe('missing_building')
+    expect(r.body.detail.reason).toBe('missing_research')
   })
 })
 

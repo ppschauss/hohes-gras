@@ -59,11 +59,17 @@ export const SHINY_PLATEAU_ODDS = 0.10
  * für jede Begegnung: wer Abra vierzigmal hintereinander fing, traf auch
  * überall sonst häufiger auf Schillernde — und musste sie wegwerfen, weil es
  * die falsche Art war.
+ *
+ * @param bonus Erforschter Zuschlag in Prozentpunkten. Er hebt nur die
+ *   Grundchance: Plateau und Garantie der Fangserie bleiben, wo sie sind —
+ *   sonst haette Forschung die Serie ueberfluessig gemacht.
  */
-export function shinyOdds(chainStreak: number): number {
+export function shinyOdds(chainStreak: number, bonus = 0): number {
   const streak = Math.max(0, Math.floor(chainStreak))
   if (streak >= SHINY_CHAIN_GUARANTEE) return 1
   if (streak >= SHINY_CHAIN_PLATEAU) return SHINY_PLATEAU_ODDS
+  const base = SHINY_BASE_ODDS + Math.max(0, bonus) / 100
+  if (streak <= 0) return base
   const progress = streak / SHINY_CHAIN_PLATEAU
   return SHINY_BASE_ODDS + (SHINY_PLATEAU_ODDS - SHINY_BASE_ODDS) * progress
 }
@@ -121,6 +127,8 @@ export function rollEncounter(
   /** Levelversatz aus der dynamischen Skalierung; siehe `scaling.ts`. */
   levelOffset = 0,
   lure: LureEffect | null = null,
+  /** Erforschter Zuschlag auf die Shiny-Grundchance, in Prozentpunkten. */
+  shinyBonus = 0,
 ): WildEncounter | null {
   const pool = availableSpawns(area, ctx)
   if (pool.length === 0) return null
@@ -138,7 +146,7 @@ export function rollEncounter(
   return {
     speciesId: entry.speciesId,
     level,
-    shiny: rng.chance(shinyOdds(streak) * 100),
+    shiny: rng.chance(shinyOdds(streak, shinyBonus) * 100),
     gatedByConditions: Boolean(entry.timeOfDay || entry.weather),
   }
 }
@@ -264,7 +272,8 @@ const CATCH_DROPS: Array<{ itemId: string; weight: number }> = [
   { itemId: 'star-piece', weight: 4 },
 ]
 
-export function rollCatchDrop(rng: Rng): string | null {
-  if (!rng.chance(CATCH_DROP_CHANCE)) return null
+/** @param bonus Erforschter Zuschlag in Prozentpunkten. */
+export function rollCatchDrop(rng: Rng, bonus = 0): string | null {
+  if (!rng.chance(CATCH_DROP_CHANCE + Math.max(0, bonus))) return null
   return rng.weighted(CATCH_DROPS, (d) => d.weight).itemId
 }

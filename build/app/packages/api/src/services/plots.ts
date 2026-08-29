@@ -15,6 +15,7 @@ import * as expeditions from '../repos/expeditions.js'
 import { logEvent } from '../repos/events.js'
 import * as energy from './energy.js'
 import { assertPace, recordPace } from './pacing.js'
+import { busyCreatureIds } from './busy.js'
 
 /**
  * Poké-Beet.
@@ -89,7 +90,7 @@ export function state(ctx: AppContext, trainer: Trainer, now = Date.now()): Plot
   const open = new Map(plots.openOf(ctx.db, trainer.id).map((p) => [p.slot, p]))
   const bag = inventory.bagOf(ctx.db, trainer.id)
   const busy = plots.busyTenderIds(ctx.db, trainer.id)
-  const away = expeditions.busyCreatureIds(ctx.db, trainer.id)
+  const away = busyCreatureIds(ctx, trainer.id)
 
   const plantable: Plantable[] = Object.entries(bag)
     .flatMap(([itemId, have]) => {
@@ -209,7 +210,7 @@ function resolveTender(
   if (!isTender(ctx, c.speciesId)) {
     throw new GameError('invalid_state', { reason: 'not_a_plant', creatureId: tenderId }, 409)
   }
-  if (expeditions.busyCreatureIds(ctx.db, trainer.id).has(tenderId)) {
+  if (busyCreatureIds(ctx, trainer.id).has(tenderId)) {
     throw new GameError('invalid_state', { reason: 'on_expedition', creatureId: tenderId }, 409)
   }
   // Dasselbe Pokemon kann nicht zwei Beete pflegen — ausser es ist schon das

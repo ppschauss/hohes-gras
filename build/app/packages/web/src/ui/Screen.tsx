@@ -10,6 +10,15 @@ interface Props {
   onBack: () => void
   aside?: ReactNode
   children: ReactNode
+  /**
+   * Die Hauptaktionen des Bildschirms, angedockt über der Navigationsleiste.
+   *
+   * Sie standen bisher am Ende des Inhalts und rutschten damit aus dem Bild,
+   * sobald darüber genug stand — auf der Safari lag „Fangen" hinter drei
+   * Auswahlfeldern und zwei Infokästen. Was man ständig drückt, gehört in den
+   * Daumenbereich und nicht ans Ende einer Liste.
+   */
+  footer?: ReactNode
 }
 
 /**
@@ -22,7 +31,7 @@ interface Props {
  *
  * Jetzt trägt eine Zeile alles: zurück, wo man ist, und was man hat.
  */
-export function Screen({ eyebrow, title, onBack, aside, children }: Props) {
+export function Screen({ eyebrow, title, onBack, aside, children, footer }: Props) {
   return (
     <>
       <header className="appbar">
@@ -47,6 +56,7 @@ export function Screen({ eyebrow, title, onBack, aside, children }: Props) {
         <Resources />
       </header>
       {children}
+      {footer && <footer className="actionBar">{footer}</footer>}
     </>
   )
 }

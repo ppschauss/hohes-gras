@@ -29,6 +29,20 @@
 }
 .appbar--home { border-bottom-color: transparent; }
 
+/*
+ * Auf einem Telefon gibt die Nebenangabe ganz nach.
+ *
+ * Vier Dinge in einer Zeile — zurueck, Titel, Nebenangabe, Gold und Energie —
+ * gehen sich auf 412 Punkten nicht aus: gemeldet wurde ein "Radweg" neben
+ * "Wilde Begegn…" und "298 Erkundungen he…", also drei abgeschnittene Texte.
+ * Die Nebenangabe ist davon die entbehrlichste; sie steht auf dem Bildschirm
+ * ohnehin noch einmal.
+ */
+@media (max-width: 460px) {
+  .appbar__aside { display: none; }
+  .appbar__eyebrow { display: none; }
+}
+
 .appbar__back {
   flex: none;
   width: 34px; height: 34px;
@@ -1046,6 +1060,31 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 
 .actionRow { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: var(--s2); }
 
+/*
+ * Angedockte Hauptaktionen.
+ *
+ * Klebt am unteren Rand des Scrollbereichs, direkt über der Navigationsleiste.
+ * Deckend und mit Oberkante: darunter scrollt Inhalt durch, und ohne sichtbare
+ * Trennung sieht die Leiste aus, als gehörte sie zum letzten Kasten.
+ */
+.actionBar {
+  position: sticky; bottom: 0; z-index: var(--z-sticky);
+  display: flex; flex-direction: column; gap: var(--s2);
+  /* Kein Sicherheitsabstand nach unten: darunter liegt die Navigationsleiste,
+     die ihn schon traegt. */
+  padding: var(--s3) var(--s4);
+  margin-top: auto;
+  background: var(--surface-sunken);
+  border-top: 1px solid var(--edge);
+}
+.actionBar__hint { font-size: var(--t-xs); color: var(--ink-faint); text-align: center; margin: 0; }
+
+/* Drei Wähler nebeneinander statt zwei plus einer darunter: das spart auf dem
+   Telefon eine ganze Zeile, und die Auswahl bleibt im ersten Bild. */
+.pickers--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pickers--three .picker__body { padding: var(--s2); }
+.pickers--three .picker__select { font-size: var(--t-xs); }
+
 /* ============================================================== Expeditionen === */
 
 .expo {
@@ -1661,6 +1700,17 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .recipe__have { color: var(--ink-muted); }
 .recipe__missing { color: var(--danger); }
 .recipe__req { font-size: var(--t-xs); color: var(--warn); }
+.recipe__meta { font-size: var(--t-xs); color: var(--ink-faint); line-height: 1.35; margin: 0; }
+.recipe__gold { color: var(--gold); }
+/* Abgeschlossen: nicht ausgegraut, sondern abgehakt — es ist ein Erfolg und
+   kein deaktivierter Knopf. */
+.recipe--done { border-color: color-mix(in oklab, var(--ok) 45%, var(--edge)); }
+
+/* Zwei Schaltflaechen nebeneinander. Wurde schon in der Arena benutzt, war
+   aber nie gesetzt: dort standen sie untereinander statt nebeneinander. */
+.row { display: flex; gap: var(--s2); flex-wrap: wrap; }
+.row .btn { flex: 1 1 auto; min-width: 0; }
+.chipRow { display: flex; gap: var(--s2); flex-wrap: wrap; }
 
 .seasonHead {
   display: flex; flex-direction: column; gap: var(--s2);

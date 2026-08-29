@@ -6,12 +6,19 @@ import { findById } from '../repos/trainers.js'
 import * as progression from '../services/progression.js'
 import * as story from '../services/story.js'
 import * as login from '../services/login.js'
+import * as research from '../services/research.js'
 
 const EvolveSchema = z.object({ creatureId: z.string().uuid(), targetSpeciesId: z.string() })
 const BuildingSchema = z.object({ buildingId: z.string() })
 const RecipeSchema = z.object({ recipeId: z.string() })
 const TierSchema = z.object({ tier: z.number().int().min(1).max(30) })
 const AchievementSchema = z.object({ achievementId: z.string() })
+const ResearchSchema = z.object({ projectId: z.string(), creatureId: z.string().uuid() })
+const TrainSchema = z.object({
+  creatureId: z.string().uuid(),
+  stat: z.enum(['hp', 'atk', 'def', 'spa', 'spd', 'spe']),
+})
+const ResearchIdSchema = z.object({ id: z.string().uuid() })
 
 export function registerProgressionRoutes(app: FastifyInstance, ctx: AppContext): void {
   const auth = { preHandler: [requireTrainer(ctx), rateLimit(ctx, 'action')] }
@@ -38,6 +45,32 @@ export function registerProgressionRoutes(app: FastifyInstance, ctx: AppContext)
     const { recipeId } = RecipeSchema.parse(req.body)
     const result = progression.craft(ctx, req.trainer!, recipeId)
     return { ...result, crafting: progression.craftingView(ctx, findById(ctx.db, req.trainer!.id)!) }
+  })
+
+  app.get('/api/research', auth, async (req) => research.view(ctx, req.trainer!))
+
+  app.post('/api/research/start', write, async (req) => {
+    const { projectId, creatureId } = ResearchSchema.parse(req.body)
+    research.start(ctx, req.trainer!, projectId, creatureId)
+    return { research: research.view(ctx, findById(ctx.db, req.trainer!.id)!) }
+  })
+
+  app.post('/api/research/train', write, async (req) => {
+    const { creatureId, stat } = TrainSchema.parse(req.body)
+    research.train(ctx, req.trainer!, creatureId, stat)
+    return { research: research.view(ctx, findById(ctx.db, req.trainer!.id)!) }
+  })
+
+  app.post('/api/research/collect', write, async (req) => {
+    const { id } = ResearchIdSchema.parse(req.body)
+    const result = research.collect(ctx, req.trainer!, id)
+    return { result, research: research.view(ctx, findById(ctx.db, req.trainer!.id)!) }
+  })
+
+  app.post('/api/research/abort', write, async (req) => {
+    const { id } = ResearchIdSchema.parse(req.body)
+    research.abort(ctx, req.trainer!, id)
+    return { research: research.view(ctx, findById(ctx.db, req.trainer!.id)!) }
   })
 
   app.get('/api/login', auth, async (req) => login.view(ctx, req.trainer!))

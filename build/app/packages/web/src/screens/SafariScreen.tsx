@@ -125,6 +125,32 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
 
   return (
     <Screen
+      footer={(
+        <>
+          <div className="actionRow">
+            <button type="button" className="btn btn--ghost btn--block" onClick={explore}
+              disabled={action.busy || phase.kind === 'throwing'
+                || (safari.data ? safari.data.energy.current < safari.data.energyCost : false)}>
+              {t('safari.explore')}
+            </button>
+            <button type="button" className="btn btn--primary btn--block" onClick={throwBall}
+              disabled={action.busy || phase.kind !== 'encounter' || ballCount < 1}>
+              {t('safari.catch')}
+            </button>
+            <button type="button" className="btn btn--ghost btn--block" onClick={flee}
+              disabled={action.busy || phase.kind !== 'encounter'}>
+              {t('safari.stop')}
+            </button>
+          </div>
+          {safari.data && (
+            <p className="actionBar__hint">
+              {safari.data.energy.current < safari.data.energyCost
+                ? t('safari.noEnergy')
+                : t('safari.exploreCost', { n: safari.data.energyCost })}
+            </p>
+          )}
+        </>
+      )}
       eyebrow={t('safari.eyebrow')}
       title={safari.data?.encounter?.areaName ?? t('safari.title')}
       onBack={onBack}
@@ -188,7 +214,9 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
           </div>
         )}
 
-        <div className="pickers">
+        {/* Drei nebeneinander: Ball, Beere und Lockduft kosteten untereinander
+            drei Zeilen und schoben die Knoepfe aus dem Bild. */}
+        <div className={`pickers${lures.length > 0 ? ' pickers--three' : ''}`}>
           <Picker
             label={t('safari.ball')}
             options={balls.map((b) => ({ id: b.id, name: b.name, icon: b.icon, category: b.category, quantity: b.quantity }))}
@@ -204,7 +232,6 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
           />
           {lures.length > 0 && (
             <Picker
-              className="picker--wide"
               label={t('safari.lure')}
               options={lures.map((b) => ({ id: b.id, name: b.name, icon: b.icon, category: b.category, quantity: b.quantity }))}
               value={lureId}
@@ -294,29 +321,6 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
           </div>
         )}
 
-        <div className="actionRow">
-          <button type="button" className="btn btn--ghost btn--block" onClick={explore}
-            disabled={action.busy || phase.kind === 'throwing'
-              || (safari.data ? safari.data.energy.current < safari.data.energyCost : false)}>
-            {t('safari.explore')}
-          </button>
-          <button type="button" className="btn btn--primary btn--block" onClick={throwBall}
-            disabled={action.busy || phase.kind !== 'encounter' || ballCount < 1}>
-            {t('safari.catch')}
-          </button>
-          <button type="button" className="btn btn--ghost btn--block" onClick={flee}
-            disabled={action.busy || phase.kind !== 'encounter'}>
-            {t('safari.stop')}
-          </button>
-        </div>
-
-        {safari.data && (
-          <p className="center__body">
-            {safari.data.energy.current < safari.data.energyCost
-              ? t('safari.noEnergy')
-              : t('safari.exploreCost', { n: safari.data.energyCost })}
-          </p>
-        )}
       </main>
     </Screen>
   )

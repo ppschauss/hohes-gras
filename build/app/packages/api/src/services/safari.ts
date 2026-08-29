@@ -30,6 +30,7 @@ import { worldClock } from '../worldClock.js'
 import { requireCurrentArea } from './world.js'
 import { creatureView } from './views.js'
 import { awardSeasonPoints, bonuses, bumpMetric } from './progression.js'
+import { researchBonuses } from './research.js'
 
 /**
  * Erkundungen sind unbegrenzt.
@@ -139,7 +140,10 @@ function buildModifiers(
   }
   // Das Labor zaehlt wie zusaetzliche Orden: derselbe kleine, spuerbare
   // Dauerbonus, statt eine weitere Zahl in die Fangformel einzubauen.
-  const labBonus = Math.round(bonuses(ctx, trainer.id).catchRateBonus / 2)
+  // Labor und Forschung zaehlen beide wie zusaetzliche Orden: derselbe kleine,
+  // spuerbare Dauerbonus, statt zwei weitere Zahlen in der Fangformel.
+  const research = researchBonuses(ctx, trainer.id)
+  const labBonus = Math.round((bonuses(ctx, trainer.id).catchRateBonus + research.catchRate) / 2)
 
   return {
     ball,
@@ -219,10 +223,11 @@ export function explore(
     /* Ein Duft kann statt eines Typs eine Zusage tragen; siehe `useLure`. */
     const forced = { legendary: false }
     const lure = useLure(ctx, trainer, lureId, lureUsed, forced)
+    const boni = researchBonuses(ctx, trainer.id)
     const rolled = rollEncounter(
       area, clock, rng,
       chainSpecies ? { speciesId: chainSpecies.s, streak: chainSpecies.streak } : null,
-      areaOffset(ctx, trainer, area), lure,
+      areaOffset(ctx, trainer, area), lure, boni.shinyOdds,
     )
     bumpCounter(ctx.db, trainer.id, EXPLORE_COUNTER)
     recordPace(ctx, trainer, 'explore')
@@ -285,7 +290,7 @@ export function explore(
      * blosser Zufall.
      */
     const detecting = detectorCharges(ctx, trainer) > 0
-    if (detecting || rollFind(rng)) {
+    if (detecting || rollFind(rng, boni.findChance)) {
       const find = grantFind(ctx, trainer, area, rng, detecting)
       if (find) {
         logEvent(ctx.db, trainer.id, 'safari.find', {
@@ -848,7 +853,10 @@ export function throwBall(
      * derselbe Fang gibt damit reproduzierbar dasselbe Fundstueck, und ein
      * zweiter Wurf laesst sich nicht auf ein besseres hin wiederholen.
      */
-    const dropId = rollCatchDrop(createRng(deriveSeed(e.seed, 'drop', String(e.startedAt))))
+    const dropId = rollCatchDrop(
+      createRng(deriveSeed(e.seed, 'drop', String(e.startedAt))),
+      researchBonuses(ctx, trainer.id).catchDrop,
+    )
     const dropItem = dropId ? ctx.registry.tryItem(dropId) : null
     if (dropItem) inventory.grant(ctx.db, trainer.id, dropItem.id, 1)
     encounters.clear(ctx.db, trainer.id)

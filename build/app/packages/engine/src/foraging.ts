@@ -19,7 +19,9 @@ export const WANDER_ODDS = 0.03
 export const FIND_ODDS = 0.03
 
 export const rollWander = (rng: Rng): boolean => rng.next() < WANDER_ODDS
-export const rollFind = (rng: Rng): boolean => rng.next() < FIND_ODDS
+/** @param bonus Erforschter Zuschlag in Prozentpunkten. */
+export const rollFind = (rng: Rng, bonus = 0): boolean =>
+  rng.next() < FIND_ODDS + Math.max(0, bonus) / 100
 
 /**
  * Wie viele Pokemon ein Streuner dabeihat.
@@ -75,7 +77,14 @@ export function rollFindKind(rng: Rng, fromDetector = false): FindKind {
  * Erkundung in einem Fund.
  */
 export const METAL_DETECTOR_ID = 'metal-detector'
-export const METAL_DETECTOR_CHARGES = 10
+/*
+ * Eine Anwendung, nicht zehn.
+ *
+ * Mit zehn war ein einziger Kauf ein halber Nachmittag garantierter Funde —
+ * gemeldet als "zu stark", und das war es auch: der Zufall kam kaum noch vor.
+ * Einer je Gerät macht daraus eine Entscheidung statt eines Modus.
+ */
+export const METAL_DETECTOR_CHARGES = 1
 
 /**
  * Wieviel ein Fundstueck in dieser Region wert sein darf, gemessen am

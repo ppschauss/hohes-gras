@@ -1,4 +1,4 @@
-import type { OwnedCreature } from '@game/shared'
+import type { OwnedCreature, StatBlock } from '@game/shared'
 import type { Db } from '../db/index.js'
 import { newId } from '../db/ids.js'
 
@@ -170,6 +170,14 @@ export function ownedSpeciesIds(db: Db, ownerId: string): Set<string> {
 
 /** EP und Level setzen — für Bonbons und alles, was ausserhalb eines Kampfes
  *  Erfahrung gibt. */
+/** Fleisspunkte setzen. Es gab dafuer nie einen Weg — sie standen bei jedem
+ *  Pokemon auf null, obwohl die Werteformel sie laengst liest. */
+export function setEvs(db: Db, creatureId: string, evs: StatBlock): void {
+  db.prepare(
+    'UPDATE creatures SET ev_hp = ?, ev_atk = ?, ev_def = ?, ev_spa = ?, ev_spd = ?, ev_spe = ? WHERE id = ?',
+  ).run(evs.hp, evs.atk, evs.def, evs.spa, evs.spd, evs.spe, creatureId)
+}
+
 export function setXp(db: Db, creatureId: string, xp: number, level: number): void {
   db.prepare('UPDATE creatures SET xp = ?, level = ? WHERE id = ?').run(xp, level, creatureId)
 }

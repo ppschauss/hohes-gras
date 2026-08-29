@@ -13,6 +13,7 @@ import * as battles from '../repos/battles.js'
 import { logEvent } from '../repos/events.js'
 import { bonuses } from './progression.js'
 import { eggSlots } from './breeding.js'
+import { busyCreatureIds } from './busy.js'
 
 /**
  * Verwerten.
@@ -43,7 +44,7 @@ export function salvage(ctx: AppContext, trainer: Trainer, creatureId: string): 
     if (battles.activeOf(ctx.db, trainer.id)) {
       throw new GameError('invalid_state', { reason: 'battle_in_progress' }, 409)
     }
-    if (expeditions.busyCreatureIds(ctx.db, trainer.id).has(c.id)) {
+    if (busyCreatureIds(ctx, trainer.id).has(c.id)) {
       throw new GameError('invalid_state', { reason: 'on_expedition', creatureId }, 409)
     }
     if (creatures.countOwned(ctx.db, trainer.id).total <= 1) {
@@ -117,7 +118,7 @@ export function salvageMany(
      * fremde Id die Auswahl scheinbar zu gross und man bekaeme "letztes
      * Pokemon" zu lesen, wo "gibt es nicht" gemeint ist.
      */
-    const busy = expeditions.busyCreatureIds(ctx.db, trainer.id)
+    const busy = busyCreatureIds(ctx, trainer.id)
     const chosen = ids.map((creatureId) => {
       const c = creatures.byId(ctx.db, creatureId)
       if (!c || c.ownerId !== trainer.id) throw new GameError('not_found', { creatureId }, 404)

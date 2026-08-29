@@ -22,6 +22,7 @@ import { worldClock, berlinParts } from '../worldClock.js'
 import { creatureView, evolutionOptions } from './views.js'
 import { refreshMoves } from './garden.js'
 import * as energy from './energy.js'
+import { unlockedRecipes } from './research.js'
 
 /* ------------------------------------------------------------- Entwicklung */
 
@@ -186,6 +187,7 @@ export function craftingView(ctx: AppContext, trainer: Trainer) {
   const bag = inventory.bagOf(ctx.db, trainer.id)
   const gold = inventory.goldOf(ctx.db, trainer.id)
   const owned = progression.buildingsOf(ctx.db, trainer.id)
+  const unlocked = unlockedRecipes(ctx, trainer.id)
 
   const label = (itemId: string) => {
     const item = ctx.registry.tryItem(itemId)
@@ -200,13 +202,15 @@ export function craftingView(ctx: AppContext, trainer: Trainer) {
   return {
     gold,
     recipes: RECIPES.map((recipe) => {
-      const check = canCraft(recipe, bag, gold, owned)
+      const check = canCraft(recipe, bag, gold, owned, unlocked)
       return {
         id: recipe.id,
         output: { ...label(recipe.output.itemId), quantity: recipe.output.quantity },
         inputs: recipe.inputs.map((i) => ({ ...label(i.itemId), quantity: i.quantity, have: bag[i.itemId] ?? 0 })),
         goldCost: recipe.goldCost,
         requiresBuilding: recipe.requiresBuilding ?? null,
+        /** Welches Projekt es freischaltet — null, wenn es offen liegt. */
+        research: recipe.research ?? null,
         craftable: check.ok,
         blockedReason: check.ok ? null : check.reason,
       }
@@ -223,7 +227,7 @@ export function craft(ctx: AppContext, trainer: Trainer, recipeId: string) {
     const gold = inventory.goldOf(ctx.db, trainer.id)
     const owned = progression.buildingsOf(ctx.db, trainer.id)
 
-    const check = canCraft(recipe, bag, gold, owned)
+    const check = canCraft(recipe, bag, gold, owned, unlockedRecipes(ctx, trainer.id))
     // Der Grund steht schon in `check`; ihn davor zu setzen wuerde ihn
     // ueberschreiben lassen.
     if (!check.ok) throw new GameError('invalid_state', { ...check }, 409)

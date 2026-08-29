@@ -16,6 +16,7 @@ import * as gifts from './gifts.js'
 import { worldClock } from '../worldClock.js'
 import { creatureView } from './views.js'
 import { bumpMetric } from './progression.js'
+import { busyCreatureIds } from './busy.js'
 
 /** Market prices are bounded so a listing cannot be used to move a fortune
  *  between two accounts one person controls. */
@@ -191,7 +192,7 @@ function assertTradable(ctx: AppContext, trainer: Trainer, creatureId: string): 
   if (!c) throw new GameError('not_found', { creatureId }, 404)
   if (c.ownerId !== trainer.id) throw new GameError('not_owner', { creatureId }, 403)
   if (c.teamSlot !== null) throw new GameError('invalid_state', { reason: 'in_team', creatureId }, 409)
-  if (expeditions.busyCreatureIds(ctx.db, trainer.id).has(creatureId)) {
+  if (busyCreatureIds(ctx, trainer.id).has(creatureId)) {
     throw new GameError('invalid_state', { reason: 'on_expedition', creatureId }, 409)
   }
   if (social.listedCreatureIds(ctx.db, trainer.id).has(creatureId)) {
@@ -221,7 +222,7 @@ export function listingView(ctx: AppContext, viewer: Trainer, listing: social.Li
 
 export function marketOverview(ctx: AppContext, trainer: Trainer) {
   const bag = creatures.boxOf(ctx.db, trainer.id, 100)
-  const busy = expeditions.busyCreatureIds(ctx.db, trainer.id)
+  const busy = busyCreatureIds(ctx, trainer.id)
   const listed = social.listedCreatureIds(ctx.db, trainer.id)
   const inTrade = social.creatureIdsInOpenTrades(ctx.db, trainer.id)
 
@@ -307,7 +308,7 @@ export function buyListing(ctx: AppContext, trainer: Trainer, listingId: string)
 
 export function tradeOverview(ctx: AppContext, trainer: Trainer) {
   const { incoming, outgoing } = social.openTradesFor(ctx.db, trainer.id)
-  const busy = expeditions.busyCreatureIds(ctx.db, trainer.id)
+  const busy = busyCreatureIds(ctx, trainer.id)
   const listed = social.listedCreatureIds(ctx.db, trainer.id)
   const inTrade = social.creatureIdsInOpenTrades(ctx.db, trainer.id)
 

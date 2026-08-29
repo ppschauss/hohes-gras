@@ -39,7 +39,7 @@ const BAIT_CHARGES = 5
 
 /** Der Metalldetektor. Die Regel dazu steht in `engine/foraging.ts`. */
 const DETECTOR_ITEM_ID = 'metal-detector'
-const DETECTOR_CHARGES = 10
+const DETECTOR_CHARGES = 1
 
 /** Gegenstaende, deren Bild selbst erzeugt wurde und als Vektor vorliegt. */
 export const SVG_ICONS = new Set([
@@ -70,14 +70,14 @@ export const AUTHORED: Authored[] = [
      *
      * Fundstücke liegen mit 3 % je Erkundung herum; wer gezielt Werkstoffe
      * braucht, wartet sonst auf den Zufall. Der Detektor ersetzt den Wurf für
-     * zehn Erkundungen — und fördert dabei anderes zutage als der Zufall:
-     * Schrott und Fragmente statt Geldbeutel. Sonst wären 500 Gold ein
+     * genau eine Erkundung — und fördert dabei anderes zutage als der Zufall:
+     * Schrott und Fragmente statt Geldbeutel. Sonst wären die 100 Gold ein
      * Einsatz, der sich selbst vervielfacht.
      */
-    id: DETECTOR_ITEM_ID, category: 'key', price: 500, sellPrice: 50,
+    id: DETECTOR_ITEM_ID, category: 'key', price: 100, sellPrice: 10,
     name: 'Metalldetektor',
-    description: 'Piept über allem, was im Boden liegt. Die nächsten '
-      + `${DETECTOR_CHARGES} Erkundungen fördern ein Fundstück zutage.`,
+    description: 'Piept über allem, was im Boden liegt. Die nächste Erkundung '
+      + 'fördert ein Fundstück zutage.',
     params: { detectorCharges: DETECTOR_CHARGES },
   },
   {

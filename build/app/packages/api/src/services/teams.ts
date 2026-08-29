@@ -9,6 +9,7 @@ import { logEvent } from '../repos/events.js'
 import { worldClock } from '../worldClock.js'
 import { creatureView } from './views.js'
 import { capOf } from './travel.js'
+import { busyCreatureIds } from './busy.js'
 
 /**
  * Teams verwalten.
@@ -49,7 +50,7 @@ export function overview(ctx: AppContext, trainer: Trainer): TeamsState {
   syncActiveFromGarden(ctx, trainer.id)
   const activeId = ensureDefault(ctx, trainer.id)
   const clock = worldClock()
-  const busy = expeditions.busyCreatureIds(ctx.db, trainer.id)
+  const busy = busyCreatureIds(ctx, trainer.id)
   const cap = capOf(ctx, trainer)
   const view = (id: string) => {
     const c = creatures.byId(ctx.db, id)

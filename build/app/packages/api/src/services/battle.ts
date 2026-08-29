@@ -28,6 +28,8 @@ import { referenceOf, scaledLevel, trainerOffset } from './scaling.js'
 import { gateFor } from './league.js'
 import { capOf } from './travel.js'
 import { contributeToGoal } from './guilds.js'
+import { busyCreatureIds } from './busy.js'
+import { researchBonuses } from './research.js'
 
 /** How well an opponent plays, by kind. Route trainers are beatable by
  *  attacking; gym leaders punish a bad matchup; the champion does not slip. */
@@ -300,7 +302,7 @@ export function beginBattle(
     if (battles.activeOf(ctx.db, trainer.id)) {
       throw new GameError('invalid_state', { reason: 'battle_in_progress' }, 409)
     }
-    const busy = expeditions.busyCreatureIds(ctx.db, trainer.id)
+    const busy = busyCreatureIds(ctx, trainer.id)
     const team = creatures.teamOf(ctx.db, trainer.id).filter((c) => !busy.has(c.id))
     if (team.length === 0) throw new GameError('invalid_state', { reason: 'no_team' }, 409)
     const usable = team.filter((c) => c.hpCurrent > 0)
@@ -565,9 +567,10 @@ function applyOutcome(
    * Kurbel. Kaempfen bleibt erlaubt und bringt weiter EP — nur nicht mehr
    * Gold aus derselben Quelle.
    */
-  const gold = showUp + (!firstToday
+  const boni = researchBonuses(ctx, trainer.id)
+  const gold = Math.round((showUp + (!firstToday
     ? 0
-    : Math.round(def.rewardGold * (firstWin ? 1 : def.repeatRewardRatio)))
+    : def.rewardGold * (firstWin ? 1 : def.repeatRewardRatio))) * (1 + boni.battleGold / 100))
   inventory.earnGold(ctx.db, trainer.id, gold)
 
   /*
@@ -615,6 +618,7 @@ function applyOutcome(
     const amount = battleXpYield(baseYield, foeLevel, stored.level, record.state.sides[1]!.party.length)
       * (firstWin ? 1 : 0.5)
       * (def.xpMultiplier ?? 1)
+      * (1 + boni.battleXp / 100)
     xpPerMember = Math.round(amount)
     // Ereignis-Arten steigen langsamer; siehe `xpFactor` im Pack.
     const scaled = Math.max(1, Math.round(amount / (species.xpFactor ?? 1)))

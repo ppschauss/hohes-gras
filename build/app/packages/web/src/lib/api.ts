@@ -289,6 +289,24 @@ export const api = {
       method: 'POST', body: JSON.stringify({ buildingId }),
     }),
 
+  research: () => request<ResearchView>('/api/research'),
+  startResearch: (projectId: string, creatureId: string) =>
+    request<{ research: ResearchView }>('/api/research/start', {
+      method: 'POST', body: JSON.stringify({ projectId, creatureId }),
+    }),
+  trainCreature: (creatureId: string, stat: string) =>
+    request<{ research: ResearchView }>('/api/research/train', {
+      method: 'POST', body: JSON.stringify({ creatureId, stat }),
+    }),
+  collectResearch: (id: string) =>
+    request<{ result: ResearchClaimView; research: ResearchView }>('/api/research/collect', {
+      method: 'POST', body: JSON.stringify({ id }),
+    }),
+  abortResearch: (id: string) =>
+    request<{ research: ResearchView }>('/api/research/abort', {
+      method: 'POST', body: JSON.stringify({ id }),
+    }),
+
   crafting: () => request<CraftingView>('/api/crafting'),
   craft: (recipeId: string) =>
     request<{ output: { itemId: string; quantity: number }; crafting: CraftingView }>('/api/crafting/craft', {
@@ -589,6 +607,69 @@ export interface ThrowResult {
   reward: { gold: number } | null
   areaCompleted: { areaId: string; areaName: string; energy: number } | null
   encounter: EncounterView | null
+}
+
+export interface ResearchInput {
+  itemId: string
+  name: string
+  icon: string
+  quantity: number
+  have: number
+}
+
+export interface ResearchProjectView {
+  id: string
+  kind: 'recipe' | 'bonus' | 'training'
+  tiers: number
+  done: number
+  complete: boolean
+  lab: number
+  bonusNow: number
+  bonusNext: number
+  step: number
+  unlocks: string | null
+  hours: number
+  goldCost: number
+  xp: number
+  inputs: ResearchInput[]
+  blockedReason: string | null
+}
+
+export interface ResearchClaimView {
+  projectId: string
+  tier: number
+  training: boolean
+  stat: string | null
+  creatureName: string | null
+  xpGained: number
+  leveledUp: boolean
+  newLevel: number | null
+  evGained: number
+}
+
+export interface ResearchView {
+  lab: number
+  slots: number
+  used: number
+  gold: number
+  trainingUnlocked: boolean
+  evPerTraining: number
+  evMaxPerStat: number
+  evMaxTotal: number
+  training: { hours: number; gold: number; inputs: ResearchInput[] }
+  running: Array<{
+    id: string
+    projectId: string
+    training: boolean
+    tier: number
+    stat: string | null
+    creatureName: string | null
+    readyAt: number
+    ready: boolean
+    totalMs: number
+    xp: number
+  }>
+  projects: ResearchProjectView[]
 }
 
 export interface ExpeditionView {
