@@ -49,13 +49,36 @@ Zwei Werkzeuge, mit klarer Arbeitsteilung:
 ### `tools/import-pokeapi.ts` — der volle Import
 
 ```bash
-npm run import -- --dex 1-251
+npm run import:full        # Dex 1–386 — alle drei Regionen
 ```
 
 Holt Arten, Attacken und Sprites von der PokéAPI, spiegelt die Bilder lokal
 nach `data/media/` und schreibt das komplette Pack. Dauert Minuten und macht
-tausende Anfragen an eine fremde API. **Nur nötig, wenn sich der Dex-Bereich
-ändert.**
+tausende Anfragen an eine fremde API — beim zweiten Mal keine, denn alles liegt
+in `data/.cache/pokeapi/`. **Nur nötig, wenn sich der Dex-Bereich ändert.**
+
+> **Der Bereich muss zum Pack passen.** Ein Lauf mit einem kleineren Bereich
+> *überschreibt* das Pack und nimmt Regionen mit: aus 390 Arten und drei
+> Regionen werden 251 und zwei. Genau so ist es einmal passiert. Deshalb heißen
+> die Skripte jetzt nach ihrem Umfang — `import:kanto` (1–151),
+> `import:johto` (1–251), `import:full` (1–386) — und `data/packs/` ist vor dem
+> Import eine Kopie wert.
+
+### Lernsätze
+
+Die PokéAPI liefert je Attacke, in welchem Spiel sie wie gelernt wird. Der
+Import nimmt daraus **alle Versionen zusammen**, aber nur die Attacken, die
+durch Levelaufstieg kommen — je Attacke das niedrigste Level, das irgendein
+Spiel vergibt.
+
+Anfangs war es eine einzige Version, die erste aus einer Prioritätsliste mit
+mindestens vier Einträgen. Das kostete gemessen fast ein Drittel: 14,2
+Attacken je Art statt 18,6, und Arten wie Woingenau standen mit zweien da.
+
+Maschinen- (TM) und Lehrer-Attacken bleiben draußen. Sie wären weitere 62 je
+Art, tragen aber kein Level: sie würden die Staffelung nicht füllen, sondern
+ersetzen — ein Glumanda auf Level 5 mit Erdbeben ist kein reicheres Lernset,
+sondern gar keins mehr.
 
 ### `tools/rebuild-world.ts` — die Welt allein
 

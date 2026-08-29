@@ -121,7 +121,8 @@ Feinsand, Tautropfen, Eisensplitter, selten Sternenstaub. Vorher kamen
 Werkstoffe ausschließlich von Expeditionen, und damit war die häufigste
 Handlung des Spiels von der Werkbank abgeschnitten.
 
-19 Rezepte statt 6. Die neuen zielen auf genau diesen Kreislauf: Bälle und
+23 Rezepte statt 6 — vier davon erst durch Forschung. Die neuen zielen auf
+genau diesen Kreislauf: Bälle und
 Medizin aus Fundstücken, und **Entwicklungssteine aus Seelenfragmenten** (8
 Fragmente der passenden Sorte + 2 Sternenstaub + 500 Gold, Labor Stufe 2). Im
 Laden kosten dieselben Steine 1.500 Gold — hier kostet es Arbeit statt

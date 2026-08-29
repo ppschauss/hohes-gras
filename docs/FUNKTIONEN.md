@@ -4,8 +4,27 @@ Was das Spiel kann, Bereich für Bereich, mit den Zahlen dahinter. Wo eine Zahl
 eine Entscheidung war, steht die Begründung in **[BALANCE.md](BALANCE.md)**;
 wie die Teile geschnitten sind, in **[ARCHITEKTUR.md](ARCHITEKTUR.md)**.
 
-Stand: 3 Regionen · 38 Gebiete · 387 Arten · 502 Attacken · 84 Gegenstände ·
-57 Trainer · 26 Orden · 12 Story-Kapitel · 861 Tests.
+Stand: 3 Regionen · 38 Gebiete · 390 Arten · 533 Attacken · 85 Gegenstände ·
+57 Trainer · 26 Orden · 21 Story-Kapitel · 23 Rezepte · 15 Forschungsprojekte ·
+965 Tests.
+
+## Wo was liegt
+
+Die Oberfläche hat fünf Ziele auf der unteren Leiste (Start, Garten, Karte,
+Team, Freunde) und darüber hinaus einen Startbildschirm, der seine Kacheln in
+Gruppen zeigt: **Spielen · Dein Team · Basis & Vorrat · Welt · Du.** Drei
+dieser Kacheln fassen jeweils mehrere Bereiche zusammen:
+
+| Ort | Reiter | Beantwortet |
+|---|---|---|
+| **Fortschritt** | Reise · Entwicklung · Pension | Wo geht meine Reise weiter? |
+| **Basis** | Ausbau · Forschung · Handwerk | Was baue und betreibe ich? |
+| **Erfolge** | Erfolge · Saison · Rangliste | Wie weit bin ich, wie steh ich da? |
+
+Die Basis ist dabei keine Sammelstelle, sondern eine Kette: der Ausbau schaltet
+Forschung frei, die Forschung schaltet Rezepte frei, die Werkstatt stellt sie
+her. Export und Löschung des Spielstands stehen bei den Einstellungen unter
+„Konto & Daten".
 
 ---
 
@@ -93,6 +112,16 @@ Der Hintergrund der Gartenszene ist wählbar (6 Motive im Laden).
 
 ---
 
+### Teams und Reihenfolge
+
+Bis zu **acht gespeicherte Aufstellungen**, eine davon aktiv; sie steht im
+Garten und kämpft. Die **Reihenfolge** ändert man im Bearbeiten-Modus mit zwei
+Tippern: erst ein Feld antippen, dann ein zweites — die beiden tauschen. Ziehen
+wäre die naheliegende Geste und in dieser WebView die falsche, weil der
+Bildschirm mitscrollt und ein Fehlgriff verschiebt statt zu blättern.
+
+---
+
 ## 5. Box, Verwerten, Seelenfragmente
 
 **900 Plätze** im Grundstock, mit dem **Depot** in 25 Stufen um je 50 erweiterbar
@@ -111,6 +140,33 @@ nicht auf Expedition, und nie das letzte Pokémon.
 **50 auf einmal**, alles in einer Transaktion — entweder gehen sie zusammen
 oder keines.
 
+**Sortieren** nach Nummer, Name, Level, Typ oder „schillernd zuerst", mit
+Richtungsumschalter. Bei Gleichstand entscheidet immer Nummer, dann Name —
+ohne festen Ausgleich springen Zeilen bei jedem Neuladen. Die Wahl überlebt den
+Besuch.
+
+**Eingelagerte erholen sich dreimal so schnell** (18 statt 6 Ausdauerpunkte je
+Stunde): leer bis voll in knapp sechs Stunden statt siebzehn. Damit ist die Box
+auch ein Ruheort. Vorher regenerierte dort *gar nichts* — wer ein Pokémon
+einlagerte, fand es Wochen später genauso erschöpft wieder vor.
+
+---
+
+### Attacken wählen
+
+Vier Plätze je Pokémon, frei belegbar aus allem, was die Art auf ihrem Level
+kann — plus dem, was sie schon hat. Der Zusatz ist kein Schlupfloch, sondern
+die Entwicklung: ein Safcon trägt Attacken aus seiner Zeit als Hornliu, die
+Safcons eigenes Lernset nicht kennt.
+
+Unter der Liste steht, **welche Attacke als Nächstes kommt und ab wann**. Ohne
+diese Zeile sieht ein Pokémon, das gerade nichts Neues lernen kann, aus wie
+eines, das nie wieder etwas lernt.
+
+Die Lernsätze stammen aus **allen Spielversionen zusammen**, je Attacke das
+niedrigste Level — im Schnitt 18,6 Attacken je Art. Details in
+[INHALT.md](INHALT.md).
+
 ---
 
 ## 6. Welt, Reise, Skalierung
@@ -125,9 +181,13 @@ frei wählbar** und bringt eigene Starter mit.
   Top Vier und Champion abgeschlossen ist.
 - **Reisegrenze:** Level 100 zu Beginn, **+50 je bezwungener Region**,
   absolutes Ende bei 500. EP über der Grenze verfallen, statt sich anzustauen.
-- **Skalierung:** Ganze Regionen treffen den Median deines Teams — nach oben
-  wie nach unten. Der Versatz wird beim **Betreten eingefroren**, wächst also
-  nicht mit dir mit. Abschaltbar.
+- **Skalierung:** Eine Region **empfängt einen immer auf dem eigenen Niveau**
+  — auf dem Median des Teams, beim **Betreten eingefroren**. Das ist keine
+  Einstellung, sondern die Bedingung dafür, dass es drei Startregionen gibt:
+  die entworfenen Bänder sind eine Kette (Kanto 2–78, Johto 58–100, Hoenn
+  96–150). Der **Schalter** regelt nur, ob die einzelnen Gebiete danach
+  mitwachsen — aus heißt „du wächst in die Region hinein und lässt sie hinter
+  dir".
 - **Wetter und Tageszeit** (Europe/Berlin) steuern, welche Arten überhaupt
   erscheinen. Beide stehen auf dem **Startbildschirm**, im Kopf der
   **Weltkarte** und über der Artenliste im **Gebiet** — dort zusätzlich mit
@@ -211,6 +271,15 @@ Anfang.
 Anders als das Abra zählt sie in den Pokédex: was man finden kann, gehört auch
 in die Summe.
 
+**Eigene Attacken.** Die Linie erbt ihr Lernset aus zwei Vorbildern — Werte und
+Typen vom eigenen, die Zeitpunkte vom Glumanda —, lernt also durchgehend im
+früheren Takt: Feuerzahn ab 25 statt 28. Dazu vier Signaturattacken nach dem
+Thema statt nach Stärke, denn ein Prisma bricht Licht: **Metallklaue (13),
+Juwelenkraft (22), Feuerodem (31), Lichtkanone (40)**, für die späteren Stufen
+Drachenklaue (36) und Antik-Kraft (48). Sie liegen in den Lücken der Vorlage —
+bei 13, 22 und 31 passierte vorher nichts. 15, 16 und 22 Attacken je Stufe,
+keine Lücke größer als sechs Level.
+
 ### Legendäre
 
 **0,1 % je Erkundung**, und nur in einer Region, die vollständig bezwungen ist.
@@ -264,43 +333,6 @@ Der **Metalldetektor** (500 Gold, 10 Anwendungen) ersetzt den Wurf: solange
 Ladungen übrig sind, endet jede Erkundung in einem Fund. Er gräbt dafür anderes
 aus als der Zufall — Schrott und Fragmente statt Geldbeutel.
 
-### Labor und Forschung
-
-Fünfzehn Projekte über sechsundzwanzig Stufen. Jedes kostet Werkstoffe und
-Gold, läuft über Stunden, belegt einen **Laborplatz** (einen je Laborstufe) und
-braucht ein **Pokémon**, das solange nicht verfügbar ist und am Ende die
-Erfahrung bekommt.
-
-- **Sieben Rezeptprojekte** schalten Bauanleitungen frei: Hyperball,
-  Sonderbonbon, die sechs Entwicklungssteine — und vier neue, die Kreisläufe
-  schließen (Metalldetektor, Sternenstaub, EP-Bonbons, Störsender).
-- **Sieben Bonusprojekte** wirken dauerhaft: Fundchance (3 → 6 %), Werkstoff je
-  Fang (12,5 → 20 %), Expeditionsbeute (+30 %), Kampf-EP (+15 %), Kampf-Gold
-  (+30 %), Fangchance (+9 %), Shiny-Grundchance (0,20 → 0,30 %).
-- **Trainingslehre** schaltet das Fleißpunkte-Training frei.
-
-Abbrechen kostet 2 Energie und gibt Material und Gold nicht zurück.
-
-### Fleißpunkte
-
-Die Datenbank führt sie seit dem ersten Tag und die Werteformel liest sie —
-aber bis hierher hat nichts sie je erhöht. Ein Trainingsdurchlauf gibt **+32
-Fleißpunkte** auf einen frei gewählten Wert, dauert 3 Stunden und ist beliebig
-wiederholbar. Grenzen wie im Vorbild: 252 je Wert, 510 insgesamt.
-
-### Pension
-
-Bis zu **fünf Pokémon für 24 Stunden**. Sie trainieren durchgehend und schaffen
-in einem vollen Aufenthalt **zehn Level** — dieselben zehn für ein frisch
-geschlüpftes wie für ein ausgewachsenes, weil über Level gerechnet wird und
-nicht über EP.
-
-**Früher abholen kostet 4 Energie, aber nie Fortschritt:** was bis dahin
-verdient ist, wird gutgeschrieben. Nach dem Tag hört die Pension auf zu
-arbeiten — wer drei Tage stehen lässt, bekommt trotzdem zehn Level.
-
----
-
 ## 8. Kampf
 
 Rundenkampf mit vollständiger **Typentabelle**, Statusveränderungen,
@@ -322,10 +354,21 @@ Die KI kennt vier Stufen; Arenaleiter und Top Vier spielen die stärkste.
 
 | | Erster Sieg über diesen Gegner | Wiederholung |
 |---|---|---|
-| Gold | voll | 15 % (Arena) bzw. 50 % |
+| Gold | voll **+ Antrittsgeld** | nur das **Antrittsgeld** |
 | EP | voll | halb |
 | Energie | +4 | — |
 | Saisonpunkte | 60 (Arena) / 10 | erst am nächsten Tag wieder |
+
+**Antrittsgeld:** 10 Gold je aufgewendeter Energie, also 20 für einen
+Trainerkampf. Es gibt ihn auch bei einer Niederlage — die Energie ist so oder
+so weg —, nur beim Aufgeben nicht. Damit geht kein ausgefochtener Kampf leer
+aus, ohne dass Wiederholen zur besten Goldquelle wird.
+
+**Die Zahl der gegnerischen Pokémon zählt bei den EP mit**, ein Viertel je
+zusätzlichem Gegner: 1,25 bei zweien, gut das Dreifache bei sechs. Vorher war
+ein Kampf gegen sechs exakt so viel wert wie einer gegen eines — in die
+Rechnung gingen das höchste Level und der Durchschnitt der Arten ein, aber nie
+die Menge.
 
 Der Grund steht in BALANCE.md: eine Arena zahlte 60 Punkte je Sieg und ließ
 sich beliebig oft herausfordern — 30 Punkte je Energie, während ein Fang 4
@@ -357,9 +400,13 @@ Gegner steht über dem ersten. Gegenstände sind erlaubt, und **zwischen den
 Kämpfen bekommt das Team 25 % seiner KP zurück**: genug, um weiterzukommen, zu
 wenig, um ohne Beutel durchzukommen.
 
-Jeder Kampf kostet die üblichen 2 Energie und zahlt **mehr EP als ein
-gewöhnlicher Trainerkampf**: ×1,5 auf leicht, ×2 auf ausgeglichen, ×3 auf
-schwer. Gemessen war ein Durchlauf vorher gut ein halbes Level je Mitglied —
+Ein ganzer Durchlauf kostet **6 Energie — einmal, nicht je Kampf**. Vorher
+zahlte jeder der vier Kämpfe seine zwei einzeln, und wer mit sechs anfing,
+stand nach dem dritten vor einem Durchlauf, den er nicht zu Ende bringen
+konnte. Reicht die Energie nicht, sagt die Arena vorher ab.
+
+Sie zahlt **mehr EP als ein gewöhnlicher Trainerkampf**: ×1,5 auf leicht, ×2
+auf ausgeglichen, ×3 auf schwer. Gemessen war ein Durchlauf vorher gut ein halbes Level je Mitglied —
 für acht Energie und vier Kämpfe der falsche Tausch, zumal die Arena der Ort
 zum Trainieren *ist*. Jetzt ist ein Durchlauf auf „ausgeglichen" etwa ein
 Level, auf „schwer" anderthalb. Die **Durchlauf-Prämie zahlt einmal am Tag je
@@ -405,6 +452,39 @@ Schlüpfen kostet Zeit, die die **Brutstation** um bis zu 50 % verkürzt.
 einen erweiterbar (2.500 Gold × Stufe², Ende bei acht). Die Fragmentliste
 sperrt ihre Knöpfe, wenn kein Platz frei ist, und sagt warum.
 
+### Brut-Beet
+
+Ein Ei lag bisher da und lief ab. Jetzt gilt dieselbe Mechanik wie im
+Poké-Beet: **vier Pflegeschritte** über die Brutzeit, wärmen und wenden im
+Wechsel. Weil sie auf drei Dinge gleichzeitig einzahlt, auf jedes ein Stück
+schwächer:
+
+| Pflege | Brutzeit | IVs | Shiny |
+|---|---|---|---|
+| 0/4 | volle Zeit | +0 | ×1 |
+| 2/4 | −12 % | +2 | ×1,25 |
+| 4/4 | **−25 %** | **+3 auf jeden Wert** | **×1,5** |
+
+Wer stattdessen **ein Pokémon danebenlegt**, bekommt dasselbe automatisch —
+anteilig zum Level, ab 100 in voller Höhe. Es ist danach nicht mehr verfügbar,
+genau wie ein Beetpfleger. Der bessere der beiden Wege zählt, nie die Summe.
+
+Die Werte steigen **beim Schlüpfen** und nicht beim Legen: sonst stünde das
+Ergebnis fest, bevor sich jemand gekümmert hat.
+
+---
+
+### Pension
+
+Bis zu **fünf Pokémon für 24 Stunden**. Sie trainieren durchgehend und schaffen
+in einem vollen Aufenthalt **zehn Level** — dieselben zehn für ein frisch
+geschlüpftes wie für ein ausgewachsenes, weil über Level gerechnet wird und
+nicht über EP.
+
+**Früher abholen kostet 4 Energie, aber nie Fortschritt:** was bis dahin
+verdient ist, wird gutgeschrieben. Nach dem Tag hört die Pension auf zu
+arbeiten — wer drei Tage stehen lässt, bekommt trotzdem zehn Level.
+
 ---
 
 ## 13. Entwicklungen
@@ -441,14 +521,44 @@ quadratisch.
 
 ---
 
+### Labor und Forschung
+
+Fünfzehn Projekte über sechsundzwanzig Stufen. Jedes kostet Werkstoffe und
+Gold, läuft über Stunden, belegt einen **Laborplatz** (einen je Laborstufe) und
+braucht ein **Pokémon**, das solange nicht verfügbar ist und am Ende die
+Erfahrung bekommt.
+
+- **Sieben Rezeptprojekte** schalten Bauanleitungen frei: Hyperball,
+  Sonderbonbon, die sechs Entwicklungssteine — und vier neue, die Kreisläufe
+  schließen (Metalldetektor, Sternenstaub, EP-Bonbons, Störsender).
+- **Sieben Bonusprojekte** wirken dauerhaft: Fundchance (3 → 6 %), Werkstoff je
+  Fang (12,5 → 20 %), Expeditionsbeute (+30 %), Kampf-EP (+15 %), Kampf-Gold
+  (+30 %), Fangchance (+9 %), Shiny-Grundchance (0,20 → 0,30 %).
+- **Trainingslehre** schaltet das Fleißpunkte-Training frei.
+
+Abbrechen kostet 2 Energie und gibt Material und Gold nicht zurück.
+
+### Fleißpunkte
+
+Die Datenbank führt sie seit dem ersten Tag und die Werteformel liest sie —
+aber bis hierher hat nichts sie je erhöht. Ein Trainingsdurchlauf gibt **+32
+Fleißpunkte** auf einen frei gewählten Wert, dauert 3 Stunden und ist beliebig
+wiederholbar. Grenzen wie im Vorbild: 252 je Wert, 510 insgesamt.
+
 ## 15. Handwerk
 
-**19 Rezepte.** Werkstoffe kommen aus Expeditionen *und* seit neuestem aus dem
-Gras (jeder achte Fang).
+**23 Rezepte.** Werkstoffe kommen aus Expeditionen, aus dem Gras (jeder achte
+Fang) und aus Fundstücken beim Erkunden.
+
+Acht davon — Hyperball, Sonderbonbon und die sechs Entwicklungssteine — und
+alle vier neuen müssen erst im Labor **erforscht** werden. Die Grundrezepte
+bleiben offen: wer heute Bälle und Tränke baut, soll das morgen noch können.
 
 - **Bälle:** Superball, Hyperball, Netzball, Finsterball, Timerball
 - **Medizin:** Hypertrank, Beleber, Top-Genesung, Energydrink
-- **Sonstiges:** Goldene Himmihbeere, EP-Bonbon L, Sonderbonbon, Sinelbeeren
+- **Sonstiges:** Goldene Himmihbeere, EP-Bonbon S und L, Sonderbonbon, Sinelbeeren
+- **Aus eigener Werkstatt:** Metalldetektor (fünf je Bauvorgang), Sternenstaub
+  aus gewöhnlichem Material, Störsender statt 10.000 Gold im Laden
 - **Entwicklungssteine:** Feuer, Wasser, Donner, Blatt, Mond, Sonne — je aus
   **8 Seelenfragmenten** der passenden Sorte + 2 Sternenstaub + 500 Gold
   (Labor Stufe 2). Im Laden kosten dieselben Steine 1.500 Gold.
@@ -473,7 +583,6 @@ Prüfgegenstände) sind weder käuflich noch verkäuflich.
 - **Marktplatz:** Pokémon öffentlich anbieten, Preise zwischen 50 und 100.000
   Gold — die Grenzen verhindern Geldwäsche über Scheinverkäufe
 - **Direkttausch** zwischen Freunden
-- **Rangliste** nach Wertung, mit Stufen von Bronze aufwärts
 - **Trainerkarte** teilen, auch inline im Gruppenchat
 - **Tägliche Geschenke:** einmal am Tag je Freund, kostenlos
 

@@ -12,7 +12,7 @@
 ---
 
 Fang Gefährten, zieh sie in deinem Garten groß und schick sie auf Expedition,
-während du weg bist. **Drei Regionen, 38 Gebiete, 387 Arten**, echte
+während du weg bist. **Drei Regionen, 38 Gebiete, 390 Arten**, echte
 Rundenkämpfe mit Typentabelle, 26 Arenaorden, Top Vier je Region, Gilden-Raids
 im Gruppenchat, Marktplatz und Tausch unter Freunden.
 
@@ -28,10 +28,11 @@ $EDITOR secrets.env          # BOT_TOKEN von @BotFather, SESSION_SECRET
 ./manage.sh health
 ```
 
-Content-Pack einmalig importieren:
+Content-Pack einmalig importieren — der Bereich muss zu den drei Regionen
+passen, ein kleinerer Lauf überschreibt das Pack und nimmt Regionen mit:
 
 ```bash
-cd build/app && npm ci && npm run import -- --dex 1-251
+cd build/app && npm ci && npm run import:full     # Dex 1–386, alle drei Regionen
 ```
 
 Ausführlich in **[docs/BETRIEB.md](docs/BETRIEB.md)**, öffentlich erreichbar
@@ -42,33 +43,38 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | Bereich | Inhalt |
 |---|---|
 | **Garten** | Team bis 5, vier Pflegeaktionen, EP + Freundschaft + Ausdauer, Box, Pokédex, Hintergründe |
-| **Teams** | Bis zu 8 gespeicherte Aufstellungen, eine davon aktiv |
-| **Attacken** | Vier Plätze je Pokémon, frei wählbar; die Automatik füllt nur leere Plätze |
+| **Teams** | Bis zu 8 gespeicherte Aufstellungen, eine davon aktiv; Reihenfolge per Doppeltipp |
+| **Attacken** | Vier Plätze je Pokémon, frei wählbar; die Automatik füllt nur leere Plätze. Lernsätze aus **allen** Spielversionen zusammen (Ø 18,6 je Art), mit Hinweis auf die nächste Attacke |
 | **Energie** | Statt Tageslimits: 2 Punkte/Minute, für Gold nachkaufbar, Vorrat bis 510 ausbaubar; über 1.000 wird sie zu Gold |
-| **Box** | 900 Plätze, mit dem Depot in 25 Stufen auf 2.150; Verwerten einzeln oder bis zu 50 auf einmal |
+| **Box** | 900 Plätze, mit dem Depot in 25 Stufen auf 2.150; sortierbar nach Nummer, Name, Level, Typ oder schillernd; Verwerten einzeln oder bis zu 50 auf einmal. Eingelagerte erholen sich dreimal so schnell |
 | **Seelenfragmente** | Je Typ des verwerteten Pokémon eines; 15 → Ei, 85 → schillerndes Ei, 5 schillernde Fragmente → schillerndes Ei |
 | **Welt** | 3 Regionen, 38 Gebiete inkl. Nachliga, freie Startregion mit eigenen Startern, Wetter und Tageszeit steuern Spawns |
 | **Freischaltung** | Gebiete über Pokédex-Einträge, Regionen über Top Vier und Champion der vorherigen |
-| **Skalierung** | Ganze Regionen treffen den Teammedian — nach oben wie nach unten, abschaltbar |
+| **Skalierung** | Eine Region empfängt einen **immer** auf dem eigenen Niveau — sonst wären die späteren gar nicht betretbar. Der Schalter regelt nur, ob die Gebiete danach mitwachsen |
 | **Reisegrenze** | Level 100 zum Start, +50 je bezwungener Region, absolutes Ende bei 500 |
 | **Safari** | Ball- und Beerenwahl, Schwächen/Beruhigen, Fangserie für Shiny-Jagd |
 | **Kampf** | Typentabelle, Status, Stat-Stufen, Mehrfachtreffer, KI in vier Stufen, 26 Orden, Top Vier je Region |
-| **Ereignisse** | Überfälle beim Erkunden: Gold, Gegenstände, Sagenbeeren, selten ein Pokémon mit makellosen Werten |
+| **Ereignisse** | Beim Erkunden: **Überfälle** (4 %) mit Gold, Sagenbeeren und selten einem Pokémon mit makellosen Werten, **Streuner** (3 %) mit höchstens zwei Pokémon, **Fundstücke** (3 %) |
 | **Legendäre** | 0,1 % Fundchance nach vollständig bezwungener Region; gefangen nur mit Sagenbeeren |
 | **Lockdüfte** | Ein Duft je Typ, 50 Gold für 5 Erkundungen; vervierfacht das Gewicht des gesuchten Typs |
-| **Fundstücke** | Jeder achte Fang bringt einen Werkstoff — das Bindeglied zwischen Erkunden und Werkbank |
-| **Arena** | Trainingsmodus: 4 Kämpfe in Folge gegen den Typ des Tages, drei Stufen (−5/−3/−1 Level), 10 % Heilung zwischen den Kämpfen |
+| **Fundstücke** | Jeder achte Fang bringt einen Werkstoff. Dazu Funde beim Erkunden: Ware nach Region gestaffelt, Beutel voll Münzen (55–789 Gold), gelegentlich Seelenfragmente. Der **Metalldetektor** (100 Gold) erzwingt einen Fund |
+| **Arena** | Trainingsmodus: 4 Kämpfe in Folge gegen den Typ des Tages, drei Stufen (−5/−3/−1 Level), 25 % Heilung zwischen den Kämpfen. **6 Energie für den ganzen Durchlauf**, nicht je Kampf |
 | **Poké-Center** | Alle 15 Minuten kostenlose Vollheilung, gelegentlich mit Fund, Geschenk oder Tauschangebot |
 | **Poké-Beet** | Beeren, Bonbons oder Gold eingraben; Pflege oder ein Pflanzen-Pokémon heben den Ertrag |
+| **Brut-Beet** | Dieselbe Pflege am Ei: bis zu −25 % Brutzeit, +3 auf jeden Wert und die anderthalbfache Shiny-Chance — von Hand oder durch ein abgestelltes Pokémon |
+| **Labor** | 15 Forschungsprojekte über 26 Stufen: Rezepte freischalten und sieben Dauerboni heben (Fundchance, Werkstoffe, Expeditionsbeute, Kampf-EP und -Gold, Fangchance, Shiny). Jedes bindet ein Pokémon und gibt ihm die Erfahrung |
+| **Fleißpunkte** | Training im Labor: +32 auf einen frei gewählten Wert je Durchlauf, Grenzen wie im Vorbild (252 je Wert, 510 gesamt) |
+| **Pension** | Bis zu 5 Pokémon für 24 Stunden, zehn Level je vollem Aufenthalt. Früher abholen kostet Energie, aber nie den Fortschritt |
 | **Idle** | Expeditionen (4 Arten × 3 Dauern, bis 6 Pokémon), Ei-Zucht mit IV-Vererbung, 3 Brutplätze (ausbaubar auf 8) |
-| **Sozial** | Freunde über Trainer-Code, tägliche Geschenke (Trank, Beeren, Bälle, gelegentlich ein Ei), teilbare Trainerkarte, Marktplatz, Direkttausch, Rangliste |
-| **Koop** | Gilden mit Wochenziel, Raid-Bosse als Karte im Telegram-Gruppenchat, asynchrones PvP mit Elo, Wochenturnier |
-| **Progression** | Entwicklungen, 10 Ausbauten, 19 Rezepte, Erfolgsketten, 12 Story-Kapitel |
+| **Sozial** | Freunde über Trainer-Code, tägliche Geschenke (Trank, Beeren, Bälle, gelegentlich ein Ei), teilbare Trainerkarte, Marktplatz, Direkttausch |
+| **Koop** | Gilden mit Wochenziel — **12 Ziele im Wechsel, das Soll zählt je Mitglied** —, Raid-Bosse als Karte im Telegram-Gruppenchat, asynchrones PvP mit Elo, Wochenturnier |
+| **Progression** | Entwicklungen, 10 Ausbauten, 23 Rezepte, Erfolgsketten, 21 Story-Kapitel mit sichtbarer Belohnung |
+| **Pokédex** | 390 Arten; jede gesehene lässt sich antippen und zeigt, **wo sie lebt** — nach Häufigkeit, mit Levelband und Bedingungen |
 | **Saison** | Eine Woche, 25 Stufen, 13 davon mit Gegenstand; die letzte bringt ein Schillerndes Seelenfragment |
 | **Anmeldung** | 28 Tage mit unterschiedlichen Gaben; jede volle Woche zahlt Schillernde Seelenfragmente (1 · 2 · 3 · 5) |
-| **Anmeldung** | Telegram-`initData`; für den Browser ein Einmalcode aus dem Chat, verbundene Geräte einzeln kündbar |
+| **Zugang** | Telegram-`initData`; für den Browser ein Einmalcode aus dem Chat, verbundene Geräte einzeln kündbar |
 | **Designs** | 13 kaufbare Farbwelten plus Tag-/Nacht-Modus, der der Weltuhr folgt |
-| **Fairness** | Taktkontrolle gegen Automatik-Klicker (Fenster, Mindestabstand, Rhythmuserkennung) und Tagesregeln je Gegner |
+| **Fairness** | Taktkontrolle gegen Automatik-Klicker (Fenster, Mindestabstand, Rhythmuserkennung). Der volle Siegbetrag fällt einmal am Tag je Gegner — darüber hinaus bleibt das **Antrittsgeld**, damit kein Kampf leer ausgeht |
 | **Konto** | Telegram-Erinnerungen (max. 1/Tag), DSGVO-Export und -Löschung, Admin-Panel |
 
 ## Aufbau
@@ -96,7 +102,7 @@ tools/                 Screenshot, Layout-Prüfung, i18n-Prüfung
 ```bash
 cd build/app
 npm ci
-npm test                                  # 861 Tests, Engine und API
+npm test                                  # 965 Tests, Engine und API
 npm run build -w @game/web                # Typprüfung der Mini-App (tsc -b deckt sie nicht ab)
 npx tsc --noEmit -p packages/api
 npm run world                             # Welt neu erzeugen, ohne Netz

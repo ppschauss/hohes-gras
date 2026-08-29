@@ -19,8 +19,10 @@
     "typecheck": "tsc -b --force",
     "world": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/rebuild-world.ts",
     "import": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/import-pokeapi.ts",
+    "_comment_import": "Der Bereich muss zum Pack passen: ein kleinerer Lauf ueberschreibt es und nimmt Regionen mit. import:full deckt alle drei Regionen ab.",
     "import:kanto": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/import-pokeapi.ts --dex 1-151",
-    "import:full": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/import-pokeapi.ts --dex 1-251",
+    "import:johto": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/import-pokeapi.ts --dex 1-251",
+    "import:full": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/import-pokeapi.ts --dex 1-386",
     "simulate": "node --experimental-strip-types --disable-warning=ExperimentalWarning tools/simulate.ts"
   },
   "devDependencies": {

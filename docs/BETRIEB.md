@@ -22,7 +22,7 @@ head -c 48 /dev/urandom | base64 | tr -d '\n/+=' | head -c 64
 Content-Pack einmalig importieren (braucht Netz, dauert Minuten):
 
 ```bash
-cd build/app && npm ci && npm run import -- --dex 1-251
+cd build/app && npm ci && npm run import:full     # Dex 1–386, alle drei Regionen
 ```
 
 ## Tägliche Handgriffe
@@ -116,7 +116,7 @@ automatisch Admin.
 
 ```bash
 cd build/app
-npm test                                  # Engine + API, 861 Tests
+npm test                                  # Engine + API, 965 Tests
 npx tsc --noEmit -p packages/api
 npm run build -w @game/web                # deckt die Mini-App ab; `tsc -b` tut es nicht
 cd .. && python3 tools/i18n-check.py      # keine fehlenden Übersetzungen
