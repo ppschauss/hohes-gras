@@ -508,6 +508,30 @@ describe('chooseAction', () => {
   })
 })
 
+describe('Wer besiegt wird, verliert seinen Zug', () => {
+  it('laesst den Nachrueckenden nicht den Angriff des Gefallenen ausfuehren', () => {
+    /*
+     * Gemeldet von einem Spieler: "jedesmal wenn der Gegner ein Pokemon
+     * eingewechselt hat, konnte es instant eine Attacke benutzen." Genau das
+     * passierte — der Zug wurde beim Ausfuehren dem *aktuell* aktiven Pokemon
+     * zugeordnet, nicht dem, das ihn angesagt hatte.
+     */
+    const stark = fighter('stark', ['normal'], 50, ['tackle'], 200)
+    const schwach = fighter('schwach', ['normal'], 5, ['tackle'], 20)
+    const ersatz = fighter('ersatz', ['normal'], 50, ['tackle'], 200)
+    // Der Gegner faellt in dieser Runde; sein Ersatz darf nicht mehr schlagen.
+    const state = battle([stark], [schwach, ersatz])
+
+    const turn = resolveTurn(state, useMove(), useMove(), content)
+    expect(turn.events.some((e) => e.type === 'faint' && e.side === 1)).toBe(true)
+    expect(turn.events.some((e) => e.type === 'switch' && e.side === 1)).toBe(true)
+    // Genau ein Schaden in dieser Runde: unserer.
+    const treffer = turn.events.filter((e) => e.type === 'damage')
+    expect(treffer).toHaveLength(1)
+    expect(treffer[0]!.side).toBe(1)
+  })
+})
+
 describe('Zuege nur in der ersten Runde', () => {
   it('laesst Mogelhieb kein zweites Mal zu', () => {
     /*
