@@ -113,6 +113,19 @@ nächste Überfall, der nächste Arenaleiter. Ein Kampf von 13:06 Uhr blockierte
 so um 19:30 Uhr noch das Heilen, und die Meldung dazu lautete „Das geht gerade
 nicht".
 
+## Überschüssige Energie wird Gold
+
+Über **2.000 Energie** wird jeder weitere gutgeschriebene Punkt zu **1 Gold**.
+Vorher stapelte sich Energie bis zur harten Grenze von 9.999 und war darüber
+schlicht weg: ein Spieler hat für 170.000 Gold Energie gekauft, von der über
+die Hälfte im Moment der Gutschrift verschwand, ohne dass irgendwo etwas davon
+stand.
+
+Der Kurs ist bewusst schlecht — gekauft kostet ein Punkt 10 bis 13 Gold. Er
+ist keine Anlage, sondern eine Quittung: nichts verschwindet mehr stillschweigend.
+Deshalb steht im Laden jetzt auch vor dem Kauf, wie viel einer Packung sofort
+wieder zu Gold würde.
+
 ## Energie kaufen
 
 | Packung | Energie | Gold | je Punkt |

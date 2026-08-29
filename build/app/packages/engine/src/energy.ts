@@ -19,6 +19,19 @@ export const ENERGY_BASE_CAP = 150
 export const ENERGY_HARD_CAP = 9999
 
 /**
+ * Ab hier wird Energie zu Gold.
+ *
+ * Bis hierher stapelte sie sich bis 9.999 und war darueber schlicht weg: ein
+ * Spieler hat fuer 170.000 Gold Energie gekauft, von der ueber die Haelfte im
+ * Moment der Gutschrift verschwand, ohne dass irgendwo etwas davon stand. Was
+ * ueber diese Grenze hinausgeht, wird jetzt eins zu eins in Gold verwandelt —
+ * ein schlechter Kurs gemessen am Kaufpreis, aber ein Kurs statt eines Lochs.
+ */
+export const ENERGY_TO_GOLD_LIMIT = 2000
+/** Wie viel Gold ein ueberzaehliger Energiepunkt bringt. */
+export const ENERGY_TO_GOLD_RATE = 1
+
+/**
  * Wie viele Entwicklungen am Tag Energie einbringen.
  *
  * Im Code stand einmal, eine Entwicklung sei "eine ehrliche Energiequelle: sie

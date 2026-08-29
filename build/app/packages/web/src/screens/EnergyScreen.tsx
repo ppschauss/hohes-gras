@@ -90,14 +90,26 @@ export function EnergyScreen({ onBack }: { onBack: () => void }) {
 
         <section className="section">
           <h2>{t('energy.buy')}</h2>
+          {d && (
+            <p className="explain">
+              {t('energy.toGold', { limit: format(d.toGoldLimit), rate: d.toGoldRate })}
+            </p>
+          )}
           <div className="stack">
             {d?.packs.map((pack) => {
               const affordable = d.gold >= pack.gold
+              // Was von dieser Packung sofort wieder zu Gold wuerde. Ein Kauf,
+              // der zu 90 % in Gold zurueckfliesst, ist keiner — das gehoert
+              // vor den Knopf und nicht in die Quittung.
+              const toGold = Math.max(0, d.state.current + pack.energy - d.toGoldLimit)
               return (
                 <article key={pack.id} className="packRow">
                   <span className="packRow__text">
                     <span className="packRow__name">{t('energy.pack', { n: pack.energy })}</span>
                     <span className="packRow__meta num">{t('energy.perPoint', { n: pack.pricePerPoint })}</span>
+                    {toGold > 0 && (
+                      <span className="packRow__warn">{t('energy.toGold.warn', { n: toGold })}</span>
+                    )}
                   </span>
                   <button
                     type="button"

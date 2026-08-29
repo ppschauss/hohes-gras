@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { ENERGY_TO_GOLD_LIMIT } from '@game/engine'
+import * as energyService from '../src/services/energy.js'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -207,5 +209,32 @@ describe('Energieanzeige nach dem Verbrauch', () => {
     const r = await h.post('/api/safari/explore', { ballId: 'poke-ball' }, token)
     expect(r.status).toBe(200)
     expect(r.body.energy.current).toBeLessThan(before)
+  })
+})
+
+describe('Ueberschuss wird Gold', () => {
+  it('wandelt jeden Punkt ueber der Grenze in Gold', async () => {
+    // Bis hierher war der Ueberschuss einfach weg — ein Spieler hat dafuer
+    // ueber 16.000 Punkte verloren, ohne dass es irgendwo stand.
+    h.ctx.db.prepare('UPDATE trainers SET energy = ? WHERE id = ?')
+      .run(ENERGY_TO_GOLD_LIMIT - 10, trainerId)
+    const goldBefore = (await h.get('/api/bag', token)).body.gold
+
+    energyService.grant(h.ctx, trainerId, 50, 'test')
+
+    const after = h.ctx.db.prepare('SELECT energy FROM trainers WHERE id = ?')
+      .get(trainerId) as { energy: number }
+    expect(after.energy).toBe(ENERGY_TO_GOLD_LIMIT)
+    h.resetRateLimits()
+    const goldAfter = (await h.get('/api/bag', token)).body.gold
+    expect(goldAfter).toBe(goldBefore + 40)
+  })
+
+  it('laesst alles unter der Grenze als Energie stehen', () => {
+    h.ctx.db.prepare('UPDATE trainers SET energy = 5 WHERE id = ?').run(trainerId)
+    energyService.grant(h.ctx, trainerId, 20, 'test')
+    const after = h.ctx.db.prepare('SELECT energy FROM trainers WHERE id = ?')
+      .get(trainerId) as { energy: number }
+    expect(after.energy).toBe(25)
   })
 })

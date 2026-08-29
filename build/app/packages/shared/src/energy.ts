@@ -48,6 +48,9 @@ export const EnergyOverviewSchema = z.object({
   /** Minuten von leer bis voll — die Zahl, die den Spieler interessiert. */
   fillMinutes: z.number().int().min(1),
   expansion: EnergyExpansionSchema,
+  /** Ab hier wird Energie zu Gold, und zu welchem Kurs. */
+  toGoldLimit: z.number().int().min(1),
+  toGoldRate: z.number().int().min(1),
 })
 export type EnergyOverview = z.infer<typeof EnergyOverviewSchema>
 

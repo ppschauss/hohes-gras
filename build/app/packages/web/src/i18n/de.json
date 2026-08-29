@@ -293,6 +293,8 @@
   "energy.reward.evolution": "Entwicklung",
   "energy.reward.raidVictory": "Besiegter Raid-Boss",
   "energy.title": "Energie",
+  "energy.toGold": "Über {limit} Energie wird jeder weitere Punkt zu {rate} Gold.",
+  "energy.toGold.warn": "Davon würden {n} sofort zu Gold — zu 1 Gold je Punkt.",
   "error.admin_only": "Das ist nur für Admins.",
   "error.already_active": "Das kämpft bereits.",
   "error.already_away": "Dieses Pokémon ist schon unterwegs.",

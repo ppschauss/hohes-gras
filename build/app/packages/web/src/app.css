@@ -1505,6 +1505,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .evoTarget__name { font-size: var(--t-xs); font-weight: 600; }
 .evoTarget__how { font-size: 10px; color: var(--ink-faint); }
 
+.packRow__warn { font-size: var(--t-xs); color: var(--warn, var(--accent)); }
+
 .earnGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s2); }
 .earnRow {
   display: flex; align-items: baseline; justify-content: space-between; gap: var(--s2);

@@ -2,6 +2,7 @@ import { GameError, type EnergyOverview, type EnergyState, type Trainer } from '
 import {
   bonusOf, clampEnergy, ENERGY_BASE_CAP, ENERGY_CAP_MAX_STEPS, ENERGY_CAP_STEP,
   ENERGY_COSTS, ENERGY_FILL_MINUTES, ENERGY_PACKS, ENERGY_REWARDS,
+  ENERGY_TO_GOLD_LIMIT, ENERGY_TO_GOLD_RATE,
   energyCapPrice, energyPerHour, findEnergyPack, fullAt, nextPointAt,
   regenerateTrainerEnergy, type EnergyAction, type EnergySource,
 } from '@game/engine'
@@ -134,8 +135,14 @@ export function spendFor(
   return spend(ctx, trainerId, ENERGY_COSTS[action], action, now)
 }
 
-/** Gutschrift. Darf ueber die Obergrenze hinaus anhaeufen — Belohnungen sollen
- *  nicht verfallen, nur weil das Konto gerade voll war. */
+/**
+ * Gutschrift. Darf ueber die persoenliche Obergrenze hinaus anhaeufen —
+ * Belohnungen sollen nicht verfallen, nur weil das Konto gerade voll war.
+ *
+ * Ab `ENERGY_TO_GOLD_LIMIT` wird der Ueberschuss zu Gold. Vorher lief er gegen
+ * eine harte Grenze und war dahinter weg; das kostete einen Spieler ueber
+ * 16.000 Punkte, ohne dass es irgendwo stand.
+ */
 export function grant(
   ctx: AppContext,
   trainerId: string,
@@ -145,10 +152,25 @@ export function grant(
 ): number {
   if (amount <= 0) return sync(ctx, trainerId, now).current
   const before = sync(ctx, trainerId, now)
-  const next = clampEnergy(before.current + amount)
+  const total = before.current + amount
+  const next = clampEnergy(Math.min(total, ENERGY_TO_GOLD_LIMIT))
+  const overflow = Math.max(0, total - next)
+
   ctx.db.prepare('UPDATE trainers SET energy = ? WHERE id = ?').run(next, trainerId)
   logEvent(ctx.db, trainerId, 'energy.grant', { amount: next - before.current, reason })
+
+  if (overflow > 0) {
+    const gold = overflow * ENERGY_TO_GOLD_RATE
+    inventory.earnGold(ctx.db, trainerId, gold)
+    logEvent(ctx.db, trainerId, 'energy.toGold', { energy: overflow, gold, reason })
+  }
   return next
+}
+
+/** Was eine Gutschrift von `amount` gerade an Gold abwerfen wuerde. */
+export function overflowGoldFor(ctx: AppContext, trainerId: string, amount: number): number {
+  const current = sync(ctx, trainerId).current
+  return Math.max(0, current + amount - ENERGY_TO_GOLD_LIMIT) * ENERGY_TO_GOLD_RATE
 }
 
 export function reward(
@@ -176,6 +198,8 @@ export function overview(ctx: AppContext, trainer: Trainer): EnergyOverview {
       stepSize: ENERGY_CAP_STEP,
       nextPrice: energyCapPrice(steps),
     },
+    toGoldLimit: ENERGY_TO_GOLD_LIMIT,
+    toGoldRate: ENERGY_TO_GOLD_RATE,
   }
 }
 
