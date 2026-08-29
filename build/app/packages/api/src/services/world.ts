@@ -317,10 +317,12 @@ export function availableTeam(ctx: AppContext, trainer: Trainer, busy: Set<strin
  * Wer hier lebt — soweit man es weiß.
  *
  * Gemeldet: man sieht nicht, was in einem Gebiet vorkommt, und weiß deshalb
- * nie, ob sich das Bleiben lohnt. Die Liste zeigt deshalb, was man hier schon
- * *gesehen* hat, mit seinem Anteil an den Begegnungen; der Rest bleibt eine
- * Zahl. Eine vollständige Liste wäre keine Entdeckung mehr, sondern ein
- * Nachschlagewerk.
+ * nie, ob sich das Bleiben lohnt.
+ *
+ * Zuerst standen hier nur die schon gesehenen Arten, damit das Entdecken nicht
+ * vorweggenommen wird. Das war zu streng: wer nicht weiß, dass da noch etwas
+ * ist und *wann* es erscheint, sucht nicht danach — er hört auf. Jetzt steht
+ * jede Art da; die unbekannten ohne Namen und Bild, aber mit ihrer Bedingung.
  *
  * Die Anteile gelten für *jetzt*: Arten, die nur nachts oder bei Regen
  * erscheinen, zählen bei Sonne nicht mit — sonst stünde dort eine Chance, die
@@ -366,6 +368,10 @@ export function spawnsOf(ctx: AppContext, trainer: Trainer, areaId: string) {
     unknown: entries.length - known.length,
     caught: known.filter((e) => e.caught).length,
     // Das Häufigste zuerst; was gerade nicht erscheinen kann, ans Ende.
-    species: known.sort((a, b) => Number(b.availableNow) - Number(a.availableNow) || b.chance - a.chance),
+    species: entries.sort(
+      (a, b) => Number(b.availableNow) - Number(a.availableNow)
+        || b.chance - a.chance
+        || Number(b.known) - Number(a.known),
+    ),
   }
 }

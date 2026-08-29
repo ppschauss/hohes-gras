@@ -116,18 +116,31 @@ export function AreaScreen({ onBack, onSafari, onBattle }: Props) {
               : (
                 <div className="stack">
                   {spawns.data.species.map((s) => (
-                    <article key={s.speciesId} className={`spawn${s.availableNow ? '' : ' spawn--off'}`}>
-                      <img className="spawn__mon" src={s.sprite ?? ''} alt="" width={40} height={40} />
+                    <article key={s.speciesId}
+                      className={`spawn${s.availableNow ? '' : ' spawn--off'}${s.known ? '' : ' spawn--unknown'}`}>
+                      {/* Unbekanntes bleibt ohne Bild: dass da etwas ist, sagt
+                          die Zeile — was es ist, findet man selbst heraus. */}
+                      {s.known
+                        ? <img className="spawn__mon" src={s.sprite ?? ''} alt="" width={40} height={40} />
+                        : <span className="spawn__mon spawn__mon--hidden" aria-hidden="true">?</span>}
                       <span className="spawn__text">
                         <span className="spawn__name">
-                          {s.name}
+                          {s.known ? s.name : t('area.spawns.hidden')}
                           {s.caught && <span className="tag tag--done">{t('area.spawns.caught')}</span>}
                         </span>
                         <span className="spawn__meta num">
                           {t('creature.levelRange', { from: s.minLevel, to: s.maxLevel })}
-                          {!s.availableNow && ` · ${s.timeOfDay
-                            ? t(`time.${s.timeOfDay}`)
-                            : s.weather ? t(`weather.${s.weather}`) : t('area.spawns.later')}`}
+                          {/* Wann es ueberhaupt erscheint — die Auskunft, ohne
+                              die man nicht weiss, wann sich Suchen lohnt. */}
+                          {/* Bedingungen sind Listen: "nur nachts oder abends". */}
+                          {s.timeOfDay?.length
+                            ? ` · ${t('area.spawns.onlyAt', { when: joinOr(s.timeOfDay.map((x) => t(`time.${x}`))) })}`
+                            : null}
+                          {s.weather?.length
+                            ? ` · ${t('area.spawns.onlyAt', { when: joinOr(s.weather.map((x) => t(`weather.${x}`))) })}`
+                            : null}
+                          {!s.availableNow && !s.timeOfDay?.length && !s.weather?.length
+                            && ` · ${t('area.spawns.later')}`}
                         </span>
                       </span>
                       <span className="spawn__chance num">
@@ -139,11 +152,17 @@ export function AreaScreen({ onBack, onSafari, onBattle }: Props) {
               )}
 
             {spawns.data.unknown > 0 && (
-              <p className="chain__hint">{t('area.spawns.unknown', { n: spawns.data.unknown })}</p>
+              <p className="chain__hint">{t('area.spawns.unknownHint', { n: spawns.data.unknown })}</p>
             )}
           </section>
         )}
       </main>
     </Screen>
   )
+}
+
+/** „Regen oder Sturm" statt „rain,storm". */
+function joinOr(parts: string[]): string {
+  if (parts.length <= 1) return parts[0] ?? ''
+  return `${parts.slice(0, -1).join(', ')} ${t('app.or')} ${parts[parts.length - 1]}`
 }

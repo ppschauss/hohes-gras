@@ -149,14 +149,17 @@ zwischen Erkunden und Werkbank.
 
 ### Wer hier lebt
 
-Im Gebiet steht, welche Arten hier vorkommen — **aber nur die, die man hier
-schon gesehen hat**, mit ihrem Anteil an den Begegnungen und ihrem Levelband.
-Der Rest bleibt eine Zahl („und 2, die dir hier noch nicht begegnet sind"): eine
-vollständige Liste wäre kein Entdecken mehr, sondern ein Nachschlagewerk.
+Im Gebiet steht, welche Arten hier vorkommen — **alle**, mit Anteil an den
+Begegnungen, Levelband und Haken für Gefangenes. Was man hier noch nicht
+gesehen hat, steht ohne Namen und Bild als **???** in der Liste, aber mit
+seiner Bedingung: „nur nachts", „nur bei Regen oder Sturm".
 
-Die Anteile gelten für **jetzt**. Arten, die nur nachts oder bei Regen
-erscheinen, stehen ausgegraut mit ihrer Bedingung statt mit einer Chance, die
-es gerade nicht gibt.
+Zuerst standen dort nur die gesehenen Arten, damit das Entdecken nicht
+vorweggenommen wird. Das war zu streng: wer nicht weiß, dass da noch etwas ist
+und *wann* es erscheint, sucht nicht danach — er hört auf.
+
+Die Anteile gelten für **jetzt**. Was gerade nicht erscheinen kann, steht
+ausgegraut mit „—" statt mit einer Chance, die es in diesem Moment nicht gibt.
 
 ### Fangserie und Schillernde
 

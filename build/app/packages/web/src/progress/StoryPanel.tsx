@@ -21,12 +21,21 @@ export function StoryPanel() {
   // Ohne Wahl: die Region, in der das aktuelle Kapitel steht.
   const [regionId, setRegionId] = useState<string | null>(null)
   const regions = d?.regions ?? []
+  /*
+   * Ohne eigene Wahl die Region, in der man unterwegs ist.
+   *
+   * Vorher stand hier die Region des "laufenden Kapitels" — und das war das
+   * erste unerreichte der ganzen Welt, also Kantos erstes. Wer in Hoenn
+   * anfaengt, bekam eine verschlossene Region gezeigt und darueber einen
+   * Willkommenstext fuer Kanto.
+   */
   const shown = regions.find((r) => r.id === regionId)
-    ?? regions.find((r) => r.id === d?.currentChapter?.regionId)
     ?? regions.find((r) => r.entered)
+    ?? regions.find((r) => r.id === d?.currentChapter?.regionId)
     ?? regions[0]
   const chapters = (d?.chapters ?? []).filter((c) => c.regionId === shown?.id)
-  const current = d?.currentChapter?.regionId === shown?.id ? d?.currentChapter : null
+  // Das laufende Kapitel *dieser* Region: das erste, das noch aussteht.
+  const current = chapters.find((c) => !c.reached) ?? chapters[chapters.length - 1] ?? null
 
   return (
     <>
@@ -40,7 +49,9 @@ export function StoryPanel() {
               <span className="section__eyebrow">{current.guide ?? t('story.guide')}</span>
               <h2>{current.title}</h2>
               <span className="num guide__chapter">
-                {t('story.chapter', { n: current.order, total: d?.total ?? 0 })}
+                {/* Innerhalb der Region gezaehlt: "Kapitel 1/21" waere die
+                    Zahl einer Reise, die es so nicht mehr gibt. */}
+                {t('story.chapter', { n: current.order % 100, total: chapters.length })}
               </span>
             </div>
           </div>

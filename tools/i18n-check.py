@@ -42,17 +42,29 @@ speechless = sorted(
     if f'error.{r}' not in catalog and not any(k.endswith(f'.{r}') and k.startswith('error.') for k in catalog)
 )
 
+# Jede Kapitelbedingung braucht einen Text.
+#
+# Die Bedingungen stehen als Aufzaehlung im Schema; die Oberflaeche schlaegt
+# sie unter `story.req.<art>` nach. Fehlt einer, steht im Spiel der Schluessel
+# selbst — genau so gemeldet: "story.req.regionDexCaught".
+schema = open('/mnt/cache/appdata/telegram-pokemon/build/app/packages/content/src/schema.ts').read()
+block = re.search(r"ChapterConditionSchema = z\.object\(\{.*?kind: z\.enum\(\[(.*?)\]\)", schema, re.S)
+condition_kinds = re.findall(r"'([a-zA-Z]+)'", block.group(1)) if block else []
+speechless_reqs = sorted(k for k in condition_kinds if f'story.req.{k}' not in catalog)
+
 missing = sorted(k for k in used if k not in catalog)
 gaps = sorted(p for p in prefixes if p and not any(k.startswith(p) for k in catalog))
 
 print(f'Katalog: {len(catalog)} Schluessel · verwendet: {len(used)} · dynamisch: {len(prefixes)} '
-      f'· Fehlergruende: {len(reasons)}')
+      f'· Fehlergruende: {len(reasons)} · Kapitelbedingungen: {len(condition_kinds)}')
 for key in missing:
     print(f'  FEHLT: {key}')
 for gap in gaps:
     print(f'  PRAEFIX OHNE EINTRAG: {gap}')
 for reason in speechless:
     print(f'  GRUND OHNE TEXT: {reason}')
-if not missing and not gaps and not speechless:
+for kind in speechless_reqs:
+    print(f'  KAPITELBEDINGUNG OHNE TEXT: {kind}')
+if not missing and not gaps and not speechless and not speechless_reqs:
     print('✓ Vollstaendig')
-sys.exit(1 if missing or gaps or speechless else 0)
+sys.exit(1 if missing or gaps or speechless or speechless_reqs else 0)

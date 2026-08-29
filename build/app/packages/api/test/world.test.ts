@@ -334,13 +334,18 @@ describe('Fangserie', () => {
 })
 
 describe('Wer hier lebt', () => {
-  it('zeigt nur, was man hier schon gesehen hat', async () => {
+  it('zeigt jede Art, die unbekannten ohne Namen', async () => {
     h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('test-route', trainerId)
     h.resetRateLimits()
     const leer = await h.get('/api/area/spawns', token)
     expect(leer.status).toBe(200)
-    // Vor der ersten Begegnung steht dort nichts als eine Zahl.
-    expect(leer.body.species).toHaveLength(0)
+    /*
+     * Vor der ersten Begegnung stehen alle da, aber keiner mit Namen.
+     * Zuerst blieb die Liste leer — das war zu streng: wer nicht weiss, dass
+     * da noch etwas ist, sucht nicht danach.
+     */
+    expect(leer.body.species).toHaveLength(leer.body.total)
+    expect(leer.body.species.every((s: any) => !s.known && s.name === null)).toBe(true)
     expect(leer.body.unknown).toBe(leer.body.total)
 
     h.ctx.db.prepare(
@@ -350,10 +355,15 @@ describe('Wer hier lebt', () => {
 
     h.resetRateLimits()
     const r = await h.get('/api/area/spawns', token)
-    expect(r.body.species).toHaveLength(1)
-    expect(r.body.species[0]).toMatchObject({ speciesId: 'wildmon', known: true, caught: false })
-    expect(r.body.species[0].chance).toBeGreaterThan(0)
+    const wild = r.body.species.find((s: any) => s.speciesId === 'wildmon')
+    expect(wild).toMatchObject({ known: true, caught: false })
+    expect(wild.chance).toBeGreaterThan(0)
     expect(r.body.unknown).toBe(r.body.total - 1)
+    // Die anderen bleiben namenlos, tragen aber ihre Bedingung.
+    for (const s of r.body.species.filter((s: any) => !s.known)) {
+      expect(s.name).toBeNull()
+      expect(s.minLevel).toBeGreaterThan(0)
+    }
   })
 
   it('nennt die Chance nur fuer das, was gerade erscheinen kann', async () => {

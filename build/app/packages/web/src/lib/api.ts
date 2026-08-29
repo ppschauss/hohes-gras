@@ -1123,8 +1123,8 @@ export interface AreaSpawns {
     availableNow: boolean
     minLevel: number
     maxLevel: number
-    timeOfDay: string | null
-    weather: string | null
+    timeOfDay: string[] | null
+    weather: string[] | null
   }>
 }
 
