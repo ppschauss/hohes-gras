@@ -29,7 +29,10 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: AppContext): voi
     return battle.opponentsIn(ctx, trainer, area.id)
   })
 
-  app.get('/api/battle', auth, async (req) => ({ battle: battle.current(ctx, req.trainer!) }))
+  app.get('/api/battle', auth, async (req) => ({
+    battle: battle.current(ctx, req.trainer!),
+    arena: arena.contextFor(ctx, req.trainer!),
+  }))
 
   app.post('/api/battle/event', write, async (req) => battle.startEvent(ctx, req.trainer!))
 
@@ -40,7 +43,10 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: AppContext): voi
 
   app.post('/api/battle/action', write, async (req) => {
     const action = ActionSchema.parse(req.body)
-    return battle.submit(ctx, req.trainer!, action)
+    const view = battle.submit(ctx, req.trainer!, action)
+    // Der Arenastand gehoert an die Antwort: sonst weiss der Bildschirm nach
+    // dem letzten Zug nicht, dass es weitergeht.
+    return { ...view, arena: arena.contextFor(ctx, req.trainer!) }
   })
 
   app.post('/api/battle/forfeit', write, async (req) => battle.forfeit(ctx, req.trainer!))

@@ -111,6 +111,37 @@ describe('Trainingsarena', () => {
     expect(hp.hp).toBeGreaterThan(1)
   })
 
+  it('stellt auf leicht nur Grundformen mit schwachen Werten auf', async () => {
+    /*
+     * Gemeldet: ein Ibitak auf Level 3 nahm einem Level-8-Pokemon die halbe
+     * Leiste. Nicht das Level war schuld, sondern die Grundwerte einer
+     * Endstufe.
+     */
+    h.resetRateLimits()
+    await h.post('/api/arena/start', { tier: 'easy' }, token)
+    const record = h.ctx.db
+      .prepare('SELECT state FROM battles WHERE trainer_id = ? ORDER BY started_at DESC LIMIT 1')
+      .get(trainerId) as { state: string }
+    const state = JSON.parse(record.state) as { sides: Array<{ party: Array<{ speciesId: string; ivs: { atk: number } }> }> }
+
+    for (const foe of state.sides[1]!.party) {
+      expect(foe.ivs.atk).toBeLessThan(15)
+      // Grundform: keine Art des Packs entwickelt sich zu ihr.
+      const isEvolution = h.ctx.registry.allSpecies.some(
+        (s) => s.evolutions.some((e) => e.to === foe.speciesId),
+      )
+      expect(isEvolution).toBe(false)
+    }
+  })
+
+  it('nennt den Arenastand im Kampf, damit es weitergehen kann', async () => {
+    h.resetRateLimits()
+    await h.post('/api/arena/start', { tier: 'easy' }, token)
+    h.resetRateLimits()
+    const r = await h.get('/api/battle', token)
+    expect(r.body.arena).toMatchObject({ tier: 'easy', round: 1, rounds: ARENA_ROUNDS })
+  })
+
   it('laesst beim Abbrechen keinen offenen Kampf zurueck', async () => {
     /*
      * Gemeldet: eine Spielerin trat mit angeschlagenem Team an, brach ab und

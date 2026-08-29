@@ -293,7 +293,7 @@ export function beginBattle(
    * Rechnung — und im Ergebnis stuende die Stufe "leicht" mal fuenf Level
    * darueber statt darunter.
    */
-  opts: { exactLevels?: boolean; storeDef?: boolean } = {},
+  opts: { exactLevels?: boolean; storeDef?: boolean; foeIv?: number } = {},
 ): BattleView {
   {
     if (battles.activeOf(ctx.db, trainer.id)) {
@@ -351,6 +351,8 @@ export function beginBattle(
         level,
         moves,
         ppOf,
+        'hardy',
+        opts.foeIv,
       )
     })
 

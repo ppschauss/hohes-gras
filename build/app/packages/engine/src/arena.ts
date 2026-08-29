@@ -16,6 +16,21 @@ export interface ArenaTier {
   id: 'easy' | 'even' | 'hard'
   /** Abstand zum eigenen Durchschnittslevel. */
   levelDelta: number
+  /**
+   * Wie weit entwickelt die Gegner sein dürfen: 0 = nur Grundformen.
+   *
+   * Das Level allein sagt wenig. Ein Ibitak auf Level 3 schlägt härter als ein
+   * Taubsi auf Level 8, weil die Grundwerte den Unterschied machen — genau so
+   * wurde es gemeldet. Die Stufe begrenzt deshalb auch die Entwicklungsstufe.
+   */
+  maxStage: number
+  /**
+   * Werte der Gegner, 0 bis 31.
+   *
+   * Unter dem Durchschnitt eines Spielerpokémon (etwa 15), damit die Arena
+   * das Üben belohnt und nicht die Statistik.
+   */
+  foeIv: number
   /** Gold je gewonnenem Kampf. */
   goldPerWin: number
   /** Was ein vollständiger Durchlauf zusätzlich einbringt. */
@@ -25,15 +40,15 @@ export interface ArenaTier {
 
 export const ARENA_TIERS: ArenaTier[] = [
   {
-    id: 'easy', levelDelta: -5, goldPerWin: 60,
+    id: 'easy', levelDelta: -5, maxStage: 0, foeIv: 5, goldPerWin: 60,
     bonusGold: 400, bonus: [{ itemId: 'exp-candy-s', quantity: 2 }],
   },
   {
-    id: 'even', levelDelta: -3, goldPerWin: 120,
+    id: 'even', levelDelta: -3, maxStage: 1, foeIv: 10, goldPerWin: 120,
     bonusGold: 900, bonus: [{ itemId: 'exp-candy-l', quantity: 1 }],
   },
   {
-    id: 'hard', levelDelta: -1, goldPerWin: 240,
+    id: 'hard', levelDelta: -1, maxStage: 2, foeIv: 15, goldPerWin: 240,
     bonusGold: 1800, bonus: [
       { itemId: 'exp-candy-l', quantity: 1 },
       { itemId: 'star-piece', quantity: 2 },

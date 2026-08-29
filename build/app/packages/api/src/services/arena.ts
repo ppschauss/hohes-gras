@@ -55,8 +55,19 @@ function averageLevel(ctx: AppContext, trainerId: string): number {
 function buildOpponent(
   ctx: AppContext, trainer: Trainer, tier: ArenaTier, typeId: string, round: number, date: string,
 ): TrainerDef {
+  /*
+   * Entwicklungsstufe begrenzen, nicht nur das Level.
+   *
+   * Gemeldet: ein Ibitak auf Level 3 nahm einem Level-8-Pokemon die halbe
+   * Leiste. Das lag nicht am Level, sondern daran, dass die Wahl jede Art des
+   * Typs zuliess — auch Endstufen. Auf "leicht" treten jetzt nur Grundformen
+   * an, auf "ausgeglichen" hoechstens die erste Entwicklung.
+   */
   const pool = ctx.registry.obtainableSpecies.filter(
-    (s) => s.types.includes(typeId) && s.catchRate > LEGENDARY_CATCH_RATE && !s.event,
+    (s) => s.types.includes(typeId)
+      && s.catchRate > LEGENDARY_CATCH_RATE
+      && !s.event
+      && evolutionStage(ctx, s.id) <= tier.maxStage,
   )
   if (pool.length === 0) throw new GameError('invalid_state', { reason: 'no_species_for_tier', typeId }, 409)
 
@@ -103,6 +114,18 @@ function teamHealthPercent(ctx: AppContext, trainerId: string): number {
     max += computeStats(species, c.level, c.ivs, c.evs, c.nature).hp
   }
   return max === 0 ? 0 : Math.round((have / max) * 100)
+}
+
+/**
+ * Die wievielte Entwicklungsstufe eine Art ist — 0 für eine Grundform.
+ *
+ * Aus den Ketten des Packs gelesen statt gepflegt: eine Liste waere beim
+ * naechsten Pack falsch.
+ */
+function evolutionStage(ctx: AppContext, speciesId: string, depth = 0): number {
+  if (depth > 4) return depth
+  const parent = ctx.registry.allSpecies.find((s) => s.evolutions.some((e) => e.to === speciesId))
+  return parent ? evolutionStage(ctx, parent.id, depth + 1) : depth
 }
 
 /** Zehn Prozent der maximalen KP zurück — für jedes Mitglied, auch besiegte. */
@@ -188,7 +211,8 @@ export function start(ctx: AppContext, trainer: Trainer, tierId: string) {
 
   const def = buildOpponent(ctx, trainer, tier, typeId, 1, date)
   const area = ctx.registry.tryArea(trainer.currentAreaId ?? '') ?? ctx.registry.allAreas[0]!
-  const battle = beginBattle(ctx, trainer, def, area, { exactLevels: true, storeDef: true })
+  const battle = beginBattle(ctx, trainer, def, area,
+    { exactLevels: true, storeDef: true, foeIv: tier.foeIv })
 
   ctx.db.prepare(
     `INSERT INTO arena_runs (trainer_id, game_date, tier, type_id, round, wins, finished, battle_id, started_at)
@@ -245,7 +269,8 @@ export function next(ctx: AppContext, trainer: Trainer) {
     const tier = findArenaTier(run.tier)!
     const def = buildOpponent(ctx, trainer, tier, run.typeId, run.round + 1, date)
     const area = ctx.registry.tryArea(trainer.currentAreaId ?? '') ?? ctx.registry.allAreas[0]!
-    const battle = beginBattle(ctx, trainer, def, area, { exactLevels: true, storeDef: true })
+    const battle = beginBattle(ctx, trainer, def, area,
+      { exactLevels: true, storeDef: true, foeIv: tier.foeIv })
 
     ctx.db.prepare('UPDATE arena_runs SET round = ?, wins = ?, battle_id = ? WHERE trainer_id = ?')
       .run(run.round + 1, wins, battle.id, trainer.id)
@@ -271,6 +296,21 @@ function pay(ctx: AppContext, trainer: Trainer, tier: ArenaTier, date: string) {
         : b.itemId,
     })),
   }
+}
+
+/**
+ * Gehört der laufende oder gerade beendete Kampf zu einem Durchlauf?
+ *
+ * Der Kampfbildschirm braucht das, um nach dem Sieg weiterzuführen. Ohne diese
+ * Auskunft blieb er auf dem beendeten Kampf stehen, zeigte die alten Gegner —
+ * und ein Angriff darauf lief in "es läuft gerade kein Kampf".
+ */
+export function contextFor(ctx: AppContext, trainer: Trainer): {
+  tier: string; round: number; rounds: number; wins: number
+} | null {
+  const run = runOf(ctx, trainer.id)
+  if (!run || run.finished === 1 || run.gameDate !== gameDate()) return null
+  return { tier: run.tier, round: run.round, rounds: ARENA_ROUNDS, wins: run.wins }
 }
 
 /**

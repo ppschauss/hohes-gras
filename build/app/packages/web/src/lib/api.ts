@@ -362,11 +362,12 @@ export const api = {
     request<unknown>('/api/privacy', { method: 'POST', body: JSON.stringify(changes) }),
 
   opponents: () => request<OpponentList>('/api/battle/opponents'),
-  currentBattle: () => request<{ battle: BattleView | null }>('/api/battle'),
+  currentBattle: () => request<{ battle: BattleView | null; arena: ArenaContext | null }>('/api/battle'),
   startBattle: (opponentId: string) =>
     request<BattleView>('/api/battle/start', { method: 'POST', body: JSON.stringify({ opponentId }) }),
   battleAction: (action: BattleAction) =>
-    request<BattleView>('/api/battle/action', { method: 'POST', body: JSON.stringify(action) }),
+    request<BattleView & { arena: ArenaContext | null }>(
+      '/api/battle/action', { method: 'POST', body: JSON.stringify(action) }),
   forfeitBattle: () => request<BattleView>('/api/battle/forfeit', { method: 'POST', body: '{}' }),
   healTeam: () => request<{ cost: number; healed: number; gold: number }>('/api/team/heal', { method: 'POST', body: '{}' }),
 
@@ -1092,6 +1093,13 @@ export interface BulkSalvageResult {
   count: number
   names: string[]
   fragments: SalvageResult['fragments']
+}
+
+export interface ArenaContext {
+  tier: string
+  round: number
+  rounds: number
+  wins: number
 }
 
 export interface ArenaView {

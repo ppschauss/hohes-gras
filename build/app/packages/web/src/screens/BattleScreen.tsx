@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { BattleFighterView, BattleMoveView, BattleView, OpponentEntry } from '../lib/api'
+import type { ArenaContext, BattleFighterView, BattleMoveView, BattleView, OpponentEntry } from '../lib/api'
 import { t } from '../i18n'
 import { errorText } from '../lib/errors'
 import { ItemIcon } from '../ui/ItemIcon'
@@ -19,20 +19,30 @@ export function BattleScreen({ onBack }: { onBack: () => void }) {
   const bag = useAsync(() => api.bag(), [])
   const action = useAction()
   const [battle, setBattle] = useState<BattleView | null>(null)
+  /*
+   * Der Arenastand, solange ein Durchlauf laeuft.
+   *
+   * Ohne ihn blieb der Bildschirm nach dem Sieg auf dem beendeten Kampf
+   * stehen, zeigte die alten Gegner — und ein Angriff darauf lief in "es
+   * laeuft gerade kein Kampf". Gemeldet, und zu Recht.
+   */
+  const [arena, setArena] = useState<ArenaContext | null>(null)
   const [panel, setPanel] = useState<Panel>('main')
   const [log, setLog] = useState<string[]>([])
   const logEnd = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (existing.data?.battle && !battle) setBattle(existing.data.battle)
+    if (existing.data) setArena(existing.data.arena)
   }, [existing.data, battle])
 
   useEffect(() => { logEnd.current?.scrollIntoView({ block: 'end' }) }, [log])
 
   const medicine = (bag.data?.items ?? []).filter((i) => i.category === 'medicine' && i.quantity > 0)
 
-  const apply = (view: BattleView) => {
+  const apply = (view: BattleView & { arena?: ArenaContext | null }) => {
     setBattle(view)
+    if (view.arena !== undefined) setArena(view.arena)
     setPanel('main')
     if (view.lastEvents.length) setLog((prev) => [...prev, ...describeTurn(view.lastEvents, view)].slice(-40))
     if (view.finished) haptic[view.winner === 0 ? 'success' : 'error']()
@@ -47,6 +57,24 @@ export function BattleScreen({ onBack }: { onBack: () => void }) {
   const act = (a: Parameters<typeof api.battleAction>[0]) => {
     haptic.tap()
     void action.run(() => api.battleAction(a), apply)
+  }
+
+  /** Weiter im Durchlauf: heilen, naechsten Gegner holen, Anzeige tauschen. */
+  const nextRound = () => {
+    haptic.tap()
+    setLog([])
+    void action.run(() => api.arenaNext(), (res) => {
+      if (res.battle) {
+        setBattle(res.battle as BattleView)
+        setArena(res.arena.run
+          ? { tier: res.arena.run.tier, round: res.arena.run.round, rounds: res.arena.rounds, wins: res.arena.run.wins }
+          : null)
+        setPanel('main')
+      } else {
+        setArena(null)
+        onBack()
+      }
+    })
   }
 
   const leave = () => { setBattle(null); setLog([]); existing.reload(); opponents.reload() }
@@ -100,7 +128,7 @@ export function BattleScreen({ onBack }: { onBack: () => void }) {
         {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
         {battle.finished
-          ? <Result battle={battle} onLeave={leave} />
+          ? <Result battle={battle} arena={arena} busy={action.busy} onNext={nextRound} onLeave={leave} />
           : panel === 'main'
             ? <div className="battleActions">
                 <button type="button" className="btn btn--primary" disabled={action.busy}
@@ -230,7 +258,13 @@ function SwitchPanel({ party, activeId, busy, onPick, onCancel }: {
   )
 }
 
-function Result({ battle, onLeave }: { battle: BattleView; onLeave: () => void }) {
+function Result({ battle, arena, busy, onNext, onLeave }: {
+  battle: BattleView
+  arena: ArenaContext | null
+  busy: boolean
+  onNext: () => void
+  onLeave: () => void
+}) {
   const won = battle.winner === 0
   const r = battle.reward
   return (
@@ -243,7 +277,22 @@ function Result({ battle, onLeave }: { battle: BattleView; onLeave: () => void }
       {r?.levelUps.map((l) => (
         <span key={l.creatureId} className="tag tag--level">{l.name} → {t('creature.level', { n: l.newLevel })}</span>
       ))}
-      <button type="button" className="btn btn--primary btn--block" onClick={onLeave}>{t('battle.back')}</button>
+      {/* Im Durchlauf geht es hier weiter — sonst steht man vor einem
+          beendeten Kampf und dem Nichts. */}
+      {arena && won && (
+        <button type="button" className="btn btn--primary btn--block" disabled={busy} onClick={onNext}>
+          {arena.wins + 1 >= arena.rounds
+            ? t('arena.finish')
+            : t('arena.nextFoe', { round: arena.round + 1, max: arena.rounds })}
+        </button>
+      )}
+      <button
+        type="button"
+        className={`btn btn--block ${arena && won ? 'btn--ghost' : 'btn--primary'}`}
+        onClick={onLeave}
+      >
+        {t('battle.back')}
+      </button>
     </section>
   )
 }
