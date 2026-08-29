@@ -26,8 +26,13 @@ export const ENERGY_HARD_CAP = 9999
  * Moment der Gutschrift verschwand, ohne dass irgendwo etwas davon stand. Was
  * ueber diese Grenze hinausgeht, wird jetzt eins zu eins in Gold verwandelt —
  * ein schlechter Kurs gemessen am Kaufpreis, aber ein Kurs statt eines Lochs.
+ *
+ * Tausend ist mit Abstand mehr, als je jemand halten muss: die groesste
+ * persoenliche Obergrenze liegt bei 150 + 12 x 25 + Gewaechshaus, also unter
+ * 520. Was darueber liegt, ist Vorrat fuer mehrere Tage — und ab hier eben
+ * Gold.
  */
-export const ENERGY_TO_GOLD_LIMIT = 2000
+export const ENERGY_TO_GOLD_LIMIT = 1000
 /** Wie viel Gold ein ueberzaehliger Energiepunkt bringt. */
 export const ENERGY_TO_GOLD_RATE = 1
 

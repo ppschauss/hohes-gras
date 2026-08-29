@@ -115,7 +115,9 @@ nicht".
 
 ## Überschüssige Energie wird Gold
 
-Über **2.000 Energie** wird jeder weitere gutgeschriebene Punkt zu **1 Gold**.
+Über **1.000 Energie** wird jeder weitere gutgeschriebene Punkt zu **1 Gold**.
+Die größte persönliche Obergrenze liegt bei 510 (150 + 12 Ausbaustufen +
+Gewächshaus) — tausend Punkte sind also schon ein Vorrat für mehrere Tage.
 Vorher stapelte sich Energie bis zur harten Grenze von 9.999 und war darüber
 schlicht weg: ein Spieler hat für 170.000 Gold Energie gekauft, von der über
 die Hälfte im Moment der Gutschrift verschwand, ohne dass irgendwo etwas davon
