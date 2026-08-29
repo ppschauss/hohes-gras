@@ -37,10 +37,15 @@ interface Authored {
 const BAIT_ITEM_ID = 'rocket-bait'
 const BAIT_CHARGES = 5
 
+/** Der Metalldetektor. Die Regel dazu steht in `engine/foraging.ts`. */
+const DETECTOR_ITEM_ID = 'metal-detector'
+const DETECTOR_CHARGES = 10
+
 /** Gegenstaende, deren Bild selbst erzeugt wurde und als Vektor vorliegt. */
 export const SVG_ICONS = new Set([
   'rocket-bait', 'energy-drink', 'exp-candy-s', 'exp-candy-l',
   'golden-razz', 'legendary-berry', 'lure-legendary', 'soul-shiny',
+  'metal-detector',
 ])
 
 export const AUTHORED: Authored[] = [
@@ -58,6 +63,22 @@ export const AUTHORED: Authored[] = [
     description: 'Funkt auf der Frequenz der Banden. Die nächsten '
       + `${BAIT_CHARGES} Erkundungen enden in einem Überfall.`,
     params: { rocketCharges: BAIT_CHARGES },
+  },
+  {
+    /*
+     * Die Schrottsuche auf Knopfdruck.
+     *
+     * Fundstücke liegen mit 3 % je Erkundung herum; wer gezielt Werkstoffe
+     * braucht, wartet sonst auf den Zufall. Der Detektor ersetzt den Wurf für
+     * zehn Erkundungen — und fördert dabei anderes zutage als der Zufall:
+     * Schrott und Fragmente statt Geldbeutel. Sonst wären 500 Gold ein
+     * Einsatz, der sich selbst vervielfacht.
+     */
+    id: DETECTOR_ITEM_ID, category: 'key', price: 500, sellPrice: 50,
+    name: 'Metalldetektor',
+    description: 'Piept über allem, was im Boden liegt. Die nächsten '
+      + `${DETECTOR_CHARGES} Erkundungen fördern ein Fundstück zutage.`,
+    params: { detectorCharges: DETECTOR_CHARGES },
   },
   {
     /*

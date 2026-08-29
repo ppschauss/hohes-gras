@@ -170,6 +170,7 @@ export const api = {
       method: 'POST', body: JSON.stringify({ ballId, berryId, lureId }),
     }),
   useJammer: () => request<{ charges: number }>('/api/safari/jammer', { method: 'POST' }),
+  useDetector: () => request<{ charges: number }>('/api/safari/detector', { method: 'POST' }),
   useLegendaryBerry: (ballId: string, berryId: string | null) =>
     request<EncounterView>('/api/safari/berry', { method: 'POST', body: JSON.stringify({ ballId, berryId }) }),
   soften: (action: 'weaken' | 'calm', ballId: string, berryId: string | null) =>
@@ -536,6 +537,8 @@ export interface SafariState {
   energyCost: number
   /** Restliche Erkundungen mit garantiertem Überfall. */
   jammerCharges: number
+  /** Restliche Erkundungen mit garantiertem Fundstück. */
+  detectorCharges: number
   /** Laufende Fangserie — sie zählt nur für die gejagte Art. */
   chain: {
     speciesId: string
@@ -557,10 +560,23 @@ export interface LureUse {
   left: number
 }
 
+/** Was im Unterholz lag — beim Eintreffen hier schon eingesammelt. */
+export interface FindResult {
+  what: 'item' | 'coins' | 'fragment'
+  itemId: string | null
+  name: string
+  icon: string | null
+  quantity: number
+  gold: number
+  /** Restliche Ladungen des Detektors; null, wenn es Zufall war. */
+  detectorLeft: number | null
+}
+
 export type ExploreResponse =
   | { kind: 'encounter'; encounter: EncounterView; legendary: boolean; lure: LureUse | null }
   | { kind: 'nothing'; lure: LureUse | null }
-  | { kind: 'event'; opponent: { id: string; name: string; title: string; kind: string; sprite: string; intro: string }; lure: LureUse | null }
+  | { kind: 'event'; opponent: { id: string; name: string; title: string; kind: string; sprite: string; intro: string }; wanderer: boolean; lure: LureUse | null }
+  | { kind: 'find'; find: FindResult; lure: LureUse | null }
 
 export interface ThrowResult {
   caught: boolean

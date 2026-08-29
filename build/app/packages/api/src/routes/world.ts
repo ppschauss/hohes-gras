@@ -63,6 +63,7 @@ export function registerWorldRoutes(app: FastifyInstance, ctx: AppContext): void
     return {
       encounter: safari.currentEncounter(ctx, trainer, q.ballId, q.berryId),
       jammerCharges: safari.jammerCharges(ctx, trainer),
+      detectorCharges: safari.detectorCharges(ctx, trainer),
       chain: safari.chainOf(ctx, trainer),
       exploresUsed: counterValue(ctx.db, trainer.id, safari.EXPLORE_COUNTER),
       energy: energy.state(ctx, trainer.id),
@@ -77,6 +78,9 @@ export function registerWorldRoutes(app: FastifyInstance, ctx: AppContext): void
 
   app.post('/api/safari/jammer', write, async (req) =>
     withEnergy(ctx, req.trainer!.id, safari.useJammer(ctx, req.trainer!)))
+
+  app.post('/api/safari/detector', write, async (req) =>
+    withEnergy(ctx, req.trainer!.id, safari.useDetector(ctx, req.trainer!)))
 
   app.post('/api/safari/berry', write, async (req) => {
     const { ballId, berryId } = SafariSelectionSchema.parse(req.body ?? {})

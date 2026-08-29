@@ -17,7 +17,7 @@ import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { LOGIN_REWARDS, RECIPES } from '../packages/engine/dist/index.js'
-import { AUTHORED, lureItems, soulItems } from './curated-items.ts'
+import { AUTHORED, lureItems, soulItems, SVG_ICONS } from './curated-items.ts'
 import { EVENT_SPECIES } from './curated-event.ts'
 import { AREAS, BADGES, REGIONS, TRAINERS } from './curated-kanto.ts'
 import { regionChapters } from './curated-story.ts'
@@ -265,7 +265,10 @@ async function main(): Promise<void> {
       params: a.params ?? {},
       ...(a.name ? { name: { de: a.name } } : {}),
       ...(a.description ? { description: { de: a.description } } : {}),
-      icon: (before as { icon?: string } | undefined)?.icon ?? `/media/items/${a.id}.png`,
+      // Selbst gezeichnete Bilder liegen als Vektor vor; alles andere kommt
+      // als PNG aus dem Sprite-Abgleich.
+      icon: (before as { icon?: string } | undefined)?.icon
+        ?? `/media/items/${a.id}.${SVG_ICONS.has(a.id) ? 'svg' : 'png'}`,
       stackable: true,
     })
   }

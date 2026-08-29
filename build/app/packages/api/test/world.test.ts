@@ -157,8 +157,26 @@ describe('Reisen', () => {
 })
 
 describe('Safari', () => {
+  /*
+   * Erkunden, bis wirklich eine Begegnung dabei ist.
+   *
+   * Seit es Fundstuecke und Streuner gibt, ist die Begegnung nicht mehr der
+   * einzige Ausgang: mit je drei Prozent kommt etwas anderes heraus. Diese
+   * Tests pruefen die Begegnung und nicht die Verteilung — sie wuerfeln
+   * deshalb weiter, statt gelegentlich zufaellig durchzufallen.
+   */
+  const explore = async (body: Record<string, unknown> = {}) => {
+    for (let i = 0; i < 40; i++) {
+      h.resetRateLimits()
+      h.resetPacing()
+      const r = await h.post('/api/safari/explore', body, token)
+      if (r.status !== 200 || r.body.kind === 'encounter') return r
+    }
+    throw new Error('keine Begegnung nach 40 Erkundungen')
+  }
+
   it('findet ein Pokemon und legt eine Begegnung an', async () => {
-    const r = await h.post('/api/safari/explore', { ballId: 'poke-ball', berryId: null }, token)
+    const r = await explore({ ballId: 'poke-ball', berryId: null })
     expect(r.status).toBe(200)
     expect(r.body.kind).toBe('encounter')
     expect(r.body.legendary).toBe(false)
@@ -168,16 +186,16 @@ describe('Safari', () => {
   })
 
   it('haelt genau eine Begegnung offen', async () => {
-    await h.post('/api/safari/explore', {}, token)
+    await explore({})
     const first = (await h.get('/api/safari', token)).body.encounter.speciesId
-    await h.post('/api/safari/explore', {}, token)
+    await explore({})
     const rows = h.ctx.db.prepare('SELECT COUNT(*) n FROM active_encounter WHERE trainer_id = ?').get(trainerId) as any
     expect(rows.n).toBe(1)
     expect(first).toBeTruthy()
   })
 
   it('traegt die Art sofort als gesehen in den Dex ein', async () => {
-    const r = await h.post('/api/safari/explore', {}, token)
+    const r = await explore({})
     const dex = await h.get('/api/dex', token)
     const row = dex.body.rows.find((x: any) => x.speciesId === r.body.encounter.speciesId)
     expect(row.seen).toBe(true)
@@ -185,7 +203,7 @@ describe('Safari', () => {
   })
 
   it('erhoeht die Fangchance mit Beruhigen', async () => {
-    const start = await h.post('/api/safari/explore', {}, token)
+    const start = await explore({})
     const before = start.body.encounter.probability
     const after = await h.post('/api/safari/soften', { action: 'calm' }, token)
     expect(after.body.probability).toBeGreaterThan(before)
@@ -193,7 +211,7 @@ describe('Safari', () => {
   })
 
   it('deckelt Beruhigen bei der Obergrenze', async () => {
-    await h.post('/api/safari/explore', {}, token)
+    await explore({})
     await h.post('/api/safari/soften', { action: 'calm' }, token)
     await h.post('/api/safari/soften', { action: 'calm' }, token)
     const third = await h.post('/api/safari/soften', { action: 'calm' }, token)
@@ -204,13 +222,13 @@ describe('Safari', () => {
   it('erhoeht die Fangchance mit einem besseren Ball', async () => {
     const buy = await h.post('/api/shop/buy', { itemId: 'great-ball', quantity: 1 }, token)
     expect(buy.status).toBe(200)
-    const plain = await h.post('/api/safari/explore', { ballId: 'poke-ball' }, token)
+    const plain = await explore({ ballId: 'poke-ball' })
     const better = await h.get('/api/safari?ballId=great-ball', token)
     expect(better.body.encounter.probability).toBeGreaterThan(plain.body.encounter.probability)
   })
 
   it('verbraucht beim Werfen einen Ball', async () => {
-    await h.post('/api/safari/explore', {}, token)
+    await explore({})
     const before = (await h.get('/api/bag', token)).body.items.find((i: any) => i.id === 'poke-ball').quantity
     await h.post('/api/safari/throw', { ballId: 'poke-ball' }, token)
     const after = (await h.get('/api/bag', token)).body.items.find((i: any) => i.id === 'poke-ball').quantity
@@ -218,7 +236,7 @@ describe('Safari', () => {
   })
 
   it('weist einen Wurf ohne Baelle ab', async () => {
-    await h.post('/api/safari/explore', {}, token)
+    await explore({})
     h.ctx.db.prepare('UPDATE inventory SET quantity = 0 WHERE trainer_id = ? AND item_id = ?')
       .run(trainerId, 'poke-ball')
     const r = await h.post('/api/safari/throw', { ballId: 'poke-ball' }, token)
@@ -243,7 +261,7 @@ describe('Safari', () => {
     let caught: any = null
     for (let i = 0; i < 40 && !caught; i++) {
       h.resetRateLimits()
-      await h.post('/api/safari/explore', {}, token)
+      await explore({})
       const r = await h.post('/api/safari/throw', { ballId: 'great-ball' }, token)
       if (r.body.caught) caught = r.body
     }
@@ -256,14 +274,14 @@ describe('Safari', () => {
   })
 
   it('beendet die Begegnung beim Fliehen', async () => {
-    await h.post('/api/safari/explore', {}, token)
+    await explore({})
     await h.post('/api/safari/flee', {}, token)
     const r = await h.get('/api/safari', token)
     expect(r.body.encounter).toBeNull()
   })
 
   it('weist einen unbekannten Ball ab', async () => {
-    await h.post('/api/safari/explore', {}, token)
+    await explore({})
     const r = await h.post('/api/safari/throw', { ballId: 'oran-berry' }, token)
     expect(r.status).toBe(400)
     expect(r.body.detail.field).toBe('ballId')
@@ -573,5 +591,119 @@ describe('Regionswechsel', () => {
     const r = await h.get('/api/world', token)
     const route = r.body.regions[0].areas[0]
     expect(route.requirements.some((q: any) => q.kind === 'region_cleared')).toBe(false)
+  })
+})
+
+describe('Fundstuecke und der Metalldetektor', () => {
+  const give = (itemId: string, n: number) =>
+    h.ctx.db
+      .prepare('INSERT INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?) ON CONFLICT(trainer_id, item_id) DO UPDATE SET quantity = ?')
+      .run(trainerId, itemId, n, n)
+
+  const gold = () =>
+    (h.ctx.db.prepare('SELECT gold FROM trainers WHERE id = ?').get(trainerId) as { gold: number }).gold
+
+  const quantity = (itemId: string) =>
+    (h.ctx.db.prepare('SELECT quantity FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, itemId) as { quantity: number } | undefined)?.quantity ?? 0
+
+  beforeEach(() => {
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ?, energy = 9000 WHERE id = ?')
+      .run('test-route', trainerId)
+  })
+
+  it('schaltet den Detektor ein und verbraucht dabei ein Geraet', async () => {
+    give('metal-detector', 2)
+    h.resetRateLimits()
+    const r = await h.post('/api/safari/detector', {}, token)
+    expect(r.status).toBe(200)
+    expect(r.body.charges).toBe(10)
+    expect(quantity('metal-detector')).toBe(1)
+
+    // Die Ladungen addieren sich, statt sich zu ueberschreiben.
+    h.resetRateLimits()
+    expect((await h.post('/api/safari/detector', {}, token)).body.charges).toBe(20)
+  })
+
+  it('weist das Einschalten ohne Geraet ab', async () => {
+    give('metal-detector', 0)
+    h.resetRateLimits()
+    const r = await h.post('/api/safari/detector', {}, token)
+    expect(r.status).toBe(409)
+  })
+
+  it('foerdert mit laufendem Detektor jede Erkundung einen Fund zutage', async () => {
+    give('metal-detector', 1)
+    h.resetRateLimits()
+    await h.post('/api/safari/detector', {}, token)
+
+    for (let i = 0; i < 5; i++) {
+      const before = { gold: gold(), balls: quantity('poke-ball'), souls: quantity('soul-normal') }
+      h.resetRateLimits()
+      h.resetPacing()
+      const r = await h.post('/api/safari/explore', {}, token)
+      expect(r.status).toBe(200)
+      expect(r.body.kind).toBe('find')
+      // Aufgehoben wird sofort: der Fund liegt beim Eintreffen schon im
+      // Beutel oder in der Kasse.
+      const f = r.body.find
+      expect(f.detectorLeft).toBe(9 - i)
+      if (f.what === 'coins') {
+        expect(f.gold).toBeGreaterThanOrEqual(55)
+        expect(f.gold).toBeLessThanOrEqual(789)
+        expect(gold()).toBe(before.gold + f.gold)
+      } else {
+        expect(f.itemId).toBeTruthy()
+        expect(quantity(f.itemId)).toBeGreaterThan(0)
+      }
+    }
+  })
+
+  it('laesst nach der letzten Ladung wieder den Zufall entscheiden', async () => {
+    give('metal-detector', 1)
+    h.resetRateLimits()
+    await h.post('/api/safari/detector', {}, token)
+    for (let i = 0; i < 10; i++) {
+      h.resetRateLimits()
+      h.resetPacing()
+      await h.post('/api/safari/explore', {}, token)
+    }
+    const left = h.ctx.db.prepare('SELECT detector_charges AS n FROM trainers WHERE id = ?')
+      .get(trainerId) as { n: number }
+    expect(left.n).toBe(0)
+
+    // Elfte Erkundung: die Zusage ist weg, also nicht mehr zwingend ein Fund.
+    let finds = 0
+    for (let i = 0; i < 12; i++) {
+      h.resetRateLimits()
+      h.resetPacing()
+      if ((await h.post('/api/safari/explore', {}, token)).body.kind === 'find') finds++
+    }
+    expect(finds).toBeLessThan(12)
+  })
+
+  it('findet in der ersten Region nur billige Ware', async () => {
+    give('metal-detector', 3)
+    h.resetRateLimits()
+    await h.post('/api/safari/detector', {}, token)
+    h.resetRateLimits()
+    await h.post('/api/safari/detector', {}, token)
+
+    const seen = new Set<string>()
+    for (let i = 0; i < 20; i++) {
+      h.resetRateLimits()
+      h.resetPacing()
+      const f = (await h.post('/api/safari/explore', {}, token)).body.find
+      if (f?.itemId) seen.add(f.itemId)
+    }
+    // Die Wertgrenze der ersten Region liegt bei 50 Verkaufsgold: der
+    // Superball (45) darf dabei sein, ein teurerer Gegenstand nicht. Und
+    // Seelenfragmente kommen nur ueber ihren eigenen Ausgang.
+    for (const id of seen) {
+      const item = h.ctx.registry.item(id)
+      const isFragment = Boolean(item.params.soulType)
+      if (!isFragment) expect(item.sellPrice ?? 0).toBeLessThanOrEqual(50)
+    }
+    expect(seen.size).toBeGreaterThan(0)
   })
 })

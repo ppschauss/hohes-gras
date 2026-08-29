@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import type { EncounterView, ThrowResult } from '../lib/api'
+import type { EncounterView, FindResult, ThrowResult } from '../lib/api'
 import { t } from '../i18n'
 import { api } from '../lib/api'
 import { errorText } from '../lib/errors'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
-import { percent } from '../lib/format'
+import { number, percent } from '../lib/format'
 import { Screen } from '../ui/Screen'
 import { Icon } from '../ui/Icon'
 import { TrainerAvatar } from '../ui/TrainerAvatar'
@@ -13,7 +13,12 @@ import { ItemIcon } from '../ui/ItemIcon'
 
 type Phase =
   | { kind: 'idle' }
-  | { kind: 'event'; opponent: { name: string; title: string; kind: string; sprite: string; intro: string } }
+  | {
+      kind: 'event'
+      opponent: { name: string; title: string; kind: string; sprite: string; intro: string }
+      wanderer: boolean
+    }
+  | { kind: 'find'; find: FindResult }
   | { kind: 'encounter'; encounter: EncounterView; legendary?: boolean }
   | { kind: 'throwing'; encounter: EncounterView; shakes: number }
   | { kind: 'caught'; result: ThrowResult }
@@ -50,6 +55,8 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
   const lures = (bag.data?.items ?? []).filter((i) => i.category === 'lure' && i.quantity > 0)
   const jammers = (bag.data?.items ?? []).find((i) => i.id === 'rocket-bait')?.quantity ?? 0
   const charges = safari.data?.jammerCharges ?? 0
+  const detectors = (bag.data?.items ?? []).find((i) => i.id === 'metal-detector')?.quantity ?? 0
+  const detectorCharges = safari.data?.detectorCharges ?? 0
   const ballCount = balls.find((b) => b.id === ballId)?.quantity ?? 0
 
   const explore = () => {
@@ -65,8 +72,13 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
         setPhase({ kind: 'encounter', encounter: res.encounter, legendary: res.legendary })
         if (res.legendary) haptic.success(); else haptic.select()
       } else if (res.kind === 'event') {
-        setPhase({ kind: 'event', opponent: res.opponent })
+        setPhase({ kind: 'event', opponent: res.opponent, wanderer: res.wanderer })
         haptic.error()
+      } else if (res.kind === 'find') {
+        setPhase({ kind: 'find', find: res.find })
+        // Der Fund liegt schon im Beutel; die Anzeige muss nachziehen.
+        bag.reload()
+        haptic.success()
       } else {
         setPhase({ kind: 'nothing' })
       }
@@ -262,6 +274,26 @@ export function SafariScreen({ onBack, onEventBattle }: { onBack: () => void; on
           </div>
         )}
 
+        {/* Derselbe Streifen wie beim Stoersender: beide sind Geraete, die
+            die naechsten Erkundungen vorherbestimmen. */}
+        {(detectorCharges > 0 || detectors > 0) && (
+          <div className="jammer">
+            <span className="jammer__text">
+              {detectorCharges > 0
+                ? t('safari.detector.active', { n: detectorCharges })
+                : t('safari.detector.idle')}
+            </span>
+            {detectors > 0 && (
+              <button
+                type="button" className="btn btn--ghost btn--sm" disabled={action.busy}
+                onClick={() => { haptic.tap(); void action.run(() => api.useDetector(), () => { safari.reload(); haptic.success() }) }}
+              >
+                {t('safari.detector.use', { n: detectors })}
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="actionRow">
           <button type="button" className="btn btn--ghost btn--block" onClick={explore}
             disabled={action.busy || phase.kind === 'throwing'
@@ -300,12 +332,36 @@ function Stage({ phase, busy, onFight }: { phase: Phase; busy: boolean; onFight:
             name={phase.opponent.name} kind={phase.opponent.kind} size={96}
           />
           <h2>{phase.opponent.name}</h2>
+          {/* Ein Streuner ist kein Ueberfall: die Zeile sagt, was einen
+              erwartet, bevor man auf "Kampf" tippt. */}
+          <p className="center__body">
+            {phase.wanderer ? t('safari.wanderer.lead', { title: phase.opponent.title }) : null}
+          </p>
           <p className="center__body">{phase.opponent.intro}</p>
           <button type="button" className="btn btn--primary" disabled={busy} onClick={onFight}>
             {t('safari.event.fight')}
           </button>
         </section>
       )
+    case 'find': {
+      const f = phase.find
+      return (
+        <section className="stage stage--win">
+          {f.icon
+            ? <img className="stage__mon" src={f.icon} alt="" width={72} height={72} />
+            : <span className="stage__find" aria-hidden="true">💰</span>}
+          <h2>{t('safari.find.title')}</h2>
+          <p className="stage__reward num">
+            {f.what === 'coins'
+              ? t('safari.find.coins', { n: number(f.gold) })
+              : t('safari.find.item', { n: f.quantity, name: f.name })}
+          </p>
+          {f.detectorLeft !== null && (
+            <p className="center__body">{t('safari.detector.left', { n: f.detectorLeft })}</p>
+          )}
+        </section>
+      )
+    }
     case 'idle':
       return (
         <section className="stage stage--idle">

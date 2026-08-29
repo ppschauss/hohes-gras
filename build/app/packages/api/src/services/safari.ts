@@ -5,6 +5,8 @@ import {
   ENERGY_REWARDS, LEGENDARY_CATCH_RATE, LEGENDARY_LEVEL_BONUS, randomIvs, rollEncounter,
   isEventTrainer, LEGENDARY_BERRY_ID, LEGENDARY_MAX_BERRIES, isLegendaryCatchRate,
   legendaryCatchChance, rollEvent, rollLegendary, xpForLevel, type Rng,
+  coinPurse, findQuantity, findValueCap, METAL_DETECTOR_ID, METAL_DETECTOR_CHARGES,
+  rollFind, rollFindKind, rollWander, WANDER_PARTY_MAX, type FindKind,
   MAX_CALM_STACKS, MAX_WEAKEN_STACKS, ROCKET_BAIT_ID, ROCKET_BAIT_CHARGES,
   SHINY_BASE_ODDS, SHINY_CHAIN_AFTER_CATCH, SHINY_CHAIN_GUARANTEE,
   SHINY_CHAIN_PLATEAU, SHINY_PLATEAU_ODDS, shinyOdds,
@@ -157,14 +159,31 @@ function buildModifiers(
  * es jetzt den Ueberfall — eine Begegnung mit einem Menschen statt mit einem
  * Pokemon. Diskriminiert ueber `kind`, damit der Client nicht raten muss.
  */
+/** Was im Unterholz lag — schon eingesammelt, wenn es hier ankommt. */
+export interface FindResult {
+  what: FindKind
+  /** Bei Ware und Fragmenten: was es war. Beim Muenzbeutel null. */
+  itemId: string | null
+  name: string
+  icon: string | null
+  quantity: number
+  /** Beim Muenzbeutel das Gold, sonst 0. */
+  gold: number
+  /** Verbleibende Ladungen des Detektors; null, wenn es Zufall war. */
+  detectorLeft: number | null
+}
+
 export type ExploreResult =
   | { kind: 'encounter'; encounter: EncounterView; legendary: boolean; lure: LureUse | null }
   | { kind: 'nothing'; lure: LureUse | null }
   | {
       kind: 'event'
       opponent: { id: string; name: string; title: string; kind: string; sprite: string; intro: string }
+      /** Ein Streuner statt einer Bande: kleiner Kampf, kein Ueberfall. */
+      wanderer: boolean
       lure: LureUse | null
     }
+  | { kind: 'find'; find: FindResult; lure: LureUse | null }
 
 export function explore(
   ctx: AppContext, trainer: Trainer, ballId: string, berryId: string | null,
@@ -253,7 +272,42 @@ export function explore(
         logEvent(ctx.db, trainer.id, 'safari.event', {
           areaId: area.id, opponentId: opponent.id, jammed,
         })
-        return { kind: 'event' as const, opponent, lure: lureUsed.current }
+        return { kind: 'event' as const, opponent, wanderer: false, lure: lureUsed.current }
+      }
+    }
+
+    /*
+     * Dann das Fundstueck.
+     *
+     * Der Detektor ersetzt den Wurf; seine Ladung wird verbraucht, sobald
+     * wirklich etwas herauskommt. Beides steht vor dem Streuner, weil ein
+     * eingeschaltetes Geraet eine Ansage des Spielers ist und ein Streuner
+     * blosser Zufall.
+     */
+    const detecting = detectorCharges(ctx, trainer) > 0
+    if (detecting || rollFind(rng)) {
+      const find = grantFind(ctx, trainer, area, rng, detecting)
+      if (find) {
+        logEvent(ctx.db, trainer.id, 'safari.find', {
+          areaId: area.id, what: find.what, itemId: find.itemId, quantity: find.quantity,
+          gold: find.gold, detector: detecting,
+        })
+        return { kind: 'find' as const, find, lure: lureUsed.current }
+      }
+    }
+
+    /*
+     * Und der Streuner: ein gewoehnlicher Trainer mit hoechstens zwei
+     * Pokemon, der einem den Weg abschneidet. Er verdraengt die Begegnung wie
+     * ein Ueberfall — zwei offene Dinge gleichzeitig gibt es hier nicht.
+     */
+    if (rollWander(rng)) {
+      const opponent = pickWanderer(ctx, trainer, area.regionId, rng)
+      if (opponent) {
+        ctx.db.prepare('UPDATE trainers SET pending_event_id = ?, pending_event_area = ? WHERE id = ?')
+          .run(opponent.id, area.id, trainer.id)
+        logEvent(ctx.db, trainer.id, 'safari.wanderer', { areaId: area.id, opponentId: opponent.id })
+        return { kind: 'event' as const, opponent, wanderer: true, lure: lureUsed.current }
       }
     }
 
@@ -329,6 +383,132 @@ function pickEvent(ctx: AppContext, trainer: Trainer, regionId: string, anyGang 
     sprite: def.sprite,
     intro: ctx.registry.localized(def.dialogue.intro, trainer.locale),
   }
+}
+
+/**
+ * Ein Streuner der Region.
+ *
+ * Kein eigener Gegner-Entwurf, sondern einer aus dem Pack: gewoehnliche
+ * Trainer mit hoechstens zwei Pokemon gibt es dort schon, samt Bild, Namen und
+ * Ansage. Damit gilt fuer sie auch die Tagesregel — der volle Siegbetrag
+ * einmal, danach das Antrittsgeld. Ein frisch erfundener Gegner haette bei
+ * jedem Treffen als "erster Sieg" gezahlt.
+ */
+function pickWanderer(ctx: AppContext, trainer: Trainer, regionId: string, rng: Rng) {
+  const inRegion = new Set(
+    ctx.registry.allAreas.filter((a) => a.regionId === regionId).flatMap((a) => a.trainerIds),
+  )
+  const pool = ctx.registry.allTrainers.filter(
+    (t) => inRegion.has(t.id) && t.kind === 'trainer' && t.team.length <= WANDER_PARTY_MAX,
+  )
+  if (pool.length === 0) return null
+  const def = rng.pick(pool)
+  return {
+    id: def.id,
+    name: ctx.registry.localized(def.name, trainer.locale),
+    title: ctx.registry.localized(def.title, trainer.locale),
+    kind: def.kind,
+    sprite: def.sprite,
+    intro: ctx.registry.localized(def.dialogue.intro, trainer.locale),
+  }
+}
+
+/**
+ * Was in dieser Region im Boden liegen kann.
+ *
+ * Abgeleitet statt aufgezaehlt: der Verkaufspreis ist das einzige Wertmass,
+ * das jeder Gegenstand traegt — auch die, die man nirgends kaufen kann —, und
+ * die Region hebt die Grenze. Damit braucht eine vierte Region keine Zeile
+ * Code, und ein neuer Werkstoff im Pack ist automatisch findbar.
+ *
+ * Seelenfragmente bleiben draussen: sie sind ein eigener Ausgang des Fundes.
+ */
+const FIND_CATEGORIES = new Set(['ball', 'berry', 'medicine', 'material', 'xp'])
+
+function findPool(ctx: AppContext, regionId: string) {
+  const cap = findValueCap(ctx.registry.region(regionId).order - 1)
+  return ctx.registry.allItems.filter(
+    (i) => FIND_CATEGORIES.has(i.category)
+      && typeof i.sellPrice === 'number' && i.sellPrice > 0 && i.sellPrice <= cap
+      && !i.params.soulType && !i.params.shinySoul,
+  )
+}
+
+/**
+ * Ein Fundstueck einsammeln.
+ *
+ * Es wandert sofort in Beutel oder Kasse. Ein Fund, den man erst noch
+ * aufheben muss, waere ein zweiter Knopf fuer nichts — gemeldet wurde
+ * ausdruecklich das Gegenteil.
+ */
+function grantFind(
+  ctx: AppContext, trainer: Trainer, area: { id: string; regionId: string },
+  rng: Rng, fromDetector: boolean,
+): FindResult | null {
+  const what = rollFindKind(rng, fromDetector)
+  const spend = () => {
+    if (!fromDetector) return null
+    ctx.db.prepare('UPDATE trainers SET detector_charges = MAX(0, detector_charges - 1) WHERE id = ?')
+      .run(trainer.id)
+    return detectorCharges(ctx, trainer)
+  }
+
+  if (what === 'coins') {
+    const gold = coinPurse(rng)
+    inventory.earnGold(ctx.db, trainer.id, gold)
+    return {
+      what, itemId: null, name: 'coins', icon: null, quantity: 1, gold,
+      detectorLeft: spend(),
+    }
+  }
+
+  const pool = what === 'fragment'
+    ? ctx.registry.allItems.filter((i) => Boolean(i.params.soulType))
+    : findPool(ctx, area.regionId)
+  if (pool.length === 0) return null
+
+  const item = rng.pick(pool)
+  const quantity = what === 'fragment'
+    ? 1 + Math.floor(rng.next() * 2)
+    : findQuantity(item.sellPrice ?? 1, findValueCap(ctx.registry.region(area.regionId).order - 1))
+  inventory.grant(ctx.db, trainer.id, item.id, quantity)
+  return {
+    what,
+    itemId: item.id,
+    name: ctx.registry.localized(item.name, trainer.locale),
+    icon: item.icon,
+    quantity,
+    gold: 0,
+    detectorLeft: spend(),
+  }
+}
+
+export function detectorCharges(ctx: AppContext, trainer: Trainer): number {
+  const row = ctx.db.prepare('SELECT detector_charges AS n FROM trainers WHERE id = ?')
+    .get(trainer.id) as { n: number } | undefined
+  return row?.n ?? 0
+}
+
+/**
+ * Metalldetektor einschalten.
+ *
+ * Wie beim Stoersender addieren sich die Ladungen, statt sich zu
+ * ueberschreiben: wer zwei kauft, hat zwanzig Erkundungen.
+ */
+export function useDetector(ctx: AppContext, trainer: Trainer): { charges: number } {
+  return tx(ctx.db, () => {
+    const item = ctx.registry.tryItem(METAL_DETECTOR_ID)
+    if (!item) throw new GameError('content_unavailable', { itemId: METAL_DETECTOR_ID }, 409)
+    if (inventory.quantityOf(ctx.db, trainer.id, METAL_DETECTOR_ID) < 1) {
+      throw new GameError('insufficient_items', { itemId: METAL_DETECTOR_ID }, 409)
+    }
+    inventory.consume(ctx.db, trainer.id, METAL_DETECTOR_ID, 1)
+    const add = Math.max(1, Math.floor(Number(item.params.detectorCharges ?? METAL_DETECTOR_CHARGES)))
+    ctx.db.prepare('UPDATE trainers SET detector_charges = detector_charges + ? WHERE id = ?')
+      .run(add, trainer.id)
+    logEvent(ctx.db, trainer.id, 'safari.detector', { charges: add })
+    return { charges: detectorCharges(ctx, trainer) }
+  })
 }
 
 /**

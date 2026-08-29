@@ -321,6 +321,23 @@ alle ~1.000 Erkundungen, drei Beeren aus ~6 gewonnenen Überfällen, also
 ~150 Erkundungen. Wer vorbereitet ist, hat die Beeren längst; wer unvorbereitet
 darauf trifft, verliert es vermutlich.
 
+## Fundstücke und der Metalldetektor
+
+Drei Prozent je Erkundung heißt: etwa jede dreiunddreißigste, also mehrmals am
+Tag, aber nie so oft, dass man aufhört hinzusehen. Dasselbe gilt für den
+Streuner.
+
+Beim Detektor war die Frage nicht die Häufigkeit, sondern der Inhalt. Zehn
+Anwendungen für 500 Gold sind 50 Gold je Fund; ein Münzbeutel bringt im Schnitt
+422. Mit dem Anteil des Zufallsfundes (28 %) läge der Erwartungswert bei 118
+Gold je Anwendung — das Gerät hätte sich selbst vervielfacht, und bei 1.000
+Energie am Tag wäre es die beste Goldquelle des Spiels gewesen.
+
+Deshalb hat der Detektor eine eigene Verteilung: 10 % Münzen statt 28 %, dafür
+mehr Ware und Fragmente. Damit liegt sein Goldertrag bei rund 42 je Anwendung
+und deckt gerade die 50, die er kostet. Er kauft **Fortschritt statt Guthaben**
+— und das ist auch das, wonach ein Detektor piept.
+
 ## Lockdüfte und Störsender
 
 | | Wert |

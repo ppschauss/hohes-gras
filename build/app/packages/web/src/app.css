@@ -978,6 +978,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 }
 .stage__meta { display: flex; flex-wrap: wrap; gap: var(--s2); justify-content: center; align-items: center; }
 .stage__reward { font-size: var(--t-lg); font-weight: 700; color: var(--gold); }
+/* Ersatzbild fuer den Muenzbeutel: der hat keinen Gegenstand und damit kein
+   Symbol im Beutel. */
+.stage__find { font-size: 56px; line-height: 1; }
 
 .stage__ball {
   width: 46px; height: 46px; border-radius: 50%;

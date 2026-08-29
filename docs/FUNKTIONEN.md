@@ -140,7 +140,7 @@ frei wählbar** und bringt eigene Starter mit.
 ## 7. Safari — Erkunden und Fangen
 
 Eine Erkundung kostet **1 Energie** und endet in einer wilden Begegnung, einem
-Überfall, einem Legendären oder nichts.
+Überfall, einem Streuner, einem Fundstück, einem Legendären oder nichts.
 
 ### Fangen
 
@@ -222,6 +222,37 @@ es nur bei Überfällen gibt.
 **4 % je Erkundung** taucht eine Bande auf. Beute: Gold, Gegenstände, mit 50 %
 eine Sagenbeere und mit 70 % zwei bis fünf verschiedene Lockdüfte. Der
 **Störsender** (10.000 Gold) erzwingt die nächsten fünf Überfälle.
+
+### Streuner
+
+**3 % je Erkundung** schneidet einem ein gewöhnlicher Trainer der Region den
+Weg ab — einer mit **höchstens zwei Pokémon**, kein Arenaleiter. Er wird nicht
+erfunden, sondern aus dem Pack genommen, damit auch für ihn die Tagesregel
+gilt: der volle Siegbetrag einmal am Tag, danach das Antrittsgeld. Wie beim
+Überfall verdrängt er die Begegnung — zwei offene Dinge gleichzeitig gibt es
+hier nicht.
+
+### Fundstücke
+
+**3 % je Erkundung** liegt etwas im Unterholz. Es wandert sofort in Beutel oder
+Kasse; einen Knopf zum Aufheben gibt es nicht.
+
+| Was | Anteil zufällig | mit Detektor |
+|---|---|---|
+| Ware aus der Region | 60 % | 72 % |
+| Beutel voll Münzen (55–789 Gold) | 28 % | 10 % |
+| Seelenfragment (1–2) | 12 % | 18 % |
+
+**Was findbar ist, hängt an der Region** — und zwar am Verkaufspreis, dem
+einzigen Wertmaß, das jeder Gegenstand trägt: 50 in Kanto, 150 in Johto, 450 in
+Hoenn. Das sind 9, 20 und 23 verschiedene Fundstücke. Eine vierte Region
+braucht dafür keine Zeile Code, und ein neuer Werkstoff im Pack ist automatisch
+findbar. Von billigen Sachen liegt ein kleiner Haufen da (bis zu drei), von
+teuren genau eines.
+
+Der **Metalldetektor** (500 Gold, 10 Anwendungen) ersetzt den Wurf: solange
+Ladungen übrig sind, endet jede Erkundung in einem Fund. Er gräbt dafür anderes
+aus als der Zufall — Schrott und Fragmente statt Geldbeutel.
 
 ---
 
