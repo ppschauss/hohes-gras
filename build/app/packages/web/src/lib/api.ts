@@ -1109,6 +1109,11 @@ export interface BulkSalvageResult {
 export interface AreaSpawns {
   areaId: string
   areaName: string
+  clock: {
+    timeOfDay: string; weather: string
+    nextTimeOfDay: string; nextTimeOfDayAt: number
+    nextWeather: string; nextWeatherAt: number
+  }
   total: number
   unknown: number
   caught: number

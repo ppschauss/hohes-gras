@@ -92,10 +92,24 @@ export type Trainer = z.infer<typeof TrainerSchema>
 
 /** World clock derived from the server's wall time. Drives spawn tables and
  *  a handful of battle modifiers, so it is computed server-side only. */
+/**
+ * Die Weltuhr.
+ *
+ * Tageszeit und Wetter steuern, welche Arten überhaupt erscheinen — seit die
+ * Gebietsliste „nur nachts" und „nur bei Regen" anzeigt, ist die nächste
+ * Änderung eine Auskunft, nach der man plant. Beides ist berechenbar: die
+ * Tageszeit aus festen Stunden, das Wetter aus Datum und Sechs-Stunden-Block.
+ */
 export const WorldClockSchema = z.object({
   timeOfDay: z.enum(TIMES_OF_DAY),
   weather: z.enum(WEATHERS),
   /** Local date in Europe/Berlin, `YYYY-MM-DD`. Daily limits reset on change. */
   gameDate: z.string(),
+  /** Wann die Tageszeit wechselt, und wohin. */
+  nextTimeOfDay: z.enum(TIMES_OF_DAY),
+  nextTimeOfDayAt: z.number().int(),
+  /** Wann das Wetter wechselt, und zu was. */
+  nextWeather: z.enum(WEATHERS),
+  nextWeatherAt: z.number().int(),
 })
 export type WorldClock = z.infer<typeof WorldClockSchema>

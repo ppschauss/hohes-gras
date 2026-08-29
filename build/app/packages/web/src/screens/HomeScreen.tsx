@@ -5,6 +5,7 @@ import { t } from '../i18n'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
+import { untilLabel } from '../lib/format'
 import { useGame, type Screen } from '../store'
 import { Icon, type IconName } from '../ui/Icon'
 import { DESTINATIONS } from '../ui/destinations'
@@ -60,6 +61,11 @@ export function HomeScreen({ boot }: { boot: Bootstrap }) {
           <span className="appbar__title">{t('home.greeting', { name: boot.trainer.displayName })}</span>
           <span className="appbar__eyebrow">
             {t(`time.${boot.clock.timeOfDay}`)} · {t(`weather.${boot.clock.weather}`)}
+            {' · '}
+            {t('clock.next', {
+              what: t(`time.${boot.clock.nextTimeOfDay}`),
+              when: untilLabel(boot.clock.nextTimeOfDayAt),
+            })}
           </span>
         </span>
         <Resources />

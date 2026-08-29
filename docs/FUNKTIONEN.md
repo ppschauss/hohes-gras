@@ -129,7 +129,11 @@ frei wählbar** und bringt eigene Starter mit.
   wie nach unten. Der Versatz wird beim **Betreten eingefroren**, wächst also
   nicht mit dir mit. Abschaltbar.
 - **Wetter und Tageszeit** (Europe/Berlin) steuern, welche Arten überhaupt
-  erscheinen.
+  erscheinen. Beide stehen auf dem **Startbildschirm**, im Kopf der
+  **Weltkarte** und über der Artenliste im **Gebiet** — dort zusätzlich mit
+  dem Zeitpunkt der nächsten Änderung („Nacht in 1 Std 12 · Wetter wechselt in
+  9 Std zu Sturm"). Beides ist berechenbar: die Tageszeit springt um 5, 8, 18
+  und 21 Uhr, das Wetter alle sechs Stunden, für alle Spieler gleich.
 
 ---
 

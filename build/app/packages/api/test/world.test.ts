@@ -333,6 +333,27 @@ describe('Fangserie', () => {
   })
 })
 
+describe('Weltuhr', () => {
+  it('nennt, wann die Tageszeit und das Wetter wechseln', async () => {
+    /*
+     * Seit die Gebietsliste "nur nachts" und "nur bei Regen" anzeigt, ist die
+     * naechste Aenderung eine Auskunft, nach der man plant. Beides ist
+     * berechenbar — also wird es berechnet.
+     */
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('test-route', trainerId)
+    h.resetRateLimits()
+    const r = await h.get('/api/area/spawns', token)
+    const clock = r.body.clock
+    expect(clock.nextTimeOfDayAt).toBeGreaterThan(Date.now())
+    expect(clock.nextWeatherAt).toBeGreaterThan(Date.now())
+    // Der naechste Zustand ist ein anderer als der jetzige.
+    expect(clock.nextTimeOfDay).not.toBe(clock.timeOfDay)
+    // Und beides liegt hoechstens einen Tag voraus.
+    expect(clock.nextTimeOfDayAt - Date.now()).toBeLessThanOrEqual(25 * 3600 * 1000)
+    expect(clock.nextWeatherAt - Date.now()).toBeLessThanOrEqual(25 * 3600 * 1000)
+  })
+})
+
 describe('Wer hier lebt', () => {
   it('zeigt jede Art, die unbekannten ohne Namen', async () => {
     h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('test-route', trainerId)

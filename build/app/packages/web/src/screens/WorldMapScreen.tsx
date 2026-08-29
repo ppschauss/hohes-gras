@@ -34,7 +34,9 @@ export function WorldMapScreen({ onBack, onEnterArea }: Props) {
       title={t('map.title')}
       onBack={onBack}
       aside={world.data && (
-        <span>{t(`weather.${world.data.clock.weather}`)} · <b>{t(`time.${world.data.clock.timeOfDay}`)}</b></span>
+        <span>
+          {t(`weather.${world.data.clock.weather}`)} · <b>{t(`time.${world.data.clock.timeOfDay}`)}</b>
+        </span>
       )}
     >
       <main className="content">

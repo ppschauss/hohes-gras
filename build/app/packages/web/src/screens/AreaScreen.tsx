@@ -3,6 +3,7 @@ import { errorText } from '../lib/errors'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
+import { untilLabel } from '../lib/format'
 import { Screen } from '../ui/Screen'
 
 interface Props {
@@ -100,6 +101,25 @@ export function AreaScreen({ onBack, onSafari, onBattle }: Props) {
             sonst waere das Entdecken vorweggenommen. */}
         {spawns.data && (
           <section className="section">
+            {/* Die Uhr gehoert dorthin, wo sie etwas bedeutet: hier steht,
+                was "nur nachts" heisst und wie lange es noch dauert. */}
+            <p className="explain">
+              {t('clock.now', {
+                time: t(`time.${spawns.data.clock.timeOfDay}`),
+                weather: t(`weather.${spawns.data.clock.weather}`),
+              })}
+              {' '}
+              {t('clock.next', {
+                what: t(`time.${spawns.data.clock.nextTimeOfDay}`),
+                when: untilLabel(spawns.data.clock.nextTimeOfDayAt),
+              })}
+              {' · '}
+              {t('clock.weatherNext', {
+                what: t(`weather.${spawns.data.clock.nextWeather}`),
+                when: untilLabel(spawns.data.clock.nextWeatherAt),
+              })}
+            </p>
+
             <div className="sectionHead">
               <h2>{t('area.spawns')}</h2>
               <span className="num">

@@ -39,8 +39,39 @@ export function weatherAt(at = new Date()): Weather {
   return rng.weighted(table, ([, w]) => w)[0]
 }
 
+/**
+ * Die naechste volle Stunde, zu der sich etwas aendert.
+ *
+ * Beides ist berechenbar, also wird es auch berechnet, statt den Spieler raten
+ * zu lassen: die Tageszeit springt um 5, 8, 18 und 21 Uhr, das Wetter alle
+ * sechs Stunden. Gesucht wird die naechste Stunde, in der der Wert ein anderer
+ * ist — hoechstens vierundzwanzig Schritte, das ist billiger als jede
+ * Sonderrechnung ueber Zeitzonen hinweg.
+ */
+function nextChange<T>(at: Date, valueAt: (d: Date) => T): { value: T; at: number } {
+  const current = valueAt(at)
+  for (let i = 1; i <= 24; i++) {
+    // Auf die volle Stunde gehen: beide Werte haengen nur an ihr.
+    const probe = new Date(at.getTime() + i * 3_600_000)
+    probe.setMinutes(0, 0, 0)
+    const value = valueAt(probe)
+    if (value !== current) return { value, at: probe.getTime() }
+  }
+  return { value: current, at: at.getTime() + 24 * 3_600_000 }
+}
+
 export function worldClock(at = new Date()): WorldClock {
-  return { timeOfDay: timeOfDayAt(at), weather: weatherAt(at), gameDate: gameDate(at) }
+  const time = nextChange(at, timeOfDayAt)
+  const sky = nextChange(at, weatherAt)
+  return {
+    timeOfDay: timeOfDayAt(at),
+    weather: weatherAt(at),
+    gameDate: gameDate(at),
+    nextTimeOfDay: time.value,
+    nextTimeOfDayAt: time.at,
+    nextWeather: sky.value,
+    nextWeatherAt: sky.at,
+  }
 }
 
 export const ALL_TIMES_OF_DAY = TIMES_OF_DAY
