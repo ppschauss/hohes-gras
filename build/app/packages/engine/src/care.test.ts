@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SpeciesDef } from '@game/content'
 import {
-  applyCare, condition, currentHpRatio, friendshipTier, regenerateEnergy,
+  applyCare, condition, currentHpRatio, ENERGY_REGEN_BOX_PER_HOUR, friendshipTier, regenerateEnergy,
   CARE_RULES, ENERGY_MAX, FRIENDSHIP_MAX, type CareCreature,
 } from './care.js'
 import { xpForLevel } from './leveling.js'
@@ -134,6 +134,13 @@ describe('regenerateEnergy', () => {
   })
   it('bleibt bei null Minuten unveraendert', () => {
     expect(regenerateEnergy(42, 0)).toBe(42)
+  })
+  it('erholt in der Box dreimal so schnell', () => {
+    expect(regenerateEnergy(0, 120, ENERGY_REGEN_BOX_PER_HOUR)).toBe(36)
+    expect(regenerateEnergy(0, 120)).toBe(12)
+    // Leer bis voll: in der Box knapp sechs Stunden, im Team siebzehn.
+    expect(regenerateEnergy(0, 340, ENERGY_REGEN_BOX_PER_HOUR)).toBe(ENERGY_MAX)
+    expect(regenerateEnergy(0, 340)).toBeLessThan(ENERGY_MAX)
   })
 })
 

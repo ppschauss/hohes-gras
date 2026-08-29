@@ -158,8 +158,24 @@ export function applyCare(
 
 /** Energy recovers on its own so a player who steps away for a day comes back
  *  to a usable team rather than a punished one. */
-export function regenerateEnergy(current: number, minutesElapsed: number): number {
-  const perHour = 6
+export const ENERGY_REGEN_PER_HOUR = 6
+
+/**
+ * In der Box erholen sie sich dreimal so schnell.
+ *
+ * Wer in der Box liegt, arbeitet nicht — das ist der ganze Unterschied zum
+ * Team, und er sollte sich auch so anfuehlen: eine leere Leiste ist dort nach
+ * knapp sechs Stunden wieder voll statt nach siebzehn. Damit wird die Box zum
+ * Ruheort und das Auswechseln zur Erholungsstrategie, statt beides gleich
+ * langsam vor sich hin laufen zu lassen.
+ */
+export const ENERGY_REGEN_BOX_PER_HOUR = 18
+
+export function regenerateEnergy(
+  current: number,
+  minutesElapsed: number,
+  perHour: number = ENERGY_REGEN_PER_HOUR,
+): number {
   return clamp(Math.floor(current + (minutesElapsed / 60) * perHour), 0, ENERGY_MAX)
 }
 

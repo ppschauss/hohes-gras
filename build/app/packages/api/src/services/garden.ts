@@ -1,6 +1,7 @@
 import { CARE_ACTIONS, GameError, type CareAction, type GardenState, type Trainer } from '@game/shared'
 import {
-  applyCare, CARE_RULES, ENERGY_COSTS, TEAM_CAPACITY as CAPACITY, randomIvs, regenerateEnergy,
+  applyCare, CARE_RULES, ENERGY_COSTS, ENERGY_MAX, ENERGY_REGEN_BOX_PER_HOUR,
+  TEAM_CAPACITY as CAPACITY, randomIvs, regenerateEnergy,
   computeStats, createRng, xpForLevel, type CareCreature,
 } from '@game/engine'
 import { NATURES } from '@game/shared'
@@ -362,8 +363,14 @@ function xpFloorForLevel(ctx: AppContext, speciesId: string, level: number): num
   return xpForLevel(ctx.registry.species(speciesId).growthRate, level)
 }
 
-/** Called on every garden read: energy ticks up in the background so a player
- *  who was away returns to a rested team. */
+/**
+ * Called on every garden read: energy ticks up in the background so a player
+ * who was away returns to a rested team.
+ *
+ * Die Box lief hier lange gar nicht mit — wer eine Kreatur einlagerte, fand
+ * sie Wochen spaeter genauso erschoepft wieder vor. Jetzt erholt sie sich
+ * dort, und zwar schneller als im Dienst.
+ */
 export function catchUpEnergy(ctx: AppContext, trainer: Trainer, now = Date.now()): void {
   const minutes = Math.floor((now - trainer.lastSeenAt) / 60_000)
   if (minutes < 10) return
@@ -374,4 +381,7 @@ export function catchUpEnergy(ctx: AppContext, trainer: Trainer, now = Date.now(
       ctx.db.prepare('UPDATE creatures SET energy = ? WHERE id = ?').run(next, c.id)
     }
   }
+  creatures.regenerateBoxEnergy(
+    ctx.db, trainer.id, (minutes / 60) * ENERGY_REGEN_BOX_PER_HOUR, ENERGY_MAX,
+  )
 }

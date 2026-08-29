@@ -100,6 +100,10 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
       }
     >
       <main className="content">
+        {/* Der Vorteil der Box steht sonst nirgends: eingelagert erholen sie
+            sich dreimal so schnell wie im Dienst. */}
+        <p className="explain">{t('box.rest')}</p>
+
         {salvaged && (
           <p className="notice notice--ok" role="status">
             {t('souls.done', {

@@ -334,4 +334,33 @@ describe('Ereignis-Wesen', () => {
     expect(evGain).toBeGreaterThan(0)
     expect(evGain).toBeCloseTo(normal / 2, -1)
   })
+
+  it('laedt eingelagerte Pokemon schneller auf als das Team', async () => {
+    await pick()
+    const trainerId = (h.ctx.db.prepare('SELECT id FROM trainers LIMIT 1').get() as { id: string }).id
+    const add = (slot: number | null) => {
+      const id = crypto.randomUUID()
+      h.ctx.db.prepare(
+        `INSERT INTO creatures (id, owner_id, species_id, xp, level, nature,
+           iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, friendship, energy, hp_current,
+           shiny, moves, caught_at, team_slot)
+         VALUES (?, ?, 'wildmon', 0, 5, 'hardy', 15,15,15,15,15,15, 0, 0, 20, 0, '["tackle"]', ?, ?)`,
+      ).run(id, trainerId, Date.now(), slot)
+      return id
+    }
+    const inTeam = add(1)
+    const inBox = add(null)
+
+    // Zwei Stunden abwesend — die Aufholrechnung laeuft beim naechsten Blick
+    // in den Garten.
+    h.ctx.db.prepare('UPDATE trainers SET last_seen_at = ? WHERE id = ?')
+      .run(Date.now() - 2 * 3_600_000, trainerId)
+    h.resetRateLimits()
+    expect((await h.get('/api/garden', token)).status).toBe(200)
+
+    const energyOf = (id: string) =>
+      (h.ctx.db.prepare('SELECT energy FROM creatures WHERE id = ?').get(id) as { energy: number }).energy
+    expect(energyOf(inTeam)).toBe(12)
+    expect(energyOf(inBox)).toBe(36)
+  })
 })

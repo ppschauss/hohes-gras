@@ -116,6 +116,20 @@ export function applyCareResult(
   for (const u of updates) stmt.run(u.xp, u.level, u.friendship, u.energy, u.creatureId)
 }
 
+/**
+ * Energie der eingelagerten Kreaturen anheben.
+ *
+ * Als eine Anweisung und nicht als Schleife: eine ausgebaute Box fasst
+ * ueber tausend Kreaturen, und das hier laeuft bei jedem Blick in den Garten.
+ */
+export function regenerateBoxEnergy(db: Db, ownerId: string, gain: number, max: number): number {
+  if (gain <= 0) return 0
+  return db.prepare(
+    `UPDATE creatures SET energy = MIN(?, energy + ?)
+      WHERE owner_id = ? AND team_slot IS NULL AND energy < ?`,
+  ).run(max, Math.floor(gain), ownerId, max).changes
+}
+
 export function setHp(db: Db, creatureId: string, hp: number): void {
   db.prepare('UPDATE creatures SET hp_current = ? WHERE id = ?').run(Math.max(0, Math.floor(hp)), creatureId)
 }

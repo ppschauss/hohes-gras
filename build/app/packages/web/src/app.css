@@ -1728,6 +1728,12 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 }
 .chapterStep--done .chapterStep__num { background: var(--ok); color: oklch(0.16 0.03 150); }
 .chapterStep__title { font-size: var(--t-sm); }
+/* Die Belohnung traegt die Goldfarbe, damit sie sich von der Aufgabe darueber
+   unterscheidet — zwei gleich graue Zeilen liest niemand auseinander. */
+.chapterStep__reward, .guide__reward {
+  font-size: var(--t-xs); color: var(--gold); font-weight: 600;
+}
+.guide__reward { margin: var(--s2) 0 0; }
 
 /* ================================================================== Daten === */
 

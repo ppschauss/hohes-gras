@@ -1,10 +1,23 @@
 import { useState } from 'react'
 import { t } from '../i18n'
 import { errorText } from '../lib/errors'
-import { api } from '../lib/api'
+import { api, type ChapterView } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
 import { number } from '../lib/format'
+
+/**
+ * Was ein Kapitel einbringt.
+ *
+ * Stand vorher nur auf dem Abhol-Knopf — also erst, wenn man es ohnehin schon
+ * geschafft hatte. Wer wissen wollte, wofuer sich die naechsten Kapitel lohnen,
+ * sah eine Liste aus Titeln und Zaehlern. Genau so gemeldet.
+ */
+const rewardOf = (c: ChapterView): string => {
+  const parts = [`${number(c.reward.gold)} 🪙`]
+  if (c.reward.itemName) parts.push(`${c.reward.quantity}× ${c.reward.itemName}`)
+  return parts.join(' + ')
+}
 
 /** The guide's chapter view. The current chapter is shown large, the rest as a
  *  compact trail — the journey so far and the next step, not a quest log. */
@@ -66,11 +79,12 @@ export function StoryPanel() {
             ))}
           </ul>
 
+          <p className="guide__reward">{t('story.reward', { list: rewardOf(current) })}</p>
+
           {current.reached && !current.claimed && (
             <button type="button" className="btn btn--primary btn--block"
               disabled={action.busy} onClick={() => claim(current.id)}>
-              {t('story.claim')} · {number(current.reward.gold)} 🪙
-              {current.reward.itemName && ` + ${current.reward.quantity}× ${current.reward.itemName}`}
+              {t('story.claim')}
             </button>
           )}
         </section>
@@ -113,6 +127,7 @@ export function StoryPanel() {
                   .map((req) => t(`story.req.${req.kind}`, { have: req.have, need: req.need, label: req.label }))
                   .join(' · ')}
               </span>
+              <span className="chapterStep__reward">{t('story.reward', { list: rewardOf(c) })}</span>
             </span>
             <span className="chapterStep__state">
               {c.claimed
