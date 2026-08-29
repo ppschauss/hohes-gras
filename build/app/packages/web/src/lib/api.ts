@@ -444,7 +444,10 @@ export interface TodayView {
 }
 
 export interface WorldMap {
-  regions: Array<{ id: string; name: string; tagline: string; areas: AreaView[] }>
+  regions: Array<{
+    id: string; name: string; tagline: string; areas: AreaView[]
+    entered: boolean; cleared: boolean; locked: boolean
+  }>
   clock: { timeOfDay: string; weather: string; gameDate: string }
   currentAreaId: string | null
   badges: string[]

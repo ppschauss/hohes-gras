@@ -170,7 +170,9 @@ function writeMinimalPack(dataDir: string): void {
       id: 'hoch-gipfel', regionId: 'hochland', order: 2,
       name: { de: 'Hochgipfel' }, description: { de: 'Das Ende derselben Region.' },
       icon: '/media/h2.png', background: '/media/h2b.png',
-      unlock: { previousAreaId: 'hoch-tal', minDexCaught: 1, minCaughtInPrevious: 0, minCreaturesAtLevel: null, requiredBadgeIds: [] },
+      // Weit oben entworfen, auch in der Bedingung: nur so laesst sich pruefen,
+      // dass die Levelforderung mit dem Gebiet heruntergerechnet wird.
+      unlock: { previousAreaId: 'hoch-tal', minDexCaught: 1, minCaughtInPrevious: 0, minCreaturesAtLevel: { count: 1, level: 80 }, requiredBadgeIds: [] },
       spawns: [{ speciesId: 'wildmon', weight: 100, minLevel: 84, maxLevel: 94 }],
       trainerIds: [],
     },

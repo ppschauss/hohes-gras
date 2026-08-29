@@ -57,8 +57,55 @@ describe('Weltkarte', () => {
     expect(kinds).toContain('creatures_at_level')
     expect(kinds).toContain('badges')
     const caught = cave.requirements.find((q: any) => q.kind === 'dex_caught')
-    // Der Starter zaehlt bereits als Dex-Eintrag.
-    expect(caught).toMatchObject({ met: false, have: 1, need: 2 })
+    /*
+     * Bei null, nicht bei eins.
+     *
+     * Gezaehlt werden Arten *dieser Region* — und der Starter ist ein
+     * Geschenk, das in keiner Spawn-Tabelle steht. Genau so war es gemeint:
+     * "wuerde er als Fang im Startgebiet zaehlen, waere die erste
+     * Freischaltbedingung schon vor dem ersten Wurf teilweise erfuellt."
+     */
+    expect(caught).toMatchObject({ met: false, have: 0, need: 2 })
+  })
+
+  it('verschiebt die Levelforderung mit dem Gebiet', async () => {
+    /*
+     * Das Hochland ist weit oben entworfen; wer dort anfaengt, spielt es
+     * heruntergerechnet. Eine Bedingung, die auf dem Entwurfslevel stehen
+     * bleibt, waere in dieser Region unerfuellbar — im echten Pack verlangte
+     * die Granitgrotte vier Pokemon ab Level 104 bei einer Reisegrenze von 100.
+     */
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('hoch-tal', trainerId)
+    h.resetRateLimits()
+    const r = await h.get('/api/world', token)
+    const gipfel = r.body.regions[1].areas[1]
+    const req = gipfel.requirements.find((q: any) => q.kind === 'creatures_at_level')
+    expect(req).toBeDefined()
+    // Entworfen fuer Level 80, gefordert auf dem Niveau, auf dem man spielt.
+    expect(Number(req.label)).toBeLessThan(40)
+    expect(Number(req.label)).toBeGreaterThan(0)
+  })
+
+  it('zaehlt fuer eine Region nur ihre eigenen Arten', async () => {
+    /*
+     * Gemeldet: mit Hoenn als Startregion verlangte das zweite Gebiet 150
+     * Dex-Eintraege — die Zahl, die jemand mitbringt, der Kanto hinter sich
+     * hat. Wer dort anfaengt, kaeme nie los.
+     */
+    const gate = async () => {
+      h.resetRateLimits()
+      const r = await h.get('/api/world', token)
+      const gipfel = r.body.regions[1].areas[1]
+      return gipfel.requirements.find((q: any) => q.kind === 'dex_caught')
+    }
+
+    // Blattmon gibt es nur im Testland; fuer das Hochland zaehlt es nicht.
+    seedCatch('blattmon', 'test-route', 4)
+    expect(await gate()).toMatchObject({ met: false, have: 0, need: 1 })
+
+    // Wildmon steht in beiden Tabellen und zaehlt hier wie dort.
+    seedCatch('wildmon', 'test-route', 12)
+    expect(await gate()).toMatchObject({ met: true, have: 1, need: 1 })
   })
 
   it('schaltet frei, sobald alle Bedingungen erfuellt sind', async () => {

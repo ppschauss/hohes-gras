@@ -132,9 +132,18 @@ async function main(): Promise<void> {
    * an, wo die vorige aufgehört hat.
    */
   const DEX_GATE: Record<string, { base: number; step: number }> = {
+    /*
+     * Jede Region zaehlt bei null los.
+     *
+     * Vorher stand hier Johto auf 80 und Hoenn auf 150 — die Zahl, die ein
+     * Spieler mitbringt, der Kanto hinter sich hat. Wer Hoenn als *Startregion*
+     * waehlt, braeuchte damit 150 Dex-Eintraege fuer sein zweites Gebiet und
+     * kaeme nie los. Die Schwelle zaehlt jetzt nur Arten *dieser* Region; damit
+     * passt sie in jeder Reihenfolge, in der man die Welt bereist.
+     */
     kanto: { base: 0, step: 7 },
-    johto: { base: 80, step: 6 },
-    hoenn: { base: 150, step: 6 },
+    johto: { base: 0, step: 6 },
+    hoenn: { base: 0, step: 6 },
   }
   /*
    * Das erste Gebiet einer Region verlangt nichts.

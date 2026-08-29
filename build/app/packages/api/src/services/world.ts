@@ -7,7 +7,7 @@ import * as dex from '../repos/dex.js'
 import * as regionEntries from '../repos/regions.js'
 import * as creatures from '../repos/creatures.js'
 import { worldClock } from '../worldClock.js'
-import { areaOffset, recordRegionEntry, referenceOf } from './scaling.js'
+import { areaOffset, recordRegionEntry, referenceOf, scaledLevel } from './scaling.js'
 import { clearedRegions, progressOf } from './league.js'
 import * as travelService from './travel.js'
 
@@ -95,16 +95,24 @@ export function evaluateArea(
   levelCounts: number[],
   dexCaught = 0,
   regionGate: UnlockRequirement | null = null,
+  levelOffset = 0,
 ): UnlockRequirement[] {
   const reqs: UnlockRequirement[] = []
   const unlock = area.unlock
 
   /*
-   * Der Pokédex, nicht die Fänge im Vorgängergebiet.
+   * Der Pokédex, nicht die Fänge im Vorgängergebiet — und je Region gezählt.
    *
-   * Vorher musste man auf Route 2 noch einmal ein Taubsi fangen, obwohl auf
-   * Route 1 schon eines gefangen war — dieselbe Art, nur woanders. Der Dex
-   * zählt, was man erreicht hat, und zählt es einmal.
+   * Erst zählte das Vorgängergebiet: wer auf Route 1 ein Taubsi gefangen hatte,
+   * musste auf Route 2 noch eins fangen. Dann zählte der ganze Dex, und das
+   * ging schief, sobald jemand eine spätere Region als *Startregion* wählte:
+   * Hoenns zweites Gebiet verlangte 150 Einträge, die es dort noch gar nicht
+   * geben konnte.
+   *
+   * Gezählt werden jetzt die gefangenen Arten, die in dieser Region überhaupt
+   * vorkommen. Damit trägt sich jede Region selbst — egal, in welcher
+   * Reihenfolge man die Welt bereist —, und wer eine Art schon anderswo
+   * gefangen hat, bekommt sie angerechnet.
    */
   if (unlock.minDexCaught > 0) {
     reqs.push({
@@ -120,7 +128,17 @@ export function evaluateArea(
   if (regionGate) reqs.push(regionGate)
 
   if (unlock.minCreaturesAtLevel) {
-    const { count, level } = unlock.minCreaturesAtLevel
+    /*
+     * Die Levelforderung folgt der Skalierung des Gebiets.
+     *
+     * Im Pack ist Hoenn fuer spaete Trainer entworfen: die Granitgrotte
+     * verlangt vier Pokemon ab Level 104. Wer Hoenn als Startregion waehlt,
+     * spielt dieselbe Grotte auf Level 10 — und stand vor einer Bedingung, die
+     * seine Reisegrenze von 100 gar nicht zulaesst. Die Wildnis dort wird
+     * bereits verschoben; die Bedingung muss mit.
+     */
+    const { count } = unlock.minCreaturesAtLevel
+    const level = scaledLevel(unlock.minCreaturesAtLevel.level, levelOffset)
     const have = levelCounts.filter((l) => l >= level).length
     reqs.push({ kind: 'creatures_at_level', met: have >= count, label: String(level), have, need: count })
   }
@@ -140,8 +158,33 @@ export function evaluateArea(
   return reqs
 }
 
+/**
+ * Gefangene Arten je Region.
+ *
+ * Eine Art zaehlt fuer jede Region, in der sie vorkommt — Pikachu in Kanto und
+ * Johto zaehlt in beiden. Sonst muesste man dieselbe Art zweimal fangen, und
+ * genau das war der Grund, vom Vorgaengergebiet auf den Dex umzustellen.
+ */
+function regionDexCounts(ctx: AppContext, caught: Set<string>): Map<string, number> {
+  const perRegion = new Map<string, Set<string>>()
+  for (const area of ctx.registry.allAreas) {
+    let seen = perRegion.get(area.regionId)
+    if (!seen) { seen = new Set(); perRegion.set(area.regionId, seen) }
+    for (const spawn of area.spawns) if (caught.has(spawn.speciesId)) seen.add(spawn.speciesId)
+  }
+  return new Map([...perRegion].map(([id, set]) => [id, set.size]))
+}
+
 export function worldMap(ctx: AppContext, trainer: Trainer): {
-  regions: Array<{ id: string; name: string; tagline: string; areas: AreaView[] }>
+  regions: Array<{
+    id: string; name: string; tagline: string; areas: AreaView[]
+    /** Betreten — die Region, in der man gerade unterwegs ist. */
+    entered: boolean
+    /** Bezwungen: Top Vier und Champion liegen hinter einem. */
+    cleared: boolean
+    /** Verschlossen, weil die laufende Region noch offen ist. */
+    locked: boolean
+  }>
   clock: ReturnType<typeof worldClock>
   currentAreaId: string | null
   badges: string[]
@@ -158,7 +201,8 @@ export function worldMap(ctx: AppContext, trainer: Trainer): {
     .prepare('SELECT level FROM creatures WHERE owner_id = ?')
     .all(trainer.id)
     .map((r) => (r as { level: number }).level)
-  const dexCaught = dex.dexCounts(ctx.db, trainer.id).caught
+  const caughtSpecies = dex.caughtSpeciesIds(ctx.db, trainer.id)
+  const caughtInRegion = regionDexCounts(ctx, caughtSpecies)
 
   const reference = referenceOf(ctx, trainer)
   const areasByRegion = new Map<string, AreaView[]>()
@@ -167,7 +211,7 @@ export function worldMap(ctx: AppContext, trainer: Trainer): {
     const band = areaBand(area)
     const reqs = evaluateArea(
       ctx, trainer, area, caughtPerArea, badges, levelCounts,
-      dexCaught, regionGateFor(ctx, trainer, area),
+      caughtInRegion.get(area.regionId) ?? 0, regionGateFor(ctx, trainer, area), offset,
     )
     const prog = progress.get(area.id)
     const view: AreaView = {
@@ -204,12 +248,29 @@ export function worldMap(ctx: AppContext, trainer: Trainer): {
     referenceLevel: reference,
     league: progressOf(ctx, trainer),
     travel: travelService.viewOf(ctx, trainer),
-    regions: ctx.registry.allRegions.map((r) => ({
-      id: r.id,
-      name: ctx.registry.localized(r.name, trainer.locale),
-      tagline: ctx.registry.localized(r.tagline, trainer.locale),
-      areas: (areasByRegion.get(r.id) ?? []).sort((a, b) => a.order - b.order),
-    })),
+    /*
+     * Der Zustand je Region gehoert an die Region, nicht nur an ihre Gebiete.
+     *
+     * Die Karte zeigt sie als Auswahlfeld; ohne diese drei Angaben muesste die
+     * Oberflaeche aus 38 Gebietszeilen zurueckrechnen, ob eine Region offen
+     * ist — und dabei die Regel verdoppeln.
+     */
+    regions: ctx.registry.allRegions.map((r) => {
+      const entered = regionEntries.entriesOf(ctx.db, trainer.id).has(r.id)
+      const first = (areasByRegion.get(r.id) ?? []).sort((a, b) => a.order - b.order)[0]
+      const locked = !entered && Boolean(
+        first?.requirements.some((req) => req.kind === 'region_cleared' && !req.met),
+      )
+      return {
+        id: r.id,
+        name: ctx.registry.localized(r.name, trainer.locale),
+        tagline: ctx.registry.localized(r.tagline, trainer.locale),
+        areas: (areasByRegion.get(r.id) ?? []).sort((a, b) => a.order - b.order),
+        entered,
+        cleared: clearedRegions(ctx, trainer).has(r.id),
+        locked,
+      }
+    }),
   }
 }
 
@@ -224,8 +285,9 @@ export function travelTo(ctx: AppContext, trainer: Trainer, areaId: string): voi
     world.badgesOf(ctx.db, trainer.id),
     ctx.db.prepare('SELECT level FROM creatures WHERE owner_id = ?').all(trainer.id)
       .map((r) => (r as { level: number }).level),
-    dex.dexCounts(ctx.db, trainer.id).caught,
+    regionDexCounts(ctx, dex.caughtSpeciesIds(ctx.db, trainer.id)).get(area.regionId) ?? 0,
     regionGateFor(ctx, trainer, area),
+    areaOffset(ctx, trainer, area, referenceOf(ctx, trainer)),
   )
   const unmet = reqs.filter((r) => !r.met)
   if (unmet.length > 0) {

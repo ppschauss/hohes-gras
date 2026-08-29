@@ -948,10 +948,20 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .stage--idle h2, .stage--sad h2 { color: var(--ink); }
 .stage--idle .center__body, .stage--sad .center__body { color: var(--ink-muted); }
 .stage--win {
+  /*
+   * Die Siegesflaeche bringt ihren eigenen dunklen Grund mit — dann muss sie
+   * auch ihre eigene Schrift mitbringen.
+   *
+   * Vorher stand hier `var(--ink)`. Im Nachtmodus ist das hell und passt; im
+   * Tagmodus ist es dunkel, und "Fiffyen gefangen!" stand dunkelgruen auf
+   * dunkelgruen. Gemeldet mit Screenshot, und im Hellen praktisch unlesbar.
+   */
   background: linear-gradient(180deg, oklch(0.42 0.1 150), oklch(0.3 0.08 155));
-  color: var(--ink);
+  color: oklch(0.95 0.02 150);
 }
-.stage--win h2 { color: var(--ink); }
+.stage--win h2 { color: oklch(0.99 0.012 150); }
+.stage--win .center__body { color: oklch(0.90 0.03 150); }
+.stage--win .stage__reward { color: oklch(0.87 0.13 90); }
 .stage__mon {
   image-rendering: pixelated;
   transform: scale(1.4);

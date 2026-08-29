@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { AreaView, UnlockRequirement } from '../lib/api'
 import { t } from '../i18n'
 import { errorText } from '../lib/errors'
@@ -14,6 +15,12 @@ interface Props {
 export function WorldMapScreen({ onBack, onEnterArea }: Props) {
   const world = useAsync(() => api.world(), [])
   const action = useAction()
+  // Ohne Wahl zeigt die Karte die Region, in der man gerade steht.
+  const [regionId, setRegionId] = useState<string | null>(null)
+
+  const regions = world.data?.regions ?? []
+  const currentRegion = regions.find((r) => r.areas.some((a) => a.isCurrent))
+  const shown = regions.find((r) => r.id === regionId) ?? currentRegion ?? regions[0]
 
   const travel = (area: AreaView) => {
     haptic.tap()
@@ -84,19 +91,44 @@ export function WorldMapScreen({ onBack, onEnterArea }: Props) {
 
         {world.loading && !world.data
           ? [0, 1, 2].map((i) => <div key={i} className="skeleton skeleton--row" />)
-          : world.data?.regions.map((region) => (
-              <section key={region.id} className="section">
-                <div>
-                  <span className="section__eyebrow">{region.tagline}</span>
-                  <h2>{region.name}</h2>
-                </div>
-                <div className="stack">
-                  {region.areas.map((area) => (
-                    <AreaRow key={area.id} area={area} busy={action.busy} onTravel={() => travel(area)} />
-                  ))}
-                </div>
-              </section>
-            ))}
+          : shown && (
+            <section className="section">
+              {/* Ein Auswahlfeld statt aller Regionen untereinander: mit drei
+                  Regionen und 38 Gebieten war die Karte eine einzige lange
+                  Rolle. Verschlossene Regionen stehen mit Schloss darin und
+                  lassen sich nicht waehlen. */}
+              <div className="picker picker--wide">
+                <span className="picker__label" id="region-picker">{t('map.region')}</span>
+                <span className="picker__body">
+                  <select
+                    className="picker__select"
+                    aria-labelledby="region-picker"
+                    value={shown.id}
+                    onChange={(e) => { haptic.select(); setRegionId(e.target.value) }}
+                  >
+                    {world.data!.regions.map((r) => (
+                      <option key={r.id} value={r.id} disabled={r.locked}>
+                        {r.locked ? `🔒 ${r.name}` : r.cleared ? `✓ ${r.name}` : r.name}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </div>
+
+              <div>
+                <span className="section__eyebrow">{shown.tagline}</span>
+                <h2>{shown.name}</h2>
+              </div>
+
+              {shown.locked && <p className="notice" role="status">{t('map.region.locked')}</p>}
+
+              <div className="stack">
+                {shown.areas.map((area) => (
+                  <AreaRow key={area.id} area={area} busy={action.busy} onTravel={() => travel(area)} />
+                ))}
+              </div>
+            </section>
+          )}
       </main>
     </Screen>
   )
