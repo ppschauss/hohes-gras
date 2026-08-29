@@ -86,13 +86,39 @@ Spielstände von echten Menschen, nicht nur eigene.
 Einladungsbasiert. Der allererste Trainer wird automatisch Admin; danach
 erzeugt der Admin Codes per Bot-Kommando `/einladen`. Ohne Code kein Konto.
 
+## Bot-Befehle
+
+Für alle:
+
+| Befehl | Wirkung |
+|---|---|
+| `/spielen` | öffnet die Mini-App |
+| `/karte` | teilt die Trainerkarte |
+| `/code` | zeigt den eigenen Trainer-Code |
+| `/browser` | Einmalcode für die Anmeldung im Browser (5 Minuten gültig) |
+| `/hilfe` | Übersicht; zeigt Admins zusätzlich ihre Befehle |
+| `/gilde` | verbindet einen Gruppenchat mit der eigenen Gilde |
+| `/raid` | zeigt laufende Raids in diesem Chat |
+
+Nur für Admins:
+
+| Befehl | Wirkung |
+|---|---|
+| `/einladen [n]` | Einladungscode, bis 50 Nutzungen, 30 Tage gültig |
+| `/codes` | offene Einladungen |
+| `/event <Trainer-Code> [Art]` | Ereignis-Wesen vergeben |
+| `/gegenstand <Trainer-Code> <Gegenstand-Id> [Anzahl]` | Gegenstände vergeben |
+
+Beispiel: `/gegenstand ABCD1234 lure-legendary 250`. Der erste Trainer wird
+automatisch Admin.
+
 ## Prüfen vor dem Ausrollen
 
 ```bash
 cd build/app
-npm test                                  # Engine + API, ~720 Tests
+npm test                                  # Engine + API, 861 Tests
 npx tsc --noEmit -p packages/api
-npx tsc --noEmit -p packages/web
+npm run build -w @game/web                # deckt die Mini-App ab; `tsc -b` tut es nicht
 cd .. && python3 tools/i18n-check.py      # keine fehlenden Übersetzungen
 npm run simulate -- --days 400            # Balancing-Kurven
 ```

@@ -12,9 +12,9 @@
 ---
 
 Fang Gefährten, zieh sie in deinem Garten groß und schick sie auf Expedition,
-während du weg bist. Zwei Regionen, 25 Gebiete, echte Rundenkämpfe mit
-Typentabelle, Arenaorden, Top Vier, Gilden-Raids im Gruppenchat, Marktplatz und
-Tausch unter Freunden.
+während du weg bist. **Drei Regionen, 38 Gebiete, 387 Arten**, echte
+Rundenkämpfe mit Typentabelle, 26 Arenaorden, Top Vier je Region, Gilden-Raids
+im Gruppenchat, Marktplatz und Tausch unter Freunden.
 
 **Keine Tageslimits.** Was du an einem Tag schaffst, entscheidest du über deine
 Energie — und die füllt sich, auch wenn du nicht da bist.
@@ -44,8 +44,11 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Garten** | Team bis 5, vier Pflegeaktionen, EP + Freundschaft + Ausdauer, Box, Pokédex, Hintergründe |
 | **Teams** | Bis zu 8 gespeicherte Aufstellungen, eine davon aktiv |
 | **Attacken** | Vier Plätze je Pokémon, frei wählbar; die Automatik füllt nur leere Plätze |
-| **Energie** | Statt Tageslimits: 2 Punkte/Minute, für Gold nachkaufbar, Vorrat dauerhaft ausbaubar |
+| **Energie** | Statt Tageslimits: 2 Punkte/Minute, für Gold nachkaufbar, Vorrat bis 510 ausbaubar; über 1.000 wird sie zu Gold |
+| **Box** | 900 Plätze, mit dem Depot in 25 Stufen auf 2.150; Verwerten einzeln oder bis zu 50 auf einmal |
+| **Seelenfragmente** | Je Typ des verwerteten Pokémon eines; 15 → Ei, 85 → schillerndes Ei, 5 schillernde Fragmente → schillerndes Ei |
 | **Welt** | 3 Regionen, 38 Gebiete inkl. Nachliga, freie Startregion mit eigenen Startern, Wetter und Tageszeit steuern Spawns |
+| **Freischaltung** | Gebiete über Pokédex-Einträge, Regionen über Top Vier und Champion der vorherigen |
 | **Skalierung** | Ganze Regionen treffen den Teammedian — nach oben wie nach unten, abschaltbar |
 | **Reisegrenze** | Level 100 zum Start, +50 je bezwungener Region, absolutes Ende bei 500 |
 | **Safari** | Ball- und Beerenwahl, Schwächen/Beruhigen, Fangserie für Shiny-Jagd |
@@ -53,15 +56,17 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Ereignisse** | Überfälle beim Erkunden: Gold, Gegenstände, Sagenbeeren, selten ein Pokémon mit makellosen Werten |
 | **Legendäre** | 0,1 % Fundchance nach vollständig bezwungener Region; gefangen nur mit Sagenbeeren |
 | **Lockdüfte** | Ein Duft je Typ, 50 Gold für 5 Erkundungen; vervierfacht das Gewicht des gesuchten Typs |
+| **Fundstücke** | Jeder achte Fang bringt einen Werkstoff — das Bindeglied zwischen Erkunden und Werkbank |
 | **Poké-Center** | Alle 15 Minuten kostenlose Vollheilung, gelegentlich mit Fund, Geschenk oder Tauschangebot |
 | **Poké-Beet** | Beeren, Bonbons oder Gold eingraben; Pflege oder ein Pflanzen-Pokémon heben den Ertrag |
-| **Idle** | Expeditionen (4 Arten × 3 Dauern, bis 6 Pokémon), Ei-Zucht mit IV-Vererbung |
+| **Idle** | Expeditionen (4 Arten × 3 Dauern, bis 6 Pokémon), Ei-Zucht mit IV-Vererbung, 3 Brutplätze (ausbaubar auf 8) |
 | **Sozial** | Freunde über Trainer-Code, teilbare Trainerkarte, Marktplatz, Direkttausch, Rangliste |
 | **Koop** | Gilden mit Wochenziel, Raid-Bosse als Karte im Telegram-Gruppenchat, asynchrones PvP mit Elo, Wochenturnier |
-| **Progression** | Entwicklungen, Basisausbau, Handwerk, Saison-Reise, Erfolge, 10 Story-Kapitel |
+| **Progression** | Entwicklungen, 10 Ausbauten, 19 Rezepte, Erfolgsketten, 12 Story-Kapitel |
+| **Saison** | Eine Woche, 25 Stufen, 13 davon mit Gegenstand; die letzte bringt ein Schillerndes Seelenfragment |
 | **Anmeldung** | Telegram-`initData`; für den Browser ein Einmalcode aus dem Chat, verbundene Geräte einzeln kündbar |
 | **Designs** | 13 kaufbare Farbwelten plus Tag-/Nacht-Modus, der der Weltuhr folgt |
-| **Fairness** | Taktkontrolle gegen Automatik-Klicker: Fenster, Mindestabstand, Rhythmuserkennung |
+| **Fairness** | Taktkontrolle gegen Automatik-Klicker (Fenster, Mindestabstand, Rhythmuserkennung) und Tagesregeln je Gegner |
 | **Konto** | Telegram-Erinnerungen (max. 1/Tag), DSGVO-Export und -Löschung, Admin-Panel |
 
 ## Aufbau
@@ -89,7 +94,8 @@ tools/                 Screenshot, Layout-Prüfung, i18n-Prüfung
 ```bash
 cd build/app
 npm ci
-npm test                                  # ~720 Tests, Engine und API
+npm test                                  # 861 Tests, Engine und API
+npm run build -w @game/web                # Typprüfung der Mini-App (tsc -b deckt sie nicht ab)
 npx tsc --noEmit -p packages/api
 npm run world                             # Welt neu erzeugen, ohne Netz
 npm run simulate -- --days 400            # Balancing-Kurven
@@ -101,6 +107,7 @@ ohne Telegram durchrechnen. Warum das so gebaut ist, steht in
 
 ## Dokumentation
 
+- **[docs/FUNKTIONEN.md](docs/FUNKTIONEN.md)** — alle Funktionen ausführlich, mit Zahlen
 - **[docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md)** — wie die Teile geschnitten sind und warum
 - **[docs/INHALT.md](docs/INHALT.md)** — Content-Pack, Pipeline, Rechtslage
 - **[docs/BETRIEB.md](docs/BETRIEB.md)** — Einrichtung, Deploy, Datenbank, Fallstricke
