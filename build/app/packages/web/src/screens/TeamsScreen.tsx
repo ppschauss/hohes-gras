@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { CreatureView, TeamView } from '@game/shared'
 import { t } from '../i18n'
 import { errorText } from '../lib/errors'
@@ -147,6 +147,30 @@ interface CardProps {
 
 function TeamCard(p: CardProps) {
   const memberIds = p.team.members.map((m) => m.id)
+  /*
+   * Reihenfolge aendern: zwei antippen, fertig.
+   *
+   * Ziehen waere die naheliegende Geste und in dieser WebView die falsche —
+   * der Bildschirm scrollt mit, und ein Fehlgriff verschiebt statt zu blaettern.
+   * Zwei Tipper sind eindeutig, brauchen keine Millimeterarbeit und
+   * funktionieren mit jedem Finger.
+   */
+  const [swapFrom, setSwapFrom] = useState<string | null>(null)
+  useEffect(() => { if (!p.editing) setSwapFrom(null) }, [p.editing])
+
+  const tapSlot = (id: string) => {
+    haptic.tap()
+    if (swapFrom === null) return setSwapFrom(id)
+    if (swapFrom === id) return setSwapFrom(null)
+    const from = memberIds.indexOf(swapFrom)
+    const to = memberIds.indexOf(id)
+    const next = [...memberIds]
+    next[from] = id
+    next[to] = swapFrom
+    setSwapFrom(null)
+    p.onSetMembers(next)
+  }
+
   const free = p.capacity - memberIds.length
   const available = p.owned.filter((c) => !memberIds.includes(c.id))
   const needle = p.filter.trim().toLowerCase()
@@ -196,24 +220,50 @@ function TeamCard(p: CardProps) {
           if (!member) {
             return <li key={`empty-${i}`} className="slot slot--empty" aria-label={t('teams.emptySlot')}>+</li>
           }
+          const chosen = swapFrom === member.id
           return (
-            <li key={member.id} className="slot">
+            <li key={member.id} className={`slot${chosen ? ' slot--chosen' : ''}`}>
               <button
                 type="button"
                 className="slot__btn"
                 disabled={!p.editing || p.actionBusy}
-                title={p.editing ? t('teams.removeMember', { name: member.displayName }) : member.displayName}
-                onClick={() => p.onSetMembers(memberIds.filter((id) => id !== member.id))}
+                aria-pressed={p.editing ? chosen : undefined}
+                title={p.editing
+                  ? t(swapFrom === null ? 'teams.pickToSwap' : 'teams.swapWith', { name: member.displayName })
+                  : member.displayName}
+                onClick={() => tapSlot(member.id)}
               >
                 <img src={member.sprite} alt={member.displayName} width={44} height={44} loading="lazy" />
+                {p.editing && <span className="slot__pos num" aria-hidden="true">{i + 1}</span>}
                 <span className="slot__level num">{member.level}</span>
                 {p.busy.has(member.id) && <span className="slot__away" title={t('teams.away')}>🧭</span>}
-                {p.editing && <span className="slot__remove" aria-hidden="true">×</span>}
               </button>
+              {/* Herausnehmen ist eine eigene Schaltflaeche, seit das Antippen
+                  des Feldes die Reihenfolge aendert. */}
+              {p.editing && (
+                <button
+                  type="button"
+                  className="slot__remove"
+                  disabled={p.actionBusy}
+                  aria-label={t('teams.removeMember', { name: member.displayName })}
+                  title={t('teams.removeMember', { name: member.displayName })}
+                  onClick={() => {
+                    haptic.tap()
+                    setSwapFrom(null)
+                    p.onSetMembers(memberIds.filter((id) => id !== member.id))
+                  }}
+                >
+                  ×
+                </button>
+              )}
             </li>
           )
         })}
       </ol>
+
+      {p.editing && p.team.members.length > 1 && (
+        <p className="explain">{t(swapFrom === null ? 'teams.orderHint' : 'teams.orderHint2')}</p>
+      )}
 
       <footer className="teamcard__foot">
         <button type="button" className="btn btn--sm btn--ghost" onClick={p.onToggleEdit}>

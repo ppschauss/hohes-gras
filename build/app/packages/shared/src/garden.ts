@@ -6,6 +6,8 @@ import { EnergyStateSchema } from './energy.js'
  *  knowing any game rules: computed stats, sprite paths, localized names. */
 export const CreatureViewSchema = OwnedCreatureSchema.extend({
   speciesName: z.string(),
+  /** Nummer der Art im Pokedex — die Reihenfolge, nach der man sortieren will. */
+  dexNumber: z.number().int(),
   displayName: z.string(),
   types: z.array(z.object({ id: z.string(), name: z.string(), color: z.string() })),
   sprite: z.string(),

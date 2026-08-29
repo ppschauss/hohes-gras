@@ -6,8 +6,12 @@ import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
 import { CenterState } from '../ui/States'
 import { CreatureCard } from '../ui/CreatureCard'
+import { SORT_KEYS, sortCreatures, type SortKey } from '../lib/sortCreatures'
 import { MovesPanel } from '../ui/MovesPanel'
 import { Screen } from '../ui/Screen'
+
+/** Wo die zuletzt gewaehlte Sortierung liegt. */
+const SORT_STORAGE = 'box.sort'
 
 export function BoxScreen({ onBack }: { onBack: () => void }) {
   const box = useAsync(() => api.box(), [])
@@ -30,6 +34,23 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
   const [bulkAsk, setBulkAsk] = useState(false)
   const [bulkDone, setBulkDone] = useState<BulkSalvageResult | null>(null)
   const BULK_MAX = 50
+  /*
+   * Die Sortierung ueberlebt den Besuch.
+   *
+   * Wer nach Level sortiert, um schwache Faenge zu verwerten, tut das nicht
+   * einmal — und muesste die Auswahl sonst bei jedem Oeffnen neu treffen.
+   */
+  const [sort, setSort] = useState<{ key: SortKey; reversed: boolean }>(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem(SORT_STORAGE) ?? 'null')
+      if (raw && SORT_KEYS.includes(raw.key)) return { key: raw.key, reversed: Boolean(raw.reversed) }
+    } catch { /* kaputter Eintrag ist kein Grund, die Box nicht zu zeigen */ }
+    return { key: 'dex', reversed: false }
+  })
+  const applySort = (next: { key: SortKey; reversed: boolean }) => {
+    setSort(next)
+    try { localStorage.setItem(SORT_STORAGE, JSON.stringify(next)) } catch { /* privater Modus */ }
+  }
 
   const salvage = (id: string) => {
     haptic.tap()
@@ -86,7 +107,7 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
     return <main className="content">{[0, 1, 2].map((i) => <div key={i} className="skeleton skeleton--row" />)}</main>
   }
 
-  const boxed = box.data?.creatures ?? []
+  const boxed = sortCreatures(box.data?.creatures ?? [], sort.key, sort.reversed)
 
   return (
     <Screen
@@ -156,6 +177,36 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
               </button>
             )}
           </div>
+
+          {/* Das <select> steht bewusst nicht in einem <label>: in der
+              Telegram-WebView zaehlt der Tipp dann doppelt und die Liste
+              schliesst sich sofort wieder. */}
+          {boxed.length > 1 && (
+            <div className="picker picker--wide">
+              <span className="picker__label" id="box-sort">{t('box.sort')}</span>
+              <span className="picker__body">
+                <select
+                  className="picker__select"
+                  aria-labelledby="box-sort"
+                  value={sort.key}
+                  onChange={(e) => { haptic.select(); applySort({ key: e.target.value as SortKey, reversed: false }) }}
+                >
+                  {SORT_KEYS.map((k) => <option key={k} value={k}>{t(`box.sort.${k}`)}</option>)}
+                </select>
+                {/* Im Rahmen des Waehlers statt daneben: die Richtung gehoert
+                    zur Sortierung, nicht zur Seite. */}
+                <button
+                  type="button"
+                  className="picker__flip"
+                  aria-label={t('box.sort.flip')}
+                  title={t('box.sort.flip')}
+                  onClick={() => { haptic.tap(); applySort({ ...sort, reversed: !sort.reversed }) }}
+                >
+                  {sort.reversed ? '↑' : '↓'}
+                </button>
+              </span>
+            </div>
+          )}
           {boxed.length === 0
             ? <CenterState glyph="📦" title={t('box.empty.title')} body={t('box.empty.body')} />
             : <div className="stack">

@@ -35,6 +35,7 @@ export function creatureView(
     ...c,
     hpCurrent,
     speciesName,
+    dexNumber: species.dexNumber,
     displayName: c.nickname ?? speciesName,
     types: species.types.map((id) => typeInfo(registry, id, locale)),
     sprite: c.shiny ? species.spriteShiny : species.sprite,

@@ -1030,6 +1030,16 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
   font: inherit; font-size: var(--t-sm); cursor: pointer;
 }
 .picker__select option { background: var(--surface); color: var(--ink); }
+/* Umschalter fuer die Richtung, im Rahmen des Waehlers. Voll greifbar gross,
+   auch wenn der Pfeil klein ist. */
+.picker__flip {
+  flex: 0 0 auto;
+  min-width: 34px; min-height: 30px;
+  display: grid; place-items: center;
+  background: var(--surface-raised); border: 1px solid var(--edge);
+  border-radius: var(--radius-sm);
+  color: var(--ink); font: inherit; font-size: var(--t-sm); cursor: pointer;
+}
 
 .actionRow { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: var(--s2); }
 
@@ -1838,10 +1848,17 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 
 .slots { display: flex; gap: var(--s2); list-style: none; padding: 0; margin: 0; }
 .slot {
+  position: relative;
   flex: 1 1 0; min-width: 0; aspect-ratio: 1;
   display: grid; place-items: center;
   background: var(--surface-sunken); border: 1px solid var(--edge);
   border-radius: var(--radius-sm);
+}
+/* Das aufgenommene Feld muss sich deutlich abheben — sonst tippt man das
+   zweite an, ohne zu wissen, was das erste war. */
+.slot--chosen {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 18%, var(--surface));
 }
 .slot--empty { color: var(--ink-faint); border-style: dashed; }
 .slot__btn {
@@ -1857,11 +1874,17 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
   font-size: var(--t-xs); color: var(--ink-muted);
 }
 .slot__away { position: absolute; left: 2px; top: 0; font-size: var(--t-xs); }
+.slot__pos {
+  position: absolute; left: 3px; bottom: 0;
+  font-size: var(--t-xs); font-weight: 700; color: var(--accent);
+}
 .slot__remove {
-  position: absolute; right: -2px; top: -4px;
-  width: 18px; height: 18px; display: grid; place-items: center;
-  background: var(--danger); color: oklch(0.99 0 0);
-  border-radius: var(--radius-pill); font-size: var(--t-xs); font-weight: 700;
+  position: absolute; right: -4px; top: -6px;
+  width: 22px; height: 22px; display: grid; place-items: center;
+  padding: 0; cursor: pointer;
+  background: var(--danger); color: oklch(0.99 0 0); border: 0;
+  border-radius: var(--radius-pill); font-size: var(--t-sm); font-weight: 700;
+  line-height: 1;
 }
 
 .picker { display: flex; flex-direction: column; gap: var(--s2); }
