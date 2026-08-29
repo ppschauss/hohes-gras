@@ -64,6 +64,33 @@ describe('Attacken', () => {
     expect((await h.put(`/api/creatures/${id}/moves`, { moveIds: ['body-slam'] }, token)).status).toBe(200)
   })
 
+  it('laesst mitgebrachte Attacken stehen, die die Art selbst nicht lernt', async () => {
+    /*
+     * Gemeldet: ein Safcon traegt Giftstachel und Fadenschuss aus seiner Zeit
+     * als Hornliu — Safcons eigenes Lernset kennt beide nicht. Jede Aenderung
+     * scheiterte deshalb mit "diese Attacke kann dein Pokemon auf seinem
+     * Level nicht", und gemeint war eine, die es laengst hatte.
+     */
+    const id = await starterId()
+    // Haerter lernt Testmon erst auf Level 8 — auf Level 5 ist es also eine
+    // mitgebrachte Attacke, wie nach einer Entwicklung.
+    h.ctx.db.prepare('UPDATE creatures SET moves = ? WHERE id = ?')
+      .run(JSON.stringify(['tackle', 'harden']), id)
+
+    h.resetRateLimits()
+    const r = await h.put(`/api/creatures/${id}/moves`, { moveIds: ['harden', 'tackle', 'growl'] }, token)
+    expect(r.status).toBe(200)
+    expect(movesOf(id)).toEqual(['harden', 'tackle', 'growl'])
+  })
+
+  it('weist trotzdem ab, was weder gelernt noch mitgebracht ist', async () => {
+    const id = await starterId()
+    h.resetRateLimits()
+    const r = await h.put(`/api/creatures/${id}/moves`, { moveIds: ['tackle', 'body-slam'] }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.detail.reason).toBe('not_learnable')
+  })
+
   it('weist eine unbekannte Attacke ab', async () => {
     const id = await starterId()
     const r = await h.put(`/api/creatures/${id}/moves`, { moveIds: ['hyperstrahl'] }, token)

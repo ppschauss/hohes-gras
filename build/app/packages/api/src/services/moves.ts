@@ -130,9 +130,21 @@ export function setMoves(
       throw new GameError('validation_failed', { field: 'moveIds', max: MOVE_SLOTS })
     }
 
-    // Nur was die Art auf ihrem Level kann. Ohne diese Pruefung liesse sich
-    // jede Attacke des Packs auf jedes Pokemon schreiben.
-    const learnable = new Set(ctx.registry.learnableAt(creature.speciesId, creature.level))
+    /*
+     * Nur was die Art auf ihrem Level kann — plus das, was sie schon hat.
+     *
+     * Der Zusatz ist kein Schlupfloch, sondern die Entwicklung: ein Safcon
+     * traegt Giftstachel und Fadenschuss aus seiner Zeit als Hornliu, und
+     * Safcons eigenes Lernset kennt beide nicht. Ohne den Zusatz scheiterte
+     * *jede* Aenderung an einer Attacke, die das Pokemon laengst hat — mit der
+     * Meldung, es koenne sie auf seinem Level nicht. Genau so gemeldet.
+     *
+     * Neu dazukommen kann weiterhin nur, was das Lernset hergibt.
+     */
+    const learnable = new Set([
+      ...ctx.registry.learnableAt(creature.speciesId, creature.level),
+      ...creature.moves,
+    ])
     for (const id of unique) {
       if (!ctx.registry.tryMove(id)) throw new GameError('not_found', { moveId: id }, 404)
       if (!learnable.has(id)) {
