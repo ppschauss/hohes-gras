@@ -64,6 +64,7 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Koop** | Gilden mit Wochenziel, Raid-Bosse als Karte im Telegram-Gruppenchat, asynchrones PvP mit Elo, Wochenturnier |
 | **Progression** | Entwicklungen, 10 Ausbauten, 19 Rezepte, Erfolgsketten, 12 Story-Kapitel |
 | **Saison** | Eine Woche, 25 Stufen, 13 davon mit Gegenstand; die letzte bringt ein Schillerndes Seelenfragment |
+| **Anmeldung** | 28 Tage mit unterschiedlichen Gaben; jede volle Woche zahlt Schillernde Seelenfragmente (1 · 2 · 3 · 5) |
 | **Anmeldung** | Telegram-`initData`; für den Browser ein Einmalcode aus dem Chat, verbundene Geräte einzeln kündbar |
 | **Designs** | 13 kaufbare Farbwelten plus Tag-/Nacht-Modus, der der Weltuhr folgt |
 | **Fairness** | Taktkontrolle gegen Automatik-Klicker (Fenster, Mindestabstand, Rhythmuserkennung) und Tagesregeln je Gegner |

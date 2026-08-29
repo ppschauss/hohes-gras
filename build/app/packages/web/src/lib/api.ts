@@ -205,6 +205,11 @@ export const api = {
       method: 'POST', body: JSON.stringify({ itemId, creatureId }),
     }),
 
+  login: () => request<LoginView>('/api/login'),
+  claimLogin: () => request<{
+    day: number; streak: number; bonus: boolean; label: string; state: LoginView
+  }>('/api/login/claim', { method: 'POST', body: '{}' }),
+
   souls: () => request<{
     souls: SoulView[]; eggsOpen: number; eggsMax: number
     shinySouls: number; shinySoulsPerEgg: number
@@ -1067,6 +1072,21 @@ export interface BulkSalvageResult {
   count: number
   names: string[]
   fragments: SalvageResult['fragments']
+}
+
+export interface LoginView {
+  day: number
+  streak: number
+  bestStreak: number
+  claimedTotal: number
+  cycleDays: number
+  weekDays: number
+  claimable: boolean
+  nextDay: number
+  streakAtRisk: boolean
+  days: Array<{
+    day: number; bonus: boolean; claimed: boolean; isNext: boolean; label: string
+  }>
 }
 
 export interface SessionView {

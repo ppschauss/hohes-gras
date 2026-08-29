@@ -1,9 +1,10 @@
+import { useState } from 'react'
 import type { Bootstrap } from '@game/shared'
-import type { TodayTask } from '../lib/api'
+import type { LoginView, TodayTask } from '../lib/api'
 import { t } from '../i18n'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
-import { useAsync } from '../lib/useAsync'
+import { useAction, useAsync } from '../lib/useAsync'
 import { useGame, type Screen } from '../store'
 import { Icon, type IconName } from '../ui/Icon'
 import { DESTINATIONS } from '../ui/destinations'
@@ -37,6 +38,18 @@ export function HomeScreen({ boot }: { boot: Bootstrap }) {
   const setScreen = useGame((s) => s.setScreen)
   const today = useAsync(() => api.today(), [])
   const tasks = today.data?.tasks ?? []
+  const login = useAsync(() => api.login(), [])
+  const claim = useAction()
+  const [got, setGot] = useState<{ label: string; bonus: boolean } | null>(null)
+
+  const collect = () => {
+    haptic.tap()
+    void claim.run(() => api.claimLogin(), (res) => {
+      login.set(res.state)
+      setGot({ label: res.label, bonus: res.bonus })
+      haptic.success()
+    })
+  }
 
   const go = (screen: Screen) => { haptic.tap(); setScreen(screen) }
 
@@ -53,6 +66,8 @@ export function HomeScreen({ boot }: { boot: Bootstrap }) {
       </header>
 
       <main className="content content--home">
+        {login.data && <LoginCard data={login.data} busy={claim.busy} got={got} onClaim={collect} />}
+
         <section className="today">
           <h2 className="today__head">{t('home.now')}</h2>
 
@@ -129,5 +144,58 @@ export function HomeScreen({ boot }: { boot: Bootstrap }) {
         </nav>
       </main>
     </>
+  )
+}
+
+/**
+ * Die Anmeldeleiter.
+ *
+ * Nur die laufende Woche steht als Kacheln da — achtundzwanzig Felder auf
+ * einem Telefon waeren Konfetti. Die Wochenpraemie traegt einen Funken, weil
+ * sie der Grund ist, die Kette nicht abreissen zu lassen.
+ */
+function LoginCard(
+  { data, busy, got, onClaim }:
+  { data: LoginView; busy: boolean; got: { label: string; bonus: boolean } | null; onClaim: () => void },
+) {
+  const week = Math.floor((data.nextDay - 1) / data.weekDays)
+  const days = data.days.slice(week * data.weekDays, (week + 1) * data.weekDays)
+
+  return (
+    <section className="daily">
+      <div className="daily__head">
+        <span className="daily__text">
+          <span className="daily__title">{t('login.title')}</span>
+          <span className="daily__meta">
+            {t('login.progress', { day: data.nextDay, max: data.cycleDays })}
+            {data.streak > 0 && ` · ${t('login.streak', { n: data.streak })}`}
+          </span>
+        </span>
+        {data.claimable && (
+          <button type="button" className="btn btn--primary btn--sm" disabled={busy} onClick={onClaim}>
+            {t('login.claim')}
+          </button>
+        )}
+      </div>
+
+      <div className="daily__week">
+        {days.map((d) => (
+          <span
+            key={d.day}
+            className={`daily__day${d.claimed ? ' daily__day--done' : ''}`
+              + `${d.isNext ? ' daily__day--next' : ''}${d.bonus ? ' daily__day--bonus' : ''}`}
+            title={d.label}
+          >
+            <span className="daily__num num">{d.bonus ? '✦' : d.day}</span>
+          </span>
+        ))}
+      </div>
+
+      {got
+        ? <p className="daily__note daily__note--ok">{t(got.bonus ? 'login.gotBonus' : 'login.got', { what: got.label })}</p>
+        : data.claimable
+          ? <p className="daily__note">{t('login.waiting', { what: data.days[data.nextDay - 1]?.label ?? '' })}</p>
+          : <p className="daily__note">{t('login.done')}</p>}
+    </section>
   )
 }

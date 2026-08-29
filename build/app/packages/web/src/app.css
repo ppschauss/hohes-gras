@@ -1526,6 +1526,29 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .earnRow__what { font-size: var(--t-sm); color: var(--ink-dim, var(--ink)); }
 .earnRow__pts { font-size: var(--t-sm); font-weight: 650; color: var(--accent); }
 
+/* Anmeldeleiter auf dem Startbildschirm. */
+.daily {
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.daily__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+.daily__text { display: flex; flex-direction: column; min-width: 0; }
+.daily__title { font-weight: 650; font-size: var(--t-md); }
+.daily__meta { font-size: var(--t-xs); color: var(--ink-faint); }
+.daily__week { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--s1, 4px); }
+.daily__day {
+  display: grid; place-items: center; aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken); border: 1px solid var(--edge);
+  color: var(--ink-faint); font-size: var(--t-xs);
+}
+.daily__day--done { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.daily__day--next { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-ring); color: var(--ink); }
+.daily__day--bonus { color: var(--gold); font-weight: 700; }
+.daily__note { font-size: var(--t-xs); color: var(--ink-muted); }
+.daily__note--ok { color: var(--ok); }
+
 .sectionHead { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
 .sectionHead h2 { margin: 0; }
 

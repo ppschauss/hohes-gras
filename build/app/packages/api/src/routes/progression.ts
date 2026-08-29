@@ -5,6 +5,7 @@ import { rateLimit, requireTrainer } from './plugin.js'
 import { findById } from '../repos/trainers.js'
 import * as progression from '../services/progression.js'
 import * as story from '../services/story.js'
+import * as login from '../services/login.js'
 
 const EvolveSchema = z.object({ creatureId: z.string().uuid(), targetSpeciesId: z.string() })
 const BuildingSchema = z.object({ buildingId: z.string() })
@@ -38,6 +39,10 @@ export function registerProgressionRoutes(app: FastifyInstance, ctx: AppContext)
     const result = progression.craft(ctx, req.trainer!, recipeId)
     return { ...result, crafting: progression.craftingView(ctx, findById(ctx.db, req.trainer!.id)!) }
   })
+
+  app.get('/api/login', auth, async (req) => login.view(ctx, req.trainer!))
+
+  app.post('/api/login/claim', write, async (req) => login.claim(ctx, req.trainer!))
 
   app.get('/api/season', auth, async (req) => progression.seasonView(ctx, req.trainer!))
 

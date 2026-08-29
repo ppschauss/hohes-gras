@@ -343,6 +343,27 @@ Dazu ein **Wochenturnier** mit automatisch aufgelöstem Bracket.
 
 ---
 
+## 19a. Tägliche Anmeldebelohnung
+
+**Vier Wochen, 28 verschiedene Gaben.** Jeder Tag zahlt einmal; wer einen Tag
+auslässt, fängt wieder bei Tag 1 an. Nach Tag 28 beginnt die Leiter von vorn,
+die Serie läuft weiter.
+
+| Woche | Thema | Prämie am 7. Tag |
+|---|---|---|
+| 1 | Ankommen: Gold, Pokébälle, Energie, Beeren, Bonbons, Superbälle | **1× Schillerndes Seelenfragment** |
+| 2 | Ausrüsten: Gold, Himmihbeeren, Energie, Supertränke, Hyperbälle, Sternenstaub | **2×** |
+| 3 | Werkeln: Gold, Tautropfen, Energie, EP-Bonbon L, Goldene Himmihbeeren, Eisensplitter | **3×** |
+| 4 | Meistern: Gold, Beleber, Energie, Sonderbonbon, Mondstein, Top-Genesungen | **5×** |
+
+Elf Fragmente je Durchlauf, dazu vier aus der Saison — in vier Wochen also
+fünfzehn, gut zwei schillernde Eier. Die Prämien wachsen, damit die vierte
+Woche mehr ist als die erste noch einmal.
+
+Die Karte steht auf dem Startbildschirm und zeigt die laufende Woche als sieben
+Felder; der Prämientag trägt einen Funken. `npm run world` prüft die 28 Gaben
+gegen den Gegenstandskatalog.
+
 ## 20. Saison-Reise
 
 Eine Saison dauert **sieben Tage** und hat **25 Stufen**. Der Zähler oben nennt

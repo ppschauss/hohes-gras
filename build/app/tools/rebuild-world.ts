@@ -16,7 +16,7 @@
 import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { RECIPES } from '../packages/engine/dist/index.js'
+import { LOGIN_REWARDS, RECIPES } from '../packages/engine/dist/index.js'
 import { AUTHORED, lureItems, soulItems } from './curated-items.ts'
 import { EVENT_SPECIES } from './curated-event.ts'
 import { AREAS, BADGES, REGIONS, TRAINERS } from './curated-kanto.ts'
@@ -238,6 +238,17 @@ async function main(): Promise<void> {
     throw new Error(`Rezepte nennen unbekannte Gegenstände: ${[...new Set(unknown)].join(', ')}`)
   }
   log(`${RECIPES.length} Rezepte geprüft`)
+
+  // Dieselbe Falle wie bei den Rezepten: eine falsche Id faellt sonst erst
+  // auf, wenn ein Spieler seine Tagesgabe abholt und nichts bekommt.
+  const missing = LOGIN_REWARDS
+    .filter((r) => r.kind === 'item')
+    .map((r) => (r as { itemId: string }).itemId)
+    .filter((id) => !known.has(id))
+  if (missing.length > 0) {
+    throw new Error(`Anmeldebelohnungen nennen unbekannte Gegenstände: ${[...new Set(missing)].join(', ')}`)
+  }
+  log(`${LOGIN_REWARDS.length} Anmeldetage geprüft`)
 
   const mergedItems = [...byId.values()].sort((x, y) => x.id.localeCompare(y.id))
   if (added) log(`${added} neue Gegenstände`)
