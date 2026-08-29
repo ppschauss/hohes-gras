@@ -13,7 +13,7 @@ export type IconName =
   | 'shop' | 'energy' | 'gold' | 'dex' | 'back' | 'chevron' | 'check'
   | 'weather' | 'clock' | 'spark'
   | 'feed' | 'play' | 'wash' | 'rest'
-  | 'caught' | 'bag'
+  | 'caught' | 'bag' | 'trophy' | 'lab'
 
 interface Props {
   name: IconName
@@ -76,6 +76,10 @@ const PATHS: Record<IconName, string> = {
   rest: 'M19 14.5A7.5 7.5 0 0 1 9.5 5 7.8 7.8 0 1 0 19 14.5Z',
   // Vierzackiger Funke — Belohnung, Neues.
   spark: 'M12 3.5c0 4 1.5 5.5 5.5 5.5-4 0-5.5 1.5-5.5 5.5 0-4-1.5-5.5-5.5-5.5 4 0 5.5-1.5 5.5-5.5ZM18 15.5c0 1.8.7 2.5 2.5 2.5-1.8 0-2.5.7-2.5 2.5 0-1.8-.7-2.5-2.5-2.5 1.8 0 2.5-.7 2.5-2.5Z',
+  // Pokal: Erfolge, Saison und Rangliste haben jetzt einen eigenen Ort.
+  trophy: 'M7 4.5h10v4a5 5 0 0 1-10 0ZM7 6H4.5v1.5A3 3 0 0 0 7.5 10.5M17 6h2.5v1.5a3 3 0 0 1-3 3M12 13.5V17M9 20h6M9.5 17h5',
+  // Kolben: die Basis mit Labor, Werkstatt und Ausbau.
+  lab: 'M10 3.5v5.2L5.2 17.4A2 2 0 0 0 7 20.5h10a2 2 0 0 0 1.8-3.1L14 8.7V3.5M9 3.5h6M7.8 14h8.4',
 }
 
 export function Icon({ name, size = 22, className }: Props) {

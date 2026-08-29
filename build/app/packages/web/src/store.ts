@@ -18,6 +18,9 @@ export const SCREENS = [
   'battle', 'expeditions', 'eggs', 'friends', 'coop', 'progress', 'energy', 'center', 'plots', 'themes',
   'arena',
   'bag',
+  // Basis (Ausbau, Labor, Werkstatt) und Erfolge (Erfolge, Saison, Rangliste):
+  // beides stand vorher als Reiter im Fortschritt und ging dort unter.
+  'base', 'records',
 ] as const
 export type Screen = (typeof SCREENS)[number]
 

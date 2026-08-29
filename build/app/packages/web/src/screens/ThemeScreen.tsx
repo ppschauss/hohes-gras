@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ThemeView } from '@game/shared'
 import { t } from '../i18n'
 import { api } from '../lib/api'
@@ -8,6 +9,7 @@ import { useAction, useAsync } from '../lib/useAsync'
 import { useGame } from '../store'
 import { Icon } from '../ui/Icon'
 import { Screen } from '../ui/Screen'
+import { DataPanel } from '../progress/DataPanel'
 
 /**
  * Der Design-Laden.
@@ -26,6 +28,8 @@ export function ThemeScreen({ onBack }: { onBack: () => void }) {
   const action = useAction()
   const applyTheme = useTheme((s) => s.apply)
   const clock = useGame((s) => s.boot?.clock.timeOfDay ?? 'day')
+  /** Aussehen oder Konto — beides sind Einstellungen. */
+  const [pane, setPane] = useState<'look' | 'data'>('look')
   const d = themes.data
 
   /** Nach jeder Änderung sofort anwenden — Vorschau ist die Anwendung. */
@@ -44,6 +48,21 @@ export function ThemeScreen({ onBack }: { onBack: () => void }) {
       <main className="content">
         {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
+        <div className="segmented" role="tablist">
+          {(['look', 'data'] as const).map((id) => (
+            <button key={id} type="button" role="tab" aria-selected={pane === id}
+              className="segmented__btn" onClick={() => { haptic.select(); setPane(id) }}>
+              {t(`themes.pane.${id}`)}
+            </button>
+          ))}
+        </div>
+
+        {/* Export und Loeschen des Spielstands standen als neunter Reiter im
+            Fortschritt — zwischen Erfolgen und Saison, wo sie niemand sucht.
+            Aussehen und Konto sind beides Einstellungen. */}
+        {pane === 'data' && <DataPanel />}
+
+        {pane === 'look' && (<>
         <section className="section">
           <h2>{t('themes.mode')}</h2>
           <div className="segmented" role="tablist">
@@ -98,6 +117,7 @@ export function ThemeScreen({ onBack }: { onBack: () => void }) {
             </section>
           )
         })}
+        </>)}
       </main>
     </Screen>
   )

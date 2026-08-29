@@ -225,7 +225,19 @@ export function worldMap(ctx: AppContext, trainer: Trainer): {
       visited: Boolean(prog),
       isCurrent: trainer.currentAreaId === area.id,
       requirements: reqs,
-      caughtHere: caughtPerArea.get(area.id) ?? 0,
+      /*
+       * Wie viel vom Bestand dieses Gebiets man hat — nicht, wie viel man
+       * *hier* gefangen hat.
+       *
+       * Das waren zwei verschiedene Zahlen, und die Karte zeigte die andere
+       * als die Gebietsansicht: "4/7 gefangen" auf der Karte, "6 gefangen" im
+       * Gebiet. Gemeldet, und der Fehler lag auf der Karte — die
+       * Gebietsansicht und die Belohnung fuers Vervollstaendigen zaehlen beide
+       * ueber den Pokedex. Wo man eine Art gefangen hat, sagt nichts darueber,
+       * ob man sie hat.
+       */
+      caughtHere: [...new Set(area.spawns.map((sp) => sp.speciesId))]
+        .filter((id) => caughtSpecies.has(id)).length,
       speciesHere: new Set(area.spawns.map((s) => s.speciesId)).size,
       encounters: prog?.encounters ?? 0,
       gymId: area.gymId,

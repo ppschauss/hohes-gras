@@ -5,11 +5,12 @@ import { Screen } from '../ui/Screen'
 import { FriendsPanel } from '../social/FriendsPanel'
 import { MarketPanel } from '../social/MarketPanel'
 import { TradePanel } from '../social/TradePanel'
-import { RankingPanel } from '../social/RankingPanel'
 import { CardPanel } from '../social/CardPanel'
 
-type Tab = 'friends' | 'market' | 'trades' | 'ranking' | 'card'
-const TABS: Tab[] = ['friends', 'market', 'trades', 'ranking', 'card']
+/* Die Rangliste steht jetzt bei den Erfolgen: sie beantwortet "wie steh ich
+ * da" und nicht "mit wem tausche ich". */
+type Tab = 'friends' | 'market' | 'trades' | 'card'
+const TABS: Tab[] = ['friends', 'market', 'trades', 'card']
 
 /** One screen with five panels rather than five menu entries: they share a
  *  header and the player moves between them constantly while trading. */
@@ -31,7 +32,6 @@ export function SocialScreen({ onBack }: { onBack: () => void }) {
         {tab === 'friends' && <FriendsPanel />}
         {tab === 'market' && <MarketPanel />}
         {tab === 'trades' && <TradePanel />}
-        {tab === 'ranking' && <RankingPanel />}
         {tab === 'card' && <CardPanel />}
       </main>
     </Screen>

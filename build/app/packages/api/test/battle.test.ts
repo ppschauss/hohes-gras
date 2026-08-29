@@ -426,3 +426,26 @@ describe('Gegenstände im Kampf', () => {
     expect(left.quantity).toBe(5)
   })
 })
+
+describe('Kampfprotokoll', () => {
+  it('nennt Attacken auf Deutsch, nicht mit ihrer Kennung', async () => {
+    /*
+     * Die Engine kennt keine Sprachen und schreibt die Kennung ins Ereignis.
+     * Im Protokoll stand damit Englisch zwischen deutschen Saetzen — gemeldet.
+     */
+    await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+    h.resetRateLimits()
+    const r = await h.post('/api/battle/action', { kind: 'move', moveIndex: 0 }, token)
+    expect(r.status).toBe(200)
+
+    const moves = (r.body.lastEvents as Array<{ type: string; moveId: string; moveName: string }>)
+      .filter((e) => e.type === 'move')
+    expect(moves.length).toBeGreaterThan(0)
+    for (const m of moves) {
+      const item = h.ctx.registry.tryMove(m.moveId)
+      expect(m.moveName).toBe(item ? item.name.de : m.moveId)
+      // Und nicht mehr die Kennung selbst, solange es eine Uebersetzung gibt.
+      if (item) expect(m.moveName).not.toBe(m.moveId)
+    }
+  })
+})

@@ -143,6 +143,21 @@ export function view(
   const self = activeFighter(player)
   const target = activeFighter(foe)
 
+  /*
+   * Attackennamen uebersetzen, bevor die Ereignisse hinausgehen.
+   *
+   * Die Engine kennt keine Sprachen — sie schreibt die Kennung der Attacke in
+   * das Ereignis, also "flame-burst". Im Kampfprotokoll stand damit Englisch
+   * zwischen deutschen Saetzen; genau so gemeldet. Uebersetzt wird hier, wo
+   * die Registry und die Sprache des Trainers bekannt sind, und nicht dort,
+   * wo die Regeln stehen.
+   */
+  const named = lastEvents.map((e) => {
+    if (e.type !== 'move') return e
+    const move = ctx.registry.tryMove(e.moveId)
+    return { ...e, moveName: move ? ctx.registry.localized(move.name, trainer.locale) : e.moveId }
+  })
+
   return {
     id: record.id,
     kind: record.kind,
@@ -180,7 +195,7 @@ export function view(
       active: fighterView(ctx, target, trainer.locale),
       party: foe.party.map((f) => fighterView(ctx, f, trainer.locale)),
     },
-    lastEvents,
+    lastEvents: named,
     reward,
   }
 }

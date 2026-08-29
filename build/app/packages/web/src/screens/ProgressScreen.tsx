@@ -4,20 +4,22 @@ import { haptic } from '../lib/telegram'
 import { Screen } from '../ui/Screen'
 import { StoryPanel } from '../progress/StoryPanel'
 import { EvolutionPanel } from '../progress/EvolutionPanel'
-import { BuildingPanel } from '../progress/BuildingPanel'
-import { CraftingPanel } from '../progress/CraftingPanel'
-import { ResearchPanel } from '../progress/ResearchPanel'
 import { BoardingPanel } from '../progress/BoardingPanel'
-import { SeasonPanel } from '../progress/SeasonPanel'
-import { AchievementPanel } from '../progress/AchievementPanel'
-import { DataPanel } from '../progress/DataPanel'
 
-type Tab = 'story' | 'evolution' | 'buildings' | 'research' | 'boarding' | 'crafting' | 'season' | 'achievements' | 'data'
-// Forschung steht vor dem Handwerk: sie schaltet dessen Rezepte frei, und in
-// dieser Reihenfolge liest sich die Leiste wie der Weg, den man geht.
-const TABS: Tab[] = [
-  'story', 'evolution', 'buildings', 'research', 'boarding', 'crafting', 'season', 'achievements', 'data',
-]
+/*
+ * Drei Reiter statt neun.
+ *
+ * Hier stand einmal alles: Reise, Entwicklung, Ausbau, Forschung, Pension,
+ * Handwerk, Saison, Erfolge und Daten — ein Streifen, den man seitlich
+ * schieben musste, um sein Ende zu sehen, und in dem nichts mit nichts zu tun
+ * hatte. Uebrig bleibt, was wirklich der Fortschritt der eigenen Reise ist:
+ * wo sie weitergeht, was sich entwickeln kann, und wer gerade trainiert.
+ *
+ * Ausbau, Forschung und Handwerk sind zur Basis gewandert, Saison, Erfolge und
+ * Rangliste zu den Erfolgen, die Daten zu den Einstellungen.
+ */
+type Tab = 'story' | 'evolution' | 'boarding'
+const TABS: Tab[] = ['story', 'evolution', 'boarding']
 
 export function ProgressScreen({ onBack }: { onBack: () => void }) {
   const [tab, setTab] = useState<Tab>('story')
@@ -25,7 +27,7 @@ export function ProgressScreen({ onBack }: { onBack: () => void }) {
   return (
     <Screen eyebrow={t('progress.eyebrow')} title={t('progress.title')} onBack={onBack}>
       <main className="content">
-        <div className="segmented segmented--scroll" role="tablist">
+        <div className="segmented" role="tablist">
           {TABS.map((id) => (
             <button key={id} type="button" role="tab" aria-selected={tab === id}
               className="segmented__btn" onClick={() => { haptic.select(); setTab(id) }}>
@@ -36,13 +38,7 @@ export function ProgressScreen({ onBack }: { onBack: () => void }) {
 
         {tab === 'story' && <StoryPanel />}
         {tab === 'evolution' && <EvolutionPanel />}
-        {tab === 'buildings' && <BuildingPanel />}
-        {tab === 'research' && <ResearchPanel />}
         {tab === 'boarding' && <BoardingPanel />}
-        {tab === 'crafting' && <CraftingPanel />}
-        {tab === 'season' && <SeasonPanel />}
-        {tab === 'achievements' && <AchievementPanel />}
-        {tab === 'data' && <DataPanel />}
       </main>
     </Screen>
   )

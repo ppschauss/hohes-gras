@@ -28,6 +28,8 @@ export const DESTINATIONS: Destination[] = [
   { screen: 'bag', icon: 'bag', labelKey: 'menu.bag.title', feature: 'shop' },
   { screen: 'coop', icon: 'guild', labelKey: 'menu.coop.title', feature: 'guilds' },
   { screen: 'progress', icon: 'progress', labelKey: 'menu.progress.title', feature: 'story' },
+  { screen: 'base', icon: 'lab', labelKey: 'menu.base.title', feature: 'story' },
+  { screen: 'records', icon: 'trophy', labelKey: 'menu.records.title', feature: 'story' },
   { screen: 'friends', icon: 'friends', labelKey: 'menu.friends.title', feature: 'social' },
   { screen: 'energy', icon: 'energy', labelKey: 'menu.energy.title', feature: 'energy' },
   { screen: 'themes', icon: 'spark', labelKey: 'menu.themes.title', feature: 'themes' },
@@ -41,8 +43,9 @@ export const DESTINATIONS: Destination[] = [
  * Gliederung, sonst ist sie eine Aufzaehlung ohne Gefaelle.
  */
 export const NAV_GROUPS: Array<{ labelKey: string; screens: Screen[] }> = [
-  { labelKey: 'nav.group.play', screens: ['garden', 'map', 'plots'] },
-  { labelKey: 'nav.group.team', screens: ['teams', 'arena', 'center', 'eggs', 'expeditions'] },
-  { labelKey: 'nav.group.world', screens: ['friends', 'coop', 'shop', 'bag'] },
-  { labelKey: 'nav.group.you', screens: ['progress', 'energy', 'themes'] },
+  { labelKey: 'nav.group.play', screens: ['garden', 'map', 'plots', 'expeditions'] },
+  { labelKey: 'nav.group.team', screens: ['teams', 'arena', 'center', 'eggs'] },
+  { labelKey: 'nav.group.build', screens: ['base', 'shop', 'bag'] },
+  { labelKey: 'nav.group.world', screens: ['friends', 'coop'] },
+  { labelKey: 'nav.group.you', screens: ['progress', 'records', 'energy', 'themes'] },
 ]

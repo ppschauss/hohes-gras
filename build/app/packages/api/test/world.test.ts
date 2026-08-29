@@ -707,3 +707,39 @@ describe('Fundstuecke und der Metalldetektor', () => {
     expect(seen.size).toBeGreaterThan(0)
   })
 })
+
+describe('Fangzaehler eines Gebiets', () => {
+  it('zaehlt den Bestand, nicht den Fangort', async () => {
+    /*
+     * Auf der Karte stand "4/7 gefangen", in der Gebietsansicht "6 gefangen".
+     * Zwei verschiedene Groessen: hier gefangen gegen im Pokedex vorhanden.
+     * Die Gebietsansicht und die Belohnung fuers Vervollstaendigen zaehlen
+     * beide ueber den Pokedex — die Karte tat es als Einzige nicht.
+     */
+    const area = h.ctx.registry.area('test-route')
+    const species = [...new Set(area.spawns.map((s) => s.speciesId))]
+
+    // Eine Art als anderswo gefangen eintragen: der Fangort ist ein anderes
+    // Gebiet, der Dex-Eintrag zaehlt trotzdem.
+    h.ctx.db.prepare(
+      `INSERT INTO creatures (id, owner_id, species_id, xp, level, nature,
+         iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, friendship, energy, hp_current,
+         shiny, moves, caught_at, caught_area_id, team_slot)
+       VALUES (?, ?, ?, 0, 5, 'hardy', 15,15,15,15,15,15, 0, 100, 20, 0, '["tackle"]', ?, 'test-cave', NULL)`,
+    ).run(crypto.randomUUID(), trainerId, species[0], Date.now())
+    h.ctx.db.prepare(
+      'INSERT INTO dex_entries (trainer_id, species_id, seen_at, caught_at) VALUES (?, ?, ?, ?) '
+      + 'ON CONFLICT(trainer_id, species_id) DO UPDATE SET caught_at = excluded.caught_at',
+    ).run(trainerId, species[0], Date.now(), Date.now())
+
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('test-route', trainerId)
+    h.resetRateLimits()
+    const world = await h.get('/api/world', token)
+    const card = world.body.regions.flatMap((r: any) => r.areas).find((a: any) => a.id === 'test-route')
+    h.resetRateLimits()
+    const detail = await h.get('/api/area/spawns', token)
+
+    expect(card.caughtHere).toBe(detail.body.caught)
+    expect(card.caughtHere).toBeGreaterThan(0)
+  })
+})

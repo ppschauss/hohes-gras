@@ -10,6 +10,23 @@ import { ItemIcon } from '../ui/ItemIcon'
 const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const
 
 /**
+ * Fuenfzehn Projekte untereinander sind eine Liste, kein Baum.
+ *
+ * Die Unterteilung folgt dem, wonach man sucht: ein Rezept, das man
+ * freischalten will, oder einen Bonus, den man heben will. "Offen" ist die
+ * Ansicht, mit der man ankommt — alles, was jetzt noch etwas bringt.
+ */
+const FILTERS = ['open', 'recipe', 'bonus', 'done'] as const
+type Filter = (typeof FILTERS)[number]
+
+const matches = (p: ResearchProjectView, f: Filter): boolean => {
+  if (f === 'done') return p.complete
+  if (f === 'open') return !p.complete
+  if (f === 'recipe') return p.kind === 'recipe' || p.kind === 'training'
+  return p.kind === 'bonus'
+}
+
+/**
  * Labor: Forschung und Training.
  *
  * Zwei Zustände je Projekt und nicht mehr: es läuft, oder es lässt sich
@@ -24,6 +41,7 @@ export function ResearchPanel() {
   const [note, setNote] = useState<string | null>(null)
   /** Welches Projekt gerade nach einem Pokémon fragt. */
   const [picking, setPicking] = useState<{ projectId: string; stat?: string } | null>(null)
+  const [filter, setFilter] = useState<Filter>('open')
 
   const d = research.data
   const candidates = [...(garden.data?.team ?? []), ...(box.data?.creatures ?? [])]
@@ -160,11 +178,38 @@ export function ResearchPanel() {
       )}
 
       <section className="section">
-        <h2>{t('research.projects')}</h2>
+        <div className="sectionHead">
+          <h2>{t('research.projects')}</h2>
+          <span className="num">{d.projects.filter((p) => p.complete).length}/{d.projects.length}</span>
+        </div>
+
+        {/* Das <select> steht bewusst nicht in einem <label>: in der
+            Telegram-WebView zaehlt der Tipp dort doppelt. */}
+        <div className="picker picker--wide">
+          <span className="picker__label" id="research-filter">{t('research.filter')}</span>
+          <span className="picker__body">
+            <select
+              className="picker__select"
+              aria-labelledby="research-filter"
+              value={filter}
+              onChange={(e) => { haptic.select(); setFilter(e.target.value as Filter) }}
+            >
+              {FILTERS.map((f) => (
+                <option key={f} value={f}>
+                  {t(`research.filter.${f}`)} ({d.projects.filter((p) => matches(p, f)).length})
+                </option>
+              ))}
+            </select>
+          </span>
+        </div>
+
         <div className="stack">
-          {d.projects.map((p) => (
+          {d.projects.filter((p) => matches(p, filter)).map((p) => (
             <Project key={p.id} p={p} gold={d.gold} busy={action.busy} onStart={setPicking} />
           ))}
+          {d.projects.filter((p) => matches(p, filter)).length === 0 && (
+            <p className="center__body">{t('research.filterEmpty')}</p>
+          )}
         </div>
       </section>
     </>

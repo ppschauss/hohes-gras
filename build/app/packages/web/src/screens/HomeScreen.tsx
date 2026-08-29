@@ -8,7 +8,7 @@ import { useAction, useAsync } from '../lib/useAsync'
 import { untilLabel } from '../lib/format'
 import { useGame, type Screen } from '../store'
 import { Icon, type IconName } from '../ui/Icon'
-import { DESTINATIONS } from '../ui/destinations'
+import { DESTINATIONS, NAV_GROUPS } from '../ui/destinations'
 import { Resources } from '../ui/Resources'
 
 /**
@@ -129,25 +129,35 @@ export function HomeScreen({ boot }: { boot: Bootstrap }) {
           </section>
         )}
 
-        {/* Am Rechner traegt die Seitenleiste dieselben Ziele — dann waere das
-            Raster hier eine zweite Navigation mit denselben dreizehn Woertern. */}
-        <nav className="grid grid--menu" aria-label={t('app.title')}>
-          {DESTINATIONS.map((d) => {
-            const enabled = boot.features[d.feature] === true
-            return (
-              <button
-                key={d.screen}
-                type="button"
-                className="tile"
-                disabled={!enabled}
-                onClick={() => go(d.screen)}
-              >
-                <Icon name={d.icon} size={24} />
-                <span className="tile__label">{t(d.labelKey)}</span>
-              </button>
-            )
-          })}
-        </nav>
+        {/*
+          * Gruppiert statt in einer Reihe.
+          *
+          * Sechzehn Kacheln hintereinander sind ein Suchbild: der Garten neben
+          * der Rangliste neben dem Beutel, ohne dass irgendetwas zusammengehoert
+          * — gemeldet als "der Start ist etwas unsortiert". Die Gruppen sind
+          * dieselben, die die Seitenleiste am Rechner schon benutzt; zwei
+          * Ordnungen fuer dieselben Ziele waeren zwei Wahrheiten.
+          */}
+        {NAV_GROUPS.map((group) => {
+          const tiles = group.screens
+            .map((screen) => DESTINATIONS.find((d) => d.screen === screen))
+            .filter((d): d is (typeof DESTINATIONS)[number] => d !== undefined)
+            .filter((d) => boot.features[d.feature] === true)
+          if (tiles.length === 0) return null
+          return (
+            <nav key={group.labelKey} className="menuGroup" aria-label={t(group.labelKey)}>
+              <h2 className="menuGroup__head">{t(group.labelKey)}</h2>
+              <div className="grid grid--menu">
+                {tiles.map((d) => (
+                  <button key={d.screen} type="button" className="tile" onClick={() => go(d.screen)}>
+                    <Icon name={d.icon} size={24} />
+                    <span className="tile__label">{t(d.labelKey)}</span>
+                  </button>
+                ))}
+              </div>
+            </nav>
+          )
+        })}
       </main>
     </>
   )
@@ -174,7 +184,10 @@ function LoginCard(
           <span className="daily__title">{t('login.title')}</span>
           <span className="daily__meta">
             {t('login.progress', { day: data.nextDay, max: data.cycleDays })}
-            {data.streak > 0 && ` · ${t('login.streak', { n: data.streak })}`}
+            {/* "1 Tage in Folge" las sich falsch — bei genau einem Tag gibt es
+                einen eigenen Satz. */}
+            {data.streak > 0
+              && ` · ${t(data.streak === 1 ? 'login.streak.one' : 'login.streak', { n: data.streak })}`}
           </span>
         </span>
         {data.claimable && (

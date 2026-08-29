@@ -888,6 +888,15 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .boarder__name { font-size: var(--t-sm); font-weight: 650; }
 .boarder__meta { font-size: var(--t-xs); color: var(--ink-faint); }
 
+/* Gruppierte Startkacheln: die Ueberschrift traegt die Ordnung, nicht ein
+   Trennstrich — vier duenne Linien untereinander waeren mehr Rahmen als
+   Inhalt. */
+.menuGroup { display: flex; flex-direction: column; gap: var(--s2); }
+.menuGroup__head {
+  font-size: var(--t-xs); font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ink-faint); margin: 0;
+}
+
 /* Brut-Beet: die Pflegezeile traegt die Belohnung, deshalb Gold. */
 .egg__care { font-size: var(--t-xs); color: var(--gold); }
 .egg__actions { display: flex; flex-direction: column; gap: var(--s2); align-items: stretch; }

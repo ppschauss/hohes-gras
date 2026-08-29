@@ -26,6 +26,8 @@ import { BattleScreen } from '../screens/BattleScreen'
 import { SocialScreen } from '../screens/SocialScreen'
 import { CoopScreen } from '../screens/CoopScreen'
 import { ProgressScreen } from '../screens/ProgressScreen'
+import { BaseScreen } from '../screens/BaseScreen'
+import { RecordsScreen } from '../screens/RecordsScreen'
 import { ArenaScreen } from '../screens/ArenaScreen'
 
 interface Props {
@@ -109,6 +111,10 @@ export function GameRouter({ boot, onTrainerChanged }: Props) {
       return <CoopScreen onBack={back} />
     case 'progress':
       return <ProgressScreen onBack={back} />
+    case 'base':
+      return <BaseScreen onBack={back} />
+    case 'records':
+      return <RecordsScreen onBack={back} />
     case 'arena':
       return <ArenaScreen onBack={back} onBattle={() => setScreen('battle')} />
     default:
