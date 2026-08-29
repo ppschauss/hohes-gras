@@ -61,7 +61,7 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Poké-Center** | Alle 15 Minuten kostenlose Vollheilung, gelegentlich mit Fund, Geschenk oder Tauschangebot |
 | **Poké-Beet** | Beeren, Bonbons oder Gold eingraben; Pflege oder ein Pflanzen-Pokémon heben den Ertrag |
 | **Idle** | Expeditionen (4 Arten × 3 Dauern, bis 6 Pokémon), Ei-Zucht mit IV-Vererbung, 3 Brutplätze (ausbaubar auf 8) |
-| **Sozial** | Freunde über Trainer-Code, teilbare Trainerkarte, Marktplatz, Direkttausch, Rangliste |
+| **Sozial** | Freunde über Trainer-Code, tägliche Geschenke (Trank, Beeren, Bälle, gelegentlich ein Ei), teilbare Trainerkarte, Marktplatz, Direkttausch, Rangliste |
 | **Koop** | Gilden mit Wochenziel, Raid-Bosse als Karte im Telegram-Gruppenchat, asynchrones PvP mit Elo, Wochenturnier |
 | **Progression** | Entwicklungen, 10 Ausbauten, 19 Rezepte, Erfolgsketten, 12 Story-Kapitel |
 | **Saison** | Eine Woche, 25 Stufen, 13 davon mit Gegenstand; die letzte bringt ein Schillerndes Seelenfragment |

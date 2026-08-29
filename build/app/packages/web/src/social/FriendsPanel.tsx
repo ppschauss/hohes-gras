@@ -100,6 +100,31 @@ export function FriendsPanel() {
         </section>
       )}
 
+      {d && d.gifts.length > 0 && (
+        <section className="section">
+          <h2>{t('gifts.inbox', { n: d.gifts.length })}</h2>
+          <div className="stack">
+            {d.gifts.map((g) => (
+              <article key={g.id} className="friend">
+                <span className="friend__text">
+                  <span className="friend__name">{g.fromName}{g.egg ? ' 🥚' : ''}</span>
+                  <span className="friend__meta">{g.label}</span>
+                </span>
+                <span className="friend__actions">
+                  <button type="button" className="btn btn--primary btn--sm" disabled={action.busy}
+                    onClick={() => {
+                      haptic.tap()
+                      void action.run(() => api.openGift(g.id), (res) => { d && friends.set(res.friends); haptic.success() })
+                    }}>
+                    {t('gifts.open')}
+                  </button>
+                </span>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="section">
         <h2>{t('friends.list')}</h2>
         {d && d.friends.length === 0
@@ -107,7 +132,20 @@ export function FriendsPanel() {
           : <div className="stack">
               {d?.friends.map((f) => (
                 <FriendRow key={f.trainerId} friend={f}
-                  actions={[{ label: t('friends.remove'), onClick: () => remove(f.trainerId) }]}
+                  actions={[
+                    {
+                      label: f.giftedToday ? t('gifts.sentToday') : t('gifts.send'),
+                      primary: !f.giftedToday,
+                      disabled: f.giftedToday,
+                      onClick: () => {
+                        haptic.tap()
+                        void action.run(() => api.sendGift(f.trainerId), (res) => {
+                          friends.set(res.friends); haptic.success()
+                        })
+                      },
+                    },
+                    { label: t('friends.remove'), onClick: () => remove(f.trainerId) },
+                  ]}
                   busy={action.busy} />
               ))}
             </div>}
@@ -118,7 +156,7 @@ export function FriendsPanel() {
 
 function FriendRow({ friend, actions, busy }: {
   friend: FriendBrief
-  actions: Array<{ label: string; onClick: () => void; primary?: boolean }>
+  actions: Array<{ label: string; onClick: () => void; primary?: boolean; disabled?: boolean }>
   busy: boolean
 }) {
   return (
@@ -133,7 +171,7 @@ function FriendRow({ friend, actions, busy }: {
         {actions.map((a) => (
           <button key={a.label} type="button"
             className={`btn btn--sm ${a.primary ? 'btn--primary' : 'btn--ghost'}`}
-            disabled={busy} onClick={a.onClick}>{a.label}</button>
+            disabled={busy || a.disabled} onClick={a.onClick}>{a.label}</button>
         ))}
       </span>
     </article>

@@ -340,6 +340,24 @@ Prüfgegenstände) sind weder käuflich noch verkäuflich.
 - **Direkttausch** zwischen Freunden
 - **Rangliste** nach Wertung, mit Stufen von Bronze aufwärts
 - **Trainerkarte** teilen, auch inline im Gruppenchat
+- **Tägliche Geschenke:** einmal am Tag je Freund, kostenlos
+
+### Geschenke
+
+Ein Geschenk enthält **1 Trank, 1–3 Beeren und 5–10 Pokébälle**, und in etwa
+jedem zwölften liegt zusätzlich **ein Ei**. Nichts Seltenes — der Wert liegt in
+der Regelmäßigkeit, nicht im einzelnen Fund.
+
+Der Inhalt wird beim **Senden** gewürfelt und mitgeschrieben; sonst hinge er
+davon ab, wann der Empfänger hineinschaut. Das **Ei** entsteht dagegen erst
+beim Öffnen: welche Art schlüpft, gehört zum Empfänger, und ohne freien
+Brutplatz läge es sonst tagelang fest. Ist kein Platz frei, kommt der Rest
+trotzdem an, und die Meldung sagt es.
+
+Höchstens **20 ungeöffnete Geschenke** sammeln sich an; darüber hinaus wird der
+Absender abgewiesen statt still zu stapeln. Die Tagesgrenze steht als
+eindeutiger Index in der Datenbank — zwei gleichzeitige Anfragen kämen sonst
+beide durch.
 
 ---
 

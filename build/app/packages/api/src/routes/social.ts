@@ -4,6 +4,7 @@ import type { AppContext } from '../context.js'
 import { rateLimit, requireTrainer } from './plugin.js'
 import { findById } from '../repos/trainers.js'
 import * as social from '../services/social.js'
+import * as gifts from '../services/gifts.js'
 
 const CodeSchema = z.object({ code: z.string().trim().min(4).max(16) })
 const IdSchema = z.object({ trainerId: z.string().uuid() })
@@ -42,6 +43,18 @@ export function registerSocialRoutes(app: FastifyInstance, ctx: AppContext): voi
     const { fromId, accept } = RespondSchema.parse(req.body)
     social.respondToRequest(ctx, req.trainer!, fromId, accept)
     return social.friendOverview(ctx, req.trainer!)
+  })
+
+  app.post('/api/friends/gift', write, async (req) => {
+    const { trainerId } = z.object({ trainerId: z.string().uuid() }).parse(req.body)
+    const sent = gifts.send(ctx, req.trainer!, trainerId)
+    return { sent, friends: social.friendOverview(ctx, req.trainer!) }
+  })
+
+  app.post('/api/gifts/open', write, async (req) => {
+    const { giftId } = z.object({ giftId: z.string().min(1) }).parse(req.body)
+    const opened = gifts.open(ctx, req.trainer!, giftId)
+    return { opened, friends: social.friendOverview(ctx, req.trainer!) }
   })
 
   app.post('/api/friends/remove', write, async (req) => {

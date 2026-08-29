@@ -205,6 +205,15 @@ export const api = {
       method: 'POST', body: JSON.stringify({ itemId, creatureId }),
     }),
 
+  sendGift: (trainerId: string) =>
+    request<{ sent: { to: string; egg: boolean; label: string }; friends: FriendOverview }>(
+      '/api/friends/gift', { method: 'POST', body: JSON.stringify({ trainerId }) }),
+  openGift: (giftId: string) =>
+    request<{
+      opened: { label: string; egg: { id: string; speciesId: string } | null; eggSkipped: boolean }
+      friends: FriendOverview
+    }>('/api/gifts/open', { method: 'POST', body: JSON.stringify({ giftId }) }),
+
   arena: () => request<ArenaView>('/api/arena'),
   arenaStart: (tier: string) =>
     request<{ arena: ArenaView }>('/api/arena/start', { method: 'POST', body: JSON.stringify({ tier }) }),
@@ -706,6 +715,8 @@ export interface BattleView {
 
 
 export interface FriendBrief {
+  /** Heute schon beschenkt — der Knopf braucht nur ja oder nein. */
+  giftedToday?: boolean
   trainerId: string
   displayName: string
   lastSeenAt: number
@@ -716,6 +727,7 @@ export interface FriendBrief {
 
 export interface FriendOverview {
   trainerCode: string
+  gifts: Array<{ id: string; fromName: string; sentAt: number; egg: boolean; label: string }>
   friends: FriendBrief[]
   incoming: FriendBrief[]
   outgoing: FriendBrief[]

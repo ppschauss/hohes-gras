@@ -12,6 +12,7 @@ import * as expeditions from '../repos/expeditions.js'
 import * as battles from '../repos/battles.js'
 import { findById, findByTrainerCode } from '../repos/trainers.js'
 import { logEvent } from '../repos/events.js'
+import * as gifts from './gifts.js'
 import { worldClock } from '../worldClock.js'
 import { creatureView } from './views.js'
 import { bumpMetric } from './progression.js'
@@ -122,9 +123,13 @@ export function friendOverview(ctx: AppContext, trainer: Trainer) {
     }
   }
 
+  const gifted = gifts.sentToday(ctx, trainer.id)
   return {
     trainerCode: trainer.trainerCode,
-    friends: friendIds.map(brief).filter((f): f is NonNullable<typeof f> => f !== null),
+    gifts: gifts.inbox(ctx, trainer),
+    friends: friendIds.map(brief).filter((f): f is NonNullable<typeof f> => f !== null)
+      // Der Knopf braucht nur ein Ja oder Nein; das Datum bleibt beim Server.
+      .map((f) => ({ ...f, giftedToday: gifted.has(f.trainerId) })),
     incoming: incoming.map((r) => brief(r.fromId)).filter((f): f is NonNullable<typeof f> => f !== null),
     outgoing: outgoing.map((r) => brief(r.toId)).filter((f): f is NonNullable<typeof f> => f !== null),
   }
