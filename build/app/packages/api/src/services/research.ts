@@ -16,6 +16,7 @@ import { logEvent } from '../repos/events.js'
 import { capOf } from './travel.js'
 import { busyCreatureIds } from './busy.js'
 import * as energy from './energy.js'
+import { bumpMetric } from './progression.js'
 
 /**
  * Forschung.
@@ -298,6 +299,7 @@ export function collect(ctx: AppContext, trainer: Trainer, id: string): Research
     logEvent(ctx.db, trainer.id, 'research.done', {
       projectId: row.projectId, tier: row.tier, stat: row.stat, xp,
     })
+    bumpMetric(ctx, trainer.id, 'research')
     return {
       projectId: row.projectId,
       tier: row.tier,

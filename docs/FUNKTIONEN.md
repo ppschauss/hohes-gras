@@ -499,6 +499,26 @@ beide durch.
 ## 18. Koop
 
 - **Gilden** mit gemeinsamem Wochenziel und Kasse
+
+### Das Wochenziel
+
+**Zwölf Ziele im Wechsel**, eines je Woche: Fänge, Kämpfe, Pflegeaktionen,
+Erkundungen, Raid-Schaden, geschlüpfte Eier, Entwicklungen, hergestellte
+Gegenstände, gewonnene Duelle, neue Pokédex-Einträge, abgeschlossene
+Forschungsprojekte und verschickte Geschenke.
+
+**Das Soll zählt je Mitglied**, nicht als feste Zahl. Vorher standen dort 1000
+Fänge und 800 Pflegeaktionen — Werte für eine volle Gilde. Eine Gilde aus zwei
+Leuten hatte damit 400 Fänge je Kopf zu erledigen, und das Ziel war nie etwas
+anderes als Deko. Jetzt sind es 60 Fänge je Mitglied, bei einer Untergrenze,
+die auch die Ein-Personen-Gilde nicht an einem Nachmittag abräumt. Wer beitritt,
+hebt die Latte und trägt selbst dazu bei.
+
+Und **jedes Ziel hat nachweislich eine Quelle.** Vorher wurden nur Kämpfe und
+Raid-Schaden hochgezählt: eine Woche mit dem Ziel „Fänge" oder
+„Pflegeaktionen" blieb bei null stehen, egal was die Gilde tat. Jetzt meldet
+dieselbe Funktion, die schon die Erfolge zählt, auch ans Wochenziel.
+
 - **Raid-Bosse als Karte im Telegram-Gruppenchat**: Der Bot postet, Mitglieder
   treten per Knopf bei, ihre Teams tragen Schaden bei, die Beute verteilt sich
   nach Beitrag. `/gilde` verbindet einen Chat mit der Gilde, `/raid` zeigt

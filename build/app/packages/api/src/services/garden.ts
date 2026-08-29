@@ -153,6 +153,8 @@ export function performCare(ctx: AppContext, trainer: Trainer, action: CareActio
     // Energie erst abbuchen, wenn die Aktion tatsaechlich zustande kommt —
     // eine abgelehnte Pflege darf nichts kosten.
     energy.spendFor(ctx, trainer.id, 'care')
+    // Zaehlt fuers Wochenziel der Gilde: eine Aktion, nicht ein Pokemon.
+    bumpMetric(ctx, trainer.id, 'careActions')
 
     if (result.consumed) {
       inventory.consume(ctx.db, trainer.id, result.consumed.itemId, result.consumed.quantity)

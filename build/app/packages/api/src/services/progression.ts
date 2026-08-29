@@ -23,6 +23,7 @@ import { creatureView, evolutionOptions } from './views.js'
 import { refreshMoves } from './garden.js'
 import * as energy from './energy.js'
 import { unlockedRecipes } from './research.js'
+import { contributeToGoal } from './guilds.js'
 
 /* ------------------------------------------------------------- Entwicklung */
 
@@ -237,6 +238,7 @@ export function craft(ctx: AppContext, trainer: Trainer, recipeId: string) {
     inventory.grant(ctx.db, trainer.id, recipe.output.itemId, recipe.output.quantity)
 
     logEvent(ctx.db, trainer.id, 'crafted', { recipeId, output: recipe.output })
+    bumpMetric(ctx, trainer.id, 'crafted')
     return { output: recipe.output }
   })
 }
@@ -353,8 +355,18 @@ export function metricsOf(ctx: AppContext, trainerId: string): Record<string, nu
 }
 
 /** Called after anything that could complete an achievement. */
-export function bumpMetric(ctx: AppContext, trainerId: string, _metric: string): void {
-  void _metric
+/**
+ * Eine Handlung melden.
+ *
+ * Der Name war bis hierher Zierde: die Funktion warf ihn weg und rechnete nur
+ * die Erfolge neu. Dabei stehen die Aufrufe genau an den richtigen Stellen —
+ * Fang, Schlupf, Entwicklung, Duellsieg. Sie fuettern jetzt auch das
+ * Wochenziel der Gilde. Vorher zaehlten nur Kaempfe und Raidschaden mit, und
+ * eine Woche mit dem Ziel "Faenge" oder "Pflegeaktionen" blieb bei null
+ * stehen, egal was die Gilde tat.
+ */
+export function bumpMetric(ctx: AppContext, trainerId: string, metric: string, amount = 1): void {
+  contributeToGoal(ctx, trainerId, metric, amount)
   refreshAchievements(ctx, trainerId)
 }
 

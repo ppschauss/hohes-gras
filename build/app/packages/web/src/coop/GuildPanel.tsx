@@ -110,6 +110,9 @@ export function GuildPanel() {
           <span className="bar__fill bar__fill--dex" style={{ width: `${goalPercent}%` }} />
         </div>
         <p className="num">{number(g.goal.progress)} / {number(g.goal.target)}</p>
+        {/* Ohne diese Zeile sieht das Soll aus wie eine feste Zahl — und war
+            es frueher auch: 800 Pflegeaktionen fuer eine Gilde aus zwei. */}
+        <p className="center__body">{t('guild.goal.scaled', { perMember: number(g.goal.perMember) })}</p>
         <p className="center__body">{t('guild.goal.reward', { n: g.goal.rewardPerMember })}</p>
         <button type="button" className="btn btn--primary btn--block"
           disabled={!g.goal.complete || g.goal.claimed || action.busy} onClick={claim}>

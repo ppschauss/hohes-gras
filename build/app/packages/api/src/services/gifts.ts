@@ -12,7 +12,7 @@ import { findById } from '../repos/trainers.js'
 import { logEvent } from '../repos/events.js'
 import { gameDate } from '../worldClock.js'
 import { eggSlots } from './breeding.js'
-import { bonuses } from './progression.js'
+import { bonuses, bumpMetric } from './progression.js'
 
 interface GiftRow {
   id: string
@@ -99,6 +99,7 @@ export function send(ctx: AppContext, trainer: Trainer, toId: string) {
     ).run(id, trainer.id, toId, date, JSON.stringify(contents), Date.now())
 
     logEvent(ctx.db, trainer.id, 'gift.sent', { to: toId, egg: contents.egg })
+    bumpMetric(ctx, trainer.id, 'gifts')
     return { id, to: target.displayName, egg: contents.egg, label: label(ctx, trainer, contents) }
   })
 }

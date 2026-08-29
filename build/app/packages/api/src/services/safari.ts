@@ -230,6 +230,7 @@ export function explore(
       areaOffset(ctx, trainer, area), lure, boni.shinyOdds,
     )
     bumpCounter(ctx.db, trainer.id, EXPLORE_COUNTER)
+    bumpMetric(ctx, trainer.id, 'explores')
     recordPace(ctx, trainer, 'explore')
     world.visitArea(ctx.db, trainer.id, area.id)
 
@@ -865,6 +866,7 @@ export function throwBall(
     awardSeasonPoints(ctx, trainer.id, 'catch')
     if (newDexEntry) awardSeasonPoints(ctx, trainer.id, 'newDexEntry')
     bumpMetric(ctx, trainer.id, 'catches')
+    if (newDexEntry) bumpMetric(ctx, trainer.id, 'dexNew')
     const areaCompleted = newDexEntry ? completeArea(ctx, trainer, e.areaId) : null
     logEvent(ctx.db, trainer.id, 'safari.catch', {
       speciesId: e.speciesId, level: e.level, shiny: e.shiny, chain, gold: reward.gold,

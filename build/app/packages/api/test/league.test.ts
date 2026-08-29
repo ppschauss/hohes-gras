@@ -100,16 +100,33 @@ describe('Überfall', () => {
     expect(again.body.detail.reason).toBe('no_event')
   })
 
+  /** Dem Gegner einen Kraftpunkt lassen: macht den Ausgang eindeutig. */
+  const weakenFoe = () => {
+    const row = h.ctx.db
+      .prepare('SELECT id, state FROM battles WHERE trainer_id = ? AND finished_at IS NULL')
+      .get(trainerId) as { id: string; state: string }
+    const state = JSON.parse(row.state) as { sides: Array<{ party: Array<{ hp: number }> }> }
+    for (const f of state.sides[1]!.party) f.hp = 1
+    h.ctx.db.prepare('UPDATE battles SET state = ? WHERE id = ?').run(JSON.stringify(state), row.id)
+  }
+
   it('wirft beim Sieg Gold und Gegenstaende ab', async () => {
-    // Skalierung aus: sonst hebt sie den Ruepel von Level 5 auf das Niveau des
-    // eigenen Teams, und der Ausgang des Kampfes waere offen — der Test wuerde
-    // dann mal bestehen und mal nicht.
-    h.ctx.db.prepare('UPDATE trainers SET level_scaling = 0 WHERE id = ?').run(trainerId)
+    /*
+     * Der Sieg muss feststehen, sonst besteht der Test mal und mal nicht.
+     *
+     * Frueher genuegte dafuer die abgeschaltete Skalierung: der Ruepel blieb
+     * auf Level 5 und das eigene Team stand auf 90. Seit ein Ueberfall sich
+     * *immer* am eigenen Team ausrichtet — er hat keinen Ort, an dem ein
+     * Entwurfslevel haengen koennte —, ist das ein ausgeglichener Kampf und
+     * damit offen. Der Gegner geht deshalb mit einem Kraftpunkt ins Rennen:
+     * geprueft wird hier die Beute, nicht der Kampf.
+     */
     pend()
     const goldBefore = (await h.get('/api/bag', token)).body.gold
     await h.post('/api/battle/event', {}, token)
+    weakenFoe()
 
-    // Bis zum Ende durchkaempfen — Level 90 gegen Level 5 endet schnell.
+    // Bis zum Ende durchkaempfen.
     let reward: any = null
     for (let i = 0; i < 40 && !reward; i++) {
       h.resetRateLimits()

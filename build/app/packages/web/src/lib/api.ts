@@ -1049,6 +1049,8 @@ export interface GuildOverview {
     goal: {
       kind: string
       labelKey: string
+      /** Soll je Mitglied — daraus ergibt sich `target`. */
+      perMember: number
       target: number
       progress: number
       complete: boolean

@@ -140,9 +140,37 @@ export function goalOf(db: Db, guildId: string, weekKey: string): Goal | null {
   return row ? toGoal(row) : null
 }
 
+/**
+ * Das Wochenziel anlegen — und sein Soll nachfuehren.
+ *
+ * Das Soll haengt an der Mitgliederzahl, und die aendert sich mitten in der
+ * Woche. Es wird deshalb bei jedem Zugriff neu gesetzt: wer beitritt, hebt die
+ * Latte und traegt selbst dazu bei. Ein abgeholtes Ziel bleibt unangetastet —
+ * eine Belohnung, die durch einen Neuzugang rueckwirkend unverdient wird,
+ * waere unfair.
+ */
 export function ensureGoal(db: Db, guildId: string, weekKey: string, kind: string, target: number): Goal {
   db.prepare('INSERT OR IGNORE INTO guild_goals (guild_id, week_key, goal_kind, target) VALUES (?, ?, ?, ?)')
     .run(guildId, weekKey, kind, target)
+
+  /*
+   * Aendert sich die Zielart mitten in der Woche, faengt die Woche neu an.
+   *
+   * Das passiert nur bei einem Deploy, der die Liste der Wochenziele
+   * veraendert — und dann steht in der Zeile eine Art, die nicht mehr zu dem
+   * passt, was angezeigt und gezaehlt wird. Genau so aufgefallen: die Zeile
+   * sagte "Pflegeaktionen", das Etikett "Geschenke". Der Fortschritt wird
+   * dabei zurueckgesetzt, denn er wurde an einer anderen Groesse gemessen; ein
+   * abgeholtes Ziel bleibt unberuehrt.
+   */
+  db.prepare(
+    `UPDATE guild_goals SET goal_kind = ?, progress = 0
+      WHERE guild_id = ? AND week_key = ? AND claimed_at IS NULL AND goal_kind <> ?`,
+  ).run(kind, guildId, weekKey, kind)
+
+  db.prepare(
+    'UPDATE guild_goals SET target = ? WHERE guild_id = ? AND week_key = ? AND claimed_at IS NULL AND target <> ?',
+  ).run(target, guildId, weekKey, target)
   return goalOf(db, guildId, weekKey)!
 }
 

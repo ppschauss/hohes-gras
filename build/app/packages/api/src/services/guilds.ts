@@ -26,18 +26,58 @@ export function weekKey(at = new Date()): string {
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`
 }
 
-/** Weekly goals rotate so the guild is not doing the same chore forever. */
-const GOAL_ROTATION = [
-  { kind: 'catches', target: 1000, labelKey: 'guild.goal.catches' },
-  { kind: 'battles', target: 400, labelKey: 'guild.goal.battles' },
-  { kind: 'raidDamage', target: 250_000, labelKey: 'guild.goal.raidDamage' },
-  { kind: 'careActions', target: 800, labelKey: 'guild.goal.careActions' },
+/**
+ * Die Wochenziele.
+ *
+ * Zwei Dinge waren daran falsch, und beide sind hier behoben.
+ *
+ * Erstens war das Soll eine feste Zahl, entworfen fuer eine volle Gilde: 1000
+ * Faenge, 800 Pflegeaktionen. Eine Gilde aus zwei Leuten hatte damit 400 Faenge
+ * je Kopf zu erledigen, und das Ziel war nie etwas anderes als Deko. Das Soll
+ * zaehlt jetzt **je Mitglied** und folgt der Gilde, wie gross sie gerade ist.
+ *
+ * Zweitens standen hier Ziele, die niemand erfuellen konnte: `catches` und
+ * `careActions` wurden nirgends hochgezaehlt. Wer in einer solchen Woche
+ * beitrat, sah eine Leiste, die bei null blieb, egal was er tat. Jetzt fuettert
+ * `bumpMetric` die Ziele mit — dieselbe Funktion, die schon an allen richtigen
+ * Stellen aufgerufen wird —, und jedes Ziel in dieser Liste hat nachweislich
+ * eine Quelle.
+ *
+ * `min` faengt die Ein-Personen-Gilde ab: ganz ohne Untergrenze waere ein Ziel
+ * an einem Nachmittag erledigt.
+ */
+interface GoalSpec {
+  kind: string
+  /** Soll je Mitglied. */
+  perMember: number
+  /** Untergrenze, egal wie klein die Gilde ist. */
+  min: number
+  labelKey: string
+}
+
+const GOAL_ROTATION: GoalSpec[] = [
+  { kind: 'catches', perMember: 60, min: 80, labelKey: 'guild.goal.catches' },
+  { kind: 'battles', perMember: 25, min: 30, labelKey: 'guild.goal.battles' },
+  { kind: 'careActions', perMember: 60, min: 80, labelKey: 'guild.goal.careActions' },
+  { kind: 'explores', perMember: 150, min: 200, labelKey: 'guild.goal.explores' },
+  { kind: 'raidDamage', perMember: 15_000, min: 20_000, labelKey: 'guild.goal.raidDamage' },
+  { kind: 'eggsHatched', perMember: 4, min: 5, labelKey: 'guild.goal.eggsHatched' },
+  { kind: 'evolutions', perMember: 6, min: 8, labelKey: 'guild.goal.evolutions' },
+  { kind: 'crafted', perMember: 8, min: 10, labelKey: 'guild.goal.crafted' },
+  { kind: 'duelsWon', perMember: 5, min: 6, labelKey: 'guild.goal.duelsWon' },
+  { kind: 'dexNew', perMember: 6, min: 8, labelKey: 'guild.goal.dexNew' },
+  { kind: 'research', perMember: 2, min: 2, labelKey: 'guild.goal.research' },
+  { kind: 'gifts', perMember: 10, min: 12, labelKey: 'guild.goal.gifts' },
 ]
 
-export function goalForWeek(week: string): typeof GOAL_ROTATION[number] {
+export function goalForWeek(week: string): GoalSpec {
   const n = Number(week.slice(-2)) || 0
   return GOAL_ROTATION[n % GOAL_ROTATION.length]!
 }
+
+/** Das Soll dieser Woche fuer eine Gilde dieser Groesse. */
+export const goalTarget = (spec: GoalSpec, memberCount: number): number =>
+  Math.max(spec.min, spec.perMember * Math.max(1, memberCount))
 
 export const GOAL_REWARD_PER_MEMBER = 400
 
@@ -57,8 +97,8 @@ export function overview(ctx: AppContext, trainer: Trainer) {
 
   const week = weekKey()
   const spec = goalForWeek(week)
-  const goal = guilds.ensureGoal(ctx.db, guild.id, week, spec.kind, spec.target)
   const members = guilds.membersOf(ctx.db, guild.id)
+  const goal = guilds.ensureGoal(ctx.db, guild.id, week, spec.kind, goalTarget(spec, members.length))
 
   return {
     guild: {
@@ -76,6 +116,8 @@ export function overview(ctx: AppContext, trainer: Trainer) {
       goal: {
         kind: goal.goalKind,
         labelKey: spec.labelKey,
+        /** Woraus sich das Soll ergibt — die Zahl allein wirkt willkuerlich. */
+        perMember: spec.perMember,
         target: goal.target,
         progress: goal.progress,
         complete: goal.progress >= goal.target,
@@ -159,7 +201,8 @@ export function contributeToGoal(ctx: AppContext, trainerId: string, kind: strin
   const week = weekKey()
   const spec = goalForWeek(week)
   if (spec.kind !== kind) return
-  guilds.ensureGoal(ctx.db, guild.id, week, spec.kind, spec.target)
+  const members = guilds.membersOf(ctx.db, guild.id).length
+  guilds.ensureGoal(ctx.db, guild.id, week, spec.kind, goalTarget(spec, members))
   guilds.addGoalProgress(ctx.db, guild.id, week, amount)
   guilds.addContribution(ctx.db, guild.id, trainerId, amount)
 }
