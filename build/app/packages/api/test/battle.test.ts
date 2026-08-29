@@ -195,6 +195,41 @@ describe('Sieg und Belohnung', () => {
     expect(after).toBeLessThan(before)
   })
 
+  it('zahlt Saisonpunkte nur einmal am Tag je Gegner', async () => {
+    // Eine Arena zahlte 60 Punkte je Sieg und laesst sich beliebig oft
+    // herausfordern — 30 Punkte je Energie, waehrend ein Fang 4 gibt.
+    addStrongMember(50)
+    await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+    await fightToEnd()
+    h.resetRateLimits()
+    const after = (await h.get('/api/season', token)).body.points
+    expect(after).toBeGreaterThan(0)
+
+    h.ctx.db.prepare('UPDATE creatures SET hp_current = 9999 WHERE owner_id = ?').run(trainerId)
+    h.resetRateLimits()
+    await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+    const second = await fightToEnd()
+    expect(second.body.reward.won).toBe(true)
+    expect(second.body.reward.firstToday).toBe(false)
+    h.resetRateLimits()
+    expect((await h.get('/api/season', token)).body.points).toBe(after)
+  })
+
+  it('zahlt fuer einen anderen Gegner am selben Tag wieder', async () => {
+    addStrongMember(60)
+    await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+    await fightToEnd()
+    h.resetRateLimits()
+    const after = (await h.get('/api/season', token)).body.points
+    h.ctx.db.prepare('UPDATE creatures SET hp_current = 9999 WHERE owner_id = ?').run(trainerId)
+    h.resetRateLimits()
+    await h.post('/api/battle/start', { opponentId: 'test-gym' }, token)
+    const r = await fightToEnd()
+    expect(r.body.reward.firstToday).toBe(true)
+    h.resetRateLimits()
+    expect((await h.get('/api/season', token)).body.points).toBeGreaterThan(after)
+  })
+
   it('vergibt den Orden bei der Arena', async () => {
     addStrongMember(60)
     await h.post('/api/battle/start', { opponentId: 'test-gym' }, token)

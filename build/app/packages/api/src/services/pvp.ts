@@ -10,10 +10,7 @@ import * as creatures from '../repos/creatures.js'
 import * as inventory from '../repos/inventory.js'
 import { findById } from '../repos/trainers.js'
 import { logEvent } from '../repos/events.js'
-import { worldClock, gameDate } from '../worldClock.js'
-
-/** Mitternacht der Spielzeitzone — die Grenze, an der Tageslimits umspringen. */
-const dayStart = (): number => new Date(`${gameDate()}T00:00:00`).getTime()
+import { worldClock, dayStart } from '../worldClock.js'
 import { ENERGY_COSTS } from '@game/engine'
 import { battleContent } from './battle.js'
 import { contributeToGoal } from './guilds.js'

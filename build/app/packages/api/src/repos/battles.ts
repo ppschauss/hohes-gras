@@ -123,6 +123,19 @@ export function defeatsOf(db: Db, trainerId: string): Map<string, DefeatRecord> 
 }
 
 /** Returns true on the first ever win against this opponent. */
+/**
+ * Wann dieser Gegner zuletzt besiegt wurde — `null`, wenn noch nie.
+ *
+ * Muss *vor* `recordWin` gelesen werden: der Aufruf schreibt den Zeitpunkt
+ * neu, und danach ist jeder Sieg der erste des Tages.
+ */
+export function lastWinAt(db: Db, trainerId: string, opponentId: string): number | null {
+  const row = db
+    .prepare('SELECT last_win_at AS at FROM trainer_defeats WHERE trainer_id = ? AND opponent_id = ?')
+    .get(trainerId, opponentId) as { at: number } | undefined
+  return row?.at ?? null
+}
+
 export function recordWin(db: Db, trainerId: string, opponentId: string, now = Date.now()): boolean {
   const existing = db
     .prepare('SELECT wins FROM trainer_defeats WHERE trainer_id = ? AND opponent_id = ?')

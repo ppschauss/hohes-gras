@@ -58,6 +58,24 @@ wählbaren Typs, also fünf durchgespielte Wochen. Der alte Weg über 85
 gleichfarbige Fragmente bleibt bestehen; wer schillernde Fragmente hat, zahlt
 automatisch mit ihnen.
 
+### Wogegen der Pass abgesichert ist
+
+Saisonpunkte gibt es **einmal am Tag je Gegner** — für Arenen wie für
+Trainerkämpfe. Vorher zahlte ein Arenaleiter 60 Punkte *je Sieg*, und Arenen
+lassen sich beliebig oft herausfordern: mit einem ausgewachsenen Team sind das
+30 Punkte je Energie, während ein Fang 4 gibt und eine Pflegeaktion 2. Die
+ganze Leiter wäre ein Nachmittag gegen denselben Gegner gewesen. Im Protokoll
+stand die Vorstufe davon schon: 250 Wiederholungssiege gegen einen einzigen
+Käfersammler.
+
+Entwicklungen zahlen Punkte nur für die ersten **zehn am Tag** — dieselbe
+Grenze, die schon für die Energie gilt. Gemessen: 335 Entwicklungen an einem
+Tag, zu je 15 Punkten sind das 5.025 und damit mehr als eine ganze Leiter.
+
+Damit ist jede Punktquelle nach oben begrenzt: wer an einem Tag alles macht,
+was das Spiel hergibt, landet bei rund 3.300 Punkten — ungefähr einer
+Leiterlänge. Alles andere braucht die Woche.
+
 ## Handwerk und Fundstücke
 
 Jeder achte Fang (**12,5 %**) bringt einen Werkstoff mit — Seidenfaden,

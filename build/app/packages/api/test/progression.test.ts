@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MAX_SEASON_TIER } from '@game/engine'
+import { MAX_SEASON_TIER, SEASON_POINTS } from '@game/engine'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -145,6 +145,31 @@ describe('Basisausbau', () => {
     const second = await h.post('/api/buildings/upgrade', { buildingId: 'storage' }, token)
     expect(first.body.cost).toBe(5000)
     expect(second.body.cost).toBe(5000)
+  })
+
+  it('deckelt die Saisonpunkte fuers Entwickeln wie die Energie', async () => {
+    // Der Zaehler steht schon am Limit: die Entwicklung soll gelingen, aber
+    // weder Energie noch Punkte bringen.
+    h.ctx.db.prepare(
+      `INSERT INTO daily_counters (trainer_id, game_date, counter, value)
+       VALUES (?, ?, 'evolution_energy', 99)
+       ON CONFLICT(trainer_id, game_date, counter) DO UPDATE SET value = 99`,
+    ).run(trainerId, new Date().toISOString().slice(0, 10))
+
+    const id = await teamId()
+    h.ctx.db.prepare('UPDATE creatures SET level = 20, xp = 8000 WHERE id = ?').run(id)
+    h.resetRateLimits()
+    const before = (await h.get('/api/season', token)).body.points
+
+    h.resetRateLimits()
+    const r = await h.post('/api/evolutions/evolve', { creatureId: id, targetSpeciesId: 'testmon-evo' }, token)
+    expect(r.status).toBe(200)
+    expect(r.body.energyGained).toBe(0)
+
+    h.resetRateLimits()
+    const after = (await h.get('/api/season', token)).body.points
+    // Der neue Dex-Eintrag zaehlt weiter — die Entwicklung selbst nicht mehr.
+    expect(after - before).toBe(SEASON_POINTS.newDexEntry)
   })
 
   it('gibt mit der Brutkammer einen Brutplatz je Stufe dazu', async () => {

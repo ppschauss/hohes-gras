@@ -45,3 +45,14 @@ export function worldClock(at = new Date()): WorldClock {
 
 export const ALL_TIMES_OF_DAY = TIMES_OF_DAY
 export const ALL_WEATHERS = WEATHERS
+
+/**
+ * Mitternacht der Spielzeitzone in Millisekunden.
+ *
+ * Die Grenze, an der jedes Tageslimit umspringt — Duelle, Kaempfe, Zaehler.
+ * Sie steht hier und nicht in den Diensten, damit "einmal am Tag" ueberall
+ * denselben Tag meint.
+ */
+export function dayStart(at = new Date()): number {
+  return new Date(`${gameDate(at)}T00:00:00`).getTime()
+}

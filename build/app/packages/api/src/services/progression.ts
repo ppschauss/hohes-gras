@@ -67,12 +67,14 @@ export function evolve(ctx: AppContext, trainer: Trainer, creatureId: string, ta
     const newDexEntry = dexRepo.markCaught(ctx.db, trainer.id, targetSpeciesId)
 
     /*
-     * Energie gibt es fuer die ersten zehn Entwicklungen des Tages.
+     * Energie *und* Saisonpunkte gibt es fuer die ersten zehn Entwicklungen
+     * des Tages.
      *
      * Eine Entwicklung ist ein einmaliger Fortschritt je Kreatur — aber nicht
      * je Spieler: mit Eiern, Bonbons und einer vollen Box entwickelt man
-     * zwanzig am Stueck. Der Deckel laesst den Fortschritt zu und nimmt ihm
-     * nur die Energie; wer mehr braucht, kauft sie.
+     * zwanzig am Stueck. Gemessen im Protokoll: 335 Entwicklungen an einem Tag,
+     * zu je 15 Punkten macht das 5.025 — mehr als eine ganze Saisonleiter.
+     * Der Deckel laesst den Fortschritt zu und nimmt ihm nur den Ertrag.
      */
     const rewardedToday = counterValue(ctx.db, trainer.id, EVOLUTION_ENERGY_COUNTER)
     const rewarded = rewardedToday < EVOLUTION_ENERGY_PER_DAY
@@ -81,7 +83,8 @@ export function evolve(ctx: AppContext, trainer: Trainer, creatureId: string, ta
       bumpCounter(ctx.db, trainer.id, EVOLUTION_ENERGY_COUNTER)
     }
     const energyGained = rewarded ? ENERGY_REWARDS.evolution : 0
-    awardSeasonPoints(ctx, trainer.id, 'evolution')
+    if (rewarded) awardSeasonPoints(ctx, trainer.id, 'evolution')
+    // Ein neuer Dex-Eintrag ist von Natur aus einmalig und bleibt ungedeckelt.
     if (newDexEntry) awardSeasonPoints(ctx, trainer.id, 'newDexEntry')
     bumpMetric(ctx, trainer.id, 'evolutions')
 

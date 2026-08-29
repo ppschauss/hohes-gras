@@ -19,7 +19,7 @@ import * as world from '../repos/world.js'
 import * as dex from '../repos/dex.js'
 import * as expeditions from '../repos/expeditions.js'
 import { logEvent } from '../repos/events.js'
-import { worldClock } from '../worldClock.js'
+import { worldClock, dayStart } from '../worldClock.js'
 import { refreshMoves } from './garden.js'
 import { awardSeasonPoints, bumpMetric } from './progression.js'
 import * as energy from './energy.js'
@@ -468,6 +468,8 @@ export interface BattleReward {
   energy: number
   xpPerMember: number
   firstWin: boolean
+  /** Erster Sieg des Tages ueber diesen Gegner — nur er zahlt Saisonpunkte. */
+  firstToday: boolean
   badge: { id: string; name: string } | null
   levelUps: Array<{ creatureId: string; name: string; newLevel: number }>
   dialogue: string
@@ -483,7 +485,7 @@ function applyOutcome(
 
   const won = record.state.outcome?.winner === 0
   const empty: BattleReward = {
-    won, gold: 0, energy: 0, event: null, xpPerMember: 0, firstWin: false, badge: null, levelUps: [],
+    won, gold: 0, energy: 0, event: null, xpPerMember: 0, firstWin: false, firstToday: false, badge: null, levelUps: [],
     dialogue: def
       ? ctx.registry.localized(won ? def.dialogue.lose : def.dialogue.win, trainer.locale)
       : '',
@@ -497,7 +499,22 @@ function applyOutcome(
   // markRewarded is the guard against paying twice for one victory.
   if (!battles.markRewarded(ctx.db, record.id)) return empty
 
+  /*
+   * Saisonpunkte gibt es einmal am Tag je Gegner.
+   *
+   * Ein Arenaleiter zahlte 60 Punkte, und Arenen lassen sich beliebig oft
+   * herausfordern: mit einem ausgewachsenen Team sind das 30 Punkte je
+   * Energie, waehrend ein Fang 4 gibt und eine Pflegeaktion 2. Die ganze
+   * Saisonleiter waere damit ein Nachmittag gegen denselben Gegner. Gemeldet
+   * als Verdacht, im Protokoll bestaetigt: 250 Wiederholungssiege gegen einen
+   * einzigen Kaefersammler.
+   *
+   * Der Zeitpunkt muss vor `recordWin` gelesen werden — der Aufruf schreibt
+   * ihn neu.
+   */
+  const lastWin = battles.lastWinAt(ctx.db, trainer.id, def.id)
   const firstWin = battles.recordWin(ctx.db, trainer.id, def.id)
+  const firstToday = firstWin || (lastWin !== null && lastWin < dayStart())
   const gold = Math.round(def.rewardGold * (firstWin ? 1 : def.repeatRewardRatio))
   inventory.earnGold(ctx.db, trainer.id, gold)
 
@@ -561,15 +578,17 @@ function applyOutcome(
     }
   }
 
-  awardSeasonPoints(ctx, trainer.id, def.badgeId ? 'gymWin' : 'battleWin')
+  if (firstToday) awardSeasonPoints(ctx, trainer.id, def.badgeId ? 'gymWin' : 'battleWin')
   contributeToGoal(ctx, trainer.id, 'battles', 1)
   bumpMetric(ctx, trainer.id, 'badges')
-  logEvent(ctx.db, trainer.id, 'battle.win', { opponentId: def.id, gold, firstWin, badge: badge?.id ?? null })
+  logEvent(ctx.db, trainer.id, 'battle.win', {
+    opponentId: def.id, gold, firstWin, firstToday, badge: badge?.id ?? null,
+  })
   const event = isEventTrainer(def.id) ? grantEventLoot(ctx, trainer, record.areaId) : null
 
   return {
     won: true, gold, energy: energyBack, event,
-    xpPerMember, firstWin, badge, levelUps, dialogue: empty.dialogue,
+    xpPerMember, firstWin, firstToday, badge, levelUps, dialogue: empty.dialogue,
   }
 }
 
