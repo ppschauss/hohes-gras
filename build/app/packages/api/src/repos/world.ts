@@ -78,6 +78,14 @@ export function recordCatch(db: Db, trainerId: string, speciesId: string, now = 
   return chainOf(db, trainerId, speciesId)
 }
 
+/** Die Serie einer Art auf einen Wert setzen — nach einem Treffer. */
+export function setChain(db: Db, trainerId: string, speciesId: string, streak: number, now = Date.now()): void {
+  db.prepare(
+    `INSERT INTO catch_chains (trainer_id, species_id, streak, updated_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(trainer_id, species_id) DO UPDATE SET streak = excluded.streak, updated_at = excluded.updated_at`,
+  ).run(trainerId, speciesId, Math.max(0, Math.floor(streak)), now)
+}
+
 export function breakChain(db: Db, trainerId: string, now = Date.now()): void {
   db.prepare('UPDATE catch_chains SET streak = 0, updated_at = ? WHERE trainer_id = ?').run(now, trainerId)
 }

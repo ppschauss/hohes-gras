@@ -6,7 +6,7 @@ import {
   isEventTrainer, LEGENDARY_BERRY_ID, LEGENDARY_MAX_BERRIES, isLegendaryCatchRate,
   legendaryCatchChance, rollEvent, rollLegendary, xpForLevel, type Rng,
   MAX_CALM_STACKS, MAX_WEAKEN_STACKS, ROCKET_BAIT_ID, ROCKET_BAIT_CHARGES,
-  SHINY_BASE_ODDS, SHINY_CHAIN_GUARANTEE, shinyOdds,
+  SHINY_BASE_ODDS, SHINY_CHAIN_AFTER_CATCH, SHINY_CHAIN_GUARANTEE, shinyOdds,
   type CatchModifiers, type LureEffect,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
@@ -637,7 +637,18 @@ export function throwBall(
     })
 
     const newDexEntry = dex.markCaught(ctx.db, trainer.id, e.speciesId)
-    const chain = world.recordCatch(ctx.db, trainer.id, e.speciesId)
+    let chain = world.recordCatch(ctx.db, trainer.id, e.speciesId)
+    /*
+     * Ein Treffer setzt die Serie zurueck — auf die Zehn-Prozent-Marke.
+     *
+     * Vorher lief sie einfach weiter: wer einmal bei 49 stand, fing ab da
+     * jedes Exemplar dieser Art schillernd. Die Jagd war nach dem ersten
+     * Treffer vorbei.
+     */
+    if (e.shiny) {
+      world.setChain(ctx.db, trainer.id, e.speciesId, SHINY_CHAIN_AFTER_CATCH)
+      chain = SHINY_CHAIN_AFTER_CATCH
+    }
     world.bumpAreaStat(ctx.db, trainer.id, e.areaId, 'catches')
     const reward = catchReward(species, e.level, e.shiny)
     inventory.earnGold(ctx.db, trainer.id, reward.gold)

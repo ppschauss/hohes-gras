@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { SHINY_CHAIN_AFTER_CATCH, SHINY_CHAIN_GUARANTEE } from '@game/engine'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -292,6 +293,45 @@ describe('Schon gefangen', () => {
   })
 })
 
+
+describe('Fangserie', () => {
+  it('faellt nach einem schillernden Fang auf die Zehn-Prozent-Marke', async () => {
+    /*
+     * Vorher lief sie weiter: wer einmal bei 49 stand, fing ab da *jedes*
+     * Exemplar dieser Art schillernd — die Jagd war nach dem ersten Treffer
+     * vorbei.
+     */
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ?, energy = 9000 WHERE id = ?')
+      .run('test-route', trainerId)
+    h.ctx.db.prepare(
+      `INSERT INTO catch_chains (trainer_id, species_id, streak, updated_at) VALUES (?, 'wildmon', ?, ?)
+       ON CONFLICT(trainer_id, species_id) DO UPDATE SET streak = excluded.streak`,
+    ).run(trainerId, SHINY_CHAIN_GUARANTEE, Date.now())
+
+    // Die Begegnung wird gesetzt statt erwuerfelt: der Weg dorthin ist
+    // anderswo geprueft, hier zaehlt nur, was das Fangen mit der Serie macht.
+    h.ctx.db.prepare(
+      `INSERT INTO active_encounter
+         (trainer_id, area_id, species_id, level, shiny, turn, weaken_stacks, calm_stacks, seed, started_at)
+       VALUES (?, 'test-route', 'wildmon', 5, 1, 0, 0, 0, 'seed-shiny', ?)`,
+    ).run(trainerId, Date.now())
+
+    let caught = false
+    for (let i = 0; i < 60 && !caught; i++) {
+      h.resetRateLimits()
+      const r = await h.post('/api/safari/throw', { ballId: 'poke-ball' }, token)
+      caught = r.body.caught === true
+      if (r.body.encounter === null && !caught) break
+    }
+    expect(caught).toBe(true)
+
+    const chain = h.ctx.db
+      .prepare('SELECT streak FROM catch_chains WHERE trainer_id = ? AND species_id = ?')
+      .get(trainerId, 'wildmon') as { streak: number }
+    expect(chain.streak).toBe(SHINY_CHAIN_AFTER_CATCH)
+    expect(chain.streak).toBeLessThan(SHINY_CHAIN_GUARANTEE)
+  })
+})
 
 describe('Wer hier lebt', () => {
   it('zeigt nur, was man hier schon gesehen hat', async () => {

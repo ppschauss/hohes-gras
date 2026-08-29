@@ -73,8 +73,15 @@ function buildOpponent(
 
   const rng = createRng(`arena:${date}:${typeId}:${tier.id}:${round}:${trainer.id}`)
   const level = arenaLevel(averageLevel(ctx, trainer.id), tier, round, capOf(ctx, trainer))
-  // So viele Gegner wie eigene Mitglieder: Überzahl wäre keine Übung.
-  const size = Math.max(1, Math.min(5, creatures.teamOf(ctx.db, trainer.id).length))
+  /*
+   * So viele Gegner, wie die Stufe zulässt.
+   *
+   * Gleich viele wie im eigenen Team klingt fair, ist es über vier Kämpfe aber
+   * nicht: das eigene Team tritt viermal an, die Gegner je einmal frisch.
+   * Auf „leicht" ist es die Hälfte, auf „ausgeglichen" drei Viertel.
+   */
+  const own = creatures.teamOf(ctx.db, trainer.id).length
+  const size = Math.max(1, Math.min(5, Math.round(own * tier.foeShare)))
 
   const type = ctx.registry.tryType(typeId)
   const typeName = type ? ctx.registry.localized(type.name, trainer.locale) : typeId

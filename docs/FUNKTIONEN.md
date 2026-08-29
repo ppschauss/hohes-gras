@@ -169,6 +169,12 @@ nennt die aktuelle Chance und den nächsten Meilenstein.
 | 20 | 10 % |
 | 49 | der 50. Fang ist garantiert schillernd |
 
+**Nach einem Treffer fällt die Serie auf 20 zurück**, also auf die
+Zehn-Prozent-Marke. Vorher fiel sie gar nicht: wer einmal bei 49 stand, fing ab
+da *jedes* Exemplar dieser Art schillernd — die Jagd war nach dem ersten
+Treffer vorbei und das Besondere zur Regel geworden. Auf null zurückzusetzen
+wäre das andere Extrem; so bleibt die Arbeit belohnt, nur nicht ewig.
+
 ### Lockdüfte
 
 Ein Duft je Typ, **50 Gold für 5 Anwendungen**, vervierfacht das Gewicht des
@@ -243,13 +249,15 @@ vorbereiten.
 
 | Stufe | Gegnerlevel | Gold je Sieg | Durchlauf |
 |---|---|---|---|
-| **Leicht** | Teamdurchschnitt **−5** | 60 | 400 Gold + 2× EP-Bonbon S |
-| **Ausgeglichen** | **−3** | 120 | 900 Gold + 1× EP-Bonbon L |
-| **Schwer** | **−1** | 240 | 1.800 Gold + 1× EP-Bonbon L + 2× Sternenstaub |
+| Stufe | Gegnerlevel | Gegner | Werte | Gold je Sieg | Durchlauf |
+|---|---|---|---|---|---|
+| **Leicht** | Ø **−5** | halbes Team, nur Grundformen | 0 | 60 | 400 Gold + 2× EP-Bonbon S |
+| **Ausgeglichen** | **−3** | drei Viertel, bis zur ersten Entwicklung | 8 | 120 | 900 Gold + 1× EP-Bonbon L |
+| **Schwer** | **−1** | volles Team, alles | 15 | 240 | 1.800 Gold + 1× EP-Bonbon L + 2× Sternenstaub |
 
 Innerhalb eines Durchlaufs steigt das Level je Runde um eins — der vierte
 Gegner steht über dem ersten. Gegenstände sind erlaubt, und **zwischen den
-Kämpfen bekommt das Team 10 % seiner KP zurück**: genug, um weiterzukommen, zu
+Kämpfen bekommt das Team 25 % seiner KP zurück**: genug, um weiterzukommen, zu
 wenig, um ohne Beutel durchzukommen.
 
 Jeder Kampf kostet die üblichen 2 Energie und zahlt EP wie ein Trainerkampf —

@@ -15,6 +15,17 @@ export const SHINY_BASE_ODDS = 1 / 512
  */
 export const SHINY_CHAIN_GUARANTEE = 49
 
+/**
+ * Wohin die Serie faellt, nachdem ein Schillerndes gefangen wurde.
+ *
+ * Vorher fiel sie gar nicht: wer einmal bei 49 war, fing ab da *jedes*
+ * Exemplar dieser Art schillernd — die Jagd war nach einem Treffer vorbei und
+ * das Besondere zur Regel geworden. Auf null zurueckzusetzen waere das andere
+ * Extrem; zwanzig ist die Stelle, an der die Chance bei zehn Prozent liegt.
+ * Die Arbeit bleibt also belohnt, nur nicht ewig.
+ */
+export const SHINY_CHAIN_AFTER_CATCH = 20
+
 /** Beibehalten unter altem Namen: die Serie zählt bis zur Zusage. */
 export const SHINY_CHAIN_CAP = SHINY_CHAIN_GUARANTEE
 

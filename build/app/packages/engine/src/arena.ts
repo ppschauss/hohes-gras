@@ -31,6 +31,14 @@ export interface ArenaTier {
    * das Üben belohnt und nicht die Statistik.
    */
   foeIv: number
+  /**
+   * Wie viele Gegner antreten, gemessen am eigenen Team.
+   *
+   * Der wirksamste Hebel und der, der zuerst gefehlt hat: vier volle Teams
+   * hintereinander mit zehn Prozent Erholung dazwischen sind auch mit
+   * schwachen Gegnern eine Wand. Auf „leicht" tritt die Haelfte an.
+   */
+  foeShare: number
   /** Gold je gewonnenem Kampf. */
   goldPerWin: number
   /** Was ein vollständiger Durchlauf zusätzlich einbringt. */
@@ -40,15 +48,15 @@ export interface ArenaTier {
 
 export const ARENA_TIERS: ArenaTier[] = [
   {
-    id: 'easy', levelDelta: -5, maxStage: 0, foeIv: 5, goldPerWin: 60,
+    id: 'easy', levelDelta: -5, maxStage: 0, foeIv: 0, foeShare: 0.5, goldPerWin: 60,
     bonusGold: 400, bonus: [{ itemId: 'exp-candy-s', quantity: 2 }],
   },
   {
-    id: 'even', levelDelta: -3, maxStage: 1, foeIv: 10, goldPerWin: 120,
+    id: 'even', levelDelta: -3, maxStage: 1, foeIv: 8, foeShare: 0.75, goldPerWin: 120,
     bonusGold: 900, bonus: [{ itemId: 'exp-candy-l', quantity: 1 }],
   },
   {
-    id: 'hard', levelDelta: -1, maxStage: 2, foeIv: 15, goldPerWin: 240,
+    id: 'hard', levelDelta: -1, maxStage: 2, foeIv: 15, foeShare: 1, goldPerWin: 240,
     bonusGold: 1800, bonus: [
       { itemId: 'exp-candy-l', quantity: 1 },
       { itemId: 'star-piece', quantity: 2 },
@@ -64,10 +72,12 @@ export const ARENA_ROUNDS = 4
 /**
  * Wie viel das Team zwischen zwei Kämpfen zurückbekommt.
  *
- * Zehn Prozent sind Absicht und keine Erholung: sie reichen nicht, um vier
- * Kämpfe ohne Gegenstände durchzustehen. Der Beutel ist Teil der Übung.
+ * Zuerst standen hier zehn Prozent, und das war zu wenig: mit vier Kämpfen in
+ * Folge blieb selbst auf der leichten Stufe kaum jemand übrig. Ein Viertel ist
+ * spürbar, reicht aber immer noch nicht, um ohne Gegenstände durchzukommen —
+ * der Beutel bleibt Teil der Übung.
  */
-export const ARENA_HEAL_PERCENT = 10
+export const ARENA_HEAL_PERCENT = 25
 
 /**
  * Der Typ des Tages.

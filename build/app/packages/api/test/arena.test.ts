@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ARENA_ROUNDS, ARENA_TIERS, arenaTypeFor } from '@game/engine'
+import { ARENA_HEAL_PERCENT, ARENA_ROUNDS, ARENA_TIERS, arenaTypeFor } from '@game/engine'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -32,7 +32,7 @@ describe('Trainingsarena', () => {
     const r = await h.get('/api/arena', token)
     expect(r.status).toBe(200)
     expect(r.body.rounds).toBe(ARENA_ROUNDS)
-    expect(r.body.healPercent).toBe(10)
+    expect(r.body.healPercent).toBe(ARENA_HEAL_PERCENT)
     expect(r.body.averageLevel).toBe(30)
 
     const [easy, even, hard] = r.body.tiers
