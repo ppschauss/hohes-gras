@@ -44,7 +44,8 @@ export function registerCoopRoutes(app: FastifyInstance, ctx: AppContext): void 
   })
 
   app.post('/api/guild/claim', write, async (req) => {
-    const result = guilds.claimWeeklyReward(ctx, req.trainer!)
+    const { kind } = z.object({ kind: z.string() }).parse(req.body)
+    const result = guilds.claimWeeklyReward(ctx, req.trainer!, kind)
     return { ...result, guild: guilds.overview(ctx, findById(ctx.db, req.trainer!.id)!) }
   })
 

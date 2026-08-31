@@ -29,9 +29,9 @@ export function GuildPanel() {
     haptic.tap()
     void action.run(() => api.leaveGuild(), (next) => guild.set(next))
   }
-  const claim = () => {
+  const claim = (kind: string) => {
     haptic.tap()
-    void action.run(() => api.claimGuildGoal(), (res) => {
+    void action.run(() => api.claimGuildGoal(kind), (res) => {
       guild.set(res.guild); setClaimed(res.gold); haptic.success()
     })
   }
@@ -87,7 +87,6 @@ export function GuildPanel() {
   }
 
   const g = d.guild
-  const goalPercent = g.goal.target > 0 ? Math.min(100, (g.goal.progress / g.goal.target) * 100) : 0
 
   return (
     <>
@@ -103,22 +102,27 @@ export function GuildPanel() {
         <span className="num">🪙 {number(g.treasury)}</span>
       </section>
 
-      <section className="goalCard">
-        <span className="section__eyebrow">{t('guild.goal')}</span>
-        <h3>{t(g.goal.labelKey, { target: number(g.goal.target) })}</h3>
-        <div className="bar bar--lg">
-          <span className="bar__fill bar__fill--dex" style={{ width: `${goalPercent}%` }} />
-        </div>
-        <p className="num">{number(g.goal.progress)} / {number(g.goal.target)}</p>
-        {/* Ohne diese Zeile sieht das Soll aus wie eine feste Zahl — und war
-            es frueher auch: 800 Pflegeaktionen fuer eine Gilde aus zwei. */}
-        <p className="center__body">{t('guild.goal.scaled', { perMember: number(g.goal.perMember) })}</p>
-        <p className="center__body">{t('guild.goal.reward', { n: g.goal.rewardPerMember })}</p>
-        <button type="button" className="btn btn--primary btn--block"
-          disabled={!g.goal.complete || g.goal.claimed || action.busy} onClick={claim}>
-          {g.goal.claimed ? t('guild.claimed') : t('guild.claim')}
-        </button>
-      </section>
+      {/* Drei kleine Ziele nebeneinander statt eines grossen: eine Woche, die
+          man planen kann, statt einer Wand. */}
+      {g.goals.map((goal) => (
+        <section key={goal.kind} className="goalCard">
+          <span className="section__eyebrow">{t('guild.goal')}</span>
+          <h3>{t(goal.labelKey, { target: number(goal.target) })}</h3>
+          <div className="bar bar--lg">
+            <span className="bar__fill bar__fill--dex"
+              style={{ width: `${goal.target > 0 ? Math.min(100, (goal.progress / goal.target) * 100) : 0}%` }} />
+          </div>
+          <p className="num">{number(goal.progress)} / {number(goal.target)}</p>
+          {/* Ohne diese Zeile sieht das Soll aus wie eine feste Zahl — und war
+              es frueher auch: 800 Pflegeaktionen fuer eine Gilde aus zwei. */}
+          <p className="center__body">{t('guild.goal.scaled', { perMember: number(goal.perMember) })}</p>
+          <p className="center__body">{t('guild.goal.reward', { n: goal.rewardPerMember })}</p>
+          <button type="button" className="btn btn--primary btn--block"
+            disabled={!goal.complete || goal.claimed || action.busy} onClick={() => claim(goal.kind)}>
+            {goal.claimed ? t('guild.claimed') : t('guild.claim')}
+          </button>
+        </section>
+      ))}
 
       {!g.chatBound && <p className="explain">{t('guild.chatHint')}</p>}
 

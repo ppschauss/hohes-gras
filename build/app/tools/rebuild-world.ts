@@ -212,20 +212,40 @@ async function main(): Promise<void> {
    * landet so bei knapp hundert Arten, und die späteren Regionen setzen dort
    * an, wo die vorige aufgehört hat.
    */
-  const DEX_GATE: Record<string, { base: number; step: number }> = {
-    /*
-     * Jede Region zaehlt bei null los.
-     *
-     * Vorher stand hier Johto auf 80 und Hoenn auf 150 — die Zahl, die ein
-     * Spieler mitbringt, der Kanto hinter sich hat. Wer Hoenn als *Startregion*
-     * waehlt, braeuchte damit 150 Dex-Eintraege fuer sein zweites Gebiet und
-     * kaeme nie los. Die Schwelle zaehlt jetzt nur Arten *dieser* Region; damit
-     * passt sie in jeder Reihenfolge, in der man die Welt bereist.
-     */
-    kanto: { base: 0, step: 7 },
-    johto: { base: 0, step: 6 },
-    hoenn: { base: 0, step: 6 },
+  /*
+   * Ein Anteil dessen, was erreichbar ist — keine feste Stufenzahl.
+   *
+   * Vorher stand hier je Region ein Schritt: Kanto sieben Arten je Gebiet,
+   * Johto und Hoenn sechs. Nachgerechnet war das in Kanto ab dem fuenften
+   * Gebiet *unloesbar* — die Schwelle verlangte mehr Arten, als in allen
+   * vorherigen Gebieten zusammen ueberhaupt vorkommen, bis zu sieben mehr. Und
+   * in Hoenn brauchte man 36 von 42 erreichbaren, also 86 Prozent: damit ist
+   * jede wetter- oder tageszeitgebundene Art Pflicht. Genau daran haengen
+   * Meldungen wie "34/36 Arten, das ist zu praesent".
+   *
+   * Zwei Drittel des Erreichbaren lassen Luft fuer das, was man nicht
+   * erwischt: die seltenen, die bedingten, die uebersehenen. Und es rechnet
+   * sich selbst nach, wenn sich der Inhalt aendert — eine neue Route mit
+   * wenigen Arten hebt die Schwelle nur um wenig.
+   */
+  const DEX_GATE_SHARE = 2 / 3
+
+  const byRegion = new Map<string, typeof repaired>()
+  for (const a of repaired) {
+    const list = byRegion.get(a.regionId) ?? []
+    list.push(a)
+    byRegion.set(a.regionId, list)
   }
+  /** Je Gebiet: wie viele Arten in allen *vorherigen* Gebieten vorkommen. */
+  const reachableBefore = new Map<string, number>()
+  for (const list of byRegion.values()) {
+    const seen = new Set<string>()
+    for (const a of [...list].sort((x, y) => x.order - y.order)) {
+      reachableBefore.set(a.id, seen.size)
+      for (const sp of a.spawns) seen.add(sp.speciesId)
+    }
+  }
+
   /*
    * Das erste Gebiet einer Region verlangt nichts.
    *
@@ -234,11 +254,8 @@ async function main(): Promise<void> {
    * die Liga gewinnen, dann noch hundert Arten nachsammeln, bevor man den Fuss
    * auf die erste Route setzen darf.
    */
-  const dexGate = (regionId: string, order: number): number => {
-    if (order <= 1) return 0
-    const g = DEX_GATE[regionId] ?? { base: 0, step: 6 }
-    return g.base + (order - 2) * g.step
-  }
+  const dexGate = (areaId: string, order: number): number =>
+    (order <= 1 ? 0 : Math.round((reachableBefore.get(areaId) ?? 0) * DEX_GATE_SHARE))
 
   const areaById = new Map(repaired.map((a) => [a.id, a]))
   const finalAreas = repaired.map((a) => ({
@@ -248,7 +265,7 @@ async function main(): Promise<void> {
       // Die alte Bedingung ist abgeloest; sie bleibt im Schema, damit
       // aeltere Packs weiter laden.
       minCaughtInPrevious: 0,
-      minDexCaught: dexGate(a.regionId, a.order),
+      minDexCaught: dexGate(a.id, a.order),
       requiredBadgeIds: a.unlock.requiredBadgeIds.filter((b) => knownBadges.has(b)),
     },
   }))

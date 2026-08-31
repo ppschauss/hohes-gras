@@ -134,10 +134,17 @@ const toGoal = (r: GoalRow): Goal => ({
   target: r.target, progress: r.progress, claimedAt: r.claimed_at,
 })
 
-export function goalOf(db: Db, guildId: string, weekKey: string): Goal | null {
-  const row = db.prepare('SELECT * FROM guild_goals WHERE guild_id = ? AND week_key = ?')
-    .get(guildId, weekKey) as GoalRow | undefined
+export function goalOf(db: Db, guildId: string, weekKey: string, kind: string): Goal | null {
+  const row = db.prepare('SELECT * FROM guild_goals WHERE guild_id = ? AND week_key = ? AND goal_kind = ?')
+    .get(guildId, weekKey, kind) as GoalRow | undefined
   return row ? toGoal(row) : null
+}
+
+/** Alle Ziele einer Woche. Seit es drei gleichzeitig gibt, ist das der
+ *  Regelfall; `goalOf` fragt eines davon gezielt ab. */
+export function goalsOf(db: Db, guildId: string, weekKey: string): Goal[] {
+  return (db.prepare('SELECT * FROM guild_goals WHERE guild_id = ? AND week_key = ?')
+    .all(guildId, weekKey) as GoalRow[]).map(toGoal)
 }
 
 /**
@@ -149,38 +156,32 @@ export function goalOf(db: Db, guildId: string, weekKey: string): Goal | null {
  * eine Belohnung, die durch einen Neuzugang rueckwirkend unverdient wird,
  * waere unfair.
  */
+/**
+ * Ein Wochenziel anlegen — und sein Soll nachfuehren.
+ *
+ * Seit die Art im Schluessel steht, braucht es kein Umschreiben mehr, wenn
+ * sich die Liste der Ziele aendert: eine Woche traegt einfach die Zeilen, die
+ * zu ihr gehoeren, und alte bleiben liegen, ohne zu stoeren. Nachgefuehrt wird
+ * nur noch das Soll, das an der Mitgliederzahl haengt.
+ */
 export function ensureGoal(db: Db, guildId: string, weekKey: string, kind: string, target: number): Goal {
   db.prepare('INSERT OR IGNORE INTO guild_goals (guild_id, week_key, goal_kind, target) VALUES (?, ?, ?, ?)')
     .run(guildId, weekKey, kind, target)
-
-  /*
-   * Aendert sich die Zielart mitten in der Woche, faengt die Woche neu an.
-   *
-   * Das passiert nur bei einem Deploy, der die Liste der Wochenziele
-   * veraendert — und dann steht in der Zeile eine Art, die nicht mehr zu dem
-   * passt, was angezeigt und gezaehlt wird. Genau so aufgefallen: die Zeile
-   * sagte "Pflegeaktionen", das Etikett "Geschenke". Der Fortschritt wird
-   * dabei zurueckgesetzt, denn er wurde an einer anderen Groesse gemessen; ein
-   * abgeholtes Ziel bleibt unberuehrt.
-   */
   db.prepare(
-    `UPDATE guild_goals SET goal_kind = ?, progress = 0
-      WHERE guild_id = ? AND week_key = ? AND claimed_at IS NULL AND goal_kind <> ?`,
-  ).run(kind, guildId, weekKey, kind)
-
-  db.prepare(
-    'UPDATE guild_goals SET target = ? WHERE guild_id = ? AND week_key = ? AND claimed_at IS NULL AND target <> ?',
-  ).run(target, guildId, weekKey, target)
-  return goalOf(db, guildId, weekKey)!
+    `UPDATE guild_goals SET target = ?
+      WHERE guild_id = ? AND week_key = ? AND goal_kind = ? AND claimed_at IS NULL AND target <> ?`,
+  ).run(target, guildId, weekKey, kind, target)
+  return goalOf(db, guildId, weekKey, kind)!
 }
 
-export function addGoalProgress(db: Db, guildId: string, weekKey: string, amount: number): void {
-  db.prepare('UPDATE guild_goals SET progress = progress + ? WHERE guild_id = ? AND week_key = ?')
-    .run(Math.max(0, amount), guildId, weekKey)
+export function addGoalProgress(db: Db, guildId: string, weekKey: string, kind: string, amount: number): void {
+  db.prepare('UPDATE guild_goals SET progress = progress + ? WHERE guild_id = ? AND week_key = ? AND goal_kind = ?')
+    .run(Math.max(0, amount), guildId, weekKey, kind)
 }
 
-export function claimGoal(db: Db, guildId: string, weekKey: string, now = Date.now()): boolean {
-  return db
-    .prepare('UPDATE guild_goals SET claimed_at = ? WHERE guild_id = ? AND week_key = ? AND claimed_at IS NULL AND progress >= target')
-    .run(now, guildId, weekKey).changes === 1
+export function claimGoal(db: Db, guildId: string, weekKey: string, kind: string, now = Date.now()): boolean {
+  return db.prepare(
+    `UPDATE guild_goals SET claimed_at = ?
+      WHERE guild_id = ? AND week_key = ? AND goal_kind = ? AND claimed_at IS NULL AND progress >= target`,
+  ).run(now, guildId, weekKey, kind).changes === 1
 }

@@ -638,6 +638,12 @@ Erkundungen, Raid-Schaden, geschlüpfte Eier, Entwicklungen, hergestellte
 Gegenstände, gewonnene Duelle, neue Pokédex-Einträge, abgeschlossene
 Forschungsprojekte und verschickte Geschenke.
 
+**Drei Ziele laufen gleichzeitig**, jedes für sich abholbar. Vorher war es
+eines, und das war „zu heftig" — die Antwort darauf war nicht „leichter",
+sondern „mehr davon, kleiner": alle Werte auf ein Drittel, dafür drei
+nebeneinander. Drei kleine Aufgaben sind eine Woche, die man planen kann; eine
+große ist eine Wand.
+
 **Das Soll zählt je Mitglied**, nicht als feste Zahl. Vorher standen dort 1000
 Fänge und 800 Pflegeaktionen — Werte für eine volle Gilde. Eine Gilde aus zwei
 Leuten hatte damit 400 Fänge je Kopf zu erledigen, und das Ziel war nie etwas

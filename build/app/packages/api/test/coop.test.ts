@@ -82,36 +82,51 @@ describe('Gilden', () => {
     expect(exists).toBeUndefined()
   })
 
-  it('legt ein Wochenziel an und zahlt es an alle aus', async () => {
+  /** Die Art des ersten laufenden Ziels — es sind seit neuestem drei. */
+  const firstKind = async () =>
+    (await h.get('/api/guild', ash.token)).body.guild.goals[0].kind as string
+
+  it('legt drei Wochenziele an und zahlt jedes an alle aus', async () => {
     const g = await found()
     await h.post('/api/guild/join', { guildId: g.body.guild.id }, misty.token)
     const view = await h.get('/api/guild', ash.token)
-    expect(view.body.guild.goal.target).toBeGreaterThan(0)
-    expect(view.body.guild.goal.complete).toBe(false)
+    // Drei kleine statt eines grossen: gemeldet als "zu heftig".
+    expect(view.body.guild.goals).toHaveLength(3)
+    for (const goal of view.body.guild.goals) {
+      expect(goal.target).toBeGreaterThan(0)
+      expect(goal.complete).toBe(false)
+    }
+    // Und sie sind verschieden.
+    expect(new Set(view.body.guild.goals.map((x: any) => x.kind)).size).toBe(3)
 
-    // Ziel erfuellen
-    h.ctx.db.prepare('UPDATE guild_goals SET progress = target WHERE guild_id = ?').run(g.body.guild.id)
+    const kind = view.body.guild.goals[0].kind
+    h.ctx.db.prepare('UPDATE guild_goals SET progress = target WHERE guild_id = ? AND goal_kind = ?')
+      .run(g.body.guild.id, kind)
     const goldBefore = (await h.get('/api/bag', misty.token)).body.gold
-    const claim = await h.post('/api/guild/claim', {}, ash.token)
+    const claim = await h.post('/api/guild/claim', { kind }, ash.token)
     expect(claim.status).toBe(200)
     const goldAfter = (await h.get('/api/bag', misty.token)).body.gold
     expect(goldAfter).toBe(goldBefore + 400)
+
+    // Die anderen beiden bleiben offen — jedes zahlt fuer sich.
+    const after = await h.get('/api/guild', ash.token)
+    expect(after.body.guild.goals.filter((x: any) => x.claimed)).toHaveLength(1)
   })
 
-  it('laesst das Wochenziel nur einmal einloesen', async () => {
+  it('laesst ein Wochenziel nur einmal einloesen', async () => {
     const g = await found()
-    h.ctx.db.prepare('UPDATE guild_goals SET progress = target WHERE guild_id = ?').run(g.body.guild.id)
-    await h.get('/api/guild', ash.token)
-    h.ctx.db.prepare('UPDATE guild_goals SET progress = target WHERE guild_id = ?').run(g.body.guild.id)
-    expect((await h.post('/api/guild/claim', {}, ash.token)).status).toBe(200)
-    const second = await h.post('/api/guild/claim', {}, ash.token)
+    const kind = await firstKind()
+    h.ctx.db.prepare('UPDATE guild_goals SET progress = target WHERE guild_id = ? AND goal_kind = ?')
+      .run(g.body.guild.id, kind)
+    expect((await h.post('/api/guild/claim', { kind }, ash.token)).status).toBe(200)
+    const second = await h.post('/api/guild/claim', { kind }, ash.token)
     expect(second.status).toBe(409)
   })
 
   it('verweigert das Einloesen bei unerfuelltem Ziel', async () => {
     await found()
-    await h.get('/api/guild', ash.token)
-    const r = await h.post('/api/guild/claim', {}, ash.token)
+    const kind = await firstKind()
+    const r = await h.post('/api/guild/claim', { kind }, ash.token)
     expect(r.status).toBe(409)
     expect(r.body.detail.reason).toBe('goal_incomplete')
   })

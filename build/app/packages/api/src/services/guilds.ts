@@ -45,6 +45,13 @@ export function weekKey(at = new Date()): string {
  *
  * `min` faengt die Ein-Personen-Gilde ab: ganz ohne Untergrenze waere ein Ziel
  * an einem Nachmittag erledigt.
+ *
+ * Drittens war auch das Soll je Kopf noch zu hoch — zehn Geschenke die Woche
+ * heisst zehn von vierzehn moeglichen Tagen daran denken. Gemeldet als "zu
+ * heftig", und die Antwort war nicht "leichter", sondern "mehr davon,
+ * kleiner": alle Werte auf ein Drittel, dafuer laufen **drei Ziele
+ * gleichzeitig**. Drei kleine Aufgaben nebeneinander sind eine Woche, die man
+ * planen kann; eine grosse ist eine Wand.
  */
 interface GoalSpec {
   kind: string
@@ -56,23 +63,38 @@ interface GoalSpec {
 }
 
 const GOAL_ROTATION: GoalSpec[] = [
-  { kind: 'catches', perMember: 60, min: 80, labelKey: 'guild.goal.catches' },
-  { kind: 'battles', perMember: 25, min: 30, labelKey: 'guild.goal.battles' },
-  { kind: 'careActions', perMember: 60, min: 80, labelKey: 'guild.goal.careActions' },
-  { kind: 'explores', perMember: 150, min: 200, labelKey: 'guild.goal.explores' },
-  { kind: 'raidDamage', perMember: 15_000, min: 20_000, labelKey: 'guild.goal.raidDamage' },
-  { kind: 'eggsHatched', perMember: 4, min: 5, labelKey: 'guild.goal.eggsHatched' },
-  { kind: 'evolutions', perMember: 6, min: 8, labelKey: 'guild.goal.evolutions' },
-  { kind: 'crafted', perMember: 8, min: 10, labelKey: 'guild.goal.crafted' },
-  { kind: 'duelsWon', perMember: 5, min: 6, labelKey: 'guild.goal.duelsWon' },
-  { kind: 'dexNew', perMember: 6, min: 8, labelKey: 'guild.goal.dexNew' },
-  { kind: 'research', perMember: 2, min: 2, labelKey: 'guild.goal.research' },
-  { kind: 'gifts', perMember: 10, min: 12, labelKey: 'guild.goal.gifts' },
+  { kind: 'catches', perMember: 20, min: 30, labelKey: 'guild.goal.catches' },
+  { kind: 'battles', perMember: 8, min: 12, labelKey: 'guild.goal.battles' },
+  { kind: 'careActions', perMember: 20, min: 30, labelKey: 'guild.goal.careActions' },
+  { kind: 'explores', perMember: 50, min: 70, labelKey: 'guild.goal.explores' },
+  { kind: 'raidDamage', perMember: 5000, min: 7000, labelKey: 'guild.goal.raidDamage' },
+  { kind: 'eggsHatched', perMember: 2, min: 2, labelKey: 'guild.goal.eggsHatched' },
+  { kind: 'evolutions', perMember: 2, min: 3, labelKey: 'guild.goal.evolutions' },
+  { kind: 'crafted', perMember: 3, min: 4, labelKey: 'guild.goal.crafted' },
+  { kind: 'duelsWon', perMember: 2, min: 2, labelKey: 'guild.goal.duelsWon' },
+  { kind: 'dexNew', perMember: 2, min: 3, labelKey: 'guild.goal.dexNew' },
+  { kind: 'research', perMember: 1, min: 1, labelKey: 'guild.goal.research' },
+  { kind: 'gifts', perMember: 3, min: 4, labelKey: 'guild.goal.gifts' },
 ]
 
-export function goalForWeek(week: string): GoalSpec {
+/** Wie viele Ziele gleichzeitig laufen. */
+export const GOALS_PER_WEEK = 3
+
+/**
+ * Die drei Ziele dieser Woche.
+ *
+ * Aus der Wochennummer abgeleitet und damit fuer alle Gilden gleich — und, was
+ * wichtiger ist, fuer dieselbe Woche immer dasselbe. Der Abstand von fuenf
+ * sorgt dafuer, dass die drei aus verschiedenen Ecken der Liste kommen und
+ * nicht dreimal dasselbe Thema treffen.
+ */
+export function goalsForWeek(week: string): GoalSpec[] {
   const n = Number(week.slice(-2)) || 0
-  return GOAL_ROTATION[n % GOAL_ROTATION.length]!
+  const out: GoalSpec[] = []
+  for (let i = 0; i < GOALS_PER_WEEK; i++) {
+    out.push(GOAL_ROTATION[(n * GOALS_PER_WEEK + i * 5) % GOAL_ROTATION.length]!)
+  }
+  return out
 }
 
 /** Das Soll dieser Woche fuer eine Gilde dieser Groesse. */
@@ -96,9 +118,21 @@ export function overview(ctx: AppContext, trainer: Trainer) {
   }
 
   const week = weekKey()
-  const spec = goalForWeek(week)
   const members = guilds.membersOf(ctx.db, guild.id)
-  const goal = guilds.ensureGoal(ctx.db, guild.id, week, spec.kind, goalTarget(spec, members.length))
+  const goals = goalsForWeek(week).map((spec) => {
+    const row = guilds.ensureGoal(ctx.db, guild.id, week, spec.kind, goalTarget(spec, members.length))
+    return {
+      kind: row.goalKind,
+      labelKey: spec.labelKey,
+      /** Woraus sich das Soll ergibt — die Zahl allein wirkt willkuerlich. */
+      perMember: spec.perMember,
+      target: row.target,
+      progress: row.progress,
+      complete: row.progress >= row.target,
+      claimed: row.claimedAt !== null,
+      rewardPerMember: GOAL_REWARD_PER_MEMBER,
+    }
+  })
 
   return {
     guild: {
@@ -113,17 +147,7 @@ export function overview(ctx: AppContext, trainer: Trainer) {
       members,
       memberCount: members.length,
       maxMembers: MAX_MEMBERS,
-      goal: {
-        kind: goal.goalKind,
-        labelKey: spec.labelKey,
-        /** Woraus sich das Soll ergibt — die Zahl allein wirkt willkuerlich. */
-        perMember: spec.perMember,
-        target: goal.target,
-        progress: goal.progress,
-        complete: goal.progress >= goal.target,
-        claimed: goal.claimedAt !== null,
-        rewardPerMember: GOAL_REWARD_PER_MEMBER,
-      },
+      goals,
     },
     open: [],
     foundingCost: FOUNDING_COST,
@@ -199,31 +223,36 @@ export function contributeToGoal(ctx: AppContext, trainerId: string, kind: strin
   const guild = guilds.guildOf(ctx.db, trainerId)
   if (!guild) return
   const week = weekKey()
-  const spec = goalForWeek(week)
-  if (spec.kind !== kind) return
+  const spec = goalsForWeek(week).find((g) => g.kind === kind)
+  if (!spec) return
   const members = guilds.membersOf(ctx.db, guild.id).length
   guilds.ensureGoal(ctx.db, guild.id, week, spec.kind, goalTarget(spec, members))
-  guilds.addGoalProgress(ctx.db, guild.id, week, amount)
+  guilds.addGoalProgress(ctx.db, guild.id, week, spec.kind, amount)
   guilds.addContribution(ctx.db, guild.id, trainerId, amount)
 }
 
-export function claimWeeklyReward(ctx: AppContext, trainer: Trainer): { gold: number } {
+/** Ein einzelnes Ziel abholen. Seit drei gleichzeitig laufen, sagt der Aufrufer
+ *  welches — jedes zahlt fuer sich. */
+export function claimWeeklyReward(ctx: AppContext, trainer: Trainer, kind: string): { gold: number } {
   return tx(ctx.db, () => {
     const guild = guilds.guildOf(ctx.db, trainer.id)
     if (!guild) throw new GameError('invalid_state', { reason: 'not_in_guild' }, 409)
     const week = weekKey()
-    const goal = guilds.goalOf(ctx.db, guild.id, week)
+    if (!goalsForWeek(week).some((g) => g.kind === kind)) {
+      throw new GameError('invalid_state', { reason: 'no_goal' }, 409)
+    }
+    const goal = guilds.goalOf(ctx.db, guild.id, week, kind)
     if (!goal) throw new GameError('invalid_state', { reason: 'no_goal' }, 409)
     if (goal.progress < goal.target) throw new GameError('invalid_state', { reason: 'goal_incomplete' }, 409)
 
     // The claim is per guild, not per member: whoever taps it pays out
     // everybody, which is what makes it a shared reward.
-    if (!guilds.claimGoal(ctx.db, guild.id, week)) {
+    if (!guilds.claimGoal(ctx.db, guild.id, week, kind)) {
       throw new GameError('invalid_state', { reason: 'already_claimed' }, 409)
     }
     const members = guilds.membersOf(ctx.db, guild.id)
     for (const m of members) inventory.earnGold(ctx.db, m.trainerId, GOAL_REWARD_PER_MEMBER)
-    logEvent(ctx.db, trainer.id, 'guild.goalClaimed', { guildId: guild.id, week, members: members.length })
+    logEvent(ctx.db, trainer.id, 'guild.goalClaimed', { guildId: guild.id, week, kind, members: members.length })
     return { gold: GOAL_REWARD_PER_MEMBER }
   })
 }

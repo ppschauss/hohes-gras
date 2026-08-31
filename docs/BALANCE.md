@@ -99,6 +99,28 @@ Woingenau von 2 auf 6. Ditto bleibt bei 1 — es lernt nun einmal nur Wandler.
 sondern ersetzen. Ein Glumanda auf Level 5 mit Erdbeben ist kein reicheres
 Lernset, sondern gar keins mehr.
 
+## Freischaltung: zwei Drittel statt einer Stufenzahl
+
+Die Dex-Schwelle je Gebiet war eine Formel mit festem Schritt — Kanto sieben
+Arten je Gebiet, Johto und Hoenn sechs. Nachgerechnet gegen das, was in den
+vorherigen Gebieten überhaupt vorkommt:
+
+| Region | Gebiet | erreichbar | gefordert |
+|---|---|---|---|
+| Kanto | 8 | 36 | **42** |
+| Kanto | 15 | 84 | **91** |
+| Hoenn | 8 | 42 | 36 (86 %) |
+
+In Kanto war es ab dem fünften Gebiet **unlösbar**: die Schwelle verlangte mehr
+Arten, als es gab. In Hoenn brauchte man 86 % des Erreichbaren — damit ist jede
+wetter- oder tageszeitgebundene Art Pflicht, und genau daran hing „34/36 Arten,
+das ist zu präsent".
+
+Jetzt sind es **zwei Drittel des Erreichbaren**. Das lässt Luft für die
+seltenen, die bedingten und die übersehenen Arten, und es rechnet sich selbst
+nach, wenn sich der Inhalt ändert. Hoenns achtes Gebiet fordert damit 28 statt
+36.
+
 ## Antrittsgeld
 
 Ganz ohne Ertrag blieb der Wiederholungskampf trotzdem falsch: gekämpft hat man

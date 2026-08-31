@@ -374,8 +374,10 @@ export const api = {
   joinGuild: (guildId: string) =>
     request<GuildOverview>('/api/guild/join', { method: 'POST', body: JSON.stringify({ guildId }) }),
   leaveGuild: () => request<GuildOverview>('/api/guild/leave', { method: 'POST', body: '{}' }),
-  claimGuildGoal: () =>
-    request<{ gold: number; guild: GuildOverview }>('/api/guild/claim', { method: 'POST', body: '{}' }),
+  claimGuildGoal: (kind: string) =>
+    request<{ gold: number; guild: GuildOverview }>('/api/guild/claim', {
+      method: 'POST', body: JSON.stringify({ kind }),
+    }),
 
   raids: () => request<RaidOverview>('/api/raids'),
   summonRaid: (tier: 1 | 3 | 5) =>
@@ -1046,7 +1048,8 @@ export interface GuildOverview {
     members: GuildMember[]
     memberCount: number
     maxMembers: number
-    goal: {
+    /** Drei Ziele gleichzeitig statt eines grossen. */
+    goals: Array<{
       kind: string
       labelKey: string
       /** Soll je Mitglied — daraus ergibt sich `target`. */
@@ -1056,7 +1059,7 @@ export interface GuildOverview {
       complete: boolean
       claimed: boolean
       rewardPerMember: number
-    }
+    }>
   } | null
   open: Array<{ id: string; name: string; tag: string; motto: string; memberCount: number }>
   foundingCost: number
