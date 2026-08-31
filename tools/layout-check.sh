@@ -35,10 +35,20 @@ setTimeout(() => {
       const shell = d.querySelector('.shell')
       const bar = d.querySelector('.tabbar')
       const wide = []
+      // Steckt das Element in einem Kasten, der selbst seitlich rollt oder
+      // beschneidet? Dann ragt es nicht ueber die Seite hinaus, sondern nur
+      // ueber seinen Rahmen — und der ist dafuer gebaut. Das gilt fuer die
+      // Reiterleiste im Beutel wie fuer breite Tabellen.
+      const beschnitten = (el) => {
+        for (let p = el.parentElement; p; p = p.parentElement) {
+          const ox = getComputedStyle(p).overflowX
+          if (ox === 'auto' || ox === 'scroll' || ox === 'hidden') return true
+        }
+        return false
+      }
       d.querySelectorAll('*').forEach(el => {
         const r = el.getBoundingClientRect()
-        // journey__sun ragt absichtlich heraus und wird vom Container beschnitten.
-        if (r.right > de.clientWidth + 0.5 && !el.className.toString().includes('__sun')) {
+        if (r.right > de.clientWidth + 0.5 && !beschnitten(el)) {
           wide.push(el.tagName + '.' + (el.className || '?'))
         }
       })

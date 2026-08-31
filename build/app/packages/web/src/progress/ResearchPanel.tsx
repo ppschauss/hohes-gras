@@ -6,6 +6,8 @@ import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
 import { number } from '../lib/format'
 import { ItemIcon } from '../ui/ItemIcon'
+import { Fold } from '../ui/Fold'
+import { RESEARCH_CENTERS, centerOf } from '../lib/groups'
 
 const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const
 
@@ -203,14 +205,41 @@ export function ResearchPanel() {
           </span>
         </div>
 
-        <div className="stack">
-          {d.projects.filter((p) => matches(p, filter)).map((p) => (
-            <Project key={p.id} p={p} gold={d.gold} busy={action.busy} onStart={setPicking} />
-          ))}
-          {d.projects.filter((p) => matches(p, filter)).length === 0 && (
-            <p className="center__body">{t('research.filterEmpty')}</p>
-          )}
-        </div>
+        {/*
+          * Vier Zentren statt einer Liste.
+          *
+          * Gefiltert wurde bisher nach Bauart — Rezept oder Bonus. Danach
+          * sucht aber niemand: man sucht nach einem Gebiet, in dem man besser
+          * werden will. Der Zustandsfilter oben bleibt, die Einteilung
+          * darunter beantwortet die andere Frage.
+          */}
+        {(() => {
+          const sichtbar = d.projects.filter((p) => matches(p, filter))
+          if (sichtbar.length === 0) {
+            return <p className="center__body">{t('research.filterEmpty')}</p>
+          }
+          const zentren = RESEARCH_CENTERS
+            .map((c) => ({ id: c, projects: sichtbar.filter((p) => centerOf(p.id) === c) }))
+            .filter((z) => z.projects.length > 0)
+          return zentren.map((z) => (
+            <Fold key={z.id}
+              title={t(`research.center.${z.id}`)}
+              count={z.projects.length}
+              /* Unter "Noch offen" ist keines erforscht und unter "Erforscht"
+                 alle — beide Male stuende hier dieselbe Zahl zweimal. */
+              note={filter === 'open' || filter === 'done'
+                ? undefined
+                : t('research.doneOf', { n: z.projects.filter((p) => p.complete).length })}
+              open={zentren.length === 1}
+            >
+              <div className="stack">
+                {z.projects.map((p) => (
+                  <Project key={p.id} p={p} gold={d.gold} busy={action.busy} onStart={setPicking} />
+                ))}
+              </div>
+            </Fold>
+          ))
+        })()}
       </section>
     </>
   )

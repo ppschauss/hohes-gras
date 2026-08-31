@@ -22,6 +22,10 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Basis aufgeräumt: die Werkstatt zeigt ihre 26 Rezepte in aufklappbaren Gruppen statt untereinander, mit einem Filter für „jetzt möglich".',
+      'Vier Forschungszentren im Labor — Fang & Schillernde, Feld & Expedition, Kampf & Training, Werkstoff & Gerät.',
+      'Beutel bekommt Reiter je Art; die Seelenfragmente stehen in einem eigenen statt über allem.',
+      'Dieser Bereich hier: nachlesen, was sich geändert hat.',
       'Kampfzone: Beute nach Stufen gestaffelt — jede Region hat zwei Sorten von Anfang an, Sternenstaub kommt ab Serie 50 dazu. Jede Stufe nennt ihre Gegenstände beim Namen.',
       'Alle 21 legendären Arten haben einen Fundort bekommen. Dreizehn kamen vorher in keinem einzigen Gebiet vor und waren damit unerreichbar.',
       'Kampfzone: Eintritt kostet 20 Energie, vollständige Erholung nur noch alle 25 Stufen, Fortschrittsbalken bis zur nächsten Stufe.',

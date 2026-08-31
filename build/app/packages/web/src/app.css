@@ -1309,6 +1309,70 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
   width: 5px; height: 5px; border-radius: var(--radius-pill);
   background: var(--accent-soft);
 }
+
+/* --- Aufklappbare Gruppen -------------------------------------------------
+   Werkstatt und Labor teilen sich dieses Aussehen: eine Reihe zugeklappter
+   Zeilen statt einer Rolle, durch die man scrollt. ------------------------ */
+
+.fold {
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+.fold + .fold { margin-top: var(--s2); }
+.fold__head {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  cursor: pointer; list-style: none;
+}
+/* Das eingebaute Dreieck von Safari und Chrome weg — wir zeichnen ein eigenes,
+   das sich mitdreht. */
+.fold__head::-webkit-details-marker { display: none; }
+.fold__head:hover { background: var(--surface-raised); border-radius: var(--radius); }
+.fold__title { font-weight: 650; font-size: var(--t-sm); }
+.fold__note { margin-left: auto; font-size: var(--t-xs); color: var(--ink-faint); }
+.fold__count {
+  min-width: 1.6rem; text-align: center;
+  padding: 1px var(--s2); border-radius: var(--radius-pill);
+  background: var(--surface-sunken); color: var(--ink-muted);
+  font-size: var(--t-xs); font-weight: 600;
+}
+.fold__mark { color: var(--ink-faint); transition: transform var(--fast) var(--ease); }
+.fold[open] .fold__mark { transform: rotate(180deg); }
+.fold__body { padding: 0 var(--s3) var(--s3); }
+@media (prefers-reduced-motion: reduce) {
+  .fold__mark { transition: none; }
+}
+
+/* --- Reiterleiste, die seitlich rollt --------------------------------------
+   Neun Arten passen in keine Zeile. Statt sie zu stauchen, bis niemand mehr
+   liest, was draufsteht, rollt die Leiste. -------------------------------- */
+
+.tabsScroll {
+  display: flex; gap: var(--s2);
+  overflow-x: auto; scrollbar-width: none;
+  margin: 0 calc(var(--s4) * -1); padding: 0 var(--s4) var(--s1);
+}
+.tabsScroll::-webkit-scrollbar { display: none; }
+.tabsScroll__btn {
+  display: inline-flex; align-items: center; gap: var(--s2); flex: 0 0 auto;
+  padding: var(--s2) var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius-pill);
+  color: var(--ink-muted); font: inherit; font-size: var(--t-sm); cursor: pointer;
+  transition: border-color var(--fast) var(--ease), color var(--fast) var(--ease);
+}
+.tabsScroll__btn[aria-selected='true'] {
+  border-color: var(--accent); background: var(--surface-raised); color: var(--ink); font-weight: 600;
+}
+.tabsScroll__count { font-size: var(--t-xs); color: var(--ink-faint); }
+.tabsScroll__btn[aria-selected='true'] .tabsScroll__count { color: var(--ink-muted); }
+
+/* Eine Zeile Filter ueber einer Liste: Beschriftung links, Auswahl rechts. */
+.filterRow { display: flex; align-items: center; gap: var(--s3); }
+.filterRow__label { font-size: var(--t-xs); color: var(--ink-faint); flex: 0 0 auto; }
+.filterRow .picker__select {
+  flex: 1; min-width: 0;
+  padding: var(--s2) var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
 /* Im Fenster steht die Tabelle auf der Kartenflaeche, nicht in einer Mulde. */
 .pickCard .detail__barCell .bar { background: var(--surface-sunken); }
 .pick--on { border-color: var(--accent); background: var(--surface-raised); }

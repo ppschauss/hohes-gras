@@ -7,6 +7,7 @@ import { useAction, useAsync } from '../lib/useAsync'
 import { ItemIcon } from '../ui/ItemIcon'
 import { Screen } from '../ui/Screen'
 import { CenterState } from '../ui/States'
+import { SECTION_KEY } from '../lib/groups'
 
 /**
  * Der Beutel.
@@ -31,6 +32,8 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
    * Was kein Ziel braucht — der Stoersender — wird sofort ausgeloest; alles
    * andere fragt, auf wen. Ein Trank ohne Ziel waere geraten.
    */
+  /** Welche Art gerade offen ist. Der erste vorhandene Reiter ist die Vorgabe. */
+  const [tab, setTab] = useState<string>('ball')
   const [target, setTarget] = useState<BagItem | null>(null)
   const [used, setUsed] = useState<string | null>(null)
   const box = useAsync(() => api.box(), [])
@@ -86,6 +89,24 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
     .map((category) => ({ category, items: items.filter((i) => i.category === category) }))
     .filter((g) => g.items.length > 0)
 
+  /*
+   * Ein Reiter je Art statt aller Arten untereinander.
+   *
+   * Der Beutel war eine einzige Rolle: Fragmente, dann neun Abschnitte. Wer
+   * einen Trank suchte, scrollte an achtzehn Seelenfragmenten vorbei —
+   * gemeldet mit der Bitte um "Tabs zwischen den verschiedenen Arten".
+   *
+   * Die Reiter kommen aus dem Bestand, nicht aus einer festen Liste: was man
+   * nicht hat, steht auch nicht als leerer Reiter da.
+   */
+  const hatSeelen = (souls.data?.souls.length ?? 0) > 0
+  const reiter: string[] = [
+    ...groups.map((g) => g.category),
+    ...(hatSeelen ? ['souls'] : []),
+  ]
+  const aktiv = reiter.includes(tab) ? tab : reiter[0] ?? null
+  const sichtbar = groups.filter((g) => g.category === aktiv)
+
   return (
     <Screen eyebrow={t('bag.eyebrow')} title={t('bag.title')} onBack={onBack}>
       <main className="content">
@@ -140,10 +161,29 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
           </div>
         )}
 
-        {/* Fragmente stehen oben und nicht zwischen den Materialien: sie sind
-            kein Gegenstand, den man benutzt, sondern ein Zaehler, auf den man
-            hinarbeitet. */}
-        {(souls.data?.souls.length ?? 0) > 0 && (
+        {reiter.length > 1 && (
+          <div className="tabsScroll" role="tablist" aria-label={t('bag.title')}>
+            {reiter.map((id) => (
+              <button key={id} type="button" role="tab" aria-selected={id === aktiv}
+                className="tabsScroll__btn"
+                onClick={() => { haptic.select(); setTab(id) }}>
+                {id === 'souls'
+                  ? t('souls.title')
+                  : t(`shop.section.${SECTION_KEY[id] ?? id}`)}
+                <span className="tabsScroll__count num">
+                  {id === 'souls'
+                    ? souls.data?.souls.length ?? 0
+                    : groups.find((g) => g.category === id)?.items.length ?? 0}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Fragmente sind kein Gegenstand, den man benutzt, sondern ein
+            Zaehler, auf den man hinarbeitet — deshalb ein eigener Reiter und
+            keine Zeile zwischen den Werkstoffen. */}
+        {aktiv === 'souls' && (souls.data?.souls.length ?? 0) > 0 && (
           <section className="section">
             <h2>{t('souls.title')}</h2>
             <p className="center__body">{t('souls.subtitle')}</p>
@@ -208,9 +248,8 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
           ? [0, 1].map((i) => <div key={i} className="skeleton skeleton--row" />)
           : groups.length === 0
             ? <CenterState glyph="🎒" title={t('bag.empty')} body={t('bag.emptyHint')} />
-            : groups.map((group) => (
+            : sichtbar.map((group) => (
                 <section key={group.category} className="section">
-                  <h2>{t(`shop.section.${SECTION_KEY[group.category] ?? group.category}`)}</h2>
                   <div className="stack">
                     {group.items.map((item) => (
                       <BagRow key={item.id} item={item} busy={action.busy} onUse={startUse} />
@@ -221,12 +260,6 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
       </main>
     </Screen>
   )
-}
-
-/** Die Abschnittsnamen des Ladens passen — bis auf die, die es dort nicht gibt. */
-const SECTION_KEY: Record<string, string> = {
-  ball: 'balls', berry: 'berries', medicine: 'medicine', lure: 'lures',
-  xp: 'xp', stone: 'stones', background: 'backgrounds', key: 'key',
 }
 
 /** Kategorien, die sich aus dem Beutel heraus benutzen lassen. */
