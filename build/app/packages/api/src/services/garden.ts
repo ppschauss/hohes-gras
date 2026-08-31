@@ -20,6 +20,7 @@ import { logEvent } from '../repos/events.js'
 import { worldClock } from '../worldClock.js'
 import { creatureView } from './views.js'
 import { awardSeasonPoints, bonuses, bumpMetric } from './progression.js'
+import { busyReasons } from './busy.js'
 
 export const TEAM_CAPACITY = CAPACITY
 /** Attackenplaetze je Kreatur. */
@@ -69,7 +70,12 @@ export function gardenState(ctx: AppContext, trainer: Trainer): GardenState {
 
   const background = ctx.registry.tryItem(trainer.gardenBackground)
   const cap = capOf(ctx, trainer)
-  const views = team.map((c) => creatureView(ctx.registry, c, trainer.locale, clock.timeOfDay, cap))
+  // Wer gebunden ist, steht weiter im Team — er kaempft nur nicht mit. Das
+  // muss man sehen koennen; siehe `busy.ts`.
+  const reasons = busyReasons(ctx, trainer.id)
+  const views = team.map(
+    (c) => creatureView(ctx.registry, c, trainer.locale, clock.timeOfDay, cap, reasons.get(c.id) ?? null),
+  )
 
   return {
     team: views,

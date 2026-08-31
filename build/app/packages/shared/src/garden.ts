@@ -21,6 +21,13 @@ export const CreatureViewSchema = OwnedCreatureSchema.extend({
   xpForNextLevel: z.number(),
   isMaxLevel: z.boolean(),
   moveNames: z.array(z.string()),
+  /**
+   * Woran das Pokémon gerade gebunden ist — und damit, warum es nicht kämpft.
+   *
+   * `null` heißt: es ist da. Alles andere stand vorher nirgends, und ein Team,
+   * das im Kampf ohne Ansage schrumpft, sieht aus wie ein Fehler.
+   */
+  busyReason: z.enum(['expedition', 'research', 'boarding', 'egg']).nullable().default(null),
   /** Present when the creature meets an evolution condition right now. */
   canEvolveTo: z.array(z.object({ speciesId: z.string(), name: z.string(), how: z.string() })),
 })

@@ -124,7 +124,16 @@ export function GardenScreen({ onBack, onOpenBox, onOpenDex }: Props) {
             ? <CenterState glyph="🌱" title={t('garden.empty.title')} body={t('garden.empty.body')}>
                 <button type="button" className="btn btn--primary" onClick={onOpenBox}>{t('garden.openBox')}</button>
               </CenterState>
-            : <div className="stack">
+            : <>
+              {g.team.some((c) => c.busyReason) && (
+                <p className="notice" role="status">
+                  {t('garden.busy', {
+                    n: g.team.filter((c) => c.busyReason).length,
+                    fight: g.team.filter((c) => !c.busyReason).length,
+                  })}
+                </p>
+              )}
+              <div className="stack">
                 {g.team.map((c) => (
                   <div key={c.id}>
                     <CreatureCard
@@ -138,7 +147,8 @@ export function GardenScreen({ onBack, onOpenBox, onOpenDex }: Props) {
                     {openMoves === c.id && <MovesPanel creatureId={c.id} />}
                   </div>
                 ))}
-              </div>}
+              </div>
+            </>}
         </section>
       </main>
     </Screen>

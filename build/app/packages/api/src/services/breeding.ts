@@ -1,7 +1,7 @@
 import { GameError, type Trainer } from '@game/shared'
 import {
   canBreed, computeStats, createRng, hatchProgress, produceEgg, xpForLevel,
-  BROOD_PHASES, BROOD_SHINY_BONUS, broodCare, broodIvBonus, broodMinutes,
+  BROOD_PHASES, BROOD_SHINY_BONUS, broodCare, broodIvBonus, broodMinutes, UNBREEDABLE_GROUPS,
   broodPhaseKind, broodPhasesDue, broodShinyExtra, nextBroodPhaseAt,
   IV_MAX, SHINY_BASE_ODDS, MIN_BREEDING_LEVEL,
 } from '@game/engine'
@@ -203,6 +203,17 @@ export function overview(ctx: AppContext, trainer: Trainer) {
     maxEggs: eggSlots(ctx, trainer.id),
     minLevel: MIN_BREEDING_LEVEL,
     candidates: all
+      /*
+       * Wer keine Ei-Gruppe hat, gehoert nicht in die Auswahl.
+       *
+       * Er stand vorher drin und wurde bei jedem Versuch abgelehnt — eine
+       * Liste, die Dinge anbietet, die nie gehen, ist eine Falle. Betrifft
+       * Legendaere und die besonderen Arten.
+       */
+      .filter((c) => {
+        const groups = ctx.registry.species(c.speciesId).eggGroups
+        return groups.some((g) => !UNBREEDABLE_GROUPS.has(g))
+      })
       .filter((c) => c.level >= MIN_BREEDING_LEVEL)
       .map((c) => {
         const species = ctx.registry.species(c.speciesId)

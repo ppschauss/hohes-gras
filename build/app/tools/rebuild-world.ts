@@ -71,6 +71,16 @@ async function main(): Promise<void> {
       name: ev.name,
       description: ev.description,
       types: ev.types,
+      /*
+       * Besondere Arten pflanzen sich nicht fort.
+       *
+       * Sie erbten ihre Ei-Gruppen vom Vorbild und liessen sich damit
+       * nachzuechten — aus einem Fund mit zwei Prozent auf einer einzigen
+       * Route wurde eine Produktion. Gemeldet, und zu Recht: was man findet,
+       * soll ein Fund bleiben. Die leere Gruppe ist derselbe Weg, den das Pack
+       * fuer Legendaere schon geht.
+       */
+      eggGroups: [],
       evolutions: ev.evolvesTo ? [{ trigger: 'level', to: ev.evolvesTo.to, level: ev.evolvesTo.level }] : [],
       learnset: [...learnset].map(([moveId, level]) => ({ moveId, level })).sort((a, b) => a.level - b.level),
       xpFactor: ev.xpFactor,

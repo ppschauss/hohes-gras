@@ -20,6 +20,8 @@ export function creatureView(
   /** Reisegrenze des Besitzers. Ohne sie zeigte der Balken einen naechsten
    *  Levelaufstieg an, den es fuer diesen Trainer noch gar nicht gibt. */
   levelCap?: number,
+  /** Woran es gerade gebunden ist; siehe `busy.ts`. */
+  busyReason: CreatureView['busyReason'] = null,
 ): CreatureView {
   const species = registry.species(c.speciesId)
   const stats = computeStats(species, c.level, c.ivs, c.evs, c.nature)
@@ -52,6 +54,7 @@ export function creatureView(
       const move = registry.tryMove(id)
       return move ? registry.localized(move.name, locale) : id
     }),
+    busyReason,
     canEvolveTo: evolutionOptions(registry, c, locale, timeOfDay),
   }
 }

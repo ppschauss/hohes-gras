@@ -47,6 +47,15 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
     } catch { /* kaputter Eintrag ist kein Grund, die Box nicht zu zeigen */ }
     return { key: 'dex', reversed: false }
   })
+  /*
+   * Suchen statt scrollen.
+   *
+   * Eine ausgebaute Box fasst ueber zweitausend Pokemon; sortieren allein
+   * findet darin kein bestimmtes. Gesucht wird ueber Spitznamen *und*
+   * Artnamen — wer sein Pokemon umbenannt hat, sucht mal nach dem einen und
+   * mal nach dem anderen.
+   */
+  const [query, setQuery] = useState('')
   const applySort = (next: { key: SortKey; reversed: boolean }) => {
     setSort(next)
     try { localStorage.setItem(SORT_STORAGE, JSON.stringify(next)) } catch { /* privater Modus */ }
@@ -107,7 +116,12 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
     return <main className="content">{[0, 1, 2].map((i) => <div key={i} className="skeleton skeleton--row" />)}</main>
   }
 
+  const needle = query.trim().toLowerCase()
   const boxed = sortCreatures(box.data?.creatures ?? [], sort.key, sort.reversed)
+    .filter((c) => needle === ''
+      || c.displayName.toLowerCase().includes(needle)
+      || c.speciesName.toLowerCase().includes(needle)
+      || c.types.some((t) => t.name.toLowerCase().includes(needle)))
 
   return (
     <Screen
@@ -181,6 +195,19 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
           {/* Das <select> steht bewusst nicht in einem <label>: in der
               Telegram-WebView zaehlt der Tipp dann doppelt und die Liste
               schliesst sich sofort wieder. */}
+          {(box.data?.creatures.length ?? 0) > 1 && (
+            <label className="picker__search">
+              <span className="sr-only">{t('box.search')}</span>
+              <input
+                className="field field--inline field--text"
+                type="search"
+                placeholder={t('box.search')}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+          )}
+
           {boxed.length > 1 && (
             <div className="picker picker--wide">
               <span className="picker__label" id="box-sort">{t('box.sort')}</span>
@@ -208,7 +235,9 @@ export function BoxScreen({ onBack }: { onBack: () => void }) {
             </div>
           )}
           {boxed.length === 0
-            ? <CenterState glyph="📦" title={t('box.empty.title')} body={t('box.empty.body')} />
+            ? needle
+              ? <CenterState glyph="🔍" title={t('box.noMatch.title')} body={t('box.noMatch.body', { q: query })} />
+              : <CenterState glyph="📦" title={t('box.empty.title')} body={t('box.empty.body')} />
             : <div className="stack">
                 {boxed.map((c) => (
                   <div key={c.id}>

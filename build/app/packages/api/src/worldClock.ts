@@ -26,15 +26,36 @@ export function timeOfDayAt(at = new Date()): TimeOfDay {
   return 'night'
 }
 
-/** Weather is deterministic from date + 6-hour block, so every player in the
- *  world sees the same sky and nobody can reroll it by reloading. */
+/**
+ * Wie lange ein Wetter steht.
+ *
+ * Zwei Stunden, nicht sechs. Die Rechnung dahinter ist der Grund: bei sechs
+ * Stunden und einem Gewicht von 6 von 100 kam Sandsturm im Schnitt alle
+ * *hundert* Stunden — gut vier Tage —, und dann sechs Stunden lang, in denen
+ * man auch wach und im Spiel sein musste. In Hoenn haengen 26 von 81 Arten
+ * ausschliesslich an solchen Bedingungen, und wer die letzten zwei fuer eine
+ * Freischaltung braucht, wartet auf einen Wuerfel, der zweimal die Woche
+ * faellt. Genau so gemeldet.
+ */
+export const WEATHER_BLOCK_HOURS = 2
+
+/**
+ * Weather is deterministic from date + block, so every player in the world sees
+ * the same sky and nobody can reroll it by reloading.
+ *
+ * Die Verteilung ist flacher als vorher. Sie war 45/16/12/8/7/6/6 — schoen
+ * realistisch, aber sie machte drei der sieben Wetter zu Ereignissen statt zu
+ * Wetter. Klar bleibt das haeufigste, weil ein Himmel, der staendig etwas
+ * Besonderes tut, nichts Besonderes mehr hat; darunter liegt keines mehr unter
+ * einem Zehntel.
+ */
 export function weatherAt(at = new Date()): Weather {
   const { date, hour } = berlinParts(at)
-  const block = Math.floor(hour / 6)
+  const block = Math.floor(hour / WEATHER_BLOCK_HOURS)
   const rng = createRng(`weather:${date}:${block}`)
   const table: [Weather, number][] = [
-    ['clear', 45], ['rain', 16], ['fog', 12], ['storm', 8],
-    ['snow', 7], ['sandstorm', 6], ['heat', 6],
+    ['clear', 28], ['rain', 14], ['fog', 12], ['storm', 12],
+    ['snow', 11], ['sandstorm', 11], ['heat', 12],
   ]
   return rng.weighted(table, ([, w]) => w)[0]
 }
@@ -44,7 +65,7 @@ export function weatherAt(at = new Date()): Weather {
  *
  * Beides ist berechenbar, also wird es auch berechnet, statt den Spieler raten
  * zu lassen: die Tageszeit springt um 5, 8, 18 und 21 Uhr, das Wetter alle
- * sechs Stunden. Gesucht wird die naechste Stunde, in der der Wert ein anderer
+ * zwei Stunden. Gesucht wird die naechste Stunde, in der der Wert ein anderer
  * ist — hoechstens vierundzwanzig Schritte, das ist billiger als jede
  * Sonderrechnung ueber Zeitzonen hinweg.
  */

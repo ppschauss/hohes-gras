@@ -134,3 +134,20 @@ describe('hatchProgress', () => {
     expect(isHatched(start, 60, start + 59 * 60_000)).toBe(false)
   })
 })
+
+describe('Besondere Arten', () => {
+  it('laesst sich nicht nachzuechten', () => {
+    /*
+     * Die Prisma-Arten erbten ihre Ei-Gruppen vom Vorbild und liessen sich
+     * damit vermehren — aus einem Fund mit zwei Prozent auf einer einzigen
+     * Route waere eine Produktion geworden. Gemeldet.
+     */
+    const prisma = sp('charmander-prisma', [])
+    const normal = sp('charmander', ['monster', 'dragon'])
+    expect(canBreed(prisma, normal, 20, 20, false)).toEqual({ ok: false, reason: 'unbreedable' })
+    expect(canBreed(prisma, sp('other-prisma', []), 20, 20, false))
+      .toEqual({ ok: false, reason: 'unbreedable' })
+    // Und das Vorbild selbst bleibt unberuehrt.
+    expect(canBreed(normal, sp('charmeleon', ['monster', 'dragon']), 20, 20, false)).toEqual({ ok: true })
+  })
+})

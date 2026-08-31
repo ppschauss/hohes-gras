@@ -50,6 +50,14 @@ export function CreatureCard({ creature: c, onClick, onChanged, actions }: Props
                 {type.name}
               </span>
             ))}
+            {/* Gebunden heisst: es steht im Team, kaempft aber nicht mit.
+                Ohne diesen Hinweis sieht ein Kampf mit zwei statt fuenf
+                Pokemon aus wie ein Fehler — genau so gemeldet. */}
+            {c.busyReason && (
+              <span className="chip chip--busy" title={t(`busy.${c.busyReason}.hint`)}>
+                {t(`busy.${c.busyReason}`)}
+              </span>
+            )}
             {c.canEvolveTo.length > 0 && <EvolveChip creature={c} onDone={onChanged} />}
           </span>
 

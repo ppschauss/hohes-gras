@@ -892,6 +892,13 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
    Trennstrich — vier duenne Linien untereinander waeren mehr Rahmen als
    Inhalt. */
 .menuGroup { display: flex; flex-direction: column; gap: var(--s2); }
+/* Gebunden: gedeckt statt bunt — es ist ein Zustand, keine Eigenschaft. */
+.chip--busy {
+  background: color-mix(in oklab, var(--warn) 16%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--warn) 40%, var(--edge));
+  color: var(--warn);
+}
+
 .menuGroup__head {
   font-size: var(--t-xs); font-weight: 700; letter-spacing: 0.04em;
   text-transform: uppercase; color: var(--ink-faint); margin: 0;

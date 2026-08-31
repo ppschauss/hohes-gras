@@ -112,6 +112,14 @@ Der Hintergrund der Gartenszene ist wählbar (6 Motive im Laden).
 
 ---
 
+### Wer gerade gebunden ist
+
+Ein Pokémon auf Expedition, im Labor, in der Pension oder auf einem Ei bleibt
+im Team — es **kämpft nur nicht mit**. Das stand nirgends, und ein Kampf, in
+dem zwei statt fünf antreten, sieht aus wie ein Fehler; genau so wurde es
+gemeldet („bei jedem Fight kämpfen nur 2 Pokémon"). Jetzt trägt die Karte einen
+Hinweis mit dem Grund, und über dem Team steht, wie viele in den Kampf gehen.
+
 ### Teams und Reihenfolge
 
 Bis zu **acht gespeicherte Aufstellungen**, eine davon aktiv; sie steht im
@@ -139,6 +147,9 @@ nicht auf Expedition, und nie das letzte Pokémon.
 **Sammelverwerten:** „Mehrere auswählen" setzt Häkchen an die Zeilen, bis zu
 **50 auf einmal**, alles in einer Transaktion — entweder gehen sie zusammen
 oder keines.
+
+**Suchen** über Spitzname, Art und Typ — bei über zweitausend Plätzen findet
+Sortieren allein kein bestimmtes Pokémon.
 
 **Sortieren** nach Nummer, Name, Level, Typ oder „schillernd zuerst", mit
 Richtungsumschalter. Bei Gleichstand entscheidet immer Nummer, dann Name —
@@ -188,12 +199,18 @@ frei wählbar** und bringt eigene Starter mit.
   96–150). Der **Schalter** regelt nur, ob die einzelnen Gebiete danach
   mitwachsen — aus heißt „du wächst in die Region hinein und lässt sie hinter
   dir".
+- **Wetter wechselt alle zwei Stunden**, nicht alle sechs, und die Verteilung
+  ist flach: kein Wetter liegt unter einem Zehntel. Vorher kam Sandsturm im
+  Schnitt alle **hundert Stunden** und dann sechs Stunden lang — wer die
+  letzten Arten einer Region brauchte, wartete auf einen Würfel, der zweimal
+  die Woche fällt. Jetzt ist das seltenste Wetter alle **18 Stunden** da, bei
+  zwölf Blöcken am Tag statt vier.
 - **Wetter und Tageszeit** (Europe/Berlin) steuern, welche Arten überhaupt
   erscheinen. Beide stehen auf dem **Startbildschirm**, im Kopf der
   **Weltkarte** und über der Artenliste im **Gebiet** — dort zusätzlich mit
   dem Zeitpunkt der nächsten Änderung („Nacht in 1 Std 12 · Wetter wechselt in
   9 Std zu Sturm"). Beides ist berechenbar: die Tageszeit springt um 5, 8, 18
-  und 21 Uhr, das Wetter alle sechs Stunden, für alle Spieler gleich.
+  und 21 Uhr, das Wetter alle zwei Stunden, für alle Spieler gleich.
 
 ---
 
@@ -270,6 +287,11 @@ Anfang.
 
 Anders als das Abra zählt sie in den Pokédex: was man finden kann, gehört auch
 in die Summe.
+
+**Züchten geht nicht.** Die Linie erbte ihre Ei-Gruppen vom Vorbild und ließ
+sich damit nachziehen — aus einem Fund mit zwei Prozent auf einer einzigen
+Route wäre eine Produktion geworden. Sie hat jetzt wie die Legendären gar keine
+Ei-Gruppe und erscheint erst gar nicht in der Zuchtauswahl.
 
 **Eigene Attacken.** Die Linie erbt ihr Lernset aus zwei Vorbildern — Werte und
 Typen vom eigenen, die Zeitpunkte vom Glumanda —, lernt also durchgehend im
