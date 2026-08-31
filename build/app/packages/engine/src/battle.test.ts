@@ -32,6 +32,11 @@ const MOVES: Record<string, MoveDef> = {
     ...mv('fake-out', 'normal', 'physical', 40, 100, 10, { kind: 'flinch' }, 100, 0, 3),
     firstTurnOnly: true,
   } as MoveDef,
+  // Traumfresser: hohe Staerke, halbes Aussaugen — und nur gegen Schlafende.
+  'dream-eater': {
+    ...mv('dream-eater', 'normal', 'special', 100, 100, 15, { kind: 'drain', ratio: 0.5 }, 100),
+    requiresTargetStatus: 'sleep',
+  } as MoveDef,
 }
 
 function mv(
@@ -529,6 +534,54 @@ describe('Wer besiegt wird, verliert seinen Zug', () => {
     const treffer = turn.events.filter((e) => e.type === 'damage')
     expect(treffer).toHaveLength(1)
     expect(treffer[0]!.side).toBe(1)
+  })
+})
+
+describe('Zuege, die einen Zustand voraussetzen', () => {
+  it('laesst Traumfresser gegen ein waches Ziel scheitern', () => {
+    /*
+     * Gemeldet: "Traumfresser macht einfach so dmg ohne dass das Pokemon
+     * schlaeft". Im Pack stand die Bedingung nur im Beschreibungstext, also
+     * war er eine Spezialattacke mit 100 Staerke und halbem Aussaugen ohne
+     * jede Schranke.
+     */
+    const a = fighter('hypno', ['normal'], 20, ['dream-eater'])
+    const b = fighter('ziel', ['normal'], 20, ['tackle'])
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+
+    expect(runde.events.some((e) => e.type === 'move_failed')).toBe(true)
+    // Kein Schaden auf der Gegenseite und keine Heilung fuer den Angreifer.
+    expect(runde.events.some((e) => e.type === 'damage' && e.side === 1)).toBe(false)
+    expect(runde.events.some((e) => e.type === 'heal' && e.side === 0)).toBe(false)
+  })
+
+  it('laesst ihn gegen ein schlafendes Ziel treffen', () => {
+    const a = fighter('hypno', ['normal'], 20, ['dream-eater'])
+    const b = { ...fighter('ziel', ['normal'], 20, ['tackle']), status: 'sleep' as const, statusCounter: 3 }
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+
+    expect(runde.events.some((e) => e.type === 'move_failed')).toBe(false)
+    expect(runde.events.some((e) => e.type === 'damage' && e.side === 1)).toBe(true)
+  })
+
+  it('kostet den Fehlversuch trotzdem einen PP', () => {
+    // Sonst waere das blinde Draufhalten gratis.
+    const a = fighter('hypno', ['normal'], 20, ['dream-eater'])
+    const b = fighter('ziel', ['normal'], 20, ['tackle'])
+    const vorher = a.moves[0]!.pp
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+
+    expect(runde.state.sides[0]!.party[0]!.moves[0]!.pp).toBe(vorher - 1)
+  })
+
+  it('laesst die KI ihn gegen ein waches Ziel liegen', () => {
+    // Ohne diese Wertung stuende er oben und ginge jede Runde ins Leere.
+    const gegner = fighter('hypno', ['normal'], 20, ['dream-eater', 'tackle'])
+    const wach = fighter('spieler', ['normal'], 20, ['tackle'])
+    const state = battle([wach], [gegner])
+
+    const zug = chooseAction(state, 1, 'expert', content, createRng('wach'))
+    expect(zug).toEqual({ kind: 'move', moveIndex: 1 })
   })
 })
 

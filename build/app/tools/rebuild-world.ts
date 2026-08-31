@@ -271,6 +271,37 @@ async function main(): Promise<void> {
   }))
   log(`Dex-Schwellen: ${finalAreas.map((a) => a.unlock.minDexCaught).join(', ')}`)
 
+  /*
+   * Die geforderte Pokemon-Zahl darf entlang der Kette nie sinken.
+   *
+   * Im Pack stand hinter dem Indigo-Plateau (sechs Pokemon) das Kraftwerk mit
+   * vier und die Unbekannte Hoehle mit fuenf — gemeldet mit den Worten "macht
+   * iwie kein Sinn, spaeter brauchst du nur vier". Neun Gebiete ueber alle
+   * Regionen hatten denselben Sprung nach unten. Die Kette ist die Wahrheit
+   * darueber, was "spaeter" heisst, nicht die Reihenfolge in der Datei.
+   */
+  const kinder = new Map<string | null, string[]>()
+  for (const a of finalAreas) {
+    const vor = a.unlock.previousAreaId ?? null
+    kinder.set(vor, [...(kinder.get(vor) ?? []), a.id])
+  }
+  const nachId = new Map(finalAreas.map((a) => [a.id, a]))
+  const stapel = [...(kinder.get(null) ?? [])]
+  let hoechste = 0
+  let angehoben = 0
+  while (stapel.length > 0) {
+    const id = stapel.shift()!
+    stapel.unshift(...(kinder.get(id) ?? []))
+    const bedingung = nachId.get(id)?.unlock.minCreaturesAtLevel
+    if (!bedingung) continue
+    if (bedingung.count < hoechste) {
+      bedingung.count = hoechste
+      angehoben++
+    }
+    hoechste = Math.max(hoechste, bedingung.count)
+  }
+  if (angehoben) log(`${angehoben} Gebiete auf die vorige Pokemon-Zahl angehoben`)
+
   const chapters = allChapters.filter((c) =>
     c.requires.every((r) =>
       (r.kind !== 'areaVisited' || knownAreas.has(String(r.value))) &&
@@ -370,9 +401,26 @@ async function main(): Promise<void> {
       firstTurn++
     }
   }
-  if (firstTurn) {
+  /*
+   * Zuege, die ein schlafendes Ziel brauchen.
+   *
+   * Dieselbe Lage wie oben: die Regel steht bei PokeAPI nur im Fliesstext.
+   * Traumfresser kam deshalb als reiner Aussauger mit 100 Staerke herein und
+   * war ohne jede Bedingung die beste Spezialattacke im Spiel — gemeldet nach
+   * einem Kampf, in dem er traf, obwohl niemand schlief.
+   */
+  let brauchtSchlaf = 0
+  for (const move of moves) {
+    const text = String(move.description?.de ?? '')
+    if (/only works? on sleeping/i.test(text)) {
+      move.requiresTargetStatus = 'sleep'
+      brauchtSchlaf++
+    }
+  }
+  if (firstTurn || brauchtSchlaf) {
     await writeFile(join(OUT, 'moves.json'), JSON.stringify(moves, null, 1))
-    log(`${firstTurn} Zuege nur in der ersten Runde`)
+    if (firstTurn) log(`${firstTurn} Zuege nur in der ersten Runde`)
+    if (brauchtSchlaf) log(`${brauchtSchlaf} Zuege nur gegen schlafende Ziele`)
   }
 
   const write = async (name: string, value: unknown) => {

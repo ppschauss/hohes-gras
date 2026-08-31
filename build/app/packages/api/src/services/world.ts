@@ -221,7 +221,16 @@ export function worldMap(ctx: AppContext, trainer: Trainer): {
       name: ctx.registry.localized(area.name, trainer.locale),
       description: ctx.registry.localized(area.description, trainer.locale),
       icon: area.icon,
-      unlocked: reqs.every((r) => r.met),
+      /*
+       * Wer schon dort war, kommt wieder hinein.
+       *
+       * Die Bedingungen werden bei jedem Aufruf neu gerechnet, nicht einmal
+       * vermerkt. Damit sperrt jede spaetere Aenderung am Pack Spieler aus
+       * Gebieten aus, die sie laengst offen hatten — beim Geraderuecken der
+       * Pokemon-Zahlen waere genau das passiert. Der Besuch ist die
+       * Quittung; die Bedingungen bleiben daneben trotzdem ehrlich stehen.
+       */
+      unlocked: Boolean(prog) || reqs.every((r) => r.met),
       visited: Boolean(prog),
       isCurrent: trainer.currentAreaId === area.id,
       requirements: reqs,
@@ -302,7 +311,9 @@ export function travelTo(ctx: AppContext, trainer: Trainer, areaId: string): voi
     areaOffset(ctx, trainer, area, referenceOf(ctx, trainer)),
   )
   const unmet = reqs.filter((r) => !r.met)
-  if (unmet.length > 0) {
+  // Dieselbe Regel wie in der Ansicht: ein einmal betretenes Gebiet bleibt
+  // offen, auch wenn seine Bedingungen spaeter steigen.
+  if (unmet.length > 0 && !world.progressOf(ctx.db, trainer.id).has(areaId)) {
     throw new GameError('invalid_state', { reason: 'area_locked', requirements: unmet }, 409)
   }
 

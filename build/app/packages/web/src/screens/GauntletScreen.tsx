@@ -65,6 +65,15 @@ export function GauntletScreen({ onBack, onBattle }: { onBack: () => void; onBat
             <section className="section">
               <h2>{t('gauntlet.running', { n: d.run.streak })}</h2>
               <p className="center__body">{d.run.regionName}</p>
+              {/* Der laufende Stand. Ohne ihn sieht man erst nach dem
+                  Aufhoeren, was der Lauf eingebracht hat. */}
+              <p className="center__body num">
+                {t('gauntlet.soFar', {
+                  n: d.run.defeated,
+                  gold: number(d.run.gold),
+                  xp: number(d.run.xp),
+                })}
+              </p>
               <p className="center__body num">
                 {d.run.next
                   ? t('gauntlet.nextAt', {

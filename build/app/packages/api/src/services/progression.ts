@@ -190,10 +190,19 @@ export function tradeStation(ctx: AppContext, trainer: Trainer) {
         creatureId: c.id,
         name: c.nickname ?? ctx.registry.localized(species.name, trainer.locale),
         level: c.level,
-        sprite: species.sprite,
+        /*
+         * Schillernd bleibt schillernd — auch nach dem Tausch.
+         *
+         * Beide Bilder kamen aus der Art statt aus dem Tier: links stand ein
+         * gewoehnliches Alpollo, obwohl das eigene schillert, und rechts ein
+         * gewoehnliches Gengar, obwohl genau das dabei herauskommt. Wer eine
+         * schillernde Form entwickelt, will vorher sehen, was er bekommt.
+         */
+        sprite: c.shiny ? species.spriteShiny : species.sprite,
         targetSpeciesId: evo.to,
         targetName: ctx.registry.localized(target.name, trainer.locale),
-        targetSprite: target.sprite,
+        targetSprite: c.shiny ? target.spriteShiny : target.sprite,
+        shiny: c.shiny,
         /** Der Tragegegenstand, falls einer noetig ist — mit Bestand. */
         heldItem: item
           ? { id: item.id, name: ctx.registry.localized(item.name, trainer.locale), owned }
@@ -227,7 +236,12 @@ export function evolvable(ctx: AppContext, trainer: Trainer) {
       creature: view,
       options: options.map((o) => {
         const target = ctx.registry.species(o.speciesId)
-        return { speciesId: o.speciesId, name: o.name, sprite: target.sprite, how: o.how }
+        // Dieselbe Regel wie in der Tausch-Station: das Ziel zeigt die Form,
+        // die man tatsaechlich bekommt.
+        return {
+          speciesId: o.speciesId, name: o.name, how: o.how,
+          sprite: c.shiny ? target.spriteShiny : target.sprite,
+        }
       }),
     }]
   })

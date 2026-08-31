@@ -69,6 +69,41 @@ describe('Antreten', () => {
   })
 })
 
+describe('Energie', () => {
+  /** Dem Gegner einen Kraftpunkt lassen: macht den Ausgang eindeutig. */
+  const weakenFoe = () => {
+    const row = h.ctx.db
+      .prepare('SELECT id, state FROM battles WHERE trainer_id = ? AND finished_at IS NULL')
+      .get(trainerId) as { id: string; state: string }
+    const state = JSON.parse(row.state) as { sides: Array<{ party: Array<{ hp: number }> }> }
+    for (const f of state.sides[1]!.party) f.hp = 1
+    h.ctx.db.prepare('UPDATE battles SET state = ? WHERE id = ?').run(JSON.stringify(state), row.id)
+  }
+
+  it('gibt fuer einen Sieg in der Kampfzone keine Energie zurueck', async () => {
+    /*
+     * Gemeldet: "du bekommst sehr viel Energie durch nen Abschluss".
+     *
+     * Die Kunstgegner der Kampfzone gelten als Erstsieg, damit ihr Gold
+     * stimmt — und zahlten damit auch die Energie je Kampf. Gemessen kosteten
+     * zwoelf Laeufe 120 Energie und brachten 1712 zurueck. Der Einsatz faellt
+     * vorne an, einmal je Lauf; ein Zuschuss je Sieg hebt das wieder auf.
+     */
+    const region = (await h.get('/api/gauntlet', token)).body.regions[0].id
+    h.resetRateLimits()
+    await h.post('/api/gauntlet/start', { regionId: region }, token)
+
+    const nachAntritt = energyOf()
+    weakenFoe()
+    h.resetRateLimits()
+    const r = await h.post('/api/battle/action', { kind: 'move', moveIndex: 0 }, token)
+
+    expect(r.status).toBe(200)
+    expect(r.body.reward?.energy ?? 0).toBe(0)
+    expect(energyOf()).toBe(nachAntritt)
+  })
+})
+
 describe('Aufhoeren', () => {
   it('haelt die Bestmarke fest', async () => {
     const region = (await h.get('/api/gauntlet', token)).body.regions[0].id

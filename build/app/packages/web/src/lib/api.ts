@@ -1550,6 +1550,10 @@ export interface GauntletView {
     regionId: string
     regionName: string
     streak: number
+    /** Der laufende Stand: besiegte Gegner, Gold und EP bisher. */
+    defeated: number
+    gold: number
+    xp: number
     next: { at: number; gold: number; materials: number } | null
     battleOpen: boolean
   } | null

@@ -154,6 +154,29 @@ describe('Reisen', () => {
   it('weist ein unbekanntes Gebiet ab', async () => {
     expect((await h.post('/api/world/travel', { areaId: 'atlantis' }, token)).status).toBe(404)
   })
+
+  it('laesst ein einmal betretenes Gebiet offen, auch wenn die Bedingungen steigen', async () => {
+    /*
+     * Die Bedingungen werden bei jedem Aufruf neu gerechnet, nicht einmal
+     * vermerkt. Ohne diese Regel sperrt jede spaetere Aenderung am Pack
+     * Spieler aus Gebieten aus, die sie laengst offen hatten — beim
+     * Geraderuecken der geforderten Pokemon-Zahlen waere genau das passiert.
+     */
+    expect((await h.post('/api/world/travel', { areaId: 'test-route' }, token)).status).toBe(200)
+
+    // Die Huerde nachtraeglich hochziehen, so wie es eine Packaenderung taete.
+    const gebiet = h.ctx.registry.area('test-route')
+    ;(gebiet.unlock as { minCreaturesAtLevel: unknown }).minCreaturesAtLevel = { count: 99, level: 99 }
+
+    const karte = await h.get('/api/world', token)
+    const sicht = karte.body.regions
+      .flatMap((r: { areas: Array<{ id: string; unlocked: boolean; visited: boolean }> }) => r.areas)
+      .find((a: { id: string }) => a.id === 'test-route')
+    expect(sicht.visited).toBe(true)
+    expect(sicht.unlocked).toBe(true)
+
+    expect((await h.post('/api/world/travel', { areaId: 'test-route' }, token)).status).toBe(200)
+  })
 })
 
 describe('Safari', () => {

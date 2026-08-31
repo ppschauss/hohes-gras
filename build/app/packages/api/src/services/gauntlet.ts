@@ -200,6 +200,19 @@ export function view(ctx: AppContext, trainer: Trainer) {
           regionId: run.regionId,
           regionName: ctx.registry.localized(ctx.registry.region(run.regionId).name, trainer.locale),
           streak: run.streak,
+          /*
+           * Was der Lauf bisher gebracht hat — waehrend er laeuft, nicht erst
+           * am Ende.
+           *
+           * Beides stand schon in `gauntlet_runs`, aber nur die Abrechnung
+           * nach dem Aufhoeren las es. Gemeldet als "waers nice wie viele
+           * Gegner man schon besiegt hat"; die Zahlen daneben beantworten
+           * gleich mit, warum am Ende mehr Gold herauskommt, als an der
+           * naechsten Stufe steht.
+           */
+          defeated: run.streak,
+          gold: run.totalGold,
+          xp: run.totalXp,
           next: nextMilestone(run.streak),
           battleOpen: Boolean(run.battleId && battles.activeOf(ctx.db, trainer.id)),
         }

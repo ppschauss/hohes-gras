@@ -54,6 +54,18 @@ export const MoveDefSchema = z.object({
    * gemeldet.
    */
   firstTurnOnly: z.boolean().default(false),
+  /**
+   * Der Zustand, in dem das Ziel sein muss, damit die Attacke ueberhaupt
+   * wirkt.
+   *
+   * Traumfresser stand mit 100 Staerke und halbem Aussaugen im Pack, und
+   * seine einzige Schranke — "only works on sleeping Pokemon" — stand im
+   * Beschreibungstext, den niemand liest ausser Menschen. Damit war er die
+   * beste Spezialattacke im Spiel ohne jede Bedingung; genau so wurde es
+   * gemeldet. Die Bedingung gehoert hierher, nicht in die Beschreibung, und
+   * sie ist bewusst allgemein: Schnarcher und Nachtmahr haben dieselbe.
+   */
+  requiresTargetStatus: z.enum(['burn', 'freeze', 'paralysis', 'poison', 'toxic', 'sleep']).optional(),
   /** Extra crit stages. 0 = normal (1/24), 1 = high crit (1/8), 3 = always. */
   critRate: z.number().int().min(0).max(3).default(0),
   /** Who the move acts on. Status moves need this; damage always hits the foe. */

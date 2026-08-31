@@ -56,6 +56,10 @@ function tryMove(content: BattleContent, id: string): MoveDef | null {
  *  would be slower and, worse, would make the AI unbeatable in a way that is
  *  not fun. */
 function scoreMove(move: MoveDef, self: Fighter, foe: Fighter, content: BattleContent): number {
+  // Eine Attacke, die an der Bedingung scheitert, ist keine verpasste Chance,
+  // sondern ein verlorener Zug. Ohne diese Zeile wuerde ein Traumfresser gegen
+  // ein waches Ziel oben in der Wertung stehen und jede Runde ins Leere gehen.
+  if (move.requiresTargetStatus && foe.status !== move.requiresTargetStatus) return 0
   if (move.category === 'status') {
     // Status moves are worth something only while they can still do their job.
     if (move.effect.kind === 'status' && foe.status !== 'none') return 5

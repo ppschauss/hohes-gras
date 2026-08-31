@@ -296,6 +296,20 @@ function performMove(
   }
 
   /*
+   * Manche Attacken wirken nur gegen einen bestimmten Zustand.
+   *
+   * Traumfresser ohne schlafendes Ziel ist der Fall, der gemeldet wurde: er
+   * traf und saugte, obwohl niemand schlief. Der PP geht wie oben trotzdem
+   * weg — ein Fehlversuch, der nichts kostet, waere keiner.
+   */
+  if (move.requiresTargetStatus && defender.status !== move.requiresTargetStatus) {
+    slot.pp = Math.max(0, slot.pp - 1)
+    attacker.turnsOnField = (attacker.turnsOnField ?? 0) + 1
+    events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+    return
+  }
+
+  /*
    * Gezaehlt wird die eigene Handlung, nicht die Runde.
    *
    * Sonst haengt "erste Runde" davon ab, wann jemand hereinkam: wer nach einem

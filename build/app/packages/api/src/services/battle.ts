@@ -691,8 +691,20 @@ function applyOutcome(
    * Energie-Automaten; genau so wurde es gemeldet. Der erste Sieg zahlt
    * weiterhin, die Wiederholung ist ein Zuschuss und kein Geschaeft.
    */
-  let energyBack = firstWin ? ENERGY_REWARDS.battleWon : 0
-  if (firstWin) energy.reward(ctx, trainer.id, 'battleWon')
+  /*
+   * Arena und Kampfzone zahlen keine Energie zurueck.
+   *
+   * Ihre Kunstgegner gelten oben als Erstsieg, damit das Gold stimmt — und
+   * damit fiel hier auch die Energie an, je Kampf. Beide Modi bezahlen ihren
+   * Einsatz aber *vorne*, einmal je Durchlauf, genau damit die Rechnung nicht
+   * mitten in einer Serie zuschlaegt. Ein Zuschuss je Sieg hebt diese
+   * Entscheidung wieder auf: gemessen kosteten zwoelf Kampfzonen-Laeufe 120
+   * Energie und brachten 1712 zurueck. Das war kein Kampfmodus mehr, sondern
+   * ein Energiedrucker; genau so wurde es gemeldet.
+   */
+  const zahltEnergie = firstWin && !fluechtig
+  let energyBack = zahltEnergie ? ENERGY_REWARDS.battleWon : 0
+  if (zahltEnergie) energy.reward(ctx, trainer.id, 'battleWon')
 
   let badge: BattleReward['badge'] = null
   if (def.badgeId && world.awardBadge(ctx.db, trainer.id, def.badgeId)) {
