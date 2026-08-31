@@ -301,7 +301,9 @@ export function startEvent(ctx: AppContext, trainer: Trainer): BattleView {
     // Die Vormerkung wird beim Start verbraucht: wer wegläuft, verliert sie.
     ctx.db.prepare('UPDATE trainers SET pending_event_id = NULL, pending_event_area = NULL WHERE id = ?')
       .run(trainer.id)
-    return beginBattle(ctx, trainer, def, area)
+    // Alles, was beim Erkunden auftaucht, tritt auf Augenhoehe an — Ueberfall
+    // wie Streuner.
+    return beginBattle(ctx, trainer, def, area, { onEyeLevel: true })
   })
 }
 
@@ -362,7 +364,17 @@ export function beginBattle(
    * Ein Arenadurchlauf zahlt einmal fuer alle vier Kaempfe; die einzelnen
    * Runden duerfen danach nicht noch einmal abbuchen.
    */
-  opts: { exactLevels?: boolean; storeDef?: boolean; foeIv?: number; freeEnergy?: boolean } = {},
+  opts: {
+    exactLevels?: boolean; storeDef?: boolean; foeIv?: number; freeEnergy?: boolean
+    /**
+     * Auf Augenhoehe antreten, unabhaengig vom Entwurf.
+     *
+     * Fuer alles, was beim Erkunden auftaucht: Ueberfaelle *und* Streuner. Sie
+     * haben keinen Ort im Entwurf, also waeren feste Level immer fuer jemanden
+     * falsch — zu hart fuer die einen, wirkungslos fuer die anderen.
+     */
+    onEyeLevel?: boolean
+  } = {},
 ): BattleView {
   {
     if (battles.activeOf(ctx.db, trainer.id)) {
@@ -406,7 +418,20 @@ export function beginBattle(
      * `referenceOf`, das bei abgeschalteter Skalierung null liefert.
      */
     const reference = referenceLevel(playerParty.map((f) => f.level))
-    const isEvent = !opts.exactLevels && isEventTrainer(def.id) && reference > 0
+    /*
+     * Auch der Streuner tritt auf Augenhoehe an.
+     *
+     * `isEventTrainer` erkennt nur den Praefix `event-`, also die Ueberfaelle.
+     * Ein Streuner ist dagegen ein ganz gewoehnlicher Routentrainer, zufaellig
+     * aus der Region gezogen — und behielt damit die Entwurfslevel seiner
+     * Heimatroute. Wer mit Level 56 unterwegs war, traf einen Kaefersammler,
+     * der fuer Level 8 entworfen wurde; genau so gemeldet.
+     *
+     * Die Begruendung von oben gilt fuer ihn Wort fuer Wort: er hat keinen Ort
+     * im Entwurf, sondern passiert dort, wo man gerade erkundet. `onEyeLevel`
+     * setzt `startEvent` fuer alles, was beim Erkunden auftaucht.
+     */
+    const isEvent = !opts.exactLevels && (opts.onEyeLevel || isEventTrainer(def.id)) && reference > 0
     // Nie mehr Gegner als eigene Mitglieder: drei gegen zwei ist keine knappe
     // Sache, sondern Ueberzahl.
     const foeCount = isEvent

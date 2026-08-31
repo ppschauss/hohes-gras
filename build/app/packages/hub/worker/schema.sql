@@ -55,3 +55,24 @@ CREATE TABLE IF NOT EXISTS chat (
   created_at  INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_chat_instance_time ON chat(instance_id, created_at);
+
+-- Freundschaften über Instanzgrenzen. Immer sortiert, damit ein Paar genau
+-- eine Zeile hat und die Richtung keine Rolle spielt.
+CREATE TABLE IF NOT EXISTS friends (
+  low_id     TEXT NOT NULL,
+  high_id    TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (low_id, high_id),
+  CHECK (low_id < high_id)
+);
+
+CREATE TABLE IF NOT EXISTS friend_requests (
+  from_id    TEXT NOT NULL,
+  to_id      TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (from_id, to_id)
+);
+CREATE INDEX IF NOT EXISTS idx_requests_to ON friend_requests(to_id);
+-- Der Trainer-Code, mit dem man jemanden ueber Instanzgrenzen findet.
+ALTER TABLE trainers ADD COLUMN code TEXT NOT NULL DEFAULT '';
+CREATE INDEX IF NOT EXISTS idx_trainers_code ON trainers(code);

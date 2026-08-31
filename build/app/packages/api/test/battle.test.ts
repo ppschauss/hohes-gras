@@ -493,3 +493,33 @@ describe('Trainer in zwei Gebieten', () => {
     expect(r.body.detail.reason).toBe('wrong_area')
   })
 })
+
+describe('Streuner beim Erkunden', () => {
+  it('tritt auf Augenhoehe an, nicht mit den Leveln seiner Heimatroute', async () => {
+    /*
+     * `isEventTrainer` erkennt nur den Praefix `event-`, also die Ueberfaelle.
+     * Ein Streuner ist ein gewoehnlicher Routentrainer, zufaellig aus der
+     * Region gezogen — und behielt damit die Entwurfslevel seiner Heimatroute.
+     * Wer mit Level 56 unterwegs war, traf einen Gegner fuer Level 8.
+     */
+    const team = h.ctx.db.prepare(
+      'SELECT id FROM creatures WHERE owner_id = ? AND team_slot IS NOT NULL',
+    ).all(trainerId) as Array<{ id: string }>
+    for (const c of team) {
+      h.ctx.db.prepare('UPDATE creatures SET level = 50, hp_current = 200 WHERE id = ?').run(c.id)
+    }
+
+    // Einen gewoehnlichen Routentrainer als Streuner vormerken.
+    const area = h.ctx.registry.allAreas.find((a) => a.trainerIds.length > 0)!
+    const gegner = area.trainerIds[0]!
+    h.ctx.db.prepare('UPDATE trainers SET pending_event_id = ?, pending_event_area = ? WHERE id = ?')
+      .run(gegner, area.id, trainerId)
+
+    h.resetRateLimits()
+    const r = await h.post('/api/battle/event', {}, token)
+    expect(r.status).toBe(200)
+    const level = r.body.foe.active.level as number
+    // Entworfen ist er fuer die Anfangsroute; antreten muss er auf unserem Band.
+    expect(level).toBeGreaterThan(40)
+  })
+})

@@ -32,6 +32,73 @@ export const SCORE_SQL = '(p.badges * 1000 + p.dex_caught * 10 + p.battles_won)'
 
 export function d1Store(db: D1Like): Store {
   return {
+    async trainerByCode(code) {
+      return db.prepare(
+        `SELECT id, instance_id AS instanceId, display_name AS displayName, code,
+                created_at AS createdAt, updated_at AS updatedAt
+           FROM trainers WHERE code = ? AND code != ''`,
+      ).bind(code).first<TrainerRow>()
+    },
+
+    async addFriend(row) {
+      await db.prepare(
+        `INSERT INTO friends (low_id, high_id, created_at) VALUES (?, ?, ?)
+         ON CONFLICT DO NOTHING`,
+      ).bind(row.lowId, row.highId, row.createdAt).run()
+    },
+
+    async removeFriend(a, b) {
+      const [low, high] = [a, b].sort()
+      await db.prepare('DELETE FROM friends WHERE low_id = ? AND high_id = ?').bind(low, high).run()
+    },
+
+    async friendsOf(trainerId) {
+      const res = await db.prepare(
+        `SELECT CASE WHEN low_id = ? THEN high_id ELSE low_id END AS other
+           FROM friends WHERE low_id = ? OR high_id = ?`,
+      ).bind(trainerId, trainerId, trainerId).all<{ other: string }>()
+      return res.results.map((r) => r.other)
+    },
+
+    async addFriendRequest(row) {
+      await db.prepare(
+        `INSERT INTO friend_requests (from_id, to_id, created_at) VALUES (?, ?, ?)
+         ON CONFLICT DO NOTHING`,
+      ).bind(row.fromId, row.toId, row.createdAt).run()
+    },
+
+    async removeFriendRequest(fromId, toId) {
+      await db.prepare('DELETE FROM friend_requests WHERE from_id = ? AND to_id = ?')
+        .bind(fromId, toId).run()
+    },
+
+    async requestsFor(trainerId) {
+      const ein = await db.prepare('SELECT from_id AS id FROM friend_requests WHERE to_id = ?')
+        .bind(trainerId).all<{ id: string }>()
+      const aus = await db.prepare('SELECT to_id AS id FROM friend_requests WHERE from_id = ?')
+        .bind(trainerId).all<{ id: string }>()
+      return { incoming: ein.results.map((r) => r.id), outgoing: aus.results.map((r) => r.id) }
+    },
+
+    async profilesOf(ids) {
+      if (ids.length === 0) return []
+      /*
+       * Platzhalter statt eingesetzter Werte — die Ids kommen zwar aus der
+       * eigenen Datenbank, aber eine Abfrage, die Zeichenketten zusammenklebt,
+       * ist eine, die beim naechsten Mal jemand anders fuellt.
+       */
+      const marks = ids.map(() => '?').join(',')
+      const res = await db.prepare(
+        `SELECT t.id AS trainerId, t.display_name AS displayName, t.instance_id AS instanceId, t.code,
+                COALESCE(p.badges,0) AS badges, COALESCE(p.dex_caught,0) AS dexCaught,
+                COALESCE(p.battles_won,0) AS battlesWon, COALESCE(p.rating,0) AS rating,
+                COALESCE(p.level,0) AS level, COALESCE(p.updated_at,0) AS updatedAt
+           FROM trainers t LEFT JOIN profiles p ON p.trainer_id = t.id
+          WHERE t.id IN (${marks})`,
+      ).bind(...ids).all<ProfileRow & { displayName: string; instanceId: string; code: string }>()
+      return res.results
+    },
+
     async addChat(row) {
       await db.prepare(
         'INSERT INTO chat (trainer_id, instance_id, name, body, created_at) VALUES (?, ?, ?, ?, ?)',
@@ -97,7 +164,7 @@ export function d1Store(db: D1Like): Store {
 
     async getTrainer(id) {
       return db.prepare(
-        `SELECT id, instance_id AS instanceId, display_name AS displayName,
+        `SELECT id, instance_id AS instanceId, display_name AS displayName, code,
                 created_at AS createdAt, updated_at AS updatedAt
            FROM trainers WHERE id = ?`,
       ).bind(id).first<TrainerRow>()
@@ -105,13 +172,14 @@ export function d1Store(db: D1Like): Store {
 
     async putTrainer(row) {
       await db.prepare(
-        `INSERT INTO trainers (id, instance_id, display_name, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?)
+        `INSERT INTO trainers (id, instance_id, display_name, code, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            instance_id = excluded.instance_id,
            display_name = excluded.display_name,
+           code = excluded.code,
            updated_at = excluded.updated_at`,
-      ).bind(row.id, row.instanceId, row.displayName, row.createdAt, row.updatedAt).run()
+      ).bind(row.id, row.instanceId, row.displayName, row.code, row.createdAt, row.updatedAt).run()
     },
 
     async countTrainers(instanceId) {

@@ -1,4 +1,4 @@
-import type { InstanceRow, ProfileRow, Store, TrainerRow, ReleaseRow, ChatRow } from './store.js'
+import type { InstanceRow, ProfileRow, Store, TrainerRow, ReleaseRow, ChatRow, FriendRow, FriendRequestRow } from './store.js'
 
 /**
  * Ein Speicher im Arbeitsspeicher.
@@ -20,7 +20,48 @@ export function memoryStore(): Store {
 
   let release: ReleaseRow | null = null
   const chat: ChatRow[] = []
+  const friends: FriendRow[] = []
+  const requests: FriendRequestRow[] = []
   return {
+    async trainerByCode(code) {
+      return [...trainers.values()].find((t) => t.code === code) ?? null
+    },
+    async addFriend(row) {
+      if (!friends.some((f) => f.lowId === row.lowId && f.highId === row.highId)) friends.push(row)
+    },
+    async removeFriend(a, b) {
+      const [low, high] = [a, b].sort()
+      const i = friends.findIndex((f) => f.lowId === low && f.highId === high)
+      if (i >= 0) friends.splice(i, 1)
+    },
+    async friendsOf(id) {
+      return friends.filter((f) => f.lowId === id || f.highId === id)
+        .map((f) => (f.lowId === id ? f.highId : f.lowId))
+    },
+    async addFriendRequest(row) {
+      if (!requests.some((r) => r.fromId === row.fromId && r.toId === row.toId)) requests.push(row)
+    },
+    async removeFriendRequest(fromId, toId) {
+      const i = requests.findIndex((r) => r.fromId === fromId && r.toId === toId)
+      if (i >= 0) requests.splice(i, 1)
+    },
+    async requestsFor(id) {
+      return {
+        incoming: requests.filter((r) => r.toId === id).map((r) => r.fromId),
+        outgoing: requests.filter((r) => r.fromId === id).map((r) => r.toId),
+      }
+    },
+    async profilesOf(ids) {
+      return ids.flatMap((id) => {
+        const t = trainers.get(id)
+        const pr = profiles.get(id)
+        if (!t) return []
+        return [{
+          ...(pr ?? { trainerId: id, badges: 0, dexCaught: 0, battlesWon: 0, rating: 0, level: 0, updatedAt: 0 }),
+          displayName: t.displayName, instanceId: t.instanceId, code: t.code,
+        }]
+      })
+    },
     async addChat(row) {
       const id = chat.length + 1
       chat.push({ ...row, id })

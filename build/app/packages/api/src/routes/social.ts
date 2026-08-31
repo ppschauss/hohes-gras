@@ -91,6 +91,28 @@ export function registerSocialRoutes(app: FastifyInstance, ctx: AppContext): voi
     return { ...result, market: social.marketOverview(ctx, findById(ctx.db, req.trainer!.id)!) }
   })
 
+  /* ------------------------------------------------ Freunde ueber Instanzen */
+
+  app.get('/api/friends/global', auth, async (req) => hub.globalFriends(ctx, req.trainer!))
+
+  app.post('/api/friends/global/request', write, async (req) => {
+    const { code } = z.object({ code: z.string().min(4).max(16) }).parse(req.body)
+    const accepted = await hub.requestGlobalFriend(ctx, req.trainer!, code)
+    return { accepted, view: await hub.globalFriends(ctx, req.trainer!) }
+  })
+
+  app.post('/api/friends/global/respond', write, async (req) => {
+    const { otherId, accept } = z.object({ otherId: z.string(), accept: z.boolean() }).parse(req.body)
+    await hub.respondGlobalFriend(ctx, req.trainer!, otherId, accept)
+    return { view: await hub.globalFriends(ctx, req.trainer!) }
+  })
+
+  app.post('/api/friends/global/remove', write, async (req) => {
+    const { otherId } = z.object({ otherId: z.string() }).parse(req.body)
+    await hub.removeGlobalFriend(ctx, req.trainer!, otherId)
+    return { view: await hub.globalFriends(ctx, req.trainer!) }
+  })
+
   /* --------------------------------------------------------- Globaler Chat */
 
   app.get('/api/chat', auth, async (req) => {

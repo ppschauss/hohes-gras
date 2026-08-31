@@ -1,7 +1,7 @@
 import { sign } from '@game/hub'
 import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { GameError, type Trainer } from '@game/shared'
+import { ERROR_CODES, GameError, type Trainer } from '@game/shared'
 import type { AppContext } from '../context.js'
 import { logEvent } from '../repos/events.js'
 import { requireAdmin } from './admin.js'
@@ -90,6 +90,64 @@ async function call(
     console.warn(`[hub] ${method} ${path} nicht erreichbar: ${(err as Error).message}`)
     return null
   }
+}
+
+/**
+ * Wie `call`, aber redselig.
+ *
+ * `call` verschluckt jede Fehlerantwort zu `null` — richtig für den
+ * Hintergrundabgleich, der niemanden stören soll. Für eine Handlung, die
+ * jemand gerade ausgelöst hat, ist es falsch: ein unbekannter Trainer-Code
+ * meldete sich als „Verbund nicht erreichbar", und der Spieler suchte den
+ * Fehler bei sich zu Hause statt in seiner Eingabe.
+ *
+ * Diese Fassung reicht den Grund des Verbunds durch.
+ */
+async function callOrThrow(
+  ctx: AppContext, method: 'GET' | 'POST' | 'PUT', path: string, body: unknown = {},
+): Promise<Record<string, unknown>> {
+  if (!enabled(ctx)) throw new GameError('invalid_state', { reason: 'no_hub' }, 409)
+  const raw = JSON.stringify(body ?? {})
+  assertGetHasNoBody(method, path, raw)
+  const timestamp = Date.now()
+
+  let res: Response
+  try {
+    const signature = await sign(ctx.config.HUB_SECRET, method, path, timestamp, raw)
+    res = await fetch(`${ctx.config.HUB_URL.replace(/\/$/, '')}${path}`, {
+      method,
+      headers: {
+        'content-type': 'application/json',
+        'x-hub-instance': ctx.config.HUB_INSTANCE_ID,
+        'x-hub-timestamp': String(timestamp),
+        'x-hub-signature': signature,
+      },
+      body: method === 'GET' ? undefined : raw,
+      signal: AbortSignal.timeout(8_000),
+    })
+  } catch (err) {
+    console.warn(`[hub] ${method} ${path} nicht erreichbar: ${(err as Error).message}`)
+    throw new GameError('invalid_state', { reason: 'hub_unreachable' }, 503)
+  }
+
+  const antwort = await res.json().catch(() => ({})) as Record<string, unknown>
+  if (!res.ok) {
+    /*
+     * Den Grund des Verbunds weiterreichen, nicht einen eigenen erfinden.
+     *
+     * Aber nur, wenn er zu unseren Fehlerarten gehoert: der Verbund ist ein
+     * fremder Dienst, und was er sagt, gehoert geprueft, bevor es als eigener
+     * Code weitergegeben wird.
+     */
+    const code = String(antwort.error ?? '')
+    const bekannt = (ERROR_CODES as readonly string[]).includes(code)
+    throw new GameError(
+      bekannt ? (code as (typeof ERROR_CODES)[number]) : 'invalid_state',
+      (antwort.detail ?? {}) as Record<string, unknown>,
+      res.status,
+    )
+  }
+  return antwort
 }
 
 /**
@@ -198,20 +256,22 @@ export async function refreshLeaderboard(ctx: AppContext): Promise<number> {
 export async function linkNew(ctx: AppContext, limit = 20): Promise<number> {
   if (!enabled(ctx)) return 0
   const rows = ctx.db.prepare(
-    `SELECT id, telegram_id AS telegramId, display_name AS displayName
+    `SELECT id, telegram_id AS telegramId, display_name AS displayName, trainer_code AS code
        FROM trainers WHERE is_banned = 0 AND id NOT IN (SELECT trainer_id FROM hub_links)
        ORDER BY created_at LIMIT ?`,
-  ).all(limit) as Array<{ id: string; telegramId: string; displayName: string }>
+  ).all(limit) as Array<{ id: string; telegramId: string; displayName: string; code: string }>
 
   let linked = 0
   for (const row of rows) {
     const res = await call(ctx, 'POST', '/trainers', {
-      telegramId: row.telegramId, displayName: row.displayName,
+      // Der Trainer-Code geht mit: ohne ihn kann einen niemand auf einer
+      // fremden Instanz finden. Die Telegram-Id bleibt hier.
+      telegramId: row.telegramId, displayName: row.displayName, code: row.code,
     }) as { id?: string } | null
     if (!res?.id) break
     ctx.db.prepare(
-      `INSERT INTO hub_links (trainer_id, global_id, synced_at) VALUES (?, ?, ?)
-       ON CONFLICT(trainer_id) DO UPDATE SET global_id = excluded.global_id`,
+      `INSERT INTO hub_links (trainer_id, global_id, synced_at, code_pushed) VALUES (?, ?, ?, 1)
+       ON CONFLICT(trainer_id) DO UPDATE SET global_id = excluded.global_id, code_pushed = 1`,
     ).run(row.id, res.id, Date.now())
     linked++
   }
@@ -420,10 +480,130 @@ export async function sendChat(ctx: AppContext, trainer: Trainer, text: string):
   const sauber = text.replace(/\s+/g, ' ').trim()
   if (sauber.length === 0) throw new GameError('validation_failed', { field: 'text' })
 
-  const res = await call(ctx, 'POST', '/chat', { trainerId: globalId, text: sauber }) as
-    { id?: number } | null
-  if (!res?.id) throw new GameError('invalid_state', { reason: 'hub_unreachable' }, 503)
+  const res = await callOrThrow(ctx, 'POST', '/chat', { trainerId: globalId, text: sauber })
   logEvent(ctx.db, trainer.id, 'chat.sent', { id: res.id })
   await refreshChat(ctx)
-  return res.id
+  return Number(res.id)
+}
+
+
+/**
+ * Trainer-Codes nachreichen.
+ *
+ * Wer angemeldet wurde, bevor es die Freundes-Funktion gab, hat im Verbund
+ * keinen Code — und ohne ihn findet ihn niemand. Der Abgleich schickt ihn
+ * einmal nach; `code_pushed` merkt sich, für wen das erledigt ist, damit nicht
+ * bei jedem Lauf alle noch einmal geschickt werden.
+ */
+export async function pushCodes(ctx: AppContext, limit = 50): Promise<number> {
+  if (!enabled(ctx)) return 0
+  const rows = ctx.db.prepare(
+    `SELECT t.telegram_id AS telegramId, t.display_name AS displayName, t.trainer_code AS code,
+            l.trainer_id AS trainerId
+       FROM hub_links l JOIN trainers t ON t.id = l.trainer_id
+      WHERE l.code_pushed = 0 LIMIT ?`,
+  ).all(limit) as Array<{ telegramId: string; displayName: string; code: string; trainerId: string }>
+
+  let sent = 0
+  for (const row of rows) {
+    const res = await call(ctx, 'POST', '/trainers', {
+      telegramId: row.telegramId, displayName: row.displayName, code: row.code,
+    })
+    if (!res) break
+    ctx.db.prepare('UPDATE hub_links SET code_pushed = 1 WHERE trainer_id = ?').run(row.trainerId)
+    sent++
+  }
+  return sent
+}
+
+/* ---------------------------------------------------------- Globale Freunde */
+
+/**
+ * Freunde über Instanzgrenzen.
+ *
+ * Anders als die lokale Freundschaft liegt diese im Verbund und nicht in
+ * `friendships` — dort verweisen beide Spalten auf `trainers(id)`, und ein
+ * Trainer auf einer fremden Instanz hat hier keine Zeile. Sie im Verbund zu
+ * halten ist deshalb nicht bequemer, sondern das Einzige, was geht.
+ *
+ * Gesucht wird über den **Trainer-Code**: der ist ohnehin zum Weitergeben
+ * gemacht, und eine Instanz kann damit nicht die Liste aller Spieler des
+ * Verbunds herunterladen.
+ */
+
+export interface GlobalFriend {
+  trainerId: string
+  displayName: string
+  instanceId: string
+  code: string
+  badges: number
+  dexCaught: number
+  battlesWon: number
+  level: number
+}
+
+export interface GlobalFriendsView {
+  enabled: boolean
+  /** Der eigene Code — zum Weitergeben. */
+  myCode: string | null
+  friends: GlobalFriend[]
+  incoming: GlobalFriend[]
+  outgoing: GlobalFriend[]
+}
+
+const leer = (): GlobalFriendsView =>
+  ({ enabled: false, myCode: null, friends: [], incoming: [], outgoing: [] })
+
+export async function globalFriends(ctx: AppContext, trainer: Trainer): Promise<GlobalFriendsView> {
+  if (!enabled(ctx)) return leer()
+  const globalId = linkedId(ctx, trainer.id)
+  if (!globalId) return { ...leer(), enabled: true, myCode: trainer.trainerCode }
+
+  const res = await call(ctx, 'POST', '/friends', { trainerId: globalId }) as
+    { friends?: GlobalFriend[]; incoming?: GlobalFriend[]; outgoing?: GlobalFriend[] } | null
+  return {
+    enabled: true,
+    myCode: trainer.trainerCode,
+    friends: res?.friends ?? [],
+    incoming: res?.incoming ?? [],
+    outgoing: res?.outgoing ?? [],
+  }
+}
+
+/** Wer nicht angemeldet ist, kann keine Freunde im Verbund haben. */
+function requireGlobalId(ctx: AppContext, trainer: Trainer): string {
+  if (!enabled(ctx)) throw new GameError('invalid_state', { reason: 'no_hub' }, 409)
+  const id = linkedId(ctx, trainer.id)
+  if (!id) throw new GameError('invalid_state', { reason: 'not_linked' }, 409)
+  return id
+}
+
+/** Gibt zurück, ob es gleich eine Freundschaft wurde — das passiert, wenn die
+ *  andere Seite schon gefragt hatte. */
+export async function requestGlobalFriend(
+  ctx: AppContext, trainer: Trainer, code: string,
+): Promise<boolean> {
+  const globalId = requireGlobalId(ctx, trainer)
+  const sauber = code.trim().toUpperCase()
+  if (sauber === trainer.trainerCode) throw new GameError('validation_failed', { reason: 'self' })
+
+  const res = await callOrThrow(ctx, 'POST', '/friends/request', { trainerId: globalId, code: sauber })
+  logEvent(ctx.db, trainer.id, 'hub.friendRequested', { code: sauber })
+  return Boolean((res as { accepted?: boolean }).accepted)
+}
+
+export async function respondGlobalFriend(
+  ctx: AppContext, trainer: Trainer, otherId: string, accept: boolean,
+): Promise<void> {
+  const globalId = requireGlobalId(ctx, trainer)
+  await callOrThrow(ctx, 'POST', '/friends/respond', { trainerId: globalId, otherId, accept })
+  logEvent(ctx.db, trainer.id, 'hub.friendResponded', { otherId, accept })
+}
+
+export async function removeGlobalFriend(
+  ctx: AppContext, trainer: Trainer, otherId: string,
+): Promise<void> {
+  const globalId = requireGlobalId(ctx, trainer)
+  await callOrThrow(ctx, 'POST', '/friends/remove', { trainerId: globalId, otherId })
+  logEvent(ctx.db, trainer.id, 'hub.friendRemoved', { otherId })
 }

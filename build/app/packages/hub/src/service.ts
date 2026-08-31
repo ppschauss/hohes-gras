@@ -109,7 +109,8 @@ export function createHub(config: HubConfig) {
 
     /* ------------------------------------------------------ Trainer melden */
     if (req.method === 'POST' && req.path === '/trainers') {
-      const { telegramId, displayName } = body as { telegramId?: string; displayName?: string }
+      const { telegramId, displayName, code } = body as
+        { telegramId?: string; displayName?: string; code?: string }
       if (!telegramId) return bad(400, 'validation_failed', { field: 'telegramId' })
 
       const id = await globalTrainerId(String(telegramId), config.idSalt)
@@ -132,6 +133,8 @@ export function createHub(config: HubConfig) {
          * wenn sie schon so aussieht.
          */
         displayName: (displayName ?? existing?.displayName ?? '—').slice(0, 32),
+        // Wie der Name: was nicht mitkommt, loescht nichts.
+        code: (code ?? existing?.code ?? '').slice(0, 16).toUpperCase(),
         createdAt: existing?.createdAt ?? now(),
         updatedAt: now(),
       })
@@ -173,6 +176,105 @@ export function createHub(config: HubConfig) {
     if (req.method === 'GET' && req.path === '/release') {
       const release = await store.getRelease()
       return { status: 200, body: { release } }
+    }
+
+    /* ------------------------------------------------------------ Freunde */
+    /*
+     * Jemanden über seinen Trainer-Code finden.
+     *
+     * Der Code ist ohnehin dafür gemacht, weitergegeben zu werden — anders als
+     * die Telegram-Id, die deshalb gar nicht erst im Verbund liegt. Gesucht
+     * wird einzeln: eine Instanz soll nicht die Liste aller Spieler des
+     * Verbunds herunterladen können.
+     */
+    if (req.method === 'POST' && req.path === '/trainers/find') {
+      const { code } = body as { code?: string }
+      if (!code || !/^[A-Z0-9-]{4,16}$/i.test(code)) return bad(400, 'validation_failed', { field: 'code' })
+      const gefunden = await store.trainerByCode(code.toUpperCase())
+      if (!gefunden) return { status: 200, body: { trainer: null } }
+      const [profil] = await store.profilesOf([gefunden.id])
+      return { status: 200, body: { trainer: profil ?? null } }
+    }
+
+    if (req.method === 'POST' && req.path === '/friends') {
+      const { trainerId } = body as { trainerId?: string }
+      if (!trainerId) return bad(400, 'validation_failed', { field: 'trainerId' })
+      const wer = await store.getTrainer(trainerId)
+      if (!wer) return bad(404, 'not_found')
+      // Nur die eigene Herde: eine Instanz liest keine fremden Freundeslisten.
+      if (wer.instanceId !== instance.id) return bad(403, 'not_owner')
+
+      const ids = await store.friendsOf(trainerId)
+      const { incoming, outgoing } = await store.requestsFor(trainerId)
+      return {
+        status: 200,
+        body: {
+          friends: await store.profilesOf(ids),
+          incoming: await store.profilesOf(incoming),
+          outgoing: await store.profilesOf(outgoing),
+        },
+      }
+    }
+
+    if (req.method === 'POST' && req.path === '/friends/request') {
+      const { trainerId, code } = body as { trainerId?: string; code?: string }
+      if (!trainerId || !code) return bad(400, 'validation_failed')
+      const wer = await store.getTrainer(trainerId)
+      if (!wer) return bad(404, 'not_found')
+      if (wer.instanceId !== instance.id) return bad(403, 'not_owner')
+
+      const ziel = await store.trainerByCode(code.toUpperCase())
+      if (!ziel) return bad(404, 'not_found', { reason: 'unknown_code' })
+      if (ziel.id === trainerId) return bad(400, 'validation_failed', { reason: 'self' })
+
+      const schon = await store.friendsOf(trainerId)
+      if (schon.includes(ziel.id)) return bad(409, 'invalid_state', { reason: 'already_friends' })
+
+      /*
+       * Hat die andere Seite schon gefragt, ist das hier die Zusage.
+       *
+       * Ohne das müsste man erst eine Anfrage schicken, die drüben neben der
+       * eigenen liegt, und dann warten — zwei Leute, die gleichzeitig auf
+       * denselben Knopf drücken, wären sonst nie befreundet.
+       */
+      const offen = await store.requestsFor(trainerId)
+      if (offen.incoming.includes(ziel.id)) {
+        const [low, high] = [trainerId, ziel.id].sort()
+        await store.addFriend({ lowId: low!, highId: high!, createdAt: now() })
+        await store.removeFriendRequest(ziel.id, trainerId)
+        return { status: 200, body: { accepted: true } }
+      }
+
+      await store.addFriendRequest({ fromId: trainerId, toId: ziel.id, createdAt: now() })
+      return { status: 200, body: { accepted: false } }
+    }
+
+    if (req.method === 'POST' && req.path === '/friends/respond') {
+      const { trainerId, otherId, accept } = body as
+        { trainerId?: string; otherId?: string; accept?: boolean }
+      if (!trainerId || !otherId) return bad(400, 'validation_failed')
+      const wer = await store.getTrainer(trainerId)
+      if (!wer) return bad(404, 'not_found')
+      if (wer.instanceId !== instance.id) return bad(403, 'not_owner')
+
+      await store.removeFriendRequest(otherId, trainerId)
+      if (accept) {
+        const [low, high] = [trainerId, otherId].sort()
+        await store.addFriend({ lowId: low!, highId: high!, createdAt: now() })
+      }
+      return { status: 200, body: { ok: true } }
+    }
+
+    if (req.method === 'POST' && req.path === '/friends/remove') {
+      const { trainerId, otherId } = body as { trainerId?: string; otherId?: string }
+      if (!trainerId || !otherId) return bad(400, 'validation_failed')
+      const wer = await store.getTrainer(trainerId)
+      if (!wer) return bad(404, 'not_found')
+      if (wer.instanceId !== instance.id) return bad(403, 'not_owner')
+      await store.removeFriend(trainerId, otherId)
+      await store.removeFriendRequest(trainerId, otherId)
+      await store.removeFriendRequest(otherId, trainerId)
+      return { status: 200, body: { ok: true } }
     }
 
     /* --------------------------------------------------------------- Chat */

@@ -438,6 +438,20 @@ export const api = {
       method: 'POST', body: JSON.stringify({ tradeId, accept }),
     }),
 
+  globalFriends: () => request<GlobalFriendsView>('/api/friends/global'),
+  requestGlobalFriend: (code: string) =>
+    request<{ accepted: boolean; view: GlobalFriendsView }>('/api/friends/global/request', {
+      method: 'POST', body: JSON.stringify({ code }),
+    }),
+  respondGlobalFriend: (otherId: string, accept: boolean) =>
+    request<{ view: GlobalFriendsView }>('/api/friends/global/respond', {
+      method: 'POST', body: JSON.stringify({ otherId, accept }),
+    }),
+  removeGlobalFriend: (otherId: string) =>
+    request<{ view: GlobalFriendsView }>('/api/friends/global/remove', {
+      method: 'POST', body: JSON.stringify({ otherId }),
+    }),
+
   chat: () => request<ChatView>('/api/chat'),
   sendChat: (text: string) =>
     request<ChatView>('/api/chat', { method: 'POST', body: JSON.stringify({ text }) }),
@@ -1577,4 +1591,25 @@ export interface ChatView {
     createdAt: number
     isSelf: boolean
   }>
+}
+
+
+/** Freunde über Instanzgrenzen. `enabled: false` heißt: kein Verbund. */
+export interface GlobalFriend {
+  trainerId: string
+  displayName: string
+  instanceId: string
+  code: string
+  badges: number
+  dexCaught: number
+  battlesWon: number
+  level: number
+}
+
+export interface GlobalFriendsView {
+  enabled: boolean
+  myCode: string | null
+  friends: GlobalFriend[]
+  incoming: GlobalFriend[]
+  outgoing: GlobalFriend[]
 }

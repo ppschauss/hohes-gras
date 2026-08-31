@@ -9,7 +9,9 @@ import { dueReminders, recordSent } from '../services/reminders.js'
 import { purgeOldCounters } from '../repos/counters.js'
 import { purgeStalePulses } from '../repos/pulse.js'
 import { abandonStale } from '../repos/battles.js'
-import { linkNew, pushProfiles, refreshLeaderboard, refreshRelease, releaseInfo } from '../services/hub.js'
+import {
+  linkNew, pushCodes, pushProfiles, refreshLeaderboard, refreshRelease, releaseInfo,
+} from '../services/hub.js'
 
 export interface Job {
   name: string
@@ -112,9 +114,13 @@ export const JOBS: Job[] = [
     run: async (ctx) => {
       if (!ctx.config.hubEnabled) return
       const linked = await linkNew(ctx)
+      // Codes von frueher angemeldeten Trainern nachreichen.
+      const codes = await pushCodes(ctx)
       const pushed = await pushProfiles(ctx)
       const rows = await refreshLeaderboard(ctx)
-      if (linked || pushed) console.log(`[job] Verbund: ${linked} angemeldet, ${pushed} Profile, ${rows} in der Rangliste`)
+      if (linked || pushed || codes) {
+        console.log(`[job] Verbund: ${linked} angemeldet, ${codes} Codes, ${pushed} Profile, ${rows} in der Rangliste`)
+      }
 
       /*
        * Den aktuellen Stand erfragen und den Betreiber einmal benachrichtigen.

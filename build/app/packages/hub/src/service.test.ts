@@ -270,3 +270,94 @@ describe('Chat', () => {
     expect(neu.messages[0].body).toBe('zwei')
   })
 })
+
+describe('Freunde über Instanzen', () => {
+  const anlegen = async (telegramId: string, name: string, code: string) =>
+    (await call({
+      method: 'POST', path: '/trainers', body: { telegramId, displayName: name, code },
+    }).then((r) => r.body as { id: string })).id
+
+  it('findet jemanden über seinen Trainer-Code', async () => {
+    await anlegen('1', 'Patte', 'AAAA-1111')
+    const r = await call({ method: 'POST', path: '/trainers/find', body: { code: 'aaaa-1111' } })
+    expect((r.body as any).trainer).toMatchObject({ displayName: 'Patte', instanceId: 'heim' })
+  })
+
+  it('meldet einen unbekannten Code als leer, nicht als Fehler', async () => {
+    const r = await call({ method: 'POST', path: '/trainers/find', body: { code: 'ZZZZ-9999' } })
+    expect(r.status).toBe(200)
+    expect((r.body as any).trainer).toBeNull()
+  })
+
+  it('macht aus zwei Anfragen sofort eine Freundschaft', async () => {
+    /*
+     * Ohne das müssten zwei Leute, die gleichzeitig auf denselben Knopf
+     * drücken, ewig aufeinander warten: jede Anfrage läge drüben neben der
+     * eigenen, und keiner käme auf die Idee, die andere anzunehmen.
+     */
+    const a = await anlegen('1', 'Patte', 'AAAA-1111')
+    const b = await anlegen('2', 'Benny', 'BBBB-2222')
+
+    const erste = await call({ method: 'POST', path: '/friends/request', body: { trainerId: a, code: 'BBBB-2222' } })
+    expect((erste.body as any).accepted).toBe(false)
+
+    const zweite = await call({ method: 'POST', path: '/friends/request', body: { trainerId: b, code: 'AAAA-1111' } })
+    expect((zweite.body as any).accepted).toBe(true)
+
+    const liste = await call({ method: 'POST', path: '/friends', body: { trainerId: a } })
+    expect((liste.body as any).friends.map((f: any) => f.displayName)).toEqual(['Benny'])
+  })
+
+  it('nimmt eine Anfrage an und lehnt eine andere ab', async () => {
+    const a = await anlegen('1', 'Patte', 'AAAA-1111')
+    const b = await anlegen('2', 'Benny', 'BBBB-2222')
+    await call({ method: 'POST', path: '/friends/request', body: { trainerId: b, code: 'AAAA-1111' } })
+
+    const offen = await call({ method: 'POST', path: '/friends', body: { trainerId: a } })
+    expect((offen.body as any).incoming).toHaveLength(1)
+
+    await call({ method: 'POST', path: '/friends/respond', body: { trainerId: a, otherId: b, accept: false } })
+    const danach = await call({ method: 'POST', path: '/friends', body: { trainerId: a } })
+    expect((danach.body as any).incoming).toHaveLength(0)
+    expect((danach.body as any).friends).toHaveLength(0)
+  })
+
+  it('laesst niemanden sich selbst hinzufuegen', async () => {
+    const a = await anlegen('1', 'Patte', 'AAAA-1111')
+    const r = await call({ method: 'POST', path: '/friends/request', body: { trainerId: a, code: 'AAAA-1111' } })
+    expect(r.status).toBe(400)
+  })
+
+  it('laesst keine Instanz fremde Freundeslisten lesen', async () => {
+    /*
+     * Dieselbe Regel wie bei Profilen und Chat: eine Instanz spricht nur fuer
+     * ihre eigenen Trainer. Sonst waere die Freundesliste jedes Spielers im
+     * Verbund fuer jede angemeldete Instanz einsehbar.
+     */
+    const a = await anlegen('1', 'Patte', 'AAAA-1111')
+    const r = await hub({ method: 'POST', path: '/instances', body: { id: 'fremd' }, adminSecret: ADMIN })
+    const otherSecret = (r.body as any).secret as string
+    const body = JSON.stringify({ trainerId: a })
+    const evil = await hub({
+      method: 'POST', path: '/friends', body: { trainerId: a },
+      auth: {
+        instanceId: 'fremd', timestamp: NOW,
+        signature: await sign(otherSecret, 'POST', '/friends', NOW, body),
+      },
+    })
+    expect(evil.status).toBe(403)
+  })
+
+  it('entfernt eine Freundschaft von beiden Seiten', async () => {
+    const a = await anlegen('1', 'Patte', 'AAAA-1111')
+    const b = await anlegen('2', 'Benny', 'BBBB-2222')
+    await call({ method: 'POST', path: '/friends/request', body: { trainerId: a, code: 'BBBB-2222' } })
+    await call({ method: 'POST', path: '/friends/request', body: { trainerId: b, code: 'AAAA-1111' } })
+
+    await call({ method: 'POST', path: '/friends/remove', body: { trainerId: a, otherId: b } })
+    for (const wer of [a, b]) {
+      const liste = await call({ method: 'POST', path: '/friends', body: { trainerId: wer } })
+      expect((liste.body as any).friends).toHaveLength(0)
+    }
+  })
+})

@@ -479,6 +479,46 @@ zurücklässt, ist schlimmer als keins.
   `/api/admin` sind allein dadurch geschützt. Ohne diese Zeile könnte jeder
   Spieler die Installation neu bauen lassen — ein Test besteht genau darauf.
 
+### Schritt 3 und 4 sind gebaut
+
+**Chat.** Ein Raum für den ganzen Verbund, lokal zwischengespeichert wie die
+Rangliste — ein Blick hinein wartet nie auf eine fremde Leitung, und ein
+stummer Verbund lässt die letzten Nachrichten stehen statt eines leeren
+Fensters. Eine Instanz darf nur im Namen **eigener** Trainer reden; ohne diese
+Regel könnte jede beliebige Instanz allen alles in den Mund legen.
+
+Gelesen wird mit `POST /chat/read`, nicht mit GET. Signiert wird der Rumpf, und
+ein GET darf laut `fetch` keinen tragen — der erste Versuch signierte
+`{"since":N}` und schickte nichts, was eine 401 ergab, die nach einem
+Schlüsselproblem aussah. `assertGetHasNoBody` macht diesen Fehler jetzt laut
+statt leise.
+
+**Freunde über Instanzgrenzen.** Sie liegen im Verbund und nicht in
+`friendships`: dort verweisen beide Spalten auf `trainers(id)`, und ein Trainer
+auf einer fremden Instanz hat lokal keine Zeile. Das ist nicht bequemer,
+sondern das Einzige, was geht.
+
+Gesucht wird über den **Trainer-Code**. Der ist ohnehin zum Weitergeben
+gemacht — anders als die Telegram-Id, die deshalb gar nicht erst im Verbund
+liegt — und eine Instanz kann damit nicht die Liste aller Spieler
+herunterladen: sie fragt einen Code, sie bekommt einen Treffer.
+
+Fragen beide gleichzeitig, sind sie sofort befreundet. Ohne das läge jede
+Anfrage drüben neben der eigenen, und keiner käme auf die Idee, die andere
+anzunehmen.
+
+### Wann ein Fehler durchgereicht wird und wann nicht
+
+`call()` verschluckt jede Fehlerantwort zu `null` — richtig für den
+Hintergrundabgleich, der niemanden stören soll. Für eine Handlung, die jemand
+gerade ausgelöst hat, ist es falsch: ein unbekannter Trainer-Code meldete sich
+als „Verbund nicht erreichbar", und der Spieler suchte den Fehler bei sich zu
+Hause statt in seiner Eingabe.
+
+Dafür gibt es `callOrThrow()`. Es reicht den Grund des Verbunds durch — aber
+nur, wenn er zu den eigenen Fehlerarten gehört. Der Verbund ist ein fremder
+Dienst, und was er sagt, gehört geprüft, bevor es als eigener Code weiterläuft.
+
 ### Was als Nächstes dran ist
 
 Schritt 3 bis 7 stehen oben unverändert. Der nächste sinnvolle ist **Freunde

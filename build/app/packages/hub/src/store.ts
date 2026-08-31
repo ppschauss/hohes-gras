@@ -27,8 +27,31 @@ export interface TrainerRow {
   id: string
   instanceId: string
   displayName: string
+  /**
+   * Der Trainer-Code, mit dem man ihn findet (`ABCD-1234`).
+   *
+   * Er ist ohnehin dafür gemacht, weitergegeben zu werden — anders als die
+   * Telegram-Id, die deshalb gar nicht erst herkommt. Ohne ihn gäbe es keinen
+   * Weg, jemanden auf einer fremden Instanz zu suchen, ohne dass eine Instanz
+   * die Liste aller Spieler herunterladen kann.
+   */
+  code: string
   createdAt: number
   updatedAt: number
+}
+
+/** Eine Freundschaft über Instanzgrenzen. Immer sortiert gespeichert. */
+export interface FriendRow {
+  lowId: string
+  highId: string
+  createdAt: number
+}
+
+/** Eine offene Anfrage. */
+export interface FriendRequestRow {
+  fromId: string
+  toId: string
+  createdAt: number
 }
 
 export interface ProfileRow {
@@ -76,6 +99,21 @@ export interface ChatRow {
 }
 
 export interface Store {
+  /** Wer diesen Trainer-Code trägt. Null, wenn niemand. */
+  trainerByCode(code: string): Promise<TrainerRow | null>
+
+  /** Freundschaft anlegen; doppelt anlegen ist kein Fehler. */
+  addFriend(row: FriendRow): Promise<void>
+  removeFriend(a: string, b: string): Promise<void>
+  friendsOf(trainerId: string): Promise<string[]>
+
+  addFriendRequest(row: FriendRequestRow): Promise<void>
+  removeFriendRequest(fromId: string, toId: string): Promise<void>
+  requestsFor(trainerId: string): Promise<{ incoming: string[]; outgoing: string[] }>
+
+  /** Mehrere Profile auf einmal — für die Freundesliste. */
+  profilesOf(ids: readonly string[]): Promise<Array<ProfileRow & { displayName: string; instanceId: string; code: string }>>
+
   /** Anhängen; gibt die vergebene Nummer zurück. */
   addChat(row: Omit<ChatRow, 'id'>): Promise<number>
   /** Die neuesten Nachrichten, aufsteigend. `since` = 0 heißt: von vorn. */
