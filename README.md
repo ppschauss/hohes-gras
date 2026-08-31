@@ -121,6 +121,7 @@ ohne Telegram durchrechnen. Warum das so gebaut ist, steht in
 - **[docs/INHALT.md](docs/INHALT.md)** — Content-Pack, Pipeline, Rechtslage
 - **[docs/BETRIEB.md](docs/BETRIEB.md)** — Einrichtung, Deploy, Datenbank, Fallstricke
 - **[docs/BALANCE.md](docs/BALANCE.md)** — alle Stellschrauben mit Begründung
+- **[docs/VERBUND.md](docs/VERBUND.md)** — Entwurf: mehrere Instanzen, eine Spielerwelt
 - **[SETUP-EXTERN.md](SETUP-EXTERN.md)** — Cloudflare-Tunnel und BotFather
 
 ## Rechtliches
