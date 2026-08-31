@@ -786,6 +786,7 @@
   "log.status_cured": "{name} geht es wieder besser",
   "log.status_damage": "{name} leidet unter {status}",
   "log.switch": "Los, {name}!",
+  "log.weather": "Das Wetter schlägt um: {weather}",
   "login.claim": "Abholen",
   "login.done": "Heute schon abgeholt. Morgen geht es weiter.",
   "login.got": "Abgeholt: {what}",

@@ -32,6 +32,8 @@ const MOVES: Record<string, MoveDef> = {
     ...mv('fake-out', 'normal', 'physical', 40, 100, 10, { kind: 'flinch' }, 100, 0, 3),
     firstTurnOnly: true,
   } as MoveDef,
+  // Regentanz: stellt das Wetter um, sonst nichts.
+  'rain-dance': mv('rain-dance', 'water', 'status', 0, 100, 5, { kind: 'weather', weather: 'rain' }, 100),
   // Traumfresser: hohe Staerke, halbes Aussaugen — und nur gegen Schlafende.
   'dream-eater': {
     ...mv('dream-eater', 'normal', 'special', 100, 100, 15, { kind: 'drain', ratio: 0.5 }, 100),
@@ -534,6 +536,51 @@ describe('Wer besiegt wird, verliert seinen Zug', () => {
     const treffer = turn.events.filter((e) => e.type === 'damage')
     expect(treffer).toHaveLength(1)
     expect(treffer[0]!.side).toBe(1)
+  })
+})
+
+describe('Wetter umstellen', () => {
+  /*
+   * Regentanz, Sonnentag, Sandsturm und Hagelsturm standen ohne Wirkung im
+   * Pack — gemessen in 79 Attackenplaetzen, die damit jedes Mal einen Zug
+   * verschenkten. Das Wetter aendert den Schaden laengst; es fehlte nur der
+   * Weg, es absichtlich zu setzen.
+   */
+  it('setzt das Wetter und meldet es', () => {
+    const a = fighter('quaxo', ['water'], 20, ['rain-dance'])
+    const b = fighter('ziel', ['normal'], 20, ['tackle'])
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+
+    expect(runde.state.weather).toBe('rain')
+    expect(runde.events.some((e) => e.type === 'weather' && e.weather === 'rain')).toBe(true)
+  })
+
+  it('meldet nichts, wenn sich nichts aendert', () => {
+    // Ein zweiter Regentanz bei Regen verschenkt den Zug — das ist die
+    // Entscheidung des Spielers, aber kein Erfolg, den man feiern muesste.
+    const a = fighter('quaxo', ['water'], 20, ['rain-dance'])
+    const b = fighter('ziel', ['normal'], 20, ['tackle'])
+    const erste = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    const zweite = resolveTurn(erste.state, useMove(), useMove(), content)
+
+    expect(zweite.state.weather).toBe('rain')
+    expect(zweite.events.some((e) => e.type === 'weather')).toBe(false)
+  })
+
+  it('laesst die KI es bei Regen liegen', () => {
+    /*
+     * Nur die Verneinung wird geprueft. Ob sie bei trockenem Wetter den Tanz
+     * oder den Angriff waehlt, ist eine Abwaegung — dass sie ihn bei Regen
+     * *nicht* waehlt, ist eine Regel.
+     */
+    const gegner = fighter('quaxo', ['water'], 20, ['rain-dance', 'tackle'])
+    const spieler = fighter('ziel', ['normal'], 20, ['tackle'])
+    const nass = { ...battle([spieler], [gegner]), weather: 'rain' as const }
+
+    for (const seed of ['a', 'b', 'c', 'd', 'e']) {
+      expect(chooseAction(nass, 1, 'expert', content, createRng(seed)))
+        .toEqual({ kind: 'move', moveIndex: 1 })
+    }
   })
 })
 

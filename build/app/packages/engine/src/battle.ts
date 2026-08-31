@@ -410,6 +410,21 @@ function applyMoveEffect(
       return
     }
 
+    case 'weather': {
+      if (!triggers) return
+      /*
+       * Kein Ereignis, wenn sich nichts aendert.
+       *
+       * Sonst liest sich ein zweiter Regentanz wie ein Erfolg, obwohl er den
+       * Zug verschenkt hat. Der Zug ist trotzdem verbraucht — das ist die
+       * Entscheidung des Spielers, nicht ein Fehler des Spiels.
+       */
+      if (state.weather === effect.weather) return
+      state.weather = effect.weather
+      events.push({ type: 'weather', side: sideIndex, fighter: attacker.id, weather: effect.weather })
+      return
+    }
+
     case 'drain': {
       if (damageDealt <= 0) return
       const healed = Math.max(1, Math.floor(damageDealt * effect.ratio))

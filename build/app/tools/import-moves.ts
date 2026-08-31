@@ -32,6 +32,7 @@ type Effect =
   | { kind: 'none' }
   | { kind: 'status'; status: 'burn' | 'freeze' | 'paralysis' | 'poison' | 'toxic' | 'sleep' | 'confusion' }
   | { kind: 'stat_stage'; target: 'self' | 'foe'; stat: 'atk' | 'def' | 'spa' | 'spd' | 'spe' | 'accuracy' | 'evasion'; stages: number }
+  | { kind: 'weather'; weather: 'clear' | 'rain' | 'storm' | 'snow' | 'fog' | 'sandstorm' | 'heat' }
   | { kind: 'drain'; ratio: number }
   | { kind: 'recoil'; ratio: number }
   | { kind: 'heal'; ratio: number }
@@ -51,6 +52,21 @@ const STATS: Record<string, Extract<Effect, { kind: 'stat_stage' }>['stat']> = {
 const SELF_TARGETS = new Set(['user', 'users-field', 'user-and-allies', 'all-allies', 'ally'])
 
 /**
+ * Zuege, die das Wetter umstellen.
+ *
+ * PokeAPI fuehrt das nicht als Feld, sondern nur im Fliesstext — dieselbe
+ * Lage wie bei Traumfresser. Ohne die Tabelle fielen die vier durch die
+ * Ableitung und standen wirkungslos im Pack; gemessen lagen sie in 79
+ * Attackenplaetzen und verschenkten dort jedes Mal einen Zug.
+ */
+const WEATHER_MOVES: Record<string, Extract<Effect, { kind: 'weather' }>['weather']> = {
+  'rain-dance': 'rain',
+  'sunny-day': 'heat',
+  sandstorm: 'sandstorm',
+  hail: 'snow',
+}
+
+/**
  * Collapse PokéAPI's rich move metadata into the single effect the engine
  * models.
  *
@@ -61,6 +77,9 @@ const SELF_TARGETS = new Set(['user', 'users-field', 'user-and-allies', 'all-all
  */
 function deriveEffect(m: ApiMove): { effect: Effect; chance: number } {
   const meta = m.meta
+
+  const wetter = WEATHER_MOVES[m.name]
+  if (wetter) return { effect: { kind: 'weather', weather: wetter }, chance: 100 }
 
   if (meta?.min_hits && meta.max_hits) {
     return { effect: { kind: 'multi_hit', min: meta.min_hits, max: meta.max_hits }, chance: 100 }

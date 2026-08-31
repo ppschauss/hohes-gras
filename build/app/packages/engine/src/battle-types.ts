@@ -91,6 +91,8 @@ export type BattleEvent =
   /** Der Zug war diesmal nicht erlaubt — etwa Mogelhieb nach der ersten Runde. */
   | { type: 'move_failed'; side: 0 | 1; fighter: string; move: string }
   | { type: 'multi_hit'; side: 0 | 1; fighter: string; hits: number }
+  /** Jemand hat das Wetter umgestellt. */
+  | { type: 'weather'; side: 0 | 1; fighter: string; weather: Weather }
   | { type: 'end'; outcome: BattleOutcome }
 
 export type PlayerAction =

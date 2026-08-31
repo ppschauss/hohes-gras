@@ -87,6 +87,18 @@ export const MoveDefSchema = z.object({
       z.object({ kind: z.literal('heal'), ratio: z.number().min(0).max(1) }),
       z.object({ kind: z.literal('multi_hit'), min: z.number().int(), max: z.number().int() }),
       z.object({ kind: z.literal('flinch') }),
+      /*
+       * Das Wetter im Kampf umstellen.
+       *
+       * Regentanz, Sonnentag, Sandsturm und Hagelsturm standen ohne Wirkung im
+       * Pack — in 79 Attackenplaetzen lag damit ein toter Zug. Das Wetter
+       * aendert den Schaden bereits (`weatherModifier`), es fehlte nur der
+       * Weg, es absichtlich zu setzen.
+       */
+      z.object({
+        kind: z.literal('weather'),
+        weather: z.enum(['clear', 'rain', 'storm', 'snow', 'fog', 'sandstorm', 'heat']),
+      }),
     ])
     .default({ kind: 'none' }),
 })

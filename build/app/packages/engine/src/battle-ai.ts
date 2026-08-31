@@ -1,4 +1,5 @@
 import type { MoveDef } from '@game/content'
+import type { Weather } from '@game/shared'
 import type { BattleState, Fighter, PlayerAction } from './battle-types.js'
 import type { BattleContent } from './battle.js'
 import type { Rng } from './rng.js'
@@ -40,7 +41,7 @@ export function chooseAction(
     if (better !== null) return { kind: 'switch', partyIndex: better }
   }
 
-  const scored = usable.map((m) => ({ ...m, score: scoreMove(m.move, self, foe, content) }))
+  const scored = usable.map((m) => ({ ...m, score: scoreMove(m.move, self, foe, content, state.weather) }))
   scored.sort((a, b) => b.score - a.score)
 
   const mistakeChance = { wild: 100, basic: 45, skilled: 18, expert: 4 }[level]
@@ -55,11 +56,15 @@ function tryMove(content: BattleContent, id: string): MoveDef | null {
 /** Rough expected value of a move this turn. Not a simulation — a simulation
  *  would be slower and, worse, would make the AI unbeatable in a way that is
  *  not fun. */
-function scoreMove(move: MoveDef, self: Fighter, foe: Fighter, content: BattleContent): number {
+function scoreMove(
+  move: MoveDef, self: Fighter, foe: Fighter, content: BattleContent, weather: Weather,
+): number {
   // Eine Attacke, die an der Bedingung scheitert, ist keine verpasste Chance,
   // sondern ein verlorener Zug. Ohne diese Zeile wuerde ein Traumfresser gegen
   // ein waches Ziel oben in der Wertung stehen und jede Runde ins Leere gehen.
   if (move.requiresTargetStatus && foe.status !== move.requiresTargetStatus) return 0
+  // Ein zweiter Regentanz bei Regen ist ein verschenkter Zug.
+  if (move.effect.kind === 'weather') return move.effect.weather === weather ? 0 : 18
   if (move.category === 'status') {
     // Status moves are worth something only while they can still do their job.
     if (move.effect.kind === 'status' && foe.status !== 'none') return 5
