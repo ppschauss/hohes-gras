@@ -30,6 +30,13 @@ export function ExpeditionScreen({ onBack }: { onBack: () => void }) {
   const expected = data?.expected.find((e) => e.kindId === kind && e.durationId === duration)
   /** Sind alle Plätze belegt? Dann gar nicht erst antreten lassen. */
   const voll = data?.maxOpen != null && data.open.length >= data.maxOpen
+  /*
+   * Wartet etwas auf das Einsammeln?
+   *
+   * „Alle Plätze belegt" allein sagt nicht, was zu tun ist — und wer über der
+   * Grenze steht, weil er sie vorher nicht hatte, sieht sonst nur eine Wand.
+   */
+  const einzusammeln = data?.open.filter((e) => e.ready).length ?? 0
   const selected = data?.durations.find((d) => d.id === duration)
   const cost = selected?.energyCost ?? 0
   const trainerCost = selected?.trainerEnergyCost ?? 0
@@ -235,13 +242,15 @@ export function ExpeditionScreen({ onBack }: { onBack: () => void }) {
               wer viele Pokemon hatte, schickte zwanzig Trupps gleichzeitig. */}
           {data?.maxOpen != null && (
             <p className="center__body num">
-              {t('expedition.slots', { have: data.open.length, max: data.maxOpen })}
+              {t('expedition.slotsOf', { have: data.open.length, max: data.maxOpen })}
             </p>
           )}
 
           <button type="button" className="btn btn--primary btn--block"
             disabled={!canStart || voll || action.busy} onClick={start}>
-            {voll ? t('expedition.slotsFull') : t('expedition.start')}
+            {voll
+              ? einzusammeln > 0 ? t('expedition.collectFirst', { n: einzusammeln }) : t('expedition.slotsFull')
+              : t('expedition.start')}
           </button>
         </section>
       </main>
