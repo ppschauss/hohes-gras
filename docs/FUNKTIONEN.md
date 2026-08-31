@@ -240,12 +240,22 @@ frei wählbar** und bringt eigene Starter mit.
   letzten Arten einer Region brauchte, wartete auf einen Würfel, der zweimal
   die Woche fällt. Jetzt ist das seltenste Wetter alle **18 Stunden** da, bei
   zwölf Blöcken am Tag statt vier.
-- **Wetter und Tageszeit** (Europe/Berlin) steuern, welche Arten überhaupt
-  erscheinen. Beide stehen auf dem **Startbildschirm**, im Kopf der
-  **Weltkarte** und über der Artenliste im **Gebiet** — dort zusätzlich mit
-  dem Zeitpunkt der nächsten Änderung („Nacht in 1 Std 12 · Wetter wechselt in
-  9 Std zu Sturm"). Beides ist berechenbar: die Tageszeit springt um 5, 8, 18
-  und 21 Uhr, das Wetter alle zwei Stunden, für alle Spieler gleich.
+- **Wetter und Tageszeit** steuern, welche Arten überhaupt erscheinen. Beide
+  stehen auf dem **Startbildschirm**, im Kopf der **Weltkarte** und über der
+  Artenliste im **Gebiet** — dort zusätzlich mit dem Zeitpunkt der nächsten
+  Änderung („Nacht in 34 Min · Wetter wechselt in 12 Min zu Sturm"). Beides
+  ist berechenbar und für alle Spieler gleich.
+- **Ein Spieltag dauert fünf Stunden**, nicht vierundzwanzig: Morgengrauen 40
+  Minuten, Tag 120, Abenddämmerung 40, Nacht 100. Vorher lief die Uhr in
+  Echtzeit, und damit lag die Nacht — an der zwei Drittel aller
+  zeitgebundenen Vorkommen hängen — für die meisten im Schlaf. Die fünf sind
+  bewusst kein Teiler von vierundzwanzig: sonst sähe jemand, der immer um
+  sieben spielt, jeden Abend dieselbe Tageszeit. So verschiebt sich der Zyklus
+  täglich und führt über eine Woche jede Tageszeit an jede Uhrzeit.
+- Gerechnet wird aus der **absoluten Zeit**, nicht aus der Ortszeit: die
+  Sommerzeit lässt den Zyklus damit nicht springen. Nur die **Tagesgrenze**
+  für Aufgaben, Geschenke und Anmeldebelohnung hängt weiter am Kalender in
+  Europe/Berlin.
 
 ---
 

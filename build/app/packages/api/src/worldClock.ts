@@ -18,12 +18,54 @@ export function gameDate(at = new Date()): string {
   return berlinParts(at).date
 }
 
+/**
+ * Wie lange ein Spieltag dauert.
+ *
+ * Fuenf Stunden statt vierundzwanzig. Die Uhr lief bisher in Echtzeit, und
+ * damit lag "Nacht" fuer die meisten im Schlaf: gemeldet als "weiss nicht, wie
+ * ich den Tagesrhythmus in nem Game halten soll". Gemessen haengen 17 Prozent
+ * aller Vorkommen an einer Tageszeit, davon zwei Drittel an der Nacht — wer
+ * nachmittags spielt, sah dieses Drittel nie.
+ *
+ * Warum ausgerechnet fuenf: die Laenge darf **nicht** in vierundzwanzig
+ * aufgehen. Bei vier Stunden saehe jemand, der immer um sieben spielt, jeden
+ * Abend dieselbe Tageszeit — der Fehler waere derselbe wie vorher, nur
+ * schneller. Fuenf verschiebt sich taeglich um vier Fuenftel eines Zyklus und
+ * fuehrt damit ueber eine Woche jede Tageszeit an jede Uhrzeit.
+ */
+export const GAME_DAY_MINUTES = 300
+
+/**
+ * Die vier Abschnitte, in Minuten, in ihrer Reihenfolge.
+ *
+ * Die Anteile folgen dem, was vorher galt (3/10/3/8 von vierundzwanzig), mit
+ * einem kleinen Zuschlag fuer Morgengrauen und Abenddaemmerung: an ihnen
+ * haengen Latias, Latios und Celebi, und sie waren die knappsten.
+ */
+const PHASES: Array<{ time: TimeOfDay; minutes: number }> = [
+  { time: 'dawn', minutes: 40 },
+  { time: 'day', minutes: 120 },
+  { time: 'dusk', minutes: 40 },
+  { time: 'night', minutes: 100 },
+]
+
+/**
+ * Minuten seit einem festen Punkt, aus der absoluten Zeit.
+ *
+ * Bewusst nicht ueber die Ortszeit: der Zyklus haengt nicht mehr an der
+ * Wanduhr, und die Sommerzeit darf ihn nicht um eine Stunde springen lassen.
+ * So sehen alle Spieler ueberall denselben Himmel — dieselbe Zusage wie
+ * vorher, nur ohne Zeitzone.
+ */
+const minutesSince = (at: Date): number => Math.floor(at.getTime() / 60_000)
+
 export function timeOfDayAt(at = new Date()): TimeOfDay {
-  const { hour } = berlinParts(at)
-  if (hour >= 5 && hour < 8) return 'dawn'
-  if (hour >= 8 && hour < 18) return 'day'
-  if (hour >= 18 && hour < 21) return 'dusk'
-  return 'night'
+  let rest = minutesSince(at) % GAME_DAY_MINUTES
+  for (const phase of PHASES) {
+    if (rest < phase.minutes) return phase.time
+    rest -= phase.minutes
+  }
+  return PHASES[PHASES.length - 1]!.time
 }
 
 /**
@@ -37,7 +79,7 @@ export function timeOfDayAt(at = new Date()): TimeOfDay {
  * Freischaltung braucht, wartet auf einen Wuerfel, der zweimal die Woche
  * faellt. Genau so gemeldet.
  */
-export const WEATHER_BLOCK_HOURS = 2
+export const WEATHER_BLOCK_MINUTES = 45
 
 /**
  * Weather is deterministic from date + block, so every player in the world sees
@@ -50,9 +92,16 @@ export const WEATHER_BLOCK_HOURS = 2
  * einem Zehntel.
  */
 export function weatherAt(at = new Date()): Weather {
-  const { date, hour } = berlinParts(at)
-  const block = Math.floor(hour / WEATHER_BLOCK_HOURS)
-  const rng = createRng(`weather:${date}:${block}`)
+  /*
+   * Auch das Wetter haengt jetzt an der absoluten Zeit statt an der Wanduhr.
+   *
+   * Fuenfundvierzig Minuten je Block: ein Spieltag von fuenf Stunden hat damit
+   * knapp sieben Wetterlagen, ungefaehr so viele wie vorher ein Tag von
+   * vierundzwanzig. Schneller waere Flackern, langsamer haette ein Spieltag
+   * oft nur ein einziges Wetter — und die Legendaeren haengen daran.
+   */
+  const block = Math.floor(minutesSince(at) / WEATHER_BLOCK_MINUTES)
+  const rng = createRng(`weather:${block}`)
   const table: [Weather, number][] = [
     ['clear', 28], ['rain', 14], ['fog', 12], ['storm', 12],
     ['snow', 11], ['sandstorm', 11], ['heat', 12],
@@ -61,24 +110,23 @@ export function weatherAt(at = new Date()): Weather {
 }
 
 /**
- * Die naechste volle Stunde, zu der sich etwas aendert.
+ * Wann sich der naechste Wert aendert.
  *
- * Beides ist berechenbar, also wird es auch berechnet, statt den Spieler raten
- * zu lassen: die Tageszeit springt um 5, 8, 18 und 21 Uhr, das Wetter alle
- * zwei Stunden. Gesucht wird die naechste Stunde, in der der Wert ein anderer
- * ist — hoechstens vierundzwanzig Schritte, das ist billiger als jede
- * Sonderrechnung ueber Zeitzonen hinweg.
+ * Gesucht wird minutenweise, nicht mehr stuendlich: seit der Spieltag fuenf
+ * Stunden dauert, sind seine Abschnitte vierzig bis hundert Minuten lang, und
+ * eine Suche in Stundenschritten haette sie uebersprungen. Beides ist
+ * berechenbar, also wird es berechnet, statt den Spieler raten zu lassen.
  */
 function nextChange<T>(at: Date, valueAt: (d: Date) => T): { value: T; at: number } {
   const current = valueAt(at)
-  for (let i = 1; i <= 24; i++) {
-    // Auf die volle Stunde gehen: beide Werte haengen nur an ihr.
-    const probe = new Date(at.getTime() + i * 3_600_000)
-    probe.setMinutes(0, 0, 0)
+  // Auf die volle Minute, damit die Anzeige nicht bei Sekundenbruchteilen springt.
+  const start = Math.floor(at.getTime() / 60_000) * 60_000
+  for (let i = 1; i <= GAME_DAY_MINUTES; i++) {
+    const probe = new Date(start + i * 60_000)
     const value = valueAt(probe)
     if (value !== current) return { value, at: probe.getTime() }
   }
-  return { value: current, at: at.getTime() + 24 * 3_600_000 }
+  return { value: current, at: start + GAME_DAY_MINUTES * 60_000 }
 }
 
 export function worldClock(at = new Date()): WorldClock {
