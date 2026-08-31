@@ -22,6 +22,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Duelle: der Mindestabstand sinkt von 1,5 Sekunden auf 0,6 — „Immer mit der Ruhe" kam bei normalem Spiel viel zu oft.',
       'Der Bereich „Designs" heißt jetzt „Einstellungen" — Export, Löschen und der Update-Knopf lagen dort, wo sie niemand vermutet hat.',
       'Verbund: fremde Marktangebote sind sichtbar. Ansehen geht, kaufen noch nicht — dafür braucht es eine Treuhand.',
       'Mew, Celebi und Rayquaza gelten jetzt als legendär: nur mit Sagenbeere zu fangen, und Rayquaza tritt nicht mehr in der Kampfzone an.',

@@ -83,14 +83,23 @@ export const EXPLORE_PACING: PacingRules = {
  * und ein Duell ist der teuerste Vorgang im Spiel: es rechnet einen ganzen
  * Kampf durch.
  *
- * Anderthalb Sekunden Mindestabstand und dreissig je Viertelstunde sind fuer
- * eine Hand grosszuegig — bei drei Energie je Duell reicht ein volles Konto
- * ohnehin nur fuer fuenfzig.
+ * Der Mindestabstand lag zuerst bei anderthalb Sekunden und war damit die
+ * falsche Schraube. Gemessen im Betrieb: die Rhythmuspruefung hat *einmal*
+ * ausgeloest, und zwar bei der Pflege; was bei Duellen wirklich biss, war
+ * dieser Abstand. Der kleinste erfolgreiche Abstand zweier Spieler lag bei
+ * 1.530 und 1.791 ms — beide standen also staendig an der Wand und bekamen
+ * "Immer mit der Ruhe" zu lesen, genau so gemeldet.
+ *
+ * Sechshundert Millisekunden trennen weiterhin sauber von dem, was den Riegel
+ * noetig machte (Median 92 ms, acht Duelle je Sekunde), lassen aber eine Hand
+ * in Ruhe. Die eigentliche Menge deckelt ohnehin das Fenster: dreissig je
+ * Viertelstunde, und bei drei Energie je Duell reicht ein volles Konto nur
+ * fuer fuenfzig.
  */
 export const DUEL_PACING: PacingRules = {
   windowMs: CARE_WINDOW_MS,
   limit: 30,
-  minGapMs: 1_500,
+  minGapMs: 600,
 }
 
 export type PacingVerdict =

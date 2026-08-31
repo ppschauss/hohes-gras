@@ -138,6 +138,17 @@ export async function importMoves(
   for (const m of results) {
     if (!isUsable(m, knownTypes)) { skipped++; continue }
     const { effect, chance } = deriveEffect(m)
+    /*
+     * Eine Statusattacke ohne darstellbare Wirkung ist ein leerer Zug.
+     *
+     * Der Filter oben laeuft *vor* dem Ableiten und kann deshalb nicht wissen,
+     * was herauskommt. Genau daran ist der Vorsatz gescheitert, den der
+     * Kommentar bei `isUsable` formuliert: gemessen standen 117 solcher
+     * Attacken im Pack, und zwoelf Prozent aller belegten Attackenplaetze im
+     * laufenden Spiel waren damit tote Zuege. Wer eine davon einsetzt,
+     * verliert die Runde, ohne dass irgendwo steht, warum.
+     */
+    if (m.damage_class.name === 'status' && effect.kind === 'none') { skipped++; continue }
     out.push({
       id: m.name,
       name: { de: germanName(m.names, m.name) },

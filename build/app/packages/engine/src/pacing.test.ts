@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  CARE_PACING, CARE_WINDOW_LIMIT, CARE_WINDOW_MS, EXPLORE_PACING, MIN_GAP_MS,
+  CARE_PACING, CARE_WINDOW_LIMIT, CARE_WINDOW_MS, DUEL_PACING, EXPLORE_PACING, MIN_GAP_MS,
   RHYTHM_PENALTY_MS, RHYTHM_SAMPLES, checkPacing, looksAutomated,
 } from './pacing.js'
 
@@ -81,6 +81,34 @@ describe('checkPacing — Mindestabstand', () => {
 
   it('bleibt bei leerer Vorgeschichte offen', () => {
     expect(checkPacing([], T0, CARE_PACING).ok).toBe(true)
+  })
+})
+
+describe('Duelle: Abstand trennt Hand von Automat', () => {
+  /*
+   * Der Abstand lag zuerst bei anderthalb Sekunden. Gemessen im Betrieb
+   * standen beide Vielspieler staendig an dieser Wand — ihr kleinster
+   * *erfolgreicher* Abstand war 1.530 und 1.791 ms — und lasen "Immer mit der
+   * Ruhe", obwohl sie von Hand spielten. Genau so wurde es gemeldet.
+   */
+  it('laesst eine schnelle Hand durch', () => {
+    // Zwei Duelle in siebenhundert Millisekunden: zackig, aber menschlich.
+    expect(checkPacing([T0], T0 + 700, DUEL_PACING, 0).ok).toBe(true)
+  })
+
+  it('haelt das auf, was den Riegel noetig machte', () => {
+    // Gemessen waren es acht Duelle je Sekunde, Median 92 ms.
+    const urteil = checkPacing([T0], T0 + 92, DUEL_PACING, 0)
+    expect(urteil.ok).toBe(false)
+    expect(urteil.ok === false && urteil.reason).toBe('too_fast')
+  })
+
+  it('deckelt die Menge weiter ueber das Fenster, nicht ueber den Abstand', () => {
+    // Dreissig in einer Viertelstunde bleiben dreissig, egal wie zackig.
+    const viele = Array.from({ length: DUEL_PACING.limit! }, (_, i) => T0 + i * 700)
+    const urteil = checkPacing(viele, T0 + DUEL_PACING.limit! * 700 + 5_000, DUEL_PACING, 0)
+    expect(urteil.ok).toBe(false)
+    expect(urteil.ok === false && urteil.reason).toBe('window')
   })
 })
 
