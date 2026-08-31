@@ -309,6 +309,31 @@ export function catchProbability(species: SpeciesDef, level: number, mods: Catch
   return clamp(base * levelPenalty * ball * berry * calm * weaken * badges * ausbau, 0.01, 0.95)
 }
 
+/**
+ * Wie viele Würfe sicher sind.
+ *
+ * Drei. Vorher gab es keine: schon der erste Fehlwurf konnte die Begegnung
+ * beenden, und weil der Zähler auch beim Schwächen und Beruhigen stieg, war
+ * man nach vier Vorbereitungen bereits bei 25 %. Wer sich vorbereitet, soll
+ * dafür nicht bestraft werden — gemeldet als vier verlorene Fangserien.
+ */
+export const FLEE_GRACE_THROWS = 3
+
+/**
+ * Wie wahrscheinlich das Wesen nach einem Fehlwurf verschwindet.
+ *
+ * Gerechnet in **Würfen**, nicht in Runden. Schwächen und Beruhigen sind
+ * Vorbereitung, kein Fluchtgrund; sie zählen deshalb nicht mit.
+ *
+ * Nach der Schonfrist steigt sie um fünf Punkte je Wurf bis zur Hälfte —
+ * damit eine Begegnung nicht endlos wiederholbar bleibt, aber niemand seine
+ * Fangserie an den ersten Wurf verliert.
+ */
+export function fleeChance(throws: number): number {
+  if (throws <= FLEE_GRACE_THROWS) return 0
+  return Math.min(0.05 * (throws - FLEE_GRACE_THROWS), 0.5)
+}
+
 /** Fewer shakes for a hopeless throw, three for a near miss. */
 function shakesFor(probability: number, rng: Rng): number {
   let shakes = 0

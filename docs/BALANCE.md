@@ -857,3 +857,58 @@ Beim Nachmessen aufgefallen: Arena und Kampfzone vermerkten ihre Kunstgegner
 dauerhaft in `trainer_defeats`. Dort standen **119 solcher Zeilen gegen
 39 echte Trainer** — und keine davon wird je wieder gelesen. Sie werden jetzt
 gar nicht mehr angelegt, und eine Migration hat die alten entfernt.
+
+
+## Die Flucht zählt Würfe, nicht Runden
+
+Gemeldet: vier verlorene Fangserien, „das Fukano dachte sich, ich verzieh mich".
+
+Die Fluchtchance hing am **Rundenzähler** — und der stieg auch beim Schwächen
+und Beruhigen. Wer viermal vorbereitete und dann warf, stand beim **ersten**
+Wurf schon bei 25 %. Vorbereiten ist aber kein Fluchtgrund.
+
+Gezählt werden jetzt Würfe, und die ersten drei sind sicher:
+
+| Wurf | 1–3 | 4 | 5 | 6 | 8 | 14 |
+|---|---|---|---|---|---|---|
+| Flucht | **0 %** | 5 % | 10 % | 15 % | 25 % | 50 % |
+
+Dazu steht die Zahl jetzt **auf dem Bildschirm**. Vorher verschwand das Wesen,
+und es sah aus wie Willkür; jetzt kann man abwägen — noch ein Ball oder lieber
+erst beruhigen.
+
+## In der Kampfzone bekam am Ende nur einer noch Erfahrung
+
+Gemeldet, und es war mein Fehler. Die Heilung übersprang Besiegte:
+
+```ts
+if (c.hpCurrent >= max || c.hpCurrent <= 0) continue
+```
+
+Auch an den Stufen. Wer einmal umfiel, blieb damit den **ganzen Lauf** draußen
+— und weil nur antritt, wer noch steht, bekam er auch keine Erfahrung mehr. Über
+dreißig Kämpfe schrumpfte das Team auf den letzten Stehenden zusammen.
+
+Jetzt gilt der Unterschied, der ohnehin gemeint war: nach einem Sieg gibt es
+zwölf Prozent für die Stehenden, an einer **Stufe** steht das Team wieder
+vollzählig auf. Sie ist der Rastplatz, und ohne das Beleben war sie nur ein
+halber. Zwischen den Stufen bleibt Umfallen ein echter Verlust — das ist das
+Risiko, das die Serie zu einer macht.
+
+Die Heilung je Sieg stieg dabei von acht auf zwölf Prozent.
+
+## Drei Arena-Typen am Tag
+
+Einer war zu wenig: wer gegen den Typ des Tages kein passendes Team hat, konnte
+die Arena schlicht nicht sinnvoll spielen und musste bis morgen warten.
+
+Jetzt stehen **drei** offen, aus dem Datum gerechnet wie vorher — mit einer
+Schrittweite, die teilerfremd zur Typenzahl ist, damit nicht drei benachbarte
+erscheinen. In achtzehn Tagen kommt jeder der achtzehn Typen dran.
+
+Jeder Typ trägt seinen **eigenen** Tagesabschluss je Stufe. Ohne das wären die
+drei Angebote in Wahrheit eines: wer Feuer auf „schwer" geschafft hat, bekäme
+Wasser auf „schwer" nur noch zum Wiederholungssatz.
+
+Mit allen achtzehn wäre der „Typ des Tages" keiner mehr — drei geben eine Wahl,
+ohne die Vorbereitung sinnlos zu machen.

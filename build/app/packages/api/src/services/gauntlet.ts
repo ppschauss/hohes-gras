@@ -140,13 +140,26 @@ function buildFoe(ctx: AppContext, trainer: Trainer, regionId: string, streak: n
 const baseStatTotal = (s: { baseStats: Record<string, number> }): number =>
   Object.values(s.baseStats).reduce((sum, v) => sum + v, 0)
 
-/** Anteilig heilen — nach jedem Sieg ein wenig, an jeder Stufe ganz. */
-function heal(ctx: AppContext, trainerId: string, percent: number): number {
+/**
+ * Heilen — und an den Stufen auch beleben.
+ *
+ * Der Unterschied ist der ganze Punkt. Nach einem Sieg gibt es ein paar
+ * Prozent, und wer fällt, bleibt liegen: das ist das Risiko der Serie. An
+ * einer **Stufe** steht das Team wieder vollzählig auf — sie ist der
+ * Rastplatz, und ohne das Beleben wäre sie nur ein halber.
+ *
+ * Vorher wurden Besiegte auch dort übersprungen (`hpCurrent <= 0` führte zum
+ * `continue`). Damit schrumpfte das Team über einen langen Lauf auf den
+ * letzten Stehenden zusammen — und weil nur antritt, wer noch steht, bekam am
+ * Ende auch nur der noch Erfahrung. Genau so gemeldet.
+ */
+function heal(ctx: AppContext, trainerId: string, percent: number, revive: boolean): number {
   let healed = 0
   for (const c of creatures.teamOf(ctx.db, trainerId)) {
     const species = ctx.registry.species(c.speciesId)
     const max = computeStats(species, c.level, c.ivs, c.evs, c.nature).hp
-    if (c.hpCurrent >= max || c.hpCurrent <= 0) continue
+    if (c.hpCurrent >= max) continue
+    if (c.hpCurrent <= 0 && !revive) continue
     const next = Math.min(max, c.hpCurrent + Math.max(1, Math.round(max * percent / 100)))
     creatures.setHp(ctx.db, c.id, next)
     healed += next - c.hpCurrent
@@ -349,7 +362,8 @@ export function next(
     // kleinen Anteil.
     const stufe = milestoneAt(streak)
     const payout = stufe ? pay(ctx, trainer, run.regionId, stufe) : null
-    const healed = heal(ctx, trainer.id, stufe?.heals ? 100 : GAUNTLET_HEAL_PERCENT)
+    // An der Stufe vollzaehlig, dazwischen nur ein Anteil fuer die Stehenden.
+    const healed = heal(ctx, trainer.id, stufe?.heals ? 100 : GAUNTLET_HEAL_PERCENT, Boolean(stufe?.heals))
     recordBest(ctx, trainer.id, run.regionId, streak)
 
     // Alles, was dieser Kampf gebracht hat, auf den Lauf aufaddieren — Gold

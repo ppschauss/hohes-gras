@@ -53,8 +53,19 @@ export const GAUNTLET_XP_TAPER = 60
 export const gauntletXpMultiplier = (streak: number): number =>
   GAUNTLET_XP_MULTIPLIER / (1 + Math.max(0, streak) / GAUNTLET_XP_TAPER)
 
-/** Anteil der KP, den das Team nach jedem gewonnenen Kampf zurückbekommt. */
-export const GAUNTLET_HEAL_PERCENT = 8
+/**
+ * Anteil der KP, den das Team nach jedem gewonnenen Kampf zurückbekommt.
+ *
+ * Zwölf Prozent. Acht waren zu wenig: wer fällt, tritt beim nächsten Kampf gar
+ * nicht mehr an — und bekommt damit auch keine Erfahrung mehr. Über einen
+ * langen Lauf schrumpfte das Team so auf den letzten Stehenden zusammen, und
+ * am Ende bekam nur der noch etwas. Genau so gemeldet.
+ *
+ * Die Stufen beleben zusätzlich; siehe `heal()` im Dienst. Zwischen ihnen
+ * bleibt Umfallen ein echter Verlust — das ist das Risiko, das die Serie
+ * überhaupt zu einer macht.
+ */
+export const GAUNTLET_HEAL_PERCENT = 12
 
 /**
  * Wie viele Pokémon gleichzeitig antreten.

@@ -336,3 +336,41 @@ describe('Arena-Energie', () => {
     expect(r.body.error).toBe('insufficient_energy')
   })
 })
+
+describe('Drei Typen am Tag', () => {
+  it('bietet mehr als einen an', async () => {
+    const r = await h.get('/api/arena', token)
+    expect(r.body.types.length).toBeGreaterThan(1)
+    // Der erste ist der, den `typeId` nennt — alte Clients aendern sich nicht.
+    expect(r.body.types[0].id).toBe(r.body.typeId)
+  })
+
+  it('nimmt nur einen der heutigen an', async () => {
+    h.resetRateLimits()
+    const r = await h.post('/api/arena/start', { tier: 'easy', typeId: 'gibtsnicht' }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.detail.reason).toBe('type_not_today')
+  })
+
+  it('zaehlt den Tagesabschluss je Typ und Stufe getrennt', async () => {
+    /*
+     * Ohne den Typ im Schluessel waeren die drei Angebote in Wahrheit eines:
+     * wer Feuer auf "schwer" geschafft hat, bekaeme Wasser auf "schwer" nur
+     * noch zum Wiederholungssatz.
+     */
+    const view = await h.get('/api/arena', token)
+    const [a, b] = view.body.types
+    expect(a.id).not.toBe(b.id)
+    expect(a.clearedTiers).toEqual([])
+
+    h.ctx.db.prepare(
+      `INSERT INTO arena_clears (trainer_id, game_date, tier, type_id, cleared_at)
+       VALUES (?, ?, 'easy', ?, ?)`,
+    ).run(trainerId, view.body.date, a.id, Date.now())
+
+    h.resetRateLimits()
+    const danach = await h.get('/api/arena', token)
+    expect(danach.body.types[0].clearedTiers).toEqual(['easy'])
+    expect(danach.body.types[1].clearedTiers).toEqual([])
+  })
+})

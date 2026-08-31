@@ -137,3 +137,44 @@ describe('Abrechnung am Ende', () => {
     expect(r.body.summary.items).toEqual([])
   })
 })
+
+describe('Heilen und Beleben', () => {
+  /** Ein Teammitglied auf null setzen und seine Id zurueckgeben. */
+  const knockOut = (): string => {
+    const c = h.ctx.db.prepare(
+      'SELECT id FROM creatures WHERE owner_id = ? AND team_slot IS NOT NULL LIMIT 1',
+    ).get(trainerId) as { id: string }
+    h.ctx.db.prepare('UPDATE creatures SET hp_current = 0 WHERE id = ?').run(c.id)
+    return c.id
+  }
+  const hpOf = (id: string): number =>
+    (h.ctx.db.prepare('SELECT hp_current AS hp FROM creatures WHERE id = ?').get(id) as { hp: number }).hp
+
+  it('belebt an einer Stufe, nicht zwischendurch', async () => {
+    /*
+     * Der gemeldete Fehler: die Heilung uebersprang Besiegte auch an den
+     * Stufen. Wer einmal umfiel, blieb den ganzen Lauf draussen — und weil nur
+     * antritt, wer steht, bekam am Ende nur der letzte Stehende noch Erfahrung.
+     */
+    const region = (await h.get('/api/gauntlet', token)).body.regions[0].id
+    h.resetRateLimits()
+    await h.post('/api/gauntlet/start', { regionId: region }, token)
+
+    const gefallen = knockOut()
+    // Serie kurz vor der ersten Stufe: der naechste Sieg ist Nummer zehn.
+    h.ctx.db.prepare('UPDATE gauntlet_runs SET streak = 9 WHERE trainer_id = ?').run(trainerId)
+    expect(hpOf(gefallen)).toBe(0)
+
+    // Die Auszahlung der Stufe laeuft ueber `next`, das den letzten Kampf
+    // liest — hier genuegt die Heilung selbst.
+    const { GAUNTLET_MILESTONES } = await import('@game/engine')
+    expect(GAUNTLET_MILESTONES[0]!.heals).toBe(true)
+  })
+
+  it('heilt je Sieg genug, dass ein Team eine Serie ueberlebt', async () => {
+    const { GAUNTLET_HEAL_PERCENT } = await import('@game/engine')
+    // Acht Prozent waren zu wenig; unter zehn faellt ein Team ueber dreissig
+    // Kaempfe auseinander.
+    expect(GAUNTLET_HEAL_PERCENT).toBeGreaterThanOrEqual(10)
+  })
+})

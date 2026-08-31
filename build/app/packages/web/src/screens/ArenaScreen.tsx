@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { t } from '../i18n'
 import { errorText } from '../lib/errors'
 import { api, type ArenaView } from '../lib/api'
@@ -16,11 +17,16 @@ import { Screen } from '../ui/Screen'
 export function ArenaScreen({ onBack, onBattle }: { onBack: () => void; onBattle: () => void }) {
   const arena = useAsync(() => api.arena(), [])
   const action = useAction()
+  const [typ, setTyp] = useState<string | null>(null)
   const d = arena.data
+  /** Der gewählte Typ des Tages; ohne Wahl der erste. */
+  const gewaehlt = typ ?? d?.types[0]?.id ?? null
+  const aktiv = d?.types.find((x) => x.id === gewaehlt) ?? null
 
   const start = (tier: string) => {
     haptic.tap()
-    void action.run(() => api.arenaStart(tier), (res) => { arena.set(res.arena); onBattle() })
+    void action.run(() => api.arenaStart(tier, gewaehlt ?? undefined),
+      (res) => { arena.set(res.arena); onBattle() })
   }
 
   const next = () => {
@@ -37,15 +43,30 @@ export function ArenaScreen({ onBack, onBattle }: { onBack: () => void; onBattle
       eyebrow={t('arena.eyebrow')}
       title={t('arena.title')}
       onBack={onBack}
-      aside={d?.typeName ? <span className="tag">{d.typeName}</span> : null}
+      aside={aktiv?.name ? <span className="tag">{aktiv.name}</span> : null}
     >
       <main className="content">
         {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
+        {/* Drei Typen am Tag statt einem: wer gegen den einen kein passendes
+            Team hat, musste sonst bis morgen warten. */}
+        {d && d.types.length > 1 && (
+          <div className="segmented" role="tablist">
+            {d.types.map((ty) => (
+              <button key={ty.id} type="button" role="tab" aria-selected={ty.id === gewaehlt}
+                className="segmented__btn"
+                onClick={() => { haptic.select(); setTyp(ty.id) }}>
+                {ty.name}
+                {ty.clearedTiers.length > 0 && <span className="segmented__done"> ·{ty.clearedTiers.length}</span>}
+              </button>
+            ))}
+          </div>
+        )}
+
         {d && (
           <p className="explain">
             {t('arena.explain', {
-              type: d.typeName ?? '—',
+              type: aktiv?.name ?? d.typeName ?? '—',
               rounds: d.rounds,
               heal: d.healPercent,
               avg: d.averageLevel,
@@ -111,7 +132,7 @@ export function ArenaScreen({ onBack, onBattle }: { onBack: () => void; onBattle
                     disabled={action.busy}
                     onClick={() => start(tier.id)}
                   >
-                    {tier.clearedToday ? t('arena.again') : t('arena.enter')}
+                    {aktiv?.clearedTiers.includes(tier.id) ? t('arena.again') : t('arena.enter')}
                   </button>
                 </article>
               ))}

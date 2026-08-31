@@ -104,8 +104,12 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: AppContext): voi
   app.get('/api/arena', auth, async (req) => arena.view(ctx, req.trainer!))
 
   app.post('/api/arena/start', write, async (req) => {
-    const { tier } = z.object({ tier: z.enum(['easy', 'even', 'hard']) }).parse(req.body)
-    return arena.start(ctx, req.trainer!, tier)
+    const { tier, typeId } = z.object({
+      tier: z.enum(['easy', 'even', 'hard']),
+      /** Welcher der drei Typen des Tages. Ohne Angabe der erste. */
+      typeId: z.string().optional(),
+    }).parse(req.body)
+    return arena.start(ctx, req.trainer!, tier, typeId)
   })
 
   app.post('/api/arena/next', write, async (req) => arena.next(ctx, req.trainer!))

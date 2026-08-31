@@ -444,6 +444,15 @@ function Stage({ phase, busy, onFight }: { phase: Phase; busy: boolean; onFight:
             </span>
             <span className="chanceBar__value num">{percent(e.probability)}</span>
           </div>
+          {/* Wie riskant der naechste Wurf ist. Vorher stand das nirgends —
+              das Wesen verschwand, und es sah aus wie Willkuer. */}
+          {!e.legendary && (
+            <p className={`fleeHint num${e.fleeChance > 0 ? ' fleeHint--risk' : ''}`}>
+              {e.fleeChance > 0
+                ? t('safari.fleeRisk', { n: Math.round(e.fleeChance * 100) })
+                : t('safari.fleeSafe')}
+            </p>
+          )}
           {e.chain > 1 && <p className="center__body num">{t('safari.chain', { n: e.chain })}</p>}
         </section>
       )

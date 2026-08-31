@@ -1,7 +1,8 @@
 import { GameError, type Trainer } from '@game/shared'
 import type { TrainerDef } from '@game/content'
 import {
-  ARENA_HEAL_PERCENT, ARENA_REPEAT_RATIO, ARENA_ROUNDS, ARENA_TIERS, arenaLevel, arenaTypeFor, ENERGY_COSTS,
+  ARENA_HEAL_PERCENT, ARENA_REPEAT_RATIO, ARENA_ROUNDS, ARENA_TIERS, arenaLevel, arenaTypeFor,
+  arenaTypesFor, ENERGY_COSTS,
   computeStats, createRng, findArenaTier, LEGENDARY_CATCH_RATE, type ArenaTier,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
@@ -38,6 +39,10 @@ const typeIds = (ctx: AppContext): string[] =>
 
 export const typeOfDay = (ctx: AppContext, date = gameDate()): string | null =>
   arenaTypeFor(date, typeIds(ctx))
+
+/** Alle Typen, die heute offenstehen. */
+export const typesOfDay = (ctx: AppContext, date = gameDate()): string[] =>
+  arenaTypesFor(date, typeIds(ctx))
 
 /** Durchschnittslevel des aufgestellten Teams — die Bezugsgröße aller Stufen. */
 function averageLevel(ctx: AppContext, trainerId: string): number {
@@ -161,9 +166,18 @@ function healTenPercent(ctx: AppContext, trainerId: string): number {
   return healed
 }
 
-const clearedToday = (ctx: AppContext, trainerId: string, tier: string, date: string): boolean =>
-  ctx.db.prepare('SELECT 1 AS hit FROM arena_clears WHERE trainer_id = ? AND game_date = ? AND tier = ?')
-    .get(trainerId, date, tier) !== undefined
+/*
+ * Abgeschlossen — je Stufe **und** Typ.
+ *
+ * Seit es drei Typen am Tag gibt, waere „einmal je Stufe" zu wenig: wer
+ * Feuer auf "schwer" geschafft hat, soll Wasser auf "schwer" noch voll
+ * bezahlt bekommen. Der Typ steht im Schluessel, damit die drei Angebote
+ * wirklich drei sind.
+ */
+const clearedToday = (ctx: AppContext, trainerId: string, tier: string, date: string, typeId: string): boolean =>
+  ctx.db.prepare(
+    'SELECT 1 AS hit FROM arena_clears WHERE trainer_id = ? AND game_date = ? AND tier = ? AND type_id = ?',
+  ).get(trainerId, date, tier, typeId) !== undefined
 
 export function view(ctx: AppContext, trainer: Trainer) {
   const date = gameDate()
@@ -179,6 +193,23 @@ export function view(ctx: AppContext, trainer: Trainer) {
     typeId,
     typeName: type ? ctx.registry.localized(type.name, trainer.locale) : null,
     typeColor: type?.color ?? null,
+    /*
+     * Die drei Typen des Tages.
+     *
+     * Einer war zu wenig: wer gegen ihn kein passendes Team hat, konnte die
+     * Arena schlicht nicht spielen und musste bis morgen warten. Jeder traegt
+     * seinen eigenen Tagesabschluss je Stufe — sonst waeren die drei Angebote
+     * in Wahrheit eines.
+     */
+    types: typesOfDay(ctx, date).map((id) => {
+      const ty = ctx.registry.tryType(id)
+      return {
+        id,
+        name: ty ? ctx.registry.localized(ty.name, trainer.locale) : id,
+        color: ty?.color ?? null,
+        clearedTiers: ARENA_TIERS.filter((t) => clearedToday(ctx, trainer.id, t.id, date, id)).map((t) => t.id),
+      }
+    }),
     averageLevel: Math.round(average),
     /*
      * Wie fit das Team gerade ist, in Prozent.
@@ -210,7 +241,7 @@ export function view(ctx: AppContext, trainer: Trainer) {
           ? ctx.registry.localized(ctx.registry.item(b.itemId).name, trainer.locale)
           : b.itemId,
       })),
-      clearedToday: clearedToday(ctx, trainer.id, t.id, date),
+      clearedToday: clearedToday(ctx, trainer.id, t.id, date, typeId ?? ''),
     })),
     run: active
       ? {
@@ -224,13 +255,23 @@ export function view(ctx: AppContext, trainer: Trainer) {
 }
 
 /** Einen Durchlauf beginnen. Der erste Kampf startet sofort. */
-export function start(ctx: AppContext, trainer: Trainer, tierId: string) {
+export function start(ctx: AppContext, trainer: Trainer, tierId: string, wunschTyp?: string) {
   const tier = findArenaTier(tierId)
   if (!tier) throw new GameError('validation_failed', { field: 'tier' })
 
   const date = gameDate()
-  const typeId = typeOfDay(ctx, date)
+  const offen = typesOfDay(ctx, date)
+  /*
+   * Ohne Angabe der erste Typ des Tages — so verhaelt sich ein alter Client
+   * weiter wie bisher. Mit Angabe muss es einer der heutigen sein: sonst
+   * koennte man sich seinen Lieblingstyp aussuchen und die Vorbereitung, die
+   * den Sinn der Arena ausmacht, entfaellt.
+   */
+  const typeId = wunschTyp ?? offen[0] ?? null
   if (!typeId) throw new GameError('invalid_state', { reason: 'no_species_for_tier' }, 409)
+  if (!offen.includes(typeId)) {
+    throw new GameError('invalid_state', { reason: 'type_not_today', typeId }, 409)
+  }
 
   const existing = runOf(ctx, trainer.id)
   if (existing && existing.finished === 0 && existing.gameDate === date) {
@@ -305,8 +346,8 @@ export function next(ctx: AppContext, trainer: Trainer) {
     if (wins >= ARENA_ROUNDS) {
       const tier = findArenaTier(run.tier)!
       // Der erste Durchlauf am Tag zahlt voll, jeder weitere ein Viertel.
-      const wiederholung = clearedToday(ctx, trainer.id, tier.id, date)
-      const payout = pay(ctx, trainer, tier, date, wiederholung)
+      const wiederholung = clearedToday(ctx, trainer.id, tier.id, date, run.typeId)
+      const payout = pay(ctx, trainer, tier, date, run.typeId, wiederholung)
       ctx.db.prepare('UPDATE arena_runs SET wins = ? WHERE trainer_id = ?').run(wins, trainer.id)
       // Der ganze Durchlauf ist die Einheit, nicht der einzelne Kampf: eine
       // Aufgabe "fuenf Durchlaeufe" soll fuenf Durchlaeufe heissen.
@@ -336,7 +377,7 @@ export function next(ctx: AppContext, trainer: Trainer) {
  * nur, soweit ein Viertel noch für ein ganzes Stück reicht. Ein halber
  * Sternenstaub wäre keine Belohnung, sondern eine Rundungsfrage.
  */
-function pay(ctx: AppContext, trainer: Trainer, tier: ArenaTier, date: string, wiederholung: boolean) {
+function pay(ctx: AppContext, trainer: Trainer, tier: ArenaTier, date: string, typeId: string, wiederholung: boolean) {
   const anteil = wiederholung ? ARENA_REPEAT_RATIO : 1
   const gold = Math.round(tier.bonusGold * anteil)
   inventory.earnGold(ctx.db, trainer.id, gold)
@@ -345,9 +386,9 @@ function pay(ctx: AppContext, trainer: Trainer, tier: ArenaTier, date: string, w
     .filter((item) => item.quantity > 0)
   for (const item of items) inventory.grant(ctx.db, trainer.id, item.itemId, item.quantity)
   ctx.db.prepare(
-    `INSERT INTO arena_clears (trainer_id, game_date, tier, cleared_at) VALUES (?, ?, ?, ?)
-     ON CONFLICT DO NOTHING`,
-  ).run(trainer.id, date, tier.id, Date.now())
+    `INSERT INTO arena_clears (trainer_id, game_date, tier, type_id, cleared_at)
+     VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,
+  ).run(trainer.id, date, tier.id, typeId, Date.now())
 
   // Zurueckgegeben wird, was wirklich gutgeschrieben wurde — nicht der volle
   // Satz. Eine Anzeige, die mehr nennt als im Beutel ankommt, ist schlimmer

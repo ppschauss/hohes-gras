@@ -1,6 +1,6 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
 import {
-  attemptCatch, BOX_BASE_LIMIT, catchProbability, catchReward, computeStats, createRng, deriveSeed,
+  attemptCatch, BOX_BASE_LIMIT, catchProbability, catchReward, computeStats, createRng, deriveSeed, fleeChance,
   rollCatchDrop,
   ENERGY_REWARDS, LEGENDARY_CATCH_RATE, LEGENDARY_LEVEL_BONUS, randomIvs, rollEncounter,
   isEventTrainer, LEGENDARY_BERRY_ID, LEGENDARY_MAX_BERRIES, isLegendaryCatchRate,
@@ -65,6 +65,10 @@ export interface EncounterView {
   shiny: boolean
   rarity: string
   turn: number
+  /** Wie oft schon geworfen wurde — nur Wuerfe koennen zur Flucht fuehren. */
+  throws: number
+  /** Wie wahrscheinlich das Wesen nach dem *naechsten* Fehlwurf verschwindet. */
+  fleeChance: number
   weakenStacks: number
   calmStacks: number
   maxWeaken: number
@@ -108,6 +112,15 @@ export function encounterView(
     caught: dex.isCaught(ctx.db, trainer.id, e.speciesId),
     rarity: species.rarity,
     turn: e.turn,
+    /*
+     * Wie riskant der naechste Wurf ist.
+     *
+     * Vorher stand das nirgends: das Wesen verschwand, und es sah aus wie
+     * Willkuer. Jetzt kann man abwaegen — noch ein Ball oder lieber erst
+     * beruhigen.
+     */
+    throws: e.throws,
+    fleeChance: legendary ? 0 : fleeChance(e.throws + 1),
     weakenStacks: e.weakenStacks,
     calmStacks: e.calmStacks,
     maxWeaken: MAX_WEAKEN_STACKS,
@@ -749,11 +762,6 @@ function completeArea(
   }
 }
 
-/** Chance the wild creature runs after a failed throw. Rises with the turn
- *  count so an encounter cannot be ground down forever with free actions. */
-function fleeChance(turn: number): number {
-  return Math.min(0.05 + turn * 0.04, 0.5)
-}
 
 /**
  * Der Wurf auf ein Legendaeres.
@@ -794,10 +802,13 @@ export function throwBall(
     const attempt = legendary
       ? legendaryAttempt(e.legendaryBerries, rng)
       : attemptCatch(species, e.level, mods, rng)
-    encounters.bumpTurn(ctx.db, trainer.id)
+    encounters.bumpThrows(ctx.db, trainer.id)
 
     if (!attempt.caught) {
-      const fled = rng.next() < fleeChance(e.turn)
+      // Gerechnet in Wuerfen, nicht in Runden: Vorbereiten ist kein
+      // Fluchtgrund. Der Zaehler ist oben schon erhoeht, also ist dies der
+      // gerade geworfene Wurf.
+      const fled = rng.next() < fleeChance(e.throws + 1)
       if (fled) {
         encounters.clear(ctx.db, trainer.id)
         world.breakChain(ctx.db, trainer.id)

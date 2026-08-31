@@ -7,6 +7,8 @@ export interface ActiveEncounter {
   level: number
   shiny: boolean
   turn: number
+  /** Wie oft schon geworfen wurde. Nur Wuerfe koennen zur Flucht fuehren. */
+  throws: number
   weakenStacks: number
   calmStacks: number
   seed: string
@@ -17,13 +19,13 @@ export interface ActiveEncounter {
 
 interface Row {
   trainer_id: string; area_id: string; species_id: string; level: number
-  shiny: number; turn: number; weaken_stacks: number; calm_stacks: number
+  shiny: number; turn: number; throws: number; weaken_stacks: number; calm_stacks: number
   seed: string; started_at: number; legendary_berries: number
 }
 
 const toEncounter = (r: Row): ActiveEncounter => ({
   trainerId: r.trainer_id, areaId: r.area_id, speciesId: r.species_id, level: r.level,
-  shiny: r.shiny === 1, turn: r.turn, weakenStacks: r.weaken_stacks,
+  shiny: r.shiny === 1, turn: r.turn, throws: r.throws, weakenStacks: r.weaken_stacks,
   calmStacks: r.calm_stacks, seed: r.seed, startedAt: r.started_at,
   legendaryBerries: r.legendary_berries,
 })
@@ -35,7 +37,7 @@ export function activeOf(db: Db, trainerId: string): ActiveEncounter | null {
 
 export function start(
   db: Db,
-  e: Omit<ActiveEncounter, 'turn' | 'weakenStacks' | 'calmStacks' | 'legendaryBerries'>,
+  e: Omit<ActiveEncounter, 'turn' | 'throws' | 'weakenStacks' | 'calmStacks' | 'legendaryBerries'>,
 ): ActiveEncounter {
   // REPLACE rather than INSERT: fleeing is implicit when a new encounter
   // begins, and a stale row must never block the next one.
@@ -49,6 +51,12 @@ export function start(
 
 export function bumpTurn(db: Db, trainerId: string): void {
   db.prepare('UPDATE active_encounter SET turn = turn + 1 WHERE trainer_id = ?').run(trainerId)
+}
+
+/** Ein Wurf. Zaehlt getrennt von der Runde, weil nur Wuerfe zur Flucht fuehren. */
+export function bumpThrows(db: Db, trainerId: string): void {
+  db.prepare('UPDATE active_encounter SET throws = throws + 1, turn = turn + 1 WHERE trainer_id = ?')
+    .run(trainerId)
 }
 
 export function addStack(db: Db, trainerId: string, kind: 'weaken' | 'calm', max: number): void {

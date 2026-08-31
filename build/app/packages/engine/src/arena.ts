@@ -115,16 +115,46 @@ export const ARENA_REPEAT_RATIO = 0.25
 export const ARENA_HEAL_PERCENT = 25
 
 /**
- * Der Typ des Tages.
+ * Wie viele Typen am selben Tag offenstehen.
  *
- * Aus dem Datum gerechnet statt gewürfelt: alle Spieler treffen denselben Typ,
- * und wer morgen wiederkommt, kann sich heute darauf vorbereiten.
+ * Drei. Einer war zu wenig: wer gegen den Typ des Tages kein passendes Team
+ * hat, konnte die Arena schlicht nicht sinnvoll spielen und musste bis morgen
+ * warten. Drei geben eine Wahl, ohne dass die Vorbereitung sinnlos wird — mit
+ * allen achtzehn wäre der „Typ des Tages" keiner mehr.
  */
-export function arenaTypeFor(date: string, typeIds: readonly string[]): string | null {
-  if (typeIds.length === 0) return null
+export const ARENA_TYPES_PER_DAY = 3
+
+/**
+ * Die Typen des Tages.
+ *
+ * Aus dem Datum gerechnet statt gewürfelt: alle Spieler treffen dieselben, und
+ * wer morgen wiederkommt, kann sich heute darauf vorbereiten.
+ *
+ * Die drei liegen weit auseinander (Schrittweite `⌊n/3⌋`, ungerade gemacht),
+ * damit nicht drei benachbarte Typen erscheinen — sonst wäre die Wahl keine.
+ */
+export function arenaTypesFor(date: string, typeIds: readonly string[]): string[] {
+  if (typeIds.length === 0) return []
   const days = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000)
-  const index = ((days % typeIds.length) + typeIds.length) % typeIds.length
-  return typeIds[index]!
+  const n = typeIds.length
+  const start = ((days % n) + n) % n
+  const wie_viele = Math.min(ARENA_TYPES_PER_DAY, n)
+
+  // Eine Schrittweite, die teilerfremd zu n ist, trifft nie zweimal denselben.
+  let schritt = Math.max(1, Math.floor(n / wie_viele))
+  while (schritt > 1 && n % schritt === 0) schritt--
+
+  const out: string[] = []
+  for (let i = 0; i < wie_viele; i++) {
+    const id = typeIds[(start + i * schritt) % n]!
+    if (!out.includes(id)) out.push(id)
+  }
+  return out
+}
+
+/** Der erste Typ des Tages. Bleibt für alles, was genau einen erwartet. */
+export function arenaTypeFor(date: string, typeIds: readonly string[]): string | null {
+  return arenaTypesFor(date, typeIds)[0] ?? null
 }
 
 /**

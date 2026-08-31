@@ -241,8 +241,10 @@ export const api = {
   areaSpawns: () => request<AreaSpawns>('/api/area/spawns'),
 
   arena: () => request<ArenaView>('/api/arena'),
-  arenaStart: (tier: string) =>
-    request<{ arena: ArenaView }>('/api/arena/start', { method: 'POST', body: JSON.stringify({ tier }) }),
+  arenaStart: (tier: string, typeId?: string) =>
+    request<{ arena: ArenaView }>('/api/arena/start', {
+      method: 'POST', body: JSON.stringify({ tier, ...(typeId ? { typeId } : {}) }),
+    }),
   arenaNext: () =>
     request<{ done: boolean; won: boolean; healed: number; battle: unknown | null; arena: ArenaView }>(
       '/api/arena/next', { method: 'POST', body: '{}' }),
@@ -607,6 +609,10 @@ export interface EncounterView {
   shiny: boolean
   rarity: string
   turn: number
+  /** Wie oft schon geworfen wurde. */
+  throws: number
+  /** Wie wahrscheinlich es nach dem *nächsten* Fehlwurf verschwindet. */
+  fleeChance: number
   weakenStacks: number
   calmStacks: number
   maxWeaken: number
@@ -1452,6 +1458,8 @@ export interface ArenaView {
   date: string
   typeId: string | null
   typeName: string | null
+  /** Die drei Typen des Tages, je mit den heute schon geschafften Stufen. */
+  types: Array<{ id: string; name: string; color: string | null; clearedTiers: string[] }>
   averageLevel: number
   teamHealth: number
   rounds: number

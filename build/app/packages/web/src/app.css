@@ -1661,6 +1661,10 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 
 .packRow__warn { font-size: var(--t-xs); color: var(--warn, var(--accent)); }
 
+/* Fluchtrisiko der laufenden Begegnung. Unauffaellig, solange nichts droht. */
+.fleeHint { font-size: var(--t-xs); color: var(--ink-faint); text-align: center; }
+.fleeHint--risk { color: var(--warn, var(--accent)); font-weight: 650; }
+
 /* Globaler Chat. Eigener Bildlauf, damit die Seite darunter ruhig bleibt. */
 .chat {
   display: flex; flex-direction: column; gap: var(--s2);
@@ -1746,6 +1750,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 /* Mengenschalter im Rezept: dieselbe Optik wie die grossen Reiter, nur enger,
    weil er in einer Karte sitzt und nicht ueber einem Bildschirm. */
 .segmented--tight { margin: var(--s2) 0; }
+/* Wie viele Stufen bei diesem Typ heute schon geschafft sind. */
+.segmented__done { color: var(--accent); font-weight: 650; }
 .segmented--tight .segmented__btn { padding: 4px var(--s2); font-size: var(--t-xs); }
 
 /* Erwartete Beute einer Expedition. */
