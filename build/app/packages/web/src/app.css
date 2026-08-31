@@ -97,6 +97,53 @@
 .res__chip--energy svg { color: var(--energy); }
 .res__cap { color: var(--ink-faint); font-weight: 500; }
 
+/*
+ * Auf schmalen Geraeten ruecken die Kapseln zusammen.
+ *
+ * `192,7k` und `320/320 +243` brauchten zusammen 223 Punkte; mit Zurueck-
+ * Knopf, Titel und Rand passte das auf 360 nicht mehr. Weil `.viewport`
+ * senkrecht rollt, rollte die Seite dadurch ploetzlich auch waagerecht — die
+ * Karten standen rechts angeschnitten da. Genau so kam es als Bild zurueck.
+ *
+ * Kleiner statt kuerzer: alle drei Zahlen bleiben stehen. Wer wissen will, wie
+ * viel Energie er hat, soll das nicht aus zweien davon raten.
+ *
+ * Der Block steht *hinter* den Grundregeln, nicht bei der anderen
+ * Bildschirmabfrage weiter oben: gleiche Spezifitaet, also gewinnt die
+ * spaetere. Oben eingesetzt tat er schlicht nichts.
+ */
+@media (max-width: 460px) {
+  .res { gap: var(--s1); min-width: 0; }
+  .res__chip { padding: 4px 7px 4px 5px; gap: 4px; font-size: var(--t-xs); }
+  .res__chip svg { width: 13px; height: 13px; }
+}
+
+/*
+ * Auf sehr schmalen Geraeten gibt auch der Titel etwas nach.
+ *
+ * Die neun Zeichen Mindestbreite stammen aus einem frueheren Fall, in dem der
+ * Titel als "Ver…" dastand, waehrend die Nebenangabe vollstaendig blieb. Die
+ * Nebenangabe ist unter 460 Punkten laengst ausgeblendet, also streitet hier
+ * niemand mehr mit ihm — und sechs Zeichen sind immer noch ein Wort und keine
+ * Andeutung.
+ */
+@media (max-width: 380px) {
+  .appbar__text { min-width: 6ch; }
+}
+
+/*
+ * Ganz unten gibt die Obergrenze nach.
+ *
+ * Auf 320 Punkten passen Zurueck-Knopf, Titel und beide Kapseln auch klein
+ * nicht mehr nebeneinander. Von den drei Energiezahlen ist `/320` die
+ * entbehrlichste: was man *hat* und was darueber liegt, sagen die beiden
+ * anderen; die Obergrenze steht im Energiebereich. Lieber eine Zahl weniger
+ * als eine halb abgeschnittene Seite.
+ */
+@media (max-width: 340px) {
+  .res__cap { display: none; }
+}
+
 /* --- Inhalt ---------------------------------------------------------------
    .viewport ist die scrollende Grid-Zeile, .content der Innenabstand des
    jeweiligen Bildschirms. Getrennt, damit ein Bildschirm eine eigene
@@ -474,7 +521,15 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 /* ================================================================ Abschnitte === */
 
 .section { display: flex; flex-direction: column; gap: var(--s3); }
-.section__head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s3); }
+/* Umbrechen statt ueberlaufen.
+   "Dein Gartenteam" neben "Pokedex" und "Box oeffnen 103" ging sich auf 360
+   Punkten nicht aus, und weil die Knopfreihe nicht nachgibt, stand sie halb
+   ausserhalb des Bildschirms. Zwei Zeilen sind ein kleiner Preis dafuer, dass
+   beide Knoepfe erreichbar bleiben. */
+.section__head {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s3);
+  flex-wrap: wrap;
+}
 .section__eyebrow { font-size: var(--t-xs); color: var(--ink-faint); display: block; }
 .section__actions { display: flex; gap: var(--s2); flex-shrink: 0; }
 .stack { display: flex; flex-direction: column; gap: var(--s2); }

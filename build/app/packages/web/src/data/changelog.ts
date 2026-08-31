@@ -22,6 +22,8 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Auf schmalen Telefonen lief die Kopfzeile über den Rand hinaus und schob die halbe Seite mit; Gold und Energie rücken dort jetzt zusammen.',
+      'Das Expeditionsbüro zeigte seinen Textschlüssel statt seiner Wirkung und hatte kein Symbol. Beides da.',
       'Basis aufgeräumt: die Werkstatt zeigt ihre 26 Rezepte in aufklappbaren Gruppen statt untereinander, mit einem Filter für „jetzt möglich".',
       'Vier Forschungszentren im Labor — Fang & Schillernde, Feld & Expedition, Kampf & Training, Werkstoff & Gerät.',
       'Beutel bekommt Reiter je Art; die Seelenfragmente stehen in einem eigenen statt über allem.',

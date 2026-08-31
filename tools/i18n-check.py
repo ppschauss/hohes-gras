@@ -8,6 +8,7 @@ Praefix ohne einen einzigen Eintrag ist der Fehler, der wirklich vorkommt.
 import json, os, re, sys
 
 SRC = '/mnt/cache/appdata/telegram-pokemon/build/app/packages/web/src'
+ROOT = '/mnt/cache/appdata/telegram-pokemon'
 catalog = json.load(open(os.path.join(SRC, 'i18n/de.json')))
 
 static = re.compile(r"""\bt\(\s*['"]([^'"]+)['"]""")
@@ -102,18 +103,57 @@ for key, namen, datei in calls:
 missing = sorted(k for k in used if k not in catalog)
 gaps = sorted(p for p in prefixes if p and not any(k.startswith(p) for k in catalog))
 
+# ---------------------------------------------------------------- Aufzaehlungen
+#
+# Bei einem dynamischen Schluessel wie `t(f'build.effect.{kind}')` prueft die
+# Regel oben nur, ob *irgendein* Eintrag mit diesem Praefix existiert. Damit
+# rutscht der fehlende einzelne durch: das Expeditionsbuero stand mit
+# `build.effect.expeditionSlotBonus` im Klartext auf dem Bildschirm, und der
+# Pruefer meldete "vollstaendig".
+#
+# Wo sich die moeglichen Werte aus dem Quelltext ablesen lassen, wird deshalb
+# jeder einzelne geprueft. Die Tabelle nennt Praefix, Datei und das Muster, an
+# dem die Werte stehen; ein Suffix deckt Paare wie `research.res-x.what` ab.
+AUFZAEHLUNGEN = [
+    ('build.effect.', 'build/app/packages/engine/src/buildings.ts', r"effectKind: '(\w+)'", ''),
+    ('build.name.', 'build/app/packages/engine/src/buildings.ts', r"^\s*id: '([a-z0-9-]+)', maxLevel", ''),
+    ('nature.', 'build/app/packages/shared/src/domain.ts', None, ''),
+    ('research.', 'build/app/packages/engine/src/research.ts', r"id: '(res-[a-z0-9-]+)'", ''),
+    ('research.', 'build/app/packages/engine/src/research.ts', r"id: '(res-[a-z0-9-]+)'", '.what'),
+    ('arena.tier.', 'build/app/packages/engine/src/arena.ts', r"id: '(easy|even|hard)'", ''),
+]
+
+luecken = []
+for praefix, quelle, muster, suffix in AUFZAEHLUNGEN:
+    pfad = os.path.join(ROOT, quelle)
+    if not os.path.exists(pfad):
+        continue
+    text = open(pfad, encoding='utf-8').read()
+    if muster is None:
+        # NATURES steht als eine Liste von Zeichenketten.
+        block = re.search(r'export const NATURES = \[(.*?)\] as const', text, re.S)
+        werte = re.findall(r"'(\w+)'", block.group(1)) if block else []
+    else:
+        werte = re.findall(muster, text, re.M)
+    for wert in sorted(set(werte)):
+        key = f'{praefix}{wert}{suffix}'
+        if key not in catalog:
+            luecken.append((key, quelle))
+
 print(f'Katalog: {len(catalog)} Schluessel · verwendet: {len(used)} · dynamisch: {len(prefixes)} '
       f'· Fehlergruende: {len(reasons)} · Kapitelbedingungen: {len(condition_kinds)}')
 for key in missing:
     print(f'  FEHLT: {key}')
 for gap in gaps:
     print(f'  PRAEFIX OHNE EINTRAG: {gap}')
+for key, quelle in luecken:
+    print(f'  AUFZAEHLUNG UNVOLLSTAENDIG: {key} — Wert steht in {quelle}')
 for reason in speechless:
     print(f'  GRUND OHNE TEXT: {reason}')
 for kind in speechless_reqs:
     print(f'  KAPITELBEDINGUNG OHNE TEXT: {kind}')
 for key, fehlend, datei in platzhalter:
     print(f'  PLATZHALTER FEHLT: {key} braucht {{{"}, {".join(fehlend)}}} — {datei}')
-if not missing and not gaps and not speechless and not speechless_reqs and not platzhalter:
+if not missing and not gaps and not speechless and not speechless_reqs and not platzhalter and not luecken:
     print('✓ Vollstaendig')
-sys.exit(1 if missing or gaps or speechless or speechless_reqs or platzhalter else 0)
+sys.exit(1 if missing or gaps or speechless or speechless_reqs or platzhalter or luecken else 0)
