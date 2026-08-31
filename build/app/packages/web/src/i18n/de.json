@@ -381,6 +381,7 @@
   "egg.eyebrow": "Ei schlüpfen & Zucht",
   "egg.groups": "Eigruppe: {groups}",
   "egg.hatch": "Schlüpfen lassen",
+  "egg.hatchBonus": "Die Brutstation zieht {n} % von der Brutzeit ab. Sie wird beim Legen verrechnet — ein Ei, das schon liegt, behält seine Zeit.",
   "egg.hatched": "{name} ist geschlüpft!",
   "egg.hint.excellent": "Ausgezeichnete Anlagen",
   "egg.hint.fair": "Solide Anlagen",

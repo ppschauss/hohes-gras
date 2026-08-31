@@ -911,6 +911,8 @@ export interface EggOverview {
   eggs: EggView[]
   maxEggs: number
   minLevel: number
+  /** Prozent kuerzere Brutzeit durch die Brutstation. */
+  hatchSpeedBonus: number
   candidates: Array<{
     id: string; name: string; sprite: string; level: number
     eggGroups: string[]; shiny: boolean

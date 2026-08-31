@@ -190,6 +190,13 @@ export function EggScreen({ onBack }: { onBack: () => void }) {
               ))}
             </div>}
 
+        {/* Was der Ausbau abzieht, und fuer wen. Ohne diesen Satz sieht ein
+            frisch ausgebauter Spieler nur eine Zahl, die er nicht einordnen
+            kann — genau so wurde es gemeldet. */}
+        {(data?.hatchSpeedBonus ?? 0) > 0 && (
+          <p className="explain">{t('egg.hatchBonus', { n: data!.hatchSpeedBonus })}</p>
+        )}
+
         <section className="section">
           <h2>{t('egg.chooseParents')}</h2>
           {data && data.candidates.length < 2

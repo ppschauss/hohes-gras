@@ -22,6 +22,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Die Zucht sagt jetzt, wie viel die Brutstation abzieht — und dass ein bereits gelegtes Ei seine Zeit behält.',
       'Ein Spieltag dauert jetzt fünf Stunden statt vierundzwanzig — die Nacht lag vorher für die meisten im Schlaf, und daran hängen zwei Drittel aller zeitgebundenen Pokémon.',
       'Regentanz, Sonnentag, Sandsturm und Hagelsturm stellen jetzt wirklich das Wetter um — sie standen in 79 Attackenplätzen und taten nichts.',
       'Tausch-Entwicklungen zeigten unter Fortschritt → Entwicklung ihren rohen Textschlüssel. Dort steht jetzt „mit Verbindungskabel".',

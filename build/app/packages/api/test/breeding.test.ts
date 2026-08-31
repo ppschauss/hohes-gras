@@ -29,6 +29,33 @@ function finishEgg(eggId: string) {
     .run(Date.now() - 999 * 60_000, eggId)
 }
 
+describe('Brutstation', () => {
+  it('zieht ihren Bonus beim Legen ab und sagt es', async () => {
+    /*
+     * Gemeldet: "Brutstation geupgraded, die Zeit fuers Ei ist immer noch auf
+     * 2 Stunden". Sie war es nicht — die Grundzeit war laengst halbiert. Nur
+     * stand nirgends, dass der Abzug schon drin ist und dass ein liegendes Ei
+     * seine Zeit behaelt.
+     */
+    const a = addCreature('wildmon', 20)
+    const b = addCreature('nachtmon', 20)
+    h.ctx.db.prepare(
+      `INSERT INTO buildings (trainer_id, building_id, level, built_at) VALUES (?, 'hatchery', 5, ?)
+       ON CONFLICT(trainer_id, building_id) DO UPDATE SET level = 5`,
+    ).run(trainerId, Date.now())
+
+    h.resetRateLimits()
+    await h.post('/api/eggs/pair', { creatureIdA: a, creatureIdB: b }, token)
+
+    const sicht = await h.get('/api/eggs', token)
+    expect(sicht.body.hatchSpeedBonus).toBe(50)
+    const ei = h.ctx.db.prepare('SELECT hatch_minutes AS m FROM eggs WHERE trainer_id = ?')
+      .get(trainerId) as { m: number }
+    const ohneBonus = h.ctx.registry.species('wildmon').hatchCycles * 6
+    expect(ei.m).toBeLessThan(ohneBonus)
+  })
+})
+
 describe('Zucht', () => {
   it('zeigt nur Pokemon ab dem Mindestlevel als Elternteil', async () => {
     addCreature('wildmon', 5)

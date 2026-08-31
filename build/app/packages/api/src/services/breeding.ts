@@ -203,6 +203,16 @@ export function overview(ctx: AppContext, trainer: Trainer) {
     eggs: open.map((e) => eggView(ctx, trainer, e, now)),
     maxEggs: eggSlots(ctx, trainer.id),
     minLevel: MIN_BREEDING_LEVEL,
+    /*
+     * Was die Brutstation gerade abzieht — und fuer wen.
+     *
+     * Gemeldet: "Brutstation geupgraded, die Zeit fuers Ei ist immer noch auf
+     * 2 Stunden". Sie war es nicht: 240 Minuten Grundzeit waren durch den
+     * Ausbau schon auf 120 gefallen. Nur stand das nirgends, und ein bereits
+     * gelegtes Ei behaelt seine Zeit ohnehin. Beides sagt der Bildschirm
+     * jetzt, statt es den Spieler an den Zahlen ablesen zu lassen.
+     */
+    hatchSpeedBonus: bonuses(ctx, trainer.id).hatchSpeedBonus,
     candidates: all
       /*
        * Wer keine Ei-Gruppe hat, gehoert nicht in die Auswahl.
