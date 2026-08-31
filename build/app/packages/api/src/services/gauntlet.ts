@@ -3,7 +3,7 @@ import type { TrainerDef } from '@game/content'
 import {
   createRng, computeStats, gauntletGoldPerWin, gauntletIv, gauntletLevel,
   GAUNTLET_FOES_PER_FIGHT, GAUNTLET_FULL_HEAL_EVERY, GAUNTLET_MILESTONES, gauntletHeals,
-  GAUNTLET_XP_MULTIPLIER, gauntletMaxBst, gauntletXpMultiplier, LEGENDARY_CATCH_RATE,
+  GAUNTLET_XP_MULTIPLIER, gauntletMaxBst, gauntletXpMultiplier, isLegendarySpecies,
   milestoneAt, nextMilestone,
   rollGauntletDrops,
   splitDrops, dropTableFor,
@@ -105,7 +105,7 @@ function buildFoe(ctx: AppContext, trainer: Trainer, regionId: string, streak: n
   const alle = [...ids]
     .map((id) => ctx.registry.trySpecies(id))
     .filter((s): s is NonNullable<typeof s> =>
-      s !== undefined && !s.event && s.catchRate > LEGENDARY_CATCH_RATE)
+      s !== undefined && !s.event && !isLegendarySpecies(s))
   const pool = alle.filter((s) => grenze === 0 || baseStatTotal(s) <= grenze)
   // Faellt eine Region durch das Raster, lieber ein zu starker Gegner als gar
   // keiner — ein Lauf, der nicht anfaengt, ist schlechter als ein harter.

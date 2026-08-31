@@ -63,8 +63,6 @@ export function regionCleared(
  * genug, dass es ein Ereignis bleibt, häufig genug, dass es passiert.
  */
 export const LEGENDARY_ODDS = 0.001
-/** Legendäre erkennt man im Pack an ihrer Fangrate. */
-export const LEGENDARY_CATCH_RATE = 3
 export const LEGENDARY_LEVEL_BONUS = 6
 
 export const rollLegendary = (rng: Rng): boolean => rng.next() < LEGENDARY_ODDS
@@ -90,8 +88,20 @@ export function legendaryCatchChance(berries: number): number {
 }
 
 /** Ist diese Art ein Legendäres? Erkennbar an der Fangrate im Pack. */
-export const isLegendaryCatchRate = (catchRate: number): boolean =>
-  catchRate <= LEGENDARY_CATCH_RATE
+/**
+ * Ist diese Art legendaer?
+ *
+ * Nach der Seltenheit aus dem Pack, nicht nach dem Fangwert. Die Schwelle
+ * "Fangwert hoechstens drei" war eine gute Naeherung und lag trotzdem daneben:
+ * Tanhel, Metang und Metagross haben im Vorbild ebenfalls Fangwert 3. Sie
+ * galten damit als legendaer — nur mit Sagenbeere zu fangen, aus Arena und
+ * Kampfzone verbannt, und der Promille-Wurf konnte sie ziehen. Sie sind
+ * nichts davon.
+ *
+ * Die Seltenheit steht im Pack und ist genau dafuer da.
+ */
+export const isLegendarySpecies = (species: { rarity: string }): boolean =>
+  species.rarity === 'legendary'
 
 /* ------------------------------------------------------------ Ereignisse */
 

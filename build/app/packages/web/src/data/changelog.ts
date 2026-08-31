@@ -22,6 +22,8 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Legendäre erscheinen jetzt mit 0,1 % je Erkundung — bei jedem Wetter und zu jeder Zeit, dafür deutlich seltener. Vorher gab es zwei Wege nebeneinander, einer davon zehnmal zu großzügig.',
+      'Tanhel, Metang und Metagross galten als legendär, weil sie Fangwert 3 haben. Sie brauchen keine Sagenbeere mehr.',
       'Die Zucht sagt jetzt, wie viel die Brutstation abzieht — und dass ein bereits gelegtes Ei seine Zeit behält.',
       'Ein Spieltag dauert jetzt fünf Stunden statt vierundzwanzig — die Nacht lag vorher für die meisten im Schlaf, und daran hängen zwei Drittel aller zeitgebundenen Pokémon.',
       'Regentanz, Sonnentag, Sandsturm und Hagelsturm stellen jetzt wirklich das Wetter um — sie standen in 79 Attackenplätzen und taten nichts.',

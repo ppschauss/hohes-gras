@@ -3,7 +3,7 @@ import { createRng } from './rng.js'
 import {
   BERRY_DROP_CHANCE, EVENT_ODDS, EVENT_PERFECT_CHANCE, LEGENDARY_BASE_CATCH,
   LEGENDARY_MAX_BERRIES, LEGENDARY_ODDS, PERFECT_IV,
-  checkLeagueGate, eventGold, eventLoot, isEventTrainer, isLegendaryCatchRate,
+  checkLeagueGate, eventGold, eventLoot, isEventTrainer, isLegendarySpecies,
   legendaryCatchChance, regionCleared, rollBerryDrop, rollEvent, rollLegendary, rollPerfect,
   eventLevels, eventPartySize,
 } from './league.js'
@@ -165,8 +165,15 @@ describe('Legendäre fangen', () => {
   })
 
   it('erkennt Legendaere an der Fangrate', () => {
-    expect(isLegendaryCatchRate(3)).toBe(true)
-    expect(isLegendaryCatchRate(45)).toBe(false)
+    expect(isLegendarySpecies({ rarity: 'legendary' })).toBe(true)
+    expect(isLegendarySpecies({ rarity: 'rare' })).toBe(false)
+    /*
+     * Der eigentliche Grund fuer den Wechsel: Tanhel, Metang und Metagross
+     * haben im Vorbild Fangwert 3 wie ein Legendaeres. Nach dem Fangwert
+     * gefragt galten sie als legendaer — nur mit Sagenbeere zu fangen und aus
+     * Arena und Kampfzone verbannt. Sie sind bloss selten.
+     */
+    expect(isLegendarySpecies({ rarity: 'rare' })).toBe(false)
   })
 })
 

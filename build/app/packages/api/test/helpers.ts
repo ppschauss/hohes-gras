@@ -82,7 +82,10 @@ function writeMinimalPack(dataDir: string): void {
     species('blattmon', 6, { types: ['grass'] }),
     // Fangrate 3 = legendaer. Steht in keiner Spawn-Tabelle: es taucht nur
     // ueber den 0,1-Prozent-Wurf auf.
-    species('sagenmon', 7, { catchRate: 3 }),
+    // Legendaer heisst jetzt: so im Pack ausgewiesen. Der Fangwert bleibt
+    // niedrig, weil er die Fangchance mitbestimmt — er entscheidet nur nicht
+    // mehr darueber, *ob* etwas legendaer ist.
+    species('sagenmon', 7, { catchRate: 3, rarity: 'legendary' }),
     // Ereignis-Art: nirgends zu fangen, doppelte EP-Kurve, zaehlt nicht in den
     // Dex.
     species('festmon', 8, { event: true, xpFactor: 2 }),

@@ -2,8 +2,8 @@ import { GameError, NATURES, type Trainer } from '@game/shared'
 import {
   attemptCatch, BOX_BASE_LIMIT, catchProbability, catchReward, computeStats, createRng, deriveSeed, fleeChance,
   rollCatchDrop,
-  ENERGY_REWARDS, LEGENDARY_CATCH_RATE, LEGENDARY_LEVEL_BONUS, randomIvs, rollEncounter,
-  isEventTrainer, LEGENDARY_BERRY_ID, LEGENDARY_MAX_BERRIES, isLegendaryCatchRate,
+  ENERGY_REWARDS, LEGENDARY_LEVEL_BONUS, randomIvs, rollEncounter,
+  isEventTrainer, LEGENDARY_BERRY_ID, LEGENDARY_MAX_BERRIES, isLegendarySpecies,
   legendaryCatchChance, rollEvent, rollLegendary, xpForLevel, type Rng,
   coinPurse, findQuantity, findValueCap, METAL_DETECTOR_ID, METAL_DETECTOR_CHARGES,
   rollFind, rollFindKind, rollWander, WANDER_PARTY_MAX, type FindKind,
@@ -93,7 +93,7 @@ export function encounterView(
 ): EncounterView {
   const species = ctx.registry.species(e.speciesId)
   const area = ctx.registry.area(e.areaId)
-  const legendary = isLegendaryCatchRate(species.catchRate)
+  const legendary = isLegendarySpecies(species)
   const mods = buildModifiers(ctx, trainer, e, ballId, berryId)
   return {
     active: true,
@@ -382,7 +382,7 @@ function pickLegendary(ctx: AppContext, regionId: string, rng: Rng): string | nu
   const high = Math.max(...numbers)
 
   const candidates = ctx.registry.obtainableSpecies.filter(
-    (sp) => sp.catchRate <= LEGENDARY_CATCH_RATE && sp.dexNumber >= low && sp.dexNumber <= high,
+    (sp) => isLegendarySpecies(sp) && sp.dexNumber >= low && sp.dexNumber <= high,
   )
   return candidates.length > 0 ? rng.pick(candidates).id : null
 }
@@ -658,7 +658,7 @@ function useLure(
 
 /** Irgendein Legendaeres des Packs — die Notloesung des Prueflufts. */
 function pickAnyLegendary(ctx: AppContext, rng: Rng): string | null {
-  const candidates = ctx.registry.obtainableSpecies.filter((sp) => sp.catchRate <= LEGENDARY_CATCH_RATE)
+  const candidates = ctx.registry.obtainableSpecies.filter(isLegendarySpecies)
   return candidates.length > 0 ? rng.pick(candidates).id : null
 }
 
@@ -678,7 +678,7 @@ export function useLegendaryBerry(
     if (!e) throw new GameError('invalid_state', { reason: 'no_encounter' }, 409)
 
     const species = ctx.registry.species(e.speciesId)
-    if (!isLegendaryCatchRate(species.catchRate)) {
+    if (!isLegendarySpecies(species)) {
       throw new GameError('invalid_state', { reason: 'not_legendary' }, 409)
     }
     if (e.legendaryBerries >= LEGENDARY_MAX_BERRIES) {
@@ -788,7 +788,7 @@ export function throwBall(
     if (!e) throw new GameError('invalid_state', { reason: 'no_encounter' }, 409)
 
     const species = ctx.registry.species(e.speciesId)
-    const legendary = isLegendaryCatchRate(species.catchRate)
+    const legendary = isLegendarySpecies(species)
     const mods = buildModifiers(ctx, trainer, e, ballId, berryId)
 
     inventory.consume(ctx.db, trainer.id, ballId, 1)

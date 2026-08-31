@@ -3,7 +3,7 @@ import type { TrainerDef } from '@game/content'
 import {
   ARENA_HEAL_PERCENT, ARENA_REPEAT_RATIO, ARENA_ROUNDS, ARENA_TIERS, arenaLevel, arenaTypeFor,
   arenaTypesFor, ENERGY_COSTS,
-  computeStats, createRng, findArenaTier, LEGENDARY_CATCH_RATE, type ArenaTier,
+  computeStats, createRng, findArenaTier, isLegendarySpecies, type ArenaTier,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
@@ -72,7 +72,7 @@ function buildOpponent(
    */
   const pool = ctx.registry.obtainableSpecies.filter(
     (s) => s.types.includes(typeId)
-      && s.catchRate > LEGENDARY_CATCH_RATE
+      && !isLegendarySpecies(s)
       && !s.event
       && evolutionStage(ctx, s.id) <= tier.maxStage
       && (tier.maxBst === 0 || baseStatTotal(s) <= tier.maxBst),
