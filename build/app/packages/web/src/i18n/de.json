@@ -52,6 +52,8 @@
   "app.yes": "Ja",
   "area.gym": "Arena",
   "area.gym.hint": "Ordenskampf gegen den Arenaleiter",
+  "area.league": "Top Vier & Meister",
+  "area.league.hint": "Die Liga dieser Region herausfordern",
   "area.masterProgress": "{caught}/{total} Arten · {defeated}/{trainers} Trainer",
   "area.mastered": "Gebiet gemeistert",
   "area.safari": "Safari",

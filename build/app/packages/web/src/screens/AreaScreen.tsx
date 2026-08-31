@@ -31,6 +31,9 @@ export function AreaScreen({ onBack, onSafari, onBattle }: Props) {
   }
 
   const defeated = data?.trainers.filter((x) => x.defeated).length ?? 0
+  const ligaGesamt = (data?.elites.length ?? 0) + (data?.champion ? 1 : 0)
+  const ligaBesiegt = (data?.elites.filter((e) => e.defeated).length ?? 0)
+    + (data?.champion?.defeated ? 1 : 0)
   // Dieselbe Rechnung wie auf dem Server: drei Gold je Level der Verletzten.
   const healCost = (garden.data?.team ?? [])
     .filter((c) => c.hpCurrent < c.hpMax)
@@ -41,7 +44,6 @@ export function AreaScreen({ onBack, onSafari, onBattle }: Props) {
       eyebrow={t('area.title')}
       title={data?.areaName ?? ''}
       onBack={onBack}
-      aside={data && <span className="num">{defeated}/{data.trainers.length} · {t('area.trainers')}</span>}
     >
       <main className="content">
         {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
@@ -68,6 +70,25 @@ export function AreaScreen({ onBack, onSafari, onBattle }: Props) {
               {data && <span className="tag">{defeated}/{data.trainers.length}</span>}
             </span>
           </button>
+
+          {/* Die Liga steht neben dem Training, nicht darin.
+              Am Indigo-Plateau gibt es keinen einzigen gewoehnlichen Trainer,
+              also war der Trainingsknopf gesperrt — und mit ihm der einzige
+              Weg zu den Top Vier. Gemeldet mit "das Plateau sollte doch die
+              Top Vier beheimaten". Ein eigener Eintrag sagt ausserdem, was es
+              ist: die Top Vier sind kein Training, das war die Ansage. */}
+          {ligaGesamt > 0 && (
+            <button type="button" className="menu__row" onClick={() => { haptic.tap(); onBattle() }}>
+              <span className="menu__icon" aria-hidden="true">👑</span>
+              <span className="menu__text">
+                <span className="menu__title">{t('area.league')}</span>
+                <span className="menu__hint">{t('area.league.hint')}</span>
+              </span>
+              <span className="menu__aside">
+                <span className="tag">{ligaBesiegt}/{ligaGesamt}</span>
+              </span>
+            </button>
+          )}
 
           {data?.gym && (
             <button type="button" className="menu__row" onClick={() => { haptic.tap(); onBattle() }}>

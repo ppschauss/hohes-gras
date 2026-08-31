@@ -712,8 +712,12 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
    Name und KP aneinanderklebten. */
 
 /* Eine Zeile im Beutel: Bild, Text, Anzahl. */
+/* Vier Spalten, nicht drei: benutzbare Gegenstaende haben einen Knopf, und der
+   war das vierte Kind eines Dreispalten-Rasters. Es landete damit in einer
+   neuen Zeile unter dem Symbol — 36 Pixel breit, aus denen die Aufschrift
+   herausragte. Genau so kam es als Screenshot zurueck. */
 .bagRow {
-  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto;
+  display: grid; grid-template-columns: 36px minmax(0, 1fr) auto auto;
   align-items: center; gap: var(--s3);
   padding: var(--s2) var(--s3);
   background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
