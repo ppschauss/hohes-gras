@@ -177,7 +177,7 @@ export function tradeStation(ctx: AppContext, trainer: Trainer) {
   const clock = worldClock()
   const bag = inventory.bagOf(ctx.db, trainer.id)
   const cables = bag[LINK_CABLE_ITEM_ID] ?? 0
-  const all = creatures.teamOf(ctx.db, trainer.id).concat(creatures.boxOf(ctx.db, trainer.id, 200))
+  const all = creatures.teamOf(ctx.db, trainer.id).concat(creatures.allBoxOf(ctx.db, trainer.id))
 
   const rows = all.flatMap((c) => {
     const species = ctx.registry.species(c.speciesId)
@@ -226,7 +226,7 @@ export function evolvable(ctx: AppContext, trainer: Trainer) {
   const clock = worldClock()
   const bag = inventory.bagOf(ctx.db, trainer.id)
   const stones = new Set(Object.keys(bag).filter((id) => (bag[id] ?? 0) > 0))
-  const all = creatures.teamOf(ctx.db, trainer.id).concat(creatures.boxOf(ctx.db, trainer.id, 200))
+  const all = creatures.teamOf(ctx.db, trainer.id).concat(creatures.allBoxOf(ctx.db, trainer.id))
 
   return all.flatMap((c) => {
     const options = evolutionOptions(ctx.registry, c, trainer.locale, clock.timeOfDay, stones)

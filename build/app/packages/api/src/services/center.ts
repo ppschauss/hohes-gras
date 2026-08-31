@@ -166,7 +166,7 @@ function rollGift(ctx: AppContext, trainer: Trainer, rng: Rng) {
  * bevorzugt etwas, das ihm noch fehlt: das ist der Reiz.
  */
 function rollTrade(ctx: AppContext, trainer: Trainer, rng: Rng, now: number): CenterOffer | null {
-  const owned = creatures.teamOf(ctx.db, trainer.id).concat(creatures.boxOf(ctx.db, trainer.id, 500))
+  const owned = creatures.teamOf(ctx.db, trainer.id).concat(creatures.allBoxOf(ctx.db, trainer.id))
   const tradable = owned.filter((c) => !busyCreatureIds(ctx, trainer.id).has(c.id))
   if (tradable.length === 0) return null
 
@@ -203,7 +203,7 @@ function offerView(ctx: AppContext, trainer: Trainer, row: center.CenterOfferRow
   const busy = busyCreatureIds(ctx, trainer.id)
 
   const mine = creatures.teamOf(ctx.db, trainer.id)
-    .concat(creatures.boxOf(ctx.db, trainer.id, 500))
+    .concat(creatures.allBoxOf(ctx.db, trainer.id))
     .filter((c) => c.speciesId === row.wantedSpeciesId && !busy.has(c.id))
 
   return {

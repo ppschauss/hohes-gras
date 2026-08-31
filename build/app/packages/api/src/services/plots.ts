@@ -107,7 +107,7 @@ export function state(ctx: AppContext, trainer: Trainer, now = Date.now()): Plot
     .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
 
   const tenders = creatures.teamOf(ctx.db, trainer.id)
-    .concat(creatures.boxOf(ctx.db, trainer.id, 500))
+    .concat(creatures.allBoxOf(ctx.db, trainer.id))
     .filter((c) => isTender(ctx, c.speciesId))
     .map((c) => {
       const species = ctx.registry.species(c.speciesId)

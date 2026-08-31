@@ -116,7 +116,7 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
   app.get('/api/box', auth, async (req) => {
     const trainer = req.trainer!
     const clock = worldClock()
-    const box = creatures.boxOf(ctx.db, trainer.id)
+    const box = creatures.allBoxOf(ctx.db, trainer.id)
     const cap = travel.capOf(ctx, trainer)
     return {
       creatures: box.map((c) => creatureView(ctx.registry, c, trainer.locale, clock.timeOfDay, cap)),

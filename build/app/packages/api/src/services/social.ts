@@ -222,7 +222,7 @@ export function listingView(ctx: AppContext, viewer: Trainer, listing: social.Li
 }
 
 export function marketOverview(ctx: AppContext, trainer: Trainer) {
-  const bag = creatures.boxOf(ctx.db, trainer.id, 100)
+  const bag = creatures.allBoxOf(ctx.db, trainer.id)
   const busy = busyCreatureIds(ctx, trainer.id)
   const listed = social.listedCreatureIds(ctx.db, trainer.id)
   const inTrade = social.creatureIdsInOpenTrades(ctx.db, trainer.id)
@@ -349,7 +349,7 @@ export function tradeOverview(ctx: AppContext, trainer: Trainer) {
       const t = findById(ctx.db, id)
       return t ? [{ trainerId: t.id, displayName: t.displayName }] : []
     }),
-    tradable: creatures.boxOf(ctx.db, trainer.id, 100)
+    tradable: creatures.allBoxOf(ctx.db, trainer.id)
       .filter((c) => !busy.has(c.id) && !listed.has(c.id) && !inTrade.has(c.id))
       .map((c) => creatureView(ctx.registry, c, trainer.locale, worldClock().timeOfDay)),
   }

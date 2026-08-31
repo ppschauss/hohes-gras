@@ -98,6 +98,23 @@ export function boxOf(db: Db, ownerId: string, limit = 200, offset = 0): OwnedCr
   return rows.map(toCreature)
 }
 
+/**
+ * Alles, was in der Box liegt — ohne stille Obergrenze.
+ *
+ * `boxOf` hat eine Vorgabe von 200, und die war jahrelang unauffaellig, weil
+ * niemand so viele hatte. Gemeldet wurde sie als "mein shiny seemon ist weg":
+ * bei 271 Pokemon in der Box fielen 71 aus der Liste, sortiert nach Level
+ * absteigend — und damit ausgerechnet die niedrigstufigen Schillernden, die
+ * man aufhebt statt sie hochzuziehen. Dreizehn von siebzehn waren unsichtbar.
+ *
+ * Wer eine Grenze *will* — eine Vorschau, eine Auswahl —, setzt sie weiter
+ * selbst. Wer alles zeigen will, sagt das hiermit, statt sich auf eine
+ * Vorgabe zu verlassen, die er nicht sieht.
+ */
+export function allBoxOf(db: Db, ownerId: string): OwnedCreature[] {
+  return boxOf(db, ownerId, countOwned(db, ownerId).total)
+}
+
 export function countOwned(db: Db, ownerId: string): { total: number; inTeam: number } {
   const row = db
     .prepare(

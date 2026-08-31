@@ -197,7 +197,7 @@ export function setBrooder(
 export function overview(ctx: AppContext, trainer: Trainer) {
   const now = Date.now()
   const open = eggs.openOf(ctx.db, trainer.id)
-  const all = creatures.teamOf(ctx.db, trainer.id).concat(creatures.boxOf(ctx.db, trainer.id, 100))
+  const all = creatures.teamOf(ctx.db, trainer.id).concat(creatures.allBoxOf(ctx.db, trainer.id))
 
   return {
     eggs: open.map((e) => eggView(ctx, trainer, e, now)),

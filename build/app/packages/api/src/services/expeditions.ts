@@ -153,7 +153,7 @@ export function overview(ctx: AppContext, trainer: Trainer) {
         }
       })),
     available: creatures.teamOf(ctx.db, trainer.id)
-      .concat(creatures.boxOf(ctx.db, trainer.id, 500))
+      .concat(creatures.allBoxOf(ctx.db, trainer.id))
       .filter((c) => !busy.has(c.id))
       .map((c) => {
         const species = ctx.registry.species(c.speciesId)

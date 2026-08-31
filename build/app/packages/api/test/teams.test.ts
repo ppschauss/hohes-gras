@@ -29,6 +29,52 @@ function addToBox(nickname: string): string {
 
 const overview = async () => (await h.get('/api/teams', token)).body
 
+describe('Die Box verschweigt nichts', () => {
+  /**
+   * Eine Kreatur mit vorgegebenem Level anlegen — die Box sortiert danach.
+   */
+  const mitLevel = (level: number, shiny = false): string => {
+    const id = crypto.randomUUID()
+    h.ctx.db.prepare(
+      `INSERT INTO creatures (id, owner_id, species_id, nickname, xp, level, nature,
+         iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe,
+         friendship, energy, hp_current, shiny, moves, caught_at, team_slot)
+       VALUES (?, ?, 'testmon', NULL, 0, ?, 'hardy', 20,20,20,20,20,20, 70, 100, 20, ?, '[]', ?, NULL)`,
+    ).run(id, trainerId, level, shiny ? 1 : 0, Date.now())
+    return id
+  }
+
+  it('zeigt auch das 201. Pokemon', async () => {
+    /*
+     * Gemeldet als "mein shiny seemon ist weg". Es war nicht weg: die Box
+     * lieferte stillschweigend nur 200 Zeilen, sortiert nach Level absteigend.
+     * Bei 271 Pokemon fielen 71 heraus — ausgerechnet die niedrigstufigen,
+     * also die Schillernden, die man aufhebt statt sie hochzuziehen. Dreizehn
+     * von siebzehn waren unsichtbar, und der Zaehler daneben nannte trotzdem
+     * die volle Zahl.
+     */
+    for (let i = 0; i < 210; i++) mitLevel(50)
+    const schatz = mitLevel(3, true)
+
+    const box = await h.get('/api/box', token)
+    const ids = (box.body.creatures as Array<{ id: string }>).map((c) => c.id)
+
+    expect(ids).toContain(schatz)
+    // Und die Liste ist so lang wie der Zaehler daneben behauptet.
+    expect(ids.length).toBe(box.body.boxUsed - 1)  // eines steht im Team
+  })
+
+  it('bietet auch das 201. zum Verkauf an', async () => {
+    // Dieselbe Grenze steckte im Marktplatz, in der Zucht und in der
+    // Tausch-Station — dort sogar bei hundert.
+    for (let i = 0; i < 120; i++) mitLevel(50)
+    const schatz = mitLevel(3)
+
+    const markt = await h.get('/api/market', token)
+    expect((markt.body.sellable as Array<{ id: string }>).map((c) => c.id)).toContain(schatz)
+  })
+})
+
 describe('Teams', () => {
   it('legt beim ersten Aufruf ein aktives Team mit dem Gartenteam an', async () => {
     const r = await h.get('/api/teams', token)

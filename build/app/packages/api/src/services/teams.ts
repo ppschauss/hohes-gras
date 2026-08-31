@@ -71,7 +71,7 @@ export function overview(ctx: AppContext, trainer: Trainer): TeamsState {
 
   const inActive = new Set(list.find((t) => t.active)?.members.map((m) => m.id) ?? [])
   const all = creatures.teamOf(ctx.db, trainer.id)
-    .concat(creatures.boxOf(ctx.db, trainer.id, 500))
+    .concat(creatures.allBoxOf(ctx.db, trainer.id))
 
   return {
     teams: list,
