@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS instances (
 );
 
 CREATE TABLE IF NOT EXISTS trainers (
+  code        TEXT NOT NULL DEFAULT '',
   id          TEXT PRIMARY KEY,
   instance_id TEXT NOT NULL REFERENCES instances(id),
   display_name TEXT NOT NULL,
@@ -74,5 +75,37 @@ CREATE TABLE IF NOT EXISTS friend_requests (
 );
 CREATE INDEX IF NOT EXISTS idx_requests_to ON friend_requests(to_id);
 -- Der Trainer-Code, mit dem man jemanden ueber Instanzgrenzen findet.
-ALTER TABLE trainers ADD COLUMN code TEXT NOT NULL DEFAULT '';
+--
+-- Stand frueher als nacktes `ALTER TABLE` am Dateiende. SQLite kennt kein
+-- `ADD COLUMN IF NOT EXISTS`, also brach der zweite Lauf mit "duplicate column
+-- name" ab — und zwar *bevor* die Tabellen darunter angelegt wurden. Die
+-- Datei behauptete im Kommentar, wiederholbar zu sein, und war es nicht.
+-- Jetzt steht die Spalte in der Tabelle; bestehende Datenbanken haben sie
+-- laengst.
 CREATE INDEX IF NOT EXISTS idx_trainers_code ON trainers(code);
+
+-- Der Aushang des Verbunds.
+--
+-- Nur Abschriften: die Kreatur bleibt auf ihrer Heimatinstanz, hier steht,
+-- wie sie aussieht und was sie kosten soll. Gekauft wird in diesem Schritt
+-- noch nicht — deshalb wandert auch nichts herueber, was man faelschen
+-- koennte.
+--
+-- Eine Instanz schickt ihren ganzen Aushang; was verkauft oder zurueckgezogen
+-- wurde, verschwindet dadurch von selbst.
+CREATE TABLE IF NOT EXISTS market (
+  id           TEXT NOT NULL,
+  instance_id  TEXT NOT NULL,
+  trainer_id   TEXT NOT NULL,
+  seller_name  TEXT NOT NULL,
+  price        INTEGER NOT NULL,
+  note         TEXT NOT NULL,
+  species_name TEXT NOT NULL,
+  level        INTEGER NOT NULL,
+  shiny        INTEGER NOT NULL,
+  iv_percent   INTEGER NOT NULL,
+  sprite       TEXT NOT NULL,
+  created_at   INTEGER NOT NULL,
+  PRIMARY KEY (instance_id, id)
+);
+CREATE INDEX IF NOT EXISTS idx_market_time ON market(created_at);

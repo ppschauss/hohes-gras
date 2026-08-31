@@ -233,6 +233,18 @@ export function marketOverview(ctx: AppContext, trainer: Trainer) {
     maxPrice: MAX_PRICE,
     feePercent: Math.round(MARKET_FEE * 100),
     listings: social.openListings(ctx.db, 50, trainer.id).map((l) => listingView(ctx, trainer, l)),
+    /*
+     * Was im Verbund aushaengt.
+     *
+     * Nur zum Ansehen: gekauft wird ueber Instanzgrenzen noch nicht. Die
+     * Angebote stammen aus dem Zwischenspeicher, den der Hintergrundlauf
+     * fuellt — ein Blick auf den Marktplatz wartet auf keine fremde Leitung.
+     * Eigene Angebote, die ueber den Verbund zurueckkommen, filtert die
+     * Ansicht heraus: sie stehen schon eine Liste weiter oben.
+     */
+    global: hub.cachedMarket(ctx)
+      .filter((l) => l.trainerId !== hub.linkedId(ctx, trainer.id))
+      .map((l) => ({ ...l, note: l.note.slice(0, 120) })),
     ownListings: social.listingsOfSeller(ctx.db, trainer.id).map((l) => listingView(ctx, trainer, l)),
     sellable: bag
       .filter((c) => !busy.has(c.id) && !listed.has(c.id) && !inTrade.has(c.id))

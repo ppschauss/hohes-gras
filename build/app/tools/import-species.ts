@@ -50,6 +50,19 @@ interface EvoNode {
   }>
 }
 
+/**
+ * Arten, die PokeAPI mit einem gewoehnlichen Fangwert fuehrt, hier aber
+ * legendaer sein sollen.
+ *
+ * Die Reihe gibt Mew, Celebi und Rayquaza einen Fangwert von 45 — sie sind
+ * dort Ereignis-Pokemon, die man ueberhaupt nur einmal trifft. Bei uns stehen
+ * sie in Spawn-Tabellen, und die Legendaeren-Regeln haengen allein am Fangwert
+ * (`isLegendaryCatchRate`, Schwelle 3). Mit 45 galten die drei als
+ * gewoehnlich: ohne Sagenbeere fangbar, und Rayquaza durfte in der Kampfzone
+ * als Gegner auftreten. Beides war nicht gemeint.
+ */
+const LEGENDAER_TROTZ_POKEAPI = new Set(['mew', 'celebi', 'rayquaza'])
+
 const GROWTH: Record<string, string> = {
   fast: 'fast', 'medium-fast': 'medium_fast', 'medium-slow': 'medium_slow',
   slow: 'slow', erratic: 'erratic', fluctuating: 'fluctuating',
@@ -226,7 +239,7 @@ export async function importSpecies(
       types: p.types.sort((a, b) => a.slot - b.slot).map((t) => t.type.name).filter((t) => knownTypes.has(t)),
       baseStats,
       growthRate: GROWTH[s.growth_rate.name] ?? 'medium_fast',
-      catchRate: Math.max(1, Math.min(255, s.capture_rate)),
+      catchRate: LEGENDAER_TROTZ_POKEAPI.has(s.name) ? 3 : Math.max(1, Math.min(255, s.capture_rate)),
       baseXpYield: p.base_experience ?? 60,
       hatchCycles: Math.max(1, s.hatch_counter),
       eggGroups: s.egg_groups.map((g) => g.name),

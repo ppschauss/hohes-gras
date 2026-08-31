@@ -1,4 +1,4 @@
-import type { InstanceRow, ChatRow, ProfileRow, ReleaseRow, Store, TrainerRow } from './store.js'
+import type { InstanceRow, ChatRow, MarketRow, ProfileRow, ReleaseRow, Store, TrainerRow } from './store.js'
 
 /**
  * Der Speicher auf Cloudflare D1.
@@ -186,6 +186,37 @@ export function d1Store(db: D1Like): Store {
       const row = await db.prepare('SELECT COUNT(*) AS n FROM trainers WHERE instance_id = ?')
         .bind(instanceId).first<{ n: number }>()
       return row?.n ?? 0
+    },
+
+    async replaceMarket(instanceId, rows) {
+      /*
+       * Erst leeren, dann schreiben.
+       *
+       * D1 kennt keine Transaktion ueber mehrere Anweisungen, also kann
+       * zwischen beiden Schritten ein Leser einen leeren Aushang dieser
+       * Instanz sehen. Das ist der harmlose Ausgang: ein Angebot kurz nicht zu
+       * zeigen ist besser, als eines zu zeigen, das es nicht mehr gibt.
+       */
+      await db.prepare('DELETE FROM market WHERE instance_id = ?').bind(instanceId).run()
+      for (const r of rows) {
+        await db.prepare(
+          `INSERT INTO market (id, instance_id, trainer_id, seller_name, price, note,
+                               species_name, level, shiny, iv_percent, sprite, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ).bind(r.id, instanceId, r.trainerId, r.sellerName, r.price, r.note,
+               r.speciesName, r.level, r.shiny ? 1 : 0, r.ivPercent, r.sprite, r.createdAt).run()
+      }
+    },
+    async openMarket(limit) {
+      const res = await db.prepare(
+        `SELECT id, instance_id AS instanceId, trainer_id AS trainerId, seller_name AS sellerName,
+                price, note, species_name AS speciesName, level, shiny, iv_percent AS ivPercent,
+                sprite, created_at AS createdAt
+           FROM market ORDER BY created_at DESC LIMIT ?`,
+        // SQLite kennt kein Wahrheitswert-Feld: `shiny` kommt als 0 oder 1
+        // zurueck und wird hier wieder zu dem, was die Schnittstelle verspricht.
+      ).bind(limit).all<Omit<MarketRow, 'shiny'> & { shiny: number }>()
+      return res.results.map((r) => ({ ...r, shiny: r.shiny === 1 }))
     },
 
     async putProfile(row) {

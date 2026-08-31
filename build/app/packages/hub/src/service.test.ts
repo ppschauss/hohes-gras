@@ -271,6 +271,78 @@ describe('Chat', () => {
   })
 })
 
+describe('Aushang des Verbunds', () => {
+  const angebot = (id: string, extra: Record<string, unknown> = {}) => ({
+    id, trainerId: 'g-1', sellerName: 'Ash', price: 5000, note: 'guenstig',
+    speciesName: 'Bisasam', level: 30, shiny: false, ivPercent: 70,
+    sprite: '/media/x.png', createdAt: NOW, ...extra,
+  })
+
+  it('nimmt Angebote an und gibt sie wieder heraus', async () => {
+    const put = await call({ method: 'PUT', path: '/market', body: { listings: [angebot('a'), angebot('b')] } })
+    expect(put.status).toBe(200)
+    expect((put.body as { accepted: number }).accepted).toBe(2)
+
+    const get = await call({ method: 'GET', path: '/market' })
+    const rows = (get.body as { rows: Array<{ id: string; instanceId: string }> }).rows
+    expect(rows.map((r) => r.id).sort()).toEqual(['a', 'b'])
+    // Die Herkunft setzt der Dienst, nicht der Absender.
+    expect(rows.every((r) => r.instanceId === 'heim')).toBe(true)
+  })
+
+  it('ersetzt den ganzen Aushang, statt anzuhaengen', async () => {
+    /*
+     * Der eigentliche Sinn des Ersetzens: was verkauft oder zurueckgezogen
+     * wurde, verschwindet von selbst. Ein Schaufenster, das Verkauftes zeigt,
+     * ist aergerlicher als eines, das kurz leer steht.
+     */
+    await call({ method: 'PUT', path: '/market', body: { listings: [angebot('a'), angebot('b')] } })
+    await call({ method: 'PUT', path: '/market', body: { listings: [angebot('b')] } })
+
+    const get = await call({ method: 'GET', path: '/market' })
+    expect((get.body as { rows: Array<{ id: string }> }).rows.map((r) => r.id)).toEqual(['b'])
+  })
+
+  it('laesst die Herkunft nicht faelschen', async () => {
+    // Was eine fremde Instanz schickt, ist eine Behauptung — auch ueber sich
+    // selbst. Der Dienst schreibt die Instanz aus der Signatur ein.
+    await call({ method: 'PUT', path: '/market', body: { listings: [angebot('a', { instanceId: 'fremd' })] } })
+    const get = await call({ method: 'GET', path: '/market' })
+    expect((get.body as { rows: Array<{ instanceId: string }> }).rows[0]!.instanceId).toBe('heim')
+  })
+
+  it('beschneidet masslose Angaben und wirft Angebote ohne Kennung weg', async () => {
+    await call({
+      method: 'PUT',
+      path: '/market',
+      body: {
+        listings: [
+          angebot('a', { price: 10 ** 12, level: 9999, ivPercent: 500, note: 'x'.repeat(500) }),
+          angebot('', {}),
+        ],
+      },
+    })
+    const rows = (await call({ method: 'GET', path: '/market' })).body as {
+      rows: Array<{ price: number; level: number; ivPercent: number; note: string }>
+    }
+    expect(rows.rows).toHaveLength(1)
+    expect(rows.rows[0]!.price).toBe(10_000_000)
+    expect(rows.rows[0]!.level).toBe(500)
+    expect(rows.rows[0]!.ivPercent).toBe(100)
+    expect(rows.rows[0]!.note.length).toBe(120)
+  })
+
+  it('weist einen Aushang ohne Liste ab', async () => {
+    const r = await call({ method: 'PUT', path: '/market', body: { listings: 'alles' } })
+    expect(r.status).toBe(400)
+  })
+
+  it('laesst niemanden ohne Signatur lesen', async () => {
+    const r = await hub({ method: 'GET', path: '/market' })
+    expect(r.status).toBe(401)
+  })
+})
+
 describe('Freunde über Instanzen', () => {
   const anlegen = async (telegramId: string, name: string, code: string) =>
     (await call({

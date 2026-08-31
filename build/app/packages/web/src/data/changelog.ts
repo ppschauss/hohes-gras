@@ -22,6 +22,8 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Verbund: fremde Marktangebote sind sichtbar. Ansehen geht, kaufen noch nicht — dafür braucht es eine Treuhand.',
+      'Mew, Celebi und Rayquaza gelten jetzt als legendär: nur mit Sagenbeere zu fangen, und Rayquaza tritt nicht mehr in der Kampfzone an.',
       'Auf schmalen Telefonen lief die Kopfzeile über den Rand hinaus und schob die halbe Seite mit; Gold und Energie rücken dort jetzt zusammen.',
       'Das Expeditionsbüro zeigte seinen Textschlüssel statt seiner Wirkung und hatte kein Symbol. Beides da.',
       'Basis aufgeräumt: die Werkstatt zeigt ihre 26 Rezepte in aufklappbaren Gruppen statt untereinander, mit einem Filter für „jetzt möglich".',

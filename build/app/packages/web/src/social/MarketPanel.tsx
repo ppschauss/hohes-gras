@@ -110,6 +110,45 @@ export function MarketPanel() {
               ))}
             </div>}
       </section>
+      {/*
+        * Der Aushang des Verbunds.
+        *
+        * Nur zum Ansehen: gekauft wird ueber Instanzgrenzen noch nicht, und
+        * das steht auch dabei. Ein Knopf, der nichts tut, waere schlimmer als
+        * keiner — ein Angebot ohne Erklaerung, warum es keinen gibt, aber
+        * auch.
+        */}
+      {d && d.global.length > 0 && (
+        <section className="section">
+          <h2>{t('market.global')}</h2>
+          <p className="explain">{t('market.globalHint')}</p>
+          <div className="stack">
+            {d.global.map((l) => (
+              <div key={`${l.instanceId}:${l.id}`} className="listing listing--far">
+                <div className="farRow">
+                  {l.sprite && <img src={l.sprite} alt="" width={48} height={48} className="farRow__mon" />}
+                  <span className="farRow__text">
+                    <span className="farRow__name">
+                      {l.speciesName}
+                      {l.shiny && <span title={t('creature.shiny')}> ✨</span>}
+                    </span>
+                    <span className="farRow__meta num">
+                      {t('creature.level', { n: l.level })} · {t('creature.ivs')} {l.ivPercent} %
+                    </span>
+                  </span>
+                  <span className="listing__price num">{number(l.price)}</span>
+                </div>
+                <div className="listing__foot">
+                  <span className="listing__meta">
+                    <span className="listing__seller">{t('market.by', { name: l.sellerName })}</span>
+                    {l.note && <span className="listing__note">„{l.note}"</span>}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </>
   )
 }

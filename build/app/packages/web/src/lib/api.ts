@@ -1085,6 +1085,12 @@ export interface MarketOverview {
   maxPrice: number
   feePercent: number
   listings: MarketListingView[]
+  /** Was im Verbund aushaengt — nur zum Ansehen. */
+  global: Array<{
+    id: string; instanceId: string; trainerId: string; sellerName: string
+    price: number; note: string; speciesName: string; level: number
+    shiny: boolean; ivPercent: number; sprite: string; createdAt: number
+  }>
   ownListings: MarketListingView[]
   sellable: CreatureLike[]
 }

@@ -1,5 +1,5 @@
 import { globalTrainerId, verify, type SignedRequest } from './auth.js'
-import type { ProfileRow, Store } from './store.js'
+import type { MarketRow, ProfileRow, Store } from './store.js'
 
 /**
  * Der Verbund-Dienst.
@@ -60,6 +60,17 @@ export const CHAT_PER_INSTANCE_PER_WINDOW = 60
 export const CHAT_WINDOW_MS = 60_000
 /** Wie viele auf einmal ausgeliefert werden. */
 export const CHAT_PAGE = 50
+
+/**
+ * Wie viele Angebote eine Instanz aushaengen darf.
+ *
+ * Der lokale Marktplatz zeigt fuenfzig; mehr als das kann eine Instanz auch
+ * im Verbund nicht sinnvoll beitragen. Die Grenze steht hier und nicht nur
+ * beim Absender: was eine fremde Instanz schickt, ist eine Behauptung.
+ */
+const MARKET_PER_INSTANCE = 60
+const MARKET_PAGE = 60
+const NOTE_MAX = 120
 
 export function createHub(config: HubConfig) {
   const now = config.now ?? (() => Date.now())
@@ -323,6 +334,59 @@ export function createHub(config: HubConfig) {
     }
 
     /* -------------------------------------------------------- Rangliste */
+    /* ------------------------------------------------------------- Markt */
+    /*
+     * Der Aushang: fremde Angebote sehen, noch nicht kaufen.
+     *
+     * Was hier liegt, ist eine Abschrift — die Kreatur bleibt auf ihrer
+     * Heimatinstanz. Deshalb ist dieser Schritt harmlos: es wandert nichts
+     * herueber, was jemand faelschen koennte, und ein erfundenes Angebot
+     * kostet hoechstens einen enttaeuschten Blick. Der Kauf kommt getrennt,
+     * mit Treuhand, und erst dann wird es ernst.
+     *
+     * Eine Instanz schickt ihren ganzen Aushang auf einmal; verkaufte und
+     * zurueckgezogene Angebote verschwinden dadurch von selbst.
+     */
+    if (req.method === 'PUT' && req.path === '/market') {
+      const { listings } = body as { listings?: unknown }
+      if (!Array.isArray(listings)) return bad(400, 'validation_failed', { field: 'listings' })
+
+      const text = (v: unknown, max: number) =>
+        (typeof v === 'string' ? v : '').slice(0, max)
+      const num = (v: unknown, max: number) =>
+        Math.max(0, Math.min(max, Math.floor(typeof v === 'number' && Number.isFinite(v) ? v : 0)))
+
+      const rows: MarketRow[] = []
+      for (const roh of listings.slice(0, MARKET_PER_INSTANCE)) {
+        const l = roh as Record<string, unknown>
+        const id = text(l.id, 64)
+        const trainerId = text(l.trainerId, 64)
+        // Ohne Kennung laesst sich ein Angebot spaeter niemandem zuordnen.
+        if (!id || !trainerId) continue
+        rows.push({
+          id,
+          instanceId: instance.id,
+          trainerId,
+          sellerName: text(l.sellerName, 32) || '—',
+          price: num(l.price, 10_000_000),
+          note: text(l.note, NOTE_MAX),
+          speciesName: text(l.speciesName, 48) || '?',
+          level: num(l.level, 500),
+          shiny: l.shiny === true,
+          ivPercent: num(l.ivPercent, 100),
+          sprite: text(l.sprite, 200),
+          createdAt: num(l.createdAt, Number.MAX_SAFE_INTEGER) || now(),
+        })
+      }
+      await store.replaceMarket(instance.id, rows)
+      return { status: 200, body: { accepted: rows.length } }
+    }
+
+    if (req.method === 'GET' && req.path === '/market') {
+      const rows = await store.openMarket(MARKET_PAGE)
+      return { status: 200, body: { rows } }
+    }
+
     if (req.method === 'GET' && req.path === '/leaderboard') {
       const rows = await store.topProfiles(50)
       return { status: 200, body: { rows } }

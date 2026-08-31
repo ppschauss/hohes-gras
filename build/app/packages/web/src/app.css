@@ -1342,6 +1342,18 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .stufe__items { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s3); font-size: var(--t-xs); color: var(--ink-muted); }
 .stufe__item { display: inline-flex; align-items: center; gap: 4px; }
 
+/* --- Angebote aus dem Verbund --------------------------------------------
+   Bewusst schlichter als ein eigenes Angebot: es ist eine Abschrift, keine
+   Kreatur, und man kann damit noch nichts tun ausser sie anzusehen. Eine
+   volle Kreaturenkarte wuerde mehr versprechen, als dahintersteht. ------- */
+
+.listing--far { border-style: dashed; }
+.farRow { display: flex; align-items: center; gap: var(--s3); padding: var(--s3); }
+.farRow__mon { image-rendering: pixelated; flex: none; }
+.farRow__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.farRow__name { font-weight: 650; font-size: var(--t-sm); }
+.farRow__meta { font-size: var(--t-xs); color: var(--ink-muted); }
+
 /* --- Aenderungen ---------------------------------------------------------- */
 
 .log__head { display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap; }

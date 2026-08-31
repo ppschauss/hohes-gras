@@ -10,7 +10,8 @@ import { purgeOldCounters } from '../repos/counters.js'
 import { purgeStalePulses } from '../repos/pulse.js'
 import { abandonStale } from '../repos/battles.js'
 import {
-  linkNew, pushCodes, pushProfiles, refreshLeaderboard, refreshRelease, releaseInfo,
+  linkNew, pushCodes, pushMarket, pushProfiles, refreshLeaderboard, refreshMarket,
+  refreshRelease, releaseInfo,
 } from '../services/hub.js'
 
 export interface Job {
@@ -118,8 +119,13 @@ export const JOBS: Job[] = [
       const codes = await pushCodes(ctx)
       const pushed = await pushProfiles(ctx)
       const rows = await refreshLeaderboard(ctx)
-      if (linked || pushed || codes) {
-        console.log(`[job] Verbund: ${linked} angemeldet, ${codes} Codes, ${pushed} Profile, ${rows} in der Rangliste`)
+      // Der Aushang: eigene Angebote hoch, fremde herunter. Beides im selben
+      // Takt wie die Rangliste — ein Marktplatz aendert sich nicht schneller.
+      const angeboten = await pushMarket(ctx)
+      const fremde = await refreshMarket(ctx)
+      if (linked || pushed || codes || angeboten || fremde) {
+        console.log(`[job] Verbund: ${linked} angemeldet, ${codes} Codes, ${pushed} Profile, `
+          + `${rows} in der Rangliste, ${angeboten} Angebote hoch, ${fremde} herunter`)
       }
 
       /*

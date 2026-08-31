@@ -32,6 +32,27 @@ export interface HubLeaderboardRow {
   level: number
 }
 
+/**
+ * Ein fremdes Marktangebot, so wie es hier ankommt.
+ *
+ * Eine Abschrift, keine Kreatur: was hier steht, reicht zum Ansehen und
+ * Vergleichen und zu nichts sonst. Der Kauf kommt getrennt, mit Treuhand.
+ */
+export interface HubListing {
+  id: string
+  instanceId: string
+  trainerId: string
+  sellerName: string
+  price: number
+  note: string
+  speciesName: string
+  level: number
+  shiny: boolean
+  ivPercent: number
+  sprite: string
+  createdAt: number
+}
+
 const enabled = (ctx: AppContext): boolean => ctx.config.hubEnabled
 
 /**
@@ -242,6 +263,88 @@ export async function refreshLeaderboard(ctx: AppContext): Promise<number> {
   if (!res?.rows) return 0
   ctx.db.prepare(
     `INSERT INTO hub_cache (key, payload, fetched_at) VALUES ('leaderboard', ?, ?)
+     ON CONFLICT(key) DO UPDATE SET payload = excluded.payload, fetched_at = excluded.fetched_at`,
+  ).run(JSON.stringify(res.rows), Date.now())
+  return res.rows.length
+}
+
+/**
+ * Den eigenen Aushang hochschicken.
+ *
+ * Der ganze auf einmal, nicht Angebot fuer Angebot: was verkauft oder
+ * zurueckgezogen wurde, verschwindet dadurch von selbst. Ein Loeschbefehl je
+ * Angebot waere ein zweiter Weg, auf dem etwas verlorengehen kann — und ein
+ * Schaufenster, das Verkauftes zeigt, ist schlimmer als eines, das kurz leer
+ * steht.
+ *
+ * Verkaeufer ohne globale Id bleiben draussen. Ohne sie liesse sich das
+ * Angebot spaeter niemandem zuordnen, und genau das braucht der Kauf.
+ */
+export async function pushMarket(ctx: AppContext, limit = 60): Promise<number> {
+  if (!enabled(ctx)) return 0
+  const rows = ctx.db.prepare(
+    `SELECT l.id, l.seller_id AS sellerId, l.price, l.note, l.created_at AS createdAt,
+            c.species_id AS speciesId, c.level, c.shiny,
+            c.iv_hp AS ivHp, c.iv_atk AS ivAtk, c.iv_def AS ivDef,
+            c.iv_spa AS ivSpa, c.iv_spd AS ivSpd, c.iv_spe AS ivSpe,
+            t.display_name AS sellerName
+       FROM market_listings l
+       JOIN creatures c ON c.id = l.creature_id
+       JOIN trainers t ON t.id = l.seller_id
+      WHERE l.sold_at IS NULL AND l.cancelled_at IS NULL
+      ORDER BY l.created_at DESC LIMIT ?`,
+  ).all(limit) as Array<Record<string, number | string>>
+
+  const listings = rows.flatMap((r) => {
+    const globalId = linkedId(ctx, String(r.sellerId))
+    if (!globalId) return []
+    const species = ctx.registry.trySpecies(String(r.speciesId))
+    const ivs = [r.ivHp, r.ivAtk, r.ivDef, r.ivSpa, r.ivSpd, r.ivSpe].map(Number)
+    return [{
+      id: String(r.id),
+      trainerId: globalId,
+      sellerName: String(r.sellerName),
+      price: Number(r.price),
+      note: String(r.note ?? ''),
+      speciesName: species ? ctx.registry.localized(species.name, 'de') : String(r.speciesId),
+      level: Number(r.level),
+      shiny: Number(r.shiny) === 1,
+      ivPercent: Math.round((ivs.reduce((a, b) => a + b, 0) / (6 * 31)) * 100),
+      sprite: species ? (Number(r.shiny) === 1 ? species.spriteShiny : species.sprite) : '',
+      createdAt: Number(r.createdAt),
+    }]
+  })
+
+  const res = await call(ctx, 'PUT', '/market', { listings }) as { accepted?: number } | null
+  return res?.accepted ?? 0
+}
+
+/**
+ * Der zuletzt geholte Aushang, ohne Netz.
+ *
+ * Wie bei der Rangliste: ein Blick auf den Marktplatz darf nicht auf eine
+ * fremde Leitung warten.
+ */
+export function cachedMarket(ctx: AppContext): HubListing[] {
+  if (!enabled(ctx)) return []
+  const row = ctx.db.prepare('SELECT payload FROM hub_cache WHERE key = ?')
+    .get('market') as { payload: string } | undefined
+  if (!row) return []
+  try {
+    const rows = JSON.parse(row.payload) as HubListing[]
+    return Array.isArray(rows) ? rows : []
+  } catch {
+    return []
+  }
+}
+
+/** Den Aushang des Verbunds holen und ablegen. */
+export async function refreshMarket(ctx: AppContext): Promise<number> {
+  if (!enabled(ctx)) return 0
+  const res = await call(ctx, 'GET', '/market') as { rows?: HubListing[] } | null
+  if (!res?.rows) return 0
+  ctx.db.prepare(
+    `INSERT INTO hub_cache (key, payload, fetched_at) VALUES ('market', ?, ?)
      ON CONFLICT(key) DO UPDATE SET payload = excluded.payload, fetched_at = excluded.fetched_at`,
   ).run(JSON.stringify(res.rows), Date.now())
   return res.rows.length

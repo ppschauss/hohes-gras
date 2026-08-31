@@ -98,6 +98,36 @@ export interface ChatRow {
   createdAt: number
 }
 
+/**
+ * Ein Marktangebot, wie es im Verbund steht.
+ *
+ * Nur Schaufenster: was hier liegt, ist eine **Abschrift** des Angebots auf
+ * seiner Heimatinstanz, keine Kreatur. Gekauft wird in diesem Schritt noch
+ * nicht — und deshalb wandert auch nichts herueber, was man faelschen koennte.
+ * Die Kreatur selbst bleibt dort, wo sie entstanden ist; hier steht, wie sie
+ * aussieht und was sie kosten soll.
+ *
+ * Der Name des Verkaeufers wird mitgeschrieben, nicht nachgeschlagen — aus
+ * demselben Grund wie im Chat: wer sich umbenennt, aendert damit nicht
+ * rueckwirkend, unter welchem Namen er etwas angeboten hat.
+ */
+export interface MarketRow {
+  /** Die Id des Angebots auf seiner Heimatinstanz. */
+  id: string
+  instanceId: string
+  trainerId: string
+  sellerName: string
+  price: number
+  note: string
+  speciesName: string
+  level: number
+  shiny: boolean
+  /** Veranlagung in Prozent — die Zahl, nach der man ein Angebot beurteilt. */
+  ivPercent: number
+  sprite: string
+  createdAt: number
+}
+
 export interface Store {
   /** Wer diesen Trainer-Code trägt. Null, wenn niemand. */
   trainerByCode(code: string): Promise<TrainerRow | null>
@@ -130,6 +160,19 @@ export interface Store {
   getTrainer(id: string): Promise<TrainerRow | null>
   putTrainer(row: TrainerRow): Promise<void>
   countTrainers(instanceId: string): Promise<number>
+
+  /**
+   * Die Angebote einer Instanz vollstaendig ersetzen.
+   *
+   * Ersetzen statt anhaengen: eine Instanz schickt ihren ganzen Aushang, und
+   * was verkauft oder zurueckgezogen wurde, verschwindet damit von selbst. Ein
+   * Loeschbefehl je Angebot waere ein zweiter Weg, auf dem etwas verlorengehen
+   * kann — und Angebote, die es nicht mehr gibt, sind das aergerlichste, was
+   * ein Schaufenster zeigen kann.
+   */
+  replaceMarket(instanceId: string, rows: readonly MarketRow[]): Promise<void>
+  /** Die neuesten Angebote aller Instanzen. */
+  openMarket(limit: number): Promise<MarketRow[]>
 
   putProfile(row: ProfileRow): Promise<void>
   /** Rangliste über alle Instanzen, absteigend. */

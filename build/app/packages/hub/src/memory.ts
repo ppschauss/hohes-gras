@@ -1,4 +1,4 @@
-import type { InstanceRow, ProfileRow, Store, TrainerRow, ReleaseRow, ChatRow, FriendRow, FriendRequestRow } from './store.js'
+import type { InstanceRow, MarketRow, ProfileRow, Store, TrainerRow, ReleaseRow, ChatRow, FriendRow, FriendRequestRow } from './store.js'
 
 /**
  * Ein Speicher im Arbeitsspeicher.
@@ -22,6 +22,7 @@ export function memoryStore(): Store {
   const chat: ChatRow[] = []
   const friends: FriendRow[] = []
   const requests: FriendRequestRow[] = []
+  let market: MarketRow[] = []
   return {
     async trainerByCode(code) {
       return [...trainers.values()].find((t) => t.code === code) ?? null
@@ -81,6 +82,12 @@ export function memoryStore(): Store {
     async putTrainer(row) { trainers.set(row.id, row) },
     async countTrainers(instanceId) {
       return [...trainers.values()].filter((t) => t.instanceId === instanceId).length
+    },
+    async replaceMarket(instanceId, rows) {
+      market = [...market.filter((m) => m.instanceId !== instanceId), ...rows]
+    },
+    async openMarket(limit) {
+      return [...market].sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)
     },
     async putProfile(row) { profiles.set(row.trainerId, row) },
     async topProfiles(limit) {
