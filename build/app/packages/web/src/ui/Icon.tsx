@@ -13,7 +13,7 @@ export type IconName =
   | 'shop' | 'energy' | 'gold' | 'dex' | 'back' | 'chevron' | 'check'
   | 'weather' | 'clock' | 'spark'
   | 'feed' | 'play' | 'wash' | 'rest'
-  | 'caught' | 'bag' | 'trophy' | 'lab'
+  | 'caught' | 'bag' | 'trophy' | 'lab' | 'gear'
 
 interface Props {
   name: IconName
@@ -80,6 +80,11 @@ const PATHS: Record<IconName, string> = {
   trophy: 'M7 4.5h10v4a5 5 0 0 1-10 0ZM7 6H4.5v1.5A3 3 0 0 0 7.5 10.5M17 6h2.5v1.5a3 3 0 0 1-3 3M12 13.5V17M9 20h6M9.5 17h5',
   // Kolben: die Basis mit Labor, Werkstatt und Ausbau.
   lab: 'M10 3.5v5.2L5.2 17.4A2 2 0 0 0 7 20.5h10a2 2 0 0 0 1.8-3.1L14 8.7V3.5M9 3.5h6M7.8 14h8.4',
+  /* Ein Zahnrad: acht Zaehne auf einem Ring, dazu die Nabe. Bewusst mit
+     wenigen, geraden Strichen — bei 22 Pixeln zerfaellt jede feinere Kontur. */
+  gear: 'M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4ZM12 2.8v2.6M12 18.6v2.6'
+    + 'M21.2 12h-2.6M5.4 12H2.8M18.5 5.5l-1.8 1.8M7.3 16.7l-1.8 1.8'
+    + 'M18.5 18.5l-1.8-1.8M7.3 7.3 5.5 5.5',
 }
 
 export function Icon({ name, size = 22, className }: Props) {

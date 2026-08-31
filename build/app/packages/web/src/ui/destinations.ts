@@ -33,7 +33,15 @@ export const DESTINATIONS: Destination[] = [
   { screen: 'records', icon: 'trophy', labelKey: 'menu.records.title', feature: 'story' },
   { screen: 'friends', icon: 'friends', labelKey: 'menu.friends.title', feature: 'social' },
   { screen: 'energy', icon: 'energy', labelKey: 'menu.energy.title', feature: 'energy' },
-  { screen: 'themes', icon: 'spark', labelKey: 'menu.themes.title', feature: 'themes' },
+  /*
+   * Heisst "Einstellungen", nicht "Designs".
+   *
+   * Hinter der Kachel liegen zwei Dinge: das Aussehen und der Spielstand —
+   * Export, Loeschen und, fuer den Betreiber, der Update-Knopf. Unter
+   * "Designs" hat das niemand vermutet; gemeldet mit "gibts keinen Punkt
+   * Daten mehr". Er war da, nur unter einem Namen, der ihn versteckte.
+   */
+  { screen: 'themes', icon: 'gear', labelKey: 'menu.themes.title', feature: 'themes' },
   { screen: 'changelog', icon: 'dex', labelKey: 'menu.changelog.title', feature: 'story' },
 ]
 

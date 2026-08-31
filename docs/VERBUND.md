@@ -434,7 +434,7 @@ Der Ablauf:
 4. **Der Betreiber bekommt eine Nachricht** — einmal je Stand, nicht je Lauf.
    Eine Meldung alle zehn Minuten wäre keine Nachricht, sondern eine
    Belästigung; der Zähler steht in `hub_cache` und übersteht einen Neustart.
-5. **Ein Knopf in der App** (Fortschritt → Daten, nur für Admins) löst aus.
+5. **Ein Knopf in der App** (Einstellungen → Konto & Daten, nur für Admins) löst aus.
 
 ### Warum der Knopf nicht selbst baut
 

@@ -180,7 +180,7 @@ der Dienst antwortet — sonst kehrt es zum alten Stand zurück und spielt die
 Datenbank ein.
 
 **Mit Verbund** kommt eine Telegram-Nachricht, sobald ein neuer Stand
-veröffentlicht wurde, und in der App steht unter *Fortschritt → Daten* ein
+veröffentlicht wurde, und in der App steht unter *Einstellungen → Konto & Daten* ein
 Knopf. Damit der etwas bewirkt, muss auf dem Wirt der Wächter laufen:
 
 ```bash
