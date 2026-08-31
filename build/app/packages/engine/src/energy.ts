@@ -133,7 +133,7 @@ export const ENERGY_COSTS: Record<EnergyAction, number> = {
    * kaempft dort fuenfzig Mal fuer denselben Einsatz. Der Preis liegt vorne,
    * damit er nie mitten in einer Serie zuschlaegt — genau wie bei der Arena.
    */
-  gauntlet: 10,
+  gauntlet: 20,
 }
 
 /**

@@ -911,7 +911,14 @@ export interface EggOverview {
   eggs: EggView[]
   maxEggs: number
   minLevel: number
-  candidates: Array<{ id: string; name: string; sprite: string; level: number; eggGroups: string[]; shiny: boolean }>
+  candidates: Array<{
+    id: string; name: string; sprite: string; level: number
+    eggGroups: string[]; shiny: boolean
+    /** Was vererbt wird — und damit das, wonach man das Paar auswaehlt. */
+    nature: string
+    ivs: { hp: number; atk: number; def: number; spa: number; spd: number; spe: number }
+    ivPercent: number
+  }>
 }
 
 
@@ -1542,10 +1549,11 @@ export interface GauntletView {
     drops: Array<{ itemId: string; name: string; icon: string }>
   }>
   energyCost: number
-  healPercent: number
+  /** Alle wie viel Stufen das Team vollstaendig geheilt wird. */
+  fullHealEvery: number
   xpMultiplier: number
   averageLevel: number
-  milestones: Array<{ at: number; gold: number; materials: number; heals: boolean }>
+  milestones: Array<{ at: number; gold: number; materials: number }>
   run: {
     regionId: string
     regionName: string

@@ -9,6 +9,8 @@ import { sectionOf } from './NavBar'
 
 interface Props {
   active: Screen
+  /** Woher man kommt — entscheidet bei Bildschirmen ohne festen Bereich. */
+  history?: readonly Screen[]
   boot: Bootstrap
   onChange: (screen: Screen) => void
 }
@@ -23,9 +25,9 @@ interface Props {
  * Unterschied zwischen den beiden Fassungen: nicht mehr Platz für dasselbe,
  * sondern ein Weg weniger zu allem.
  */
-export function Sidebar({ active, boot, onChange }: Props) {
+export function Sidebar({ active, history = [], boot, onChange }: Props) {
   const signOut = useGame((s) => s.signOut)
-  const section = sectionOf(active)
+  const section = sectionOf(active, history)
   const byScreen = new Map(DESTINATIONS.map((d) => [d.screen, d]))
 
   return (
@@ -58,7 +60,7 @@ export function Sidebar({ active, boot, onChange }: Props) {
               {items.map((d) => (
                 <RailItem
                   key={d.screen} screen={d.screen} icon={d.icon} label={t(d.labelKey)}
-                  current={active === d.screen || sectionOf(active) === d.screen}
+                  current={active === d.screen || sectionOf(active, history) === d.screen}
                   onChange={onChange}
                 />
               ))}

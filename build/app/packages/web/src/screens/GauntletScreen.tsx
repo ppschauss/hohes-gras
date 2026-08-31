@@ -43,7 +43,7 @@ export function GauntletScreen({ onBack, onBattle }: { onBack: () => void; onBat
       <main className="content">
         {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
-        {d && <p className="explain">{t('gauntlet.explain', { n: d.energyCost })}</p>}
+        {d && <p className="explain">{t('gauntlet.explain', { n: d.energyCost, heal: d.fullHealEvery })}</p>}
 
         {/* Was der letzte Lauf gebracht hat. Ohne das verschwindet alles stumm
             im Beutel, und eine Serie von dreissig fuehlt sich an wie nichts. */}
@@ -74,12 +74,30 @@ export function GauntletScreen({ onBack, onBattle }: { onBack: () => void; onBat
                   xp: number(d.run.xp),
                 })}
               </p>
+              {/* Wie weit es noch ist — als Balken, nicht als Rechenaufgabe.
+                  "Serie 33, naechste Stufe bei 50" verlangt vom Leser die
+                  Subtraktion; ein Balken zeigt sie. */}
+              {d.run.next && (
+                <div className="bar bar--lg" role="img"
+                  aria-label={t('gauntlet.toNext', { n: d.run.next.at - d.run.streak })}>
+                  <span className="bar__fill bar__fill--xp"
+                    style={{ width: `${fortschritt(d.run.streak, d.run.next.at)}%` }} />
+                </div>
+              )}
               <p className="center__body num">
                 {d.run.next
-                  ? t('gauntlet.nextAt', {
+                  ? `${t('gauntlet.toNext', { n: d.run.next.at - d.run.streak })} · ${t('gauntlet.nextAt', {
                       n: d.run.next.at, gold: number(d.run.next.gold), mats: d.run.next.materials,
-                    })
+                    })}`
                   : t('gauntlet.noNext')}
+              </p>
+              {/* Die Erholung haengt an einer eigenen Marke, nicht an den
+                  Praemienstufen — das muss man vor dem naechsten Kampf wissen. */}
+              <p className="center__body num">
+                {t('gauntlet.toHeal', {
+                  n: d.fullHealEvery - (d.run.streak % d.fullHealEvery),
+                  every: d.fullHealEvery,
+                })}
               </p>
               <div className="row">
                 <button type="button" className="btn btn--primary" disabled={action.busy} onClick={onBattle}>
@@ -160,3 +178,19 @@ export function GauntletScreen({ onBack, onBattle }: { onBack: () => void; onBat
 }
 
 export type { GauntletView }
+
+/**
+ * Wie weit die Serie zwischen der letzten und der naechsten Stufe steht.
+ *
+ * Von der vorigen Stufe aus gerechnet, nicht von null: sonst stuende der
+ * Balken zwischen fuenfzig und hundert die halbe Zeit fast voll und bewegte
+ * sich kaum noch.
+ */
+function fortschritt(streak: number, ziel: number): number {
+  const vorher = MEILEN.filter((m) => m < ziel).pop() ?? 0
+  const spanne = ziel - vorher
+  if (spanne <= 0) return 100
+  return Math.max(0, Math.min(100, ((streak - vorher) / spanne) * 100))
+}
+
+const MEILEN = [0, 10, 15, 25, 50, 100]

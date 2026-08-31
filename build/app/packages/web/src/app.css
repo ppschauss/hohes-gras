@@ -1252,6 +1252,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
   cursor: pointer; min-width: 0;
   transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
 }
+/* Wesen und Veranlagung: die zwei Zahlen, nach denen man das Paar waehlt. */
+.pick__werte { font-size: 10px; color: var(--ink-muted); text-align: center; }
 .pick--on { border-color: var(--accent); background: var(--surface-raised); }
 .pick:disabled { opacity: 0.4; cursor: default; }
 .pick__mon { image-rendering: pixelated; }

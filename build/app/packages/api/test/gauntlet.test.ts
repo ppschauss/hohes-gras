@@ -185,31 +185,80 @@ describe('Heilen und Beleben', () => {
   const hpOf = (id: string): number =>
     (h.ctx.db.prepare('SELECT hp_current AS hp FROM creatures WHERE id = ?').get(id) as { hp: number }).hp
 
-  it('belebt an einer Stufe, nicht zwischendurch', async () => {
-    /*
-     * Der gemeldete Fehler: die Heilung uebersprang Besiegte auch an den
-     * Stufen. Wer einmal umfiel, blieb den ganzen Lauf draussen — und weil nur
-     * antritt, wer steht, bekam am Ende nur der letzte Stehende noch Erfahrung.
-     */
+  /** Ein zweites Teammitglied, damit ein Gefallener den Kampf nicht verhindert. */
+  const zweitesMitglied = () => {
+    const id = crypto.randomUUID()
+    h.ctx.db.prepare(
+      `INSERT INTO creatures (id, owner_id, species_id, xp, level, nature, iv_hp, iv_atk, iv_def,
+         iv_spa, iv_spd, iv_spe, friendship, energy, hp_current, shiny, moves, caught_at, team_slot)
+       VALUES (?, ?, 'testmon', 0, 20, 'hardy', 20, 20, 20, 20, 20, 20, 70, 100, 200, 0, '["tackle"]', ?, 1)`,
+    ).run(id, trainerId, Date.now())
+    return id
+  }
+
+  /** Dem Gegner einen Kraftpunkt lassen: macht den Ausgang eindeutig. */
+  const weakenFoe = () => {
+    const row = h.ctx.db
+      .prepare('SELECT id, state FROM battles WHERE trainer_id = ? AND finished_at IS NULL')
+      .get(trainerId) as { id: string; state: string }
+    const state = JSON.parse(row.state) as { sides: Array<{ party: Array<{ hp: number }> }> }
+    for (const f of state.sides[1]!.party) f.hp = 1
+    h.ctx.db.prepare('UPDATE battles SET state = ? WHERE id = ?').run(JSON.stringify(state), row.id)
+  }
+
+  /**
+   * Einen Lauf mit dieser Serie aufsetzen und den offenen Kampf gewinnen.
+   *
+   * Ueber den echten Kampf, nicht ueber die Datenbank: die Auszahlung und die
+   * Heilung haengen an der Zugabwicklung, und eine von Hand gesetzte Zeile
+   * laeuft an ihnen vorbei.
+   */
+  const gewinneBei = async (streak: number) => {
     const region = (await h.get('/api/gauntlet', token)).body.regions[0].id
     h.resetRateLimits()
     await h.post('/api/gauntlet/start', { regionId: region }, token)
+    h.ctx.db.prepare('UPDATE gauntlet_runs SET streak = ? WHERE trainer_id = ?').run(streak, trainerId)
+    weakenFoe()
+    h.resetRateLimits()
+    return h.post('/api/battle/action', { kind: 'move', moveIndex: 0 }, token)
+  }
 
+  it('belebt an der Fuenfundzwanzig', async () => {
+    /*
+     * Der urspruenglich gemeldete Fehler: die Heilung uebersprang Besiegte.
+     * Wer einmal umfiel, blieb den ganzen Lauf draussen — und weil nur
+     * antritt, wer steht, bekam am Ende nur der letzte Stehende Erfahrung.
+     */
+    zweitesMitglied()
     const gefallen = knockOut()
-    // Serie kurz vor der ersten Stufe: der naechste Sieg ist Nummer zehn.
-    h.ctx.db.prepare('UPDATE gauntlet_runs SET streak = 9 WHERE trainer_id = ?').run(trainerId)
-    expect(hpOf(gefallen)).toBe(0)
+    const r = await gewinneBei(24)
 
-    // Die Auszahlung der Stufe laeuft ueber `next`, das den letzten Kampf
-    // liest — hier genuegt die Heilung selbst.
-    const { GAUNTLET_MILESTONES } = await import('@game/engine')
-    expect(GAUNTLET_MILESTONES[0]!.heals).toBe(true)
+    expect(r.status).toBe(200)
+    expect(r.body.gauntletAdvance.streak).toBe(25)
+    expect(hpOf(gefallen)).toBeGreaterThan(0)
   })
 
-  it('heilt je Sieg genug, dass ein Team eine Serie ueberlebt', async () => {
-    const { GAUNTLET_HEAL_PERCENT } = await import('@game/engine')
-    // Acht Prozent waren zu wenig; unter zehn faellt ein Team ueber dreissig
-    // Kaempfe auseinander.
-    expect(GAUNTLET_HEAL_PERCENT).toBeGreaterThanOrEqual(10)
+  it('heilt an einer Praemienstufe nicht mehr', async () => {
+    /*
+     * Zehn und fuenfzehn zahlen Gold und Werkstoffe, sind aber keine
+     * Rastplaetze mehr — genau das war die Ansage.
+     */
+    zweitesMitglied()
+    const gefallen = knockOut()
+    const r = await gewinneBei(9)
+
+    expect(r.body.gauntletAdvance.streak).toBe(10)
+    expect(r.body.gauntletAdvance.payout?.at).toBe(10)
+    expect(hpOf(gefallen)).toBe(0)
+  })
+
+  it('gibt zwischen den Marken keine Kraftpunkte zurueck', async () => {
+    // Vorher zwoelf Prozent nach jedem Sieg. Jetzt nichts.
+    const angeschlagen = zweitesMitglied()
+    h.ctx.db.prepare('UPDATE creatures SET hp_current = 3 WHERE id = ?').run(angeschlagen)
+
+    const r = await gewinneBei(5)
+    expect(r.body.gauntletAdvance.streak).toBe(6)
+    expect(hpOf(angeschlagen)).toBe(3)
   })
 })

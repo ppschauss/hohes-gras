@@ -2,7 +2,7 @@ import { GameError, type Trainer } from '@game/shared'
 import type { TrainerDef } from '@game/content'
 import {
   createRng, computeStats, gauntletGoldPerWin, gauntletIv, gauntletLevel,
-  GAUNTLET_FOES_PER_FIGHT, GAUNTLET_HEAL_PERCENT, GAUNTLET_MILESTONES,
+  GAUNTLET_FOES_PER_FIGHT, GAUNTLET_FULL_HEAL_EVERY, GAUNTLET_MILESTONES, gauntletHeals,
   GAUNTLET_XP_MULTIPLIER, gauntletMaxBst, gauntletXpMultiplier, LEGENDARY_CATCH_RATE,
   milestoneAt, nextMilestone,
   rollGauntletDrops,
@@ -189,7 +189,7 @@ export function view(ctx: AppContext, trainer: Trainer) {
   return {
     regions,
     energyCost: energy.costOf('gauntlet'),
-    healPercent: GAUNTLET_HEAL_PERCENT,
+    fullHealEvery: GAUNTLET_FULL_HEAL_EVERY,
     // Der Faktor beim aktuellen Stand: er flacht ueber die Serie ab, also ist
     // eine feste Zahl hier die falsche Auskunft.
     xpMultiplier: Math.round(gauntletXpMultiplier(run?.streak ?? 0) * 100) / 100,
@@ -371,12 +371,17 @@ export function next(
       }]
     })
 
-    // Erst die Stufe, dann heilen: eine Stufe heilt ganz, sonst gibt es den
-    // kleinen Anteil.
     const stufe = milestoneAt(streak)
     const payout = stufe ? pay(ctx, trainer, run.regionId, stufe) : null
-    // An der Stufe vollzaehlig, dazwischen nur ein Anteil fuer die Stehenden.
-    const healed = heal(ctx, trainer.id, stufe?.heals ? 100 : GAUNTLET_HEAL_PERCENT, Boolean(stufe?.heals))
+    /*
+     * Geheilt wird alle fuenfundzwanzig Stufen, und dann ganz.
+     *
+     * Vorher gab es nach jedem Sieg zwoelf Prozent zurueck und an jeder
+     * Praemienstufe eine Vollheilung — also schon bei zehn. Das las sich als
+     * "die Pokemon werden mitten drin geheilt, teilweise auch voll". Die
+     * Erholung haengt jetzt an einer einzigen, nachvollziehbaren Marke.
+     */
+    const healed = gauntletHeals(streak) ? heal(ctx, trainer.id, 100, true) : 0
     recordBest(ctx, trainer.id, run.regionId, streak)
 
     // Alles, was dieser Kampf gebracht hat, auf den Lauf aufaddieren — Gold

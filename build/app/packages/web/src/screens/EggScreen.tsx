@@ -189,10 +189,17 @@ export function EggScreen({ onBack }: { onBack: () => void }) {
                     const chosen = parents.includes(c.id)
                     return (
                       <button key={c.id} type="button" className={`pick${chosen ? ' pick--on' : ''}`}
-                        aria-pressed={chosen} onClick={() => toggle(c.id)}>
+                        aria-pressed={chosen} onClick={() => toggle(c.id)}
+                        /* Vererbt wird beides. Am Rechner steht die volle
+                           Aufschluesselung im Tooltip, auf dem Telefon reichen
+                           Wesen und Gesamtwert auf der Kachel. */
+                        title={werteText(c)}>
                         <img src={c.sprite} alt="" width={40} height={40} className="pick__mon" />
                         <span className="pick__name">{c.name}</span>
                         <span className="pick__meta">{t('egg.groups', { groups: c.eggGroups.join(', ') })}</span>
+                        <span className="pick__werte num">
+                          {t(`nature.${c.nature}`)} · {c.ivPercent} %
+                        </span>
                       </button>
                     )
                   })}
@@ -206,4 +213,18 @@ export function EggScreen({ onBack }: { onBack: () => void }) {
       </main>
     </Screen>
   )
+}
+
+/**
+ * Die Zeile fuer den Tooltip: Wesen und alle sechs Anlagen.
+ *
+ * Am Rechner faehrt man mit der Maus darueber und sieht, was das Pokemon
+ * wirklich mitbringt, ohne die Kachel zu vergroessern — genau darum wurde
+ * gebeten ("beim Drueberhovern die Werte anzeigen wie im Garten und der Box").
+ */
+function werteText(c: { nature: string; ivPercent: number; ivs: Record<string, number> }): string {
+  const werte = (['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const)
+    .map((k) => `${t(`stat.${k}`)} ${c.ivs[k]}`)
+    .join(' · ')
+  return `${t('creature.nature')}: ${t(`nature.${c.nature}`)}\n${t('creature.ivs')}: ${c.ivPercent} %\n${werte}`
 }

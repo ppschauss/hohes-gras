@@ -54,18 +54,23 @@ export const gauntletXpMultiplier = (streak: number): number =>
   GAUNTLET_XP_MULTIPLIER / (1 + Math.max(0, streak) / GAUNTLET_XP_TAPER)
 
 /**
- * Anteil der KP, den das Team nach jedem gewonnenen Kampf zurückbekommt.
+ * Alle wie viel Stufen das Team vollstaendig geheilt und belebt wird.
  *
- * Zwölf Prozent. Acht waren zu wenig: wer fällt, tritt beim nächsten Kampf gar
- * nicht mehr an — und bekommt damit auch keine Erfahrung mehr. Über einen
- * langen Lauf schrumpfte das Team so auf den letzten Stehenden zusammen, und
- * am Ende bekam nur der noch etwas. Genau so gemeldet.
+ * Fuenfundzwanzig, und dazwischen gar nichts. Vorher gab es nach jedem Sieg
+ * zwoelf Prozent zurueck und an jeder Praemienstufe — also schon bei zehn und
+ * fuenfzehn — eine volle Heilung. Das war zu viel und vor allem zu beliebig:
+ * "die Pokemon werden mitten drin geheilt, teilweise auch voll", gemeldet mit
+ * dem Vorschlag, den ich hier uebernehme.
  *
- * Die Stufen beleben zusätzlich; siehe `heal()` im Dienst. Zwischen ihnen
- * bleibt Umfallen ein echter Verlust — das ist das Risiko, das die Serie
- * überhaupt zu einer macht.
+ * Der Preis dafuer ist echt: fuenfundzwanzig Kaempfe auf Augenhoehe ohne einen
+ * einzigen Kraftpunkt zurueck sind nur mit dem Beutel zu schaffen. Genau das
+ * macht die Fuenfundzwanzig aber zu einer Marke statt zu einer Zwischenzahl.
  */
-export const GAUNTLET_HEAL_PERCENT = 12
+export const GAUNTLET_FULL_HEAL_EVERY = 25
+
+/** Wird das Team bei diesem Stand vollstaendig geheilt? */
+export const gauntletHeals = (streak: number): boolean =>
+  streak > 0 && streak % GAUNTLET_FULL_HEAL_EVERY === 0
 
 /**
  * Wie viele Pokémon gleichzeitig antreten.
@@ -82,25 +87,25 @@ export const GAUNTLET_FOES_PER_FIGHT = 1
  * dicht beieinander, damit auch ein kurzer Besuch etwas abwirft; danach zieht
  * es sich, damit hundert eine Zahl bleibt, die man erzählt.
  *
- * Jede Stufe heilt das Team vollständig. Ohne das wären fünfzig unerreichbar,
- * und mit einer Heilung nach jedem Kampf gäbe es kein Risiko mehr — so sind
- * die Stufen zugleich die Rastplätze.
+ * Geheilt wird hier nicht mehr: das haengt seit der Meldung "die Pokemon
+ * werden mitten drin geheilt" allein an `gauntletHeals`, alle fünfundzwanzig
+ * Stufen. Prämie und Rastplatz fallen deshalb nur bei 25, 50 und 100
+ * zusammen — bei zehn und fünfzehn gibt es Gold und Werkstoffe, aber keine
+ * Erholung.
  */
 export interface GauntletMilestone {
   at: number
   gold: number
   /** Wie viele Einheiten der Regionsbeute es gibt. */
   materials: number
-  /** Vollheilung an dieser Stufe. */
-  heals: boolean
 }
 
 export const GAUNTLET_MILESTONES: GauntletMilestone[] = [
-  { at: 10, gold: 400, materials: 3, heals: true },
-  { at: 15, gold: 700, materials: 4, heals: true },
-  { at: 25, gold: 1500, materials: 7, heals: true },
-  { at: 50, gold: 4000, materials: 15, heals: true },
-  { at: 100, gold: 12000, materials: 35, heals: true },
+  { at: 10, gold: 400, materials: 3 },
+  { at: 15, gold: 700, materials: 4 },
+  { at: 25, gold: 1500, materials: 7 },
+  { at: 50, gold: 4000, materials: 15 },
+  { at: 100, gold: 12000, materials: 35 },
 ]
 
 /** Die höchste Stufe. Darüber hinaus gibt es keine Prämien mehr — die Serie

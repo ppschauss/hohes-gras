@@ -12,7 +12,7 @@ import './app.css'
 export function App() {
   const wide = useWide()
   const {
-    auth, boot, screen, submitting,
+    auth, boot, screen, history, submitting,
     start, submitLinkCode, setScreen, syncScreenFromLocation, refresh,
   } = useGame()
 
@@ -65,7 +65,7 @@ export function App() {
   if (wide) {
     return (
       <div className="deck">
-        <Sidebar active={screen} boot={boot} onChange={setScreen} />
+        <Sidebar active={screen} history={history} boot={boot} onChange={setScreen} />
         <div className="deck__main">
           <div className="viewport">{game}</div>
         </div>
@@ -77,7 +77,7 @@ export function App() {
   // kennt seinen Titel selbst, und zwei Leisten uebereinander waren auf einem
   // Telefon eine Verschwendung.
   return (
-    <Shell footer={<NavBar active={screen} onChange={setScreen} />}>
+    <Shell footer={<NavBar active={screen} history={history} onChange={setScreen} />}>
       <div className="viewport">{game}</div>
     </Shell>
   )

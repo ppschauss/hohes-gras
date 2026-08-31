@@ -3,7 +3,7 @@ import {
   canBreed, computeStats, createRng, hatchProgress, produceEgg, xpForLevel,
   BROOD_PHASES, BROOD_SHINY_BONUS, broodCare, broodIvBonus, broodMinutes, UNBREEDABLE_GROUPS,
   broodPhaseKind, broodPhasesDue, broodShinyExtra, nextBroodPhaseAt,
-  IV_MAX, SHINY_BASE_ODDS, MIN_BREEDING_LEVEL,
+  IV_MAX, ivPercent, SHINY_BASE_ODDS, MIN_BREEDING_LEVEL,
 } from '@game/engine'
 import type { SpeciesDef } from '@game/content'
 import type { AppContext } from '../context.js'
@@ -225,6 +225,17 @@ export function overview(ctx: AppContext, trainer: Trainer) {
           level: c.level,
           eggGroups: species.eggGroups,
           shiny: c.shiny,
+          /*
+           * Wesen und Veranlagung stehen jetzt auch hier.
+           *
+           * Beides wird vererbt, und beides entscheidet, welches Paar sich
+           * lohnt — bei der Zucht mehr als irgendwo sonst. Sichtbar war es
+           * bisher nur im Garten und in der Box, also musste man vor der Wahl
+           * den Bildschirm wechseln und sich Zahlen merken.
+           */
+          nature: c.nature,
+          ivs: c.ivs,
+          ivPercent: ivPercent(c.ivs),
         }
       }),
   }

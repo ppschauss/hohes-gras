@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   dropsForRegion, gauntletGoldPerWin, gauntletIv, gauntletLevel, gauntletMaxBst,
+  GAUNTLET_FULL_HEAL_EVERY, gauntletHeals,
   GAUNTLET_MILESTONES, GAUNTLET_XP_MULTIPLIER, gauntletXpMultiplier, milestoneAt, nextMilestone,
   rollGauntletDrops, splitDrops,
 } from './gauntlet.js'
@@ -68,10 +69,20 @@ describe('Kampfzone', () => {
       }
     })
 
-    it('heilt an jeder Stufe vollstaendig', () => {
-      // Ohne das waeren fuenfzig unerreichbar; mit Heilung nach jedem Kampf
-      // gaebe es kein Risiko. Die Stufen sind die Rastplaetze.
-      expect(GAUNTLET_MILESTONES.every((m) => m.heals)).toBe(true)
+    it('heilt alle fuenfundzwanzig Stufen und dazwischen nie', () => {
+      /*
+       * Vorher hing die Erholung an den Praemienstufen — also schon bei zehn
+       * und fuenfzehn — und dazu gab es nach jedem Sieg zwoelf Prozent
+       * zurueck. Gemeldet als "die Pokemon werden mitten drin geheilt,
+       * teilweise auch voll". Jetzt haengt sie an einer einzigen Marke.
+       */
+      expect(GAUNTLET_FULL_HEAL_EVERY).toBe(25)
+      for (const stand of [0, 1, 9, 10, 15, 24, 26, 49, 99]) {
+        expect(gauntletHeals(stand)).toBe(false)
+      }
+      for (const stand of [25, 50, 75, 100, 125]) {
+        expect(gauntletHeals(stand)).toBe(true)
+      }
     })
   })
 

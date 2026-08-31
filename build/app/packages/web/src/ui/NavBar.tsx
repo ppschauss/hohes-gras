@@ -19,23 +19,52 @@ interface NavDef {
  * haengt am Startbildschirm statt hier.
  */
 export const NAV: NavDef[] = [
-  { screen: 'home', labelKey: 'nav.home', icon: 'home', covers: ['shop', 'eggs', 'coop', 'progress', 'energy', 'center', 'plots', 'themes'] },
+  {
+    screen: 'home', labelKey: 'nav.home', icon: 'home',
+    // Expeditionen, Arena und Kampfzone erreicht man ueber den Start, nicht
+    // ueber die Karte. Die Expeditionen standen hier unter `map` und liessen
+    // deshalb die Weltkarte aufleuchten — in der Seitenleiste sogar beide
+    // Eintraege zugleich. Genau so gemeldet.
+    covers: ['shop', 'eggs', 'coop', 'progress', 'energy', 'center', 'plots', 'themes',
+      'expeditions', 'arena', 'gauntlet'],
+  },
   { screen: 'garden', labelKey: 'nav.garden', icon: 'garden', covers: ['dex'] },
-  { screen: 'map', labelKey: 'nav.map', icon: 'map', covers: ['area', 'safari', 'battle', 'expeditions'] },
+  { screen: 'map', labelKey: 'nav.map', icon: 'map', covers: ['area', 'safari'] },
   { screen: 'teams', labelKey: 'nav.teams', icon: 'team', covers: ['box'] },
   { screen: 'friends', labelKey: 'nav.friends', icon: 'friends', covers: [] },
 ]
 
-const sectionOf = (screen: Screen): Screen =>
-  NAV.find((n) => n.screen === screen || n.covers.includes(screen))?.screen ?? 'home'
+/**
+ * Bildschirme, die zu keinem festen Bereich gehoeren.
+ *
+ * Ein Kampf kann aus einem Gebiet kommen, aus der Arena oder aus der
+ * Kampfzone. Fest unter der Karte eingetragen liess er waehrend eines
+ * Kampfzonen-Laufs die Weltkarte aufleuchten. Woher er kam, weiss nur der
+ * Verlauf — also fragt er ihn.
+ */
+const OHNE_HEIMAT: Screen[] = ['battle']
+
+const direkt = (screen: Screen): Screen | null =>
+  NAV.find((n) => n.screen === screen || n.covers.includes(screen))?.screen ?? null
+
+const sectionOf = (screen: Screen, history: readonly Screen[] = []): Screen => {
+  if (OHNE_HEIMAT.includes(screen)) {
+    for (let i = history.length - 1; i >= 0; i--) {
+      const vorher = history[i]
+      if (vorher && !OHNE_HEIMAT.includes(vorher)) return sectionOf(vorher)
+    }
+  }
+  return direkt(screen) ?? 'home'
+}
 
 interface Props {
   active: Screen
+  history?: readonly Screen[]
   onChange: (screen: Screen) => void
 }
 
-export function NavBar({ active, onChange }: Props) {
-  const section = sectionOf(active)
+export function NavBar({ active, history = [], onChange }: Props) {
+  const section = sectionOf(active, history)
   return (
     <nav className="tabbar" aria-label={t('app.title')}>
       {NAV.map((item) => {
