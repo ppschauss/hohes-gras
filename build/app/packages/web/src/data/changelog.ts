@@ -22,6 +22,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Tausch-Entwicklungen zeigten unter Fortschritt → Entwicklung ihren rohen Textschlüssel. Dort steht jetzt „mit Verbindungskabel".',
       'Die Box zeigte nur 200 Pokémon, sortiert nach Level — wer mehr hatte, sah die niedrigstufigen nicht mehr. Betraf auch Markt, Zucht und Tausch-Station.',
       'Duelle: der Mindestabstand sinkt von 1,5 Sekunden auf 0,6 — „Immer mit der Ruhe" kam bei normalem Spiel viel zu oft.',
       'Der Bereich „Designs" heißt jetzt „Einstellungen" — Export, Löschen und der Update-Knopf lagen dort, wo sie niemand vermutet hat.',

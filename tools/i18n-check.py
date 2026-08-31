@@ -121,6 +121,9 @@ AUFZAEHLUNGEN = [
     ('research.', 'build/app/packages/engine/src/research.ts', r"id: '(res-[a-z0-9-]+)'", ''),
     ('research.', 'build/app/packages/engine/src/research.ts', r"id: '(res-[a-z0-9-]+)'", '.what'),
     ('arena.tier.', 'build/app/packages/engine/src/arena.ts', r"id: '(easy|even|hard)'", ''),
+    ('evo.how.', 'build/app/packages/content/src/schema.ts', r"trigger: z\.literal\('(\w+)'\)", ''),
+    ('status.', 'build/app/packages/engine/src/battle-types.ts', None, ''),
+    ('weather.', 'build/app/packages/shared/src/domain.ts', None, ''),
 ]
 
 luecken = []
@@ -130,9 +133,13 @@ for praefix, quelle, muster, suffix in AUFZAEHLUNGEN:
         continue
     text = open(pfad, encoding='utf-8').read()
     if muster is None:
-        # NATURES steht als eine Liste von Zeichenketten.
-        block = re.search(r'export const NATURES = \[(.*?)\] as const', text, re.S)
-        werte = re.findall(r"'(\w+)'", block.group(1)) if block else []
+        # Eine Liste von Zeichenketten, benannt nach dem Praefix: NATURES,
+        # STATUSES, WEATHERS. Der Name steht nicht in der Tabelle, weil er
+        # sich aus dem Praefix ergibt — ein Feld weniger, das auseinanderlaufen
+        # kann.
+        name = {'nature.': 'NATURES', 'status.': 'STATUSES', 'weather.': 'WEATHERS'}[praefix]
+        block = re.search(rf'export const {name} = \[(.*?)\] as const', text, re.S)
+        werte = re.findall(r"'([\w-]+)'", block.group(1)) if block else []
     else:
         werte = re.findall(muster, text, re.M)
     for wert in sorted(set(werte)):
