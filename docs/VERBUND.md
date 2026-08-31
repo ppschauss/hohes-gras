@@ -107,24 +107,97 @@ machen, wenn genau eine Stelle entscheidet, ob sie schon stattgefunden haben.
 Das entscheidende Prinzip: **die Kreatur ist immer an genau einem Ort** — in
 einer Instanz oder in einer Marke, nie in beiden und nie in keinem.
 
-## Was der Verbund nicht lösen kann: Vertrauen
+## Gegen gefälschte Kreaturen
 
 Eine selbst gehostete Instanz kann lügen. Sie kann Kreaturen mit makellosen
 Werten erfinden, Gold aus dem Nichts schöpfen und beides in den Verbund
-schieben. Der zentrale Dienst sieht nur, dass eine Instanz etwas behauptet.
+schieben. Der zentrale Dienst sieht zunächst nur, dass eine Instanz etwas
+behauptet.
 
-Dagegen hilft kein Protokoll, nur eine Entscheidung. Drei Stufen:
+Eine Versionsnummer und ein „zuletzt geändert von" wären dagegen zu schwach:
+das sind Felder, die der Fälscher selbst schreibt. Es braucht Angaben, die sich
+**nachrechnen** lassen, und eine Kette, die sich nicht rückwirkend glätten
+lässt. Fünf Ebenen, von stark nach schwach.
 
-- **Unter Freunden.** Jede Instanz bekommt einen Schlüssel, alles wird
-  protokolliert, Auffälligkeiten sieht man im Nachhinein. Für den Kreis, um den
-  es hier geht, ist das angemessen.
-- **Mit Grenzen.** Der Dienst deckelt, was eine Instanz je Tag in den Verbund
-  schieben darf, und lehnt Werte ab, die es im Spiel nicht geben kann.
-- **Öffentlich.** Ginge nur mit zentraler Autorität — also dem Weg, der oben
-  verworfen wurde. Wer den Verbund öffentlich betreibt, muss damit rechnen.
+### 1. Nachrechenbare Herkunft — der stärkste Hebel
 
-Das steht hier so deutlich, weil es die einzige Eigenschaft ist, die man später
-nicht nachrüsten kann, ohne den Entwurf umzudrehen.
+Die Engine ist frei von I/O und würfelt ausschließlich aus einem Seed. Ein
+gefangenes Pokémon ist deshalb **vollständig aus seiner Begegnung ableitbar**:
+
+```
+seed  = trainerId : areaId : zeitpunkt : zähler
+ivs   = randomIvs(rng(seed + ':creature'))
+natur = pick(rng(seed + ':creature'))
+```
+
+Der zentrale Dienst hat dieselbe Engine und dasselbe Content-Pack. Er bekommt
+mit der Kreatur die vier Bestandteile des Seeds und **rechnet nach**: kommen bei
+diesem Seed genau diese Werte, diese Natur, dieses Schillern heraus? Wenn nein,
+ist die Kreatur erfunden — ohne dass irgendjemand irgendwem glauben muss.
+
+Damit kann eine Instanz nicht einfach „makellos und schillernd" behaupten. Sie
+müsste einen Seed *suchen*, der das ergibt, und der Seed ist gebunden: an eine
+Trainer-Id, an ein Gebiet, in dem die Art überhaupt vorkommt, an einen
+Zeitpunkt, den der Dienst gegen seine eigene Uhr prüft, und an einen Zähler,
+der je Trainer nur steigen darf. Ein Sprung im Zähler ist selbst der Alarm.
+
+Das ist der Punkt, an dem sich eine Entscheidung von früher auszahlt: die
+Engine wurde ohne I/O gebaut, damit man sie testen kann. Genau deshalb lässt
+sie sich jetzt als Prüfinstanz einsetzen.
+
+### 2. Signierte Herkunftskette
+
+Nicht alles entsteht durch Fangen. Zucht, Entwicklung, Geschenke, Level,
+Fleißpunkte — jede dieser Veränderungen hängt als **Glied an einer Kette**, die
+die Kreatur mitträgt: wer, wann, welche Instanz, signiert mit deren Schlüssel.
+Anhängend, nie überschreibend.
+
+Eine Kreatur ohne lückenlose Kette bis zu einem Entstehungsereignis wird nicht
+angenommen. Das verhindert das Fälschen nicht, aber es macht es **dauerhaft
+zurechenbar**: wer eine Kreatur erfindet, steht für immer als ihr Ursprung in
+ihrer Kette — auch wenn sie danach dreimal den Besitzer wechselt. Es gibt kein
+Waschen.
+
+### 3. Plausibilität gegen das Content-Pack
+
+Der Dienst kennt das Pack und lehnt ab, was es im Spiel nicht geben kann:
+
+- Art existiert, Level unter der Reisegrenze des Trainers
+- Werte 0–31, Fleißpunkte höchstens 252 je Wert und 510 gesamt
+- Attacken stehen im Lernsatz der Art auf diesem Level
+- „gefangen in Gebiet X" → die Art muss dort auch vorkommen
+- Entwicklung → das Ziel muss eine gültige Entwicklung der Quelle sein
+
+Das erwischt die bequemen Fälschungen, und das sind die meisten.
+
+### 4. Kontingente und Bilanz
+
+Eine Instanz darf je Tag nur so viel in den Verbund schieben, wie zu ihrer Zahl
+aktiver Trainer passt. Fälschen wird dadurch langsam — und das Überschreiten
+ist selbst das Signal. Dasselbe für Gold: der Dienst führt die Bilanz je
+Instanz. Wer dauerhaft mehr ausführt als einführt, ist entweder ein Handelsplatz
+oder eine Druckerei; beides ist es wert, angesehen zu werden.
+
+### 5. Vertrauensstufen und Rückabwicklung
+
+Neue Instanzen dürfen zuerst nur **lesen** — sehen, schreiben, in der Rangliste
+stehen. Handel wird freigeschaltet, nicht mitgeliefert.
+
+Und weil die Kette lückenlos ist, lässt sich eine als Fälscher erkannte Instanz
+**präzise zurückabwickeln**: alles, was je aus ihr kam, ist auffindbar, auch
+nach mehreren Besitzerwechseln. Das ist die eigentliche Antwort auf „was kann
+man dagegen tun" — verhindern nicht, aber vollständig rückgängig machen.
+
+### Was bleibt
+
+Ein geduldiger Fälscher, der *plausible* Kreaturen erzeugt — gewöhnliche Art,
+gewöhnliche Werte, gültiger Seed — kommt durch. Das ist hinnehmbar: eine
+plausible Kreatur ist eine, die man auch selbst hätte fangen können. Was nicht
+durchkommt, ist das, was den Verbund kaputt machen würde.
+
+Echte Verhinderung gäbe es nur mit zentraler Autorität — dem Weg, der oben
+verworfen wurde. Das steht hier so deutlich, weil es die einzige Eigenschaft
+ist, die man später nicht nachrüsten kann, ohne den Entwurf umzudrehen.
 
 ## Chat
 
