@@ -20,7 +20,7 @@ export const SCREENS = [
   'bag',
   // Basis (Ausbau, Labor, Werkstatt) und Erfolge (Erfolge, Saison, Rangliste):
   // beides stand vorher als Reiter im Fortschritt und ging dort unter.
-  'base', 'records',
+  'base', 'records', 'changelog',
 ] as const
 export type Screen = (typeof SCREENS)[number]
 

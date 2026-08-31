@@ -1,5 +1,8 @@
 secrets.env
-data/
+# Verankert: sonst faengt die Regel *jeden* Ordner namens `data` — auch
+# `build/app/packages/web/src/data`, in dem Quelltext liegt. Gemeint war immer
+# nur der Datenordner der Installation: Datenbank, Sicherungen, Content-Pack.
+/data/
 build/app/node_modules/
 build/app/packages/*/node_modules/
 build/app/packages/*/dist/

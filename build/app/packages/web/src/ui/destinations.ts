@@ -34,6 +34,7 @@ export const DESTINATIONS: Destination[] = [
   { screen: 'friends', icon: 'friends', labelKey: 'menu.friends.title', feature: 'social' },
   { screen: 'energy', icon: 'energy', labelKey: 'menu.energy.title', feature: 'energy' },
   { screen: 'themes', icon: 'spark', labelKey: 'menu.themes.title', feature: 'themes' },
+  { screen: 'changelog', icon: 'dex', labelKey: 'menu.changelog.title', feature: 'story' },
 ]
 
 /**
@@ -48,5 +49,5 @@ export const NAV_GROUPS: Array<{ labelKey: string; screens: Screen[] }> = [
   { labelKey: 'nav.group.team', screens: ['teams', 'arena', 'gauntlet', 'center', 'eggs'] },
   { labelKey: 'nav.group.build', screens: ['base', 'shop', 'bag'] },
   { labelKey: 'nav.group.world', screens: ['friends', 'coop'] },
-  { labelKey: 'nav.group.you', screens: ['progress', 'records', 'energy', 'themes'] },
+  { labelKey: 'nav.group.you', screens: ['progress', 'records', 'energy', 'themes', 'changelog'] },
 ]

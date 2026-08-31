@@ -26,7 +26,7 @@ export const NAV: NavDef[] = [
     // deshalb die Weltkarte aufleuchten — in der Seitenleiste sogar beide
     // Eintraege zugleich. Genau so gemeldet.
     covers: ['shop', 'eggs', 'coop', 'progress', 'energy', 'center', 'plots', 'themes',
-      'expeditions', 'arena', 'gauntlet'],
+      'expeditions', 'arena', 'gauntlet', 'changelog'],
   },
   { screen: 'garden', labelKey: 'nav.garden', icon: 'garden', covers: ['dex'] },
   { screen: 'map', labelKey: 'nav.map', icon: 'map', covers: ['area', 'safari'] },

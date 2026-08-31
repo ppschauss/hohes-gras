@@ -1286,6 +1286,29 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .stufe__gold { font-size: var(--t-sm); font-weight: 600; color: var(--gold); }
 .stufe__items { display: flex; flex-wrap: wrap; gap: var(--s1) var(--s3); font-size: var(--t-xs); color: var(--ink-muted); }
 .stufe__item { display: inline-flex; align-items: center; gap: 4px; }
+
+/* --- Aenderungen ---------------------------------------------------------- */
+
+.log__head { display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap; }
+.log__title { margin: 0; font-size: var(--t-md); }
+/* Das Datum ordnet ein, es fuehrt nicht: es steht rechts und leiser. */
+.log__date { margin-left: auto; font-size: var(--t-xs); color: var(--ink-faint); }
+.log__list {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: var(--s2);
+}
+/* Ein Punkt je Zeile, der Aufzaehlungspunkt gezeichnet statt geerbt — der
+   eingebaute sitzt bei mehrzeiligem Text auf der falschen Hoehe. */
+.log__item {
+  position: relative;
+  padding-left: var(--s4);
+  font-size: var(--t-sm); line-height: 1.45; color: var(--ink-muted);
+}
+.log__item::before {
+  content: ''; position: absolute; left: 2px; top: 0.55em;
+  width: 5px; height: 5px; border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+}
 /* Im Fenster steht die Tabelle auf der Kartenflaeche, nicht in einer Mulde. */
 .pickCard .detail__barCell .bar { background: var(--surface-sunken); }
 .pick--on { border-color: var(--accent); background: var(--surface-raised); }

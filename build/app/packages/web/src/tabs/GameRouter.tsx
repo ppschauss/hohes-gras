@@ -28,6 +28,7 @@ import { CoopScreen } from '../screens/CoopScreen'
 import { ProgressScreen } from '../screens/ProgressScreen'
 import { BaseScreen } from '../screens/BaseScreen'
 import { RecordsScreen } from '../screens/RecordsScreen'
+import { ChangelogScreen } from '../screens/ChangelogScreen'
 import { ArenaScreen } from '../screens/ArenaScreen'
 import { GauntletScreen } from '../screens/GauntletScreen'
 
@@ -116,6 +117,8 @@ export function GameRouter({ boot, onTrainerChanged }: Props) {
       return <BaseScreen onBack={back} />
     case 'records':
       return <RecordsScreen onBack={back} />
+    case 'changelog':
+      return <ChangelogScreen onBack={back} />
     case 'arena':
       return <ArenaScreen onBack={back} onBattle={() => setScreen('battle')} />
     case 'gauntlet':
