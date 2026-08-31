@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import type { CreatureView } from '@game/shared'
 import { t } from '../i18n'
+import { haptic } from '../lib/telegram'
+import { DetailsPanel } from './DetailsPanel'
 import { EvolveChip } from './EvolveChip'
 
 export interface CardAction {
@@ -10,7 +13,6 @@ export interface CardAction {
 
 interface Props {
   creature: CreatureView
-  onClick?: () => void
   /** Wird nach einer Entwicklung gerufen, damit der Bildschirm neu laedt. */
   onChanged?: () => void
   /** Knoepfe am unteren Rand der Karte. Mehrere stehen nebeneinander. */
@@ -21,17 +23,25 @@ interface Props {
  *  next level, so the XP bar would divide by zero). */
 const ratio = (value: number, max: number): number => (max <= 0 ? 100 : Math.round((value / max) * 100))
 
-export function CreatureCard({ creature: c, onClick, onChanged, actions }: Props) {
+export function CreatureCard({ creature: c, onChanged, actions }: Props) {
   const hpPercent = ratio(c.hpCurrent, c.hpMax)
+  /**
+   * Die Werte stehen hinter einem Tippen, nicht hinter einem weiteren Knopf.
+   *
+   * Die Karte hat in der Box schon drei Aktionen; eine vierte waere die, die
+   * man am oeftesten sucht und am schlechtesten findet. Die Flaeche selbst war
+   * bisher tot — jetzt ist sie der Weg zu Wesen und Veranlagung.
+   */
+  const [offen, setOffen] = useState(false)
 
   return (
     <article className="ccard">
       <button
         type="button"
         className="ccard__main"
-        onClick={onClick}
-        disabled={!onClick}
-        aria-label={c.displayName}
+        onClick={() => { haptic.tap(); setOffen(!offen) }}
+        aria-expanded={offen}
+        aria-label={t('detail.toggle', { name: c.displayName })}
       >
         <span className="ccard__portrait">
           <img src={c.sprite} alt="" width={72} height={72} loading="lazy" decoding="async" />
@@ -77,9 +87,12 @@ export function CreatureCard({ creature: c, onClick, onChanged, actions }: Props
             <span>{t(`friendship.${c.friendshipTier}`)}</span>
             <span aria-hidden="true">·</span>
             <span className="num">{t('creature.power')} {c.power}</span>
+            <span className="ccard__more" aria-hidden="true">{offen ? '\u25b4' : '\u25be'}</span>
           </span>
         </span>
       </button>
+
+      {offen && <DetailsPanel creature={c} />}
 
       {actions && actions.length > 0 && (
         <div className="ccard__actions">

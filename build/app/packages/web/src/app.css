@@ -520,6 +520,73 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
   font-size: var(--t-sm);
 }
 
+/* Der Hinweis, dass die Karte etwas verbirgt. Ein Pfeil in der Fusszeile
+   reicht: ein eigener Knopf haette neben den drei Aktionen der Box um
+   Aufmerksamkeit gebeten, die ihm nicht zusteht. */
+.ccard__more { margin-left: auto; color: var(--ink-faint); }
+
+/* --- Werte einer Kreatur -------------------------------------------------- */
+
+/* Sitzt buendig im Fuss der Karte statt daneben: was hier steht, gehoert zu
+   genau diesem Pokemon, und eine abgesetzte Flaeche wuerde das trennen. */
+.detail {
+  display: flex; flex-direction: column; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface-sunken);
+  border-top: 1px solid var(--edge);
+}
+
+.detail__nature {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2);
+  margin: 0;
+}
+.detail__natureName { font-weight: 650; font-size: var(--t-md); }
+.detail__natureEffect { font-size: var(--t-xs); color: var(--ink-muted); }
+
+.detail__table { width: 100%; border-collapse: collapse; font-size: var(--t-xs); }
+/* Die Bildunterschrift steht unten: die Zeilen darueber sind die Antwort, die
+   Summe nur ihre Zusammenfassung. */
+.detail__table caption {
+  caption-side: bottom;
+  padding-top: var(--s2);
+  text-align: left; color: var(--ink-muted);
+}
+.detail__table th { font-weight: 600; text-align: left; }
+.detail__table thead th {
+  padding-bottom: var(--s1);
+  color: var(--ink-faint); font-weight: 500;
+  border-bottom: 1px solid var(--edge);
+}
+.detail__table td, .detail__table tbody th { padding: var(--s1) 0; }
+.detail__table td + td, .detail__table thead th + th { padding-left: var(--s3); }
+
+.detail__stat { color: var(--ink-muted); white-space: nowrap; }
+.detail__mod { margin-left: var(--s1); font-size: 9px; }
+.detail__mod--up { color: var(--ok); }
+.detail__mod--down { color: var(--danger); }
+
+.detail__value { font-weight: 650; text-align: right; }
+/* Der Balken bekommt den Rest der Zeile — er ist das, was man ueberfliegt. */
+.detail__barCell { width: 100%; }
+/* Zwei Dinge, die er in der Kreaturenkarte geschenkt bekommt und hier nicht:
+   Als <span> in einer Tabellenzelle bleibt er inline, und dann greift seine
+   Hoehe nicht — er war schlicht unsichtbar. Und seine leere Spur hat dieselbe
+   Farbe wie der Grund dieses Feldes, weshalb auch ein halb voller Balken
+   nirgends anfaengt und nirgends aufhoert. */
+.detail__barCell .bar { display: block; height: 6px; background: var(--surface-raised); }
+.detail__iv, .detail__ev { text-align: right; color: var(--ink-muted); }
+/* Nur die 31 faellt auf. Wer zuechtet, sucht genau diese Zahl. */
+.detail__iv--perfect { color: var(--gold); font-weight: 650; }
+
+.detail__facts {
+  display: flex; flex-wrap: wrap; gap: var(--s1) var(--s4);
+  list-style: none; margin: 0; padding: 0;
+  font-size: var(--t-xs);
+}
+.detail__fact { display: flex; gap: var(--s2); }
+.detail__factLabel { color: var(--ink-faint); }
+.detail__factValue { color: var(--ink-muted); }
+
 .chip {
   padding: 1px var(--s2); border-radius: var(--radius-pill);
   font-size: 10px; font-weight: 600;
@@ -538,6 +605,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .bar__fill--hp { background: linear-gradient(90deg, var(--ok), oklch(0.78 0.14 140)); }
 .bar__fill--xp { background: linear-gradient(90deg, var(--accent), oklch(0.76 0.12 205)); }
 .bar__fill--dex { background: linear-gradient(90deg, var(--gold), oklch(0.84 0.13 70)); }
+.bar__fill--iv  { background: linear-gradient(90deg, var(--accent-soft), var(--nature)); }
 
 .tag--level { background: var(--gold); border-color: transparent; color: oklch(0.2 0.04 80); }
 .tag--active { background: var(--ok); border-color: transparent; color: oklch(0.16 0.03 150); }
