@@ -12,7 +12,7 @@ Deshalb:
   hier steht, ist der Code, der ein Pack lädt — nicht das Pack.
 - **Die Engine kennt keine Pokémon.** Sie rechnet mit dem, was ein Pack
   mitbringt.
-- **Betrieb ist privat und einladungsbasiert.** Ohne Code kein Zugang.
+- **Betrieb ist privat.** Eine Instanz im Freundeskreis, nicht beworben.
 
 Wer das Projekt öffentlich betreiben will, tauscht das Pack gegen eigene
 Kreaturen aus. Das ist eine Datei, keine Umschreibung.

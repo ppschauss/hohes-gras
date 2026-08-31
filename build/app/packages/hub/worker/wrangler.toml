@@ -1,0 +1,14 @@
+name = "hohes-gras-verbund"
+main = "index.ts"
+compatibility_date = "2025-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hohes-gras-verbund"
+# database_id wird beim Anlegen vergeben:
+#   wrangler d1 create hohes-gras-verbund
+database_id = "b17d3717-a08d-4f06-bf65-edc2de65ca97"
+
+# ID_SALT und ADMIN_SECRET sind Geheimnisse, keine Variablen:
+#   wrangler secret put ID_SALT
+#   wrangler secret put ADMIN_SECRET

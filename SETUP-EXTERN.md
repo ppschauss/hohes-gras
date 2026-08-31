@@ -58,8 +58,8 @@ Grund: Spielstand-Antworten dürfen nie aus dem Edge-Cache kommen, und die Live-
 Der statische Teil (`/assets/*`, Sprites) darf gecacht werden — dafür ist nichts zu tun,
 Cloudflare macht das ab Werk anhand der Dateiendungen.
 
-**Nicht nötig:** Cloudflare Access / WAF-Regeln. Der Zugang läuft über Einladungscodes und
-signierte Telegram-Daten; eine zusätzliche Access-Policy würde die Mini-App aussperren, weil der
+**Nicht nötig:** Cloudflare Access / WAF-Regeln. Der Zugang läuft über signierte
+Telegram-Daten; eine zusätzliche Access-Policy würde die Mini-App aussperren, weil der
 Telegram-Client kein Cloudflare-Login-Cookie mitbringt.
 
 ## 3. BotFather
@@ -84,7 +84,7 @@ also nicht alle Gruppennachrichten mitlesen — weniger Rechte, gleiche Funktion
 ## 4. Was ich noch von dir brauche
 
 **Deine numerische Telegram-User-ID** für `ADMIN_TELEGRAM_ID` in `secrets.env` — damit bist du
-im Spiel Admin und kannst Einladungscodes erzeugen. Zwei Wege:
+im Spiel Admin. Zwei Wege:
 - @userinfobot anschreiben, er antwortet mit der ID, oder
 - einfach `/start` an @OtakupulsePokeBot schicken, sobald der Container läuft — ich lese die ID
   dann aus dem Log und trage sie ein.

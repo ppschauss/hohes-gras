@@ -4,13 +4,9 @@ import type { AppContext } from '../context.js'
 import { rateLimit, requireTrainer } from './plugin.js'
 import * as privacy from '../services/privacy.js'
 import * as admin from '../services/admin.js'
+import * as hub from '../services/hub.js'
 
 const ConfirmSchema = z.object({ confirm: z.string() })
-const InviteSchema = z.object({
-  maxUses: z.number().int().min(1).max(50).default(1),
-  expiresInDays: z.number().int().min(1).max(365).nullable().default(30),
-  note: z.string().max(200).default(''),
-})
 const TargetSchema = z.object({ targetId: z.string().uuid(), value: z.boolean() })
 
 export function registerAccountRoutes(app: FastifyInstance, ctx: AppContext): void {
@@ -34,17 +30,16 @@ export function registerAccountRoutes(app: FastifyInstance, ctx: AppContext): vo
 
   app.get('/api/admin', auth, async (req) => admin.dashboard(ctx, req.trainer!))
 
-  app.post('/api/admin/invite', write, async (req) => {
-    const body = InviteSchema.parse(req.body)
-    const invite = admin.createInvite(ctx, req.trainer!, body.maxUses, body.expiresInDays, body.note)
-    return { invite, dashboard: admin.dashboard(ctx, req.trainer!) }
-  })
+  /*
+   * Aktualisierung.
+   *
+   * Der Knopf schreibt nur eine Marke; gebaut wird auf dem Wirt durch
+   * `./manage.sh watch`. Siehe `services/hub.ts` — der Container bekommt
+   * bewusst kein Recht, sich selbst zu ersetzen.
+   */
+  app.get('/api/admin/release', write, async (req) => hub.releaseInfo(ctx, req.trainer!))
 
-  app.post('/api/admin/invite/revoke', write, async (req) => {
-    const { code } = z.object({ code: z.string() }).parse(req.body)
-    admin.revokeInvite(ctx, req.trainer!, code)
-    return admin.dashboard(ctx, req.trainer!)
-  })
+  app.post('/api/admin/update', write, async (req) => hub.requestUpdate(ctx, req.trainer!))
 
   app.post('/api/admin/ban', write, async (req) => {
     const { targetId, value } = TargetSchema.parse(req.body)

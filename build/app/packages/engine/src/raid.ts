@@ -50,6 +50,48 @@ export const TIER_SPECS: Record<RaidTier, RaidTierSpec> = {
   5: { tier: 5, levelRange: [50, 68], hpMultiplier: 25, durationHours: 24, goldPool: 14000, minRarity: 'rare' },
 }
 
+/**
+ * Was ein Raid an Werkstoffen abwirft, je Stufe.
+ *
+ * Bisher gab es **nur Gold** — und genau so kam es an: „474 Gold für den
+ * Raid boss, ziemlich mau". Der Einwand lautete, die Bosse seien zu teuer;
+ * das eigentliche Problem war, dass ein Raid nichts einbrachte, was man sonst
+ * nirgends bekommt.
+ *
+ * Werkstoffe statt eines Preisnachlasses: der Raid wird damit zur schnellsten
+ * Quelle für das, was die Werkbank frisst — ohne dass die Zahl auf dem
+ * Beschwörungsknopf sinkt.
+ *
+ * Verteilt wird nach Anteil wie das Gold, aber mit einem garantierten Sockel:
+ * wer mitschlägt, geht nie leer aus.
+ */
+export interface RaidDrop {
+  itemId: string
+  /** Wie viel es bei vollem Anteil gibt. Der Sockel ist ein Drittel davon. */
+  quantity: number
+}
+
+export const RAID_DROPS: Record<RaidTier, RaidDrop[]> = {
+  1: [
+    { itemId: 'iron-shard', quantity: 6 },
+    { itemId: 'silk-thread', quantity: 4 },
+  ],
+  3: [
+    { itemId: 'iron-shard', quantity: 14 },
+    { itemId: 'soft-sand', quantity: 10 },
+    { itemId: 'star-piece', quantity: 2 },
+  ],
+  5: [
+    { itemId: 'iron-shard', quantity: 30 },
+    { itemId: 'dew-drop', quantity: 20 },
+    { itemId: 'star-piece', quantity: 6 },
+    { itemId: 'exp-candy-l', quantity: 2 },
+  ],
+}
+
+/** Der Sockel: dieser Anteil fällt auch bei winzigem Beitrag. */
+export const RAID_DROP_FLOOR = 1 / 3
+
 /** Trainers with full teams needed to finish a boss. Used by the UI to set
  *  expectations before a guild summons something it cannot beat. */
 export const TARGET_TRAINERS: Record<RaidTier, number> = { 1: 1, 3: 2, 5: 4 }
@@ -122,6 +164,8 @@ export interface RaidReward {
   /** Everyone who took part gets a chance at the boss species; the top
    *  contributor gets a better one. */
   catchChance: number
+  /** Werkstoffe: Sockel für alle, Rest nach Anteil. */
+  items: Array<{ itemId: string; quantity: number }>
 }
 
 /**
@@ -149,6 +193,14 @@ export function distributeRewards(
       share,
       gold,
       catchChance: clamp(0.35 + share * 0.5, 0.35, 0.9),
+      // Sockel plus Anteil, aufgerundet: ein halber Eisensplitter ist keine
+      // Belohnung, sondern eine Rundungsfrage.
+      items: RAID_DROPS[tier]
+        .map((d) => ({
+          itemId: d.itemId,
+          quantity: Math.ceil(d.quantity * (RAID_DROP_FLOOR + (1 - RAID_DROP_FLOOR) * share)),
+        }))
+        .filter((d) => d.quantity > 0),
     }
   })
 }

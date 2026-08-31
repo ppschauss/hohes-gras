@@ -9,6 +9,7 @@ import { dueReminders, recordSent } from '../services/reminders.js'
 import { purgeOldCounters } from '../repos/counters.js'
 import { purgeStalePulses } from '../repos/pulse.js'
 import { abandonStale } from '../repos/battles.js'
+import { linkNew, pushProfiles, refreshLeaderboard, refreshRelease, releaseInfo } from '../services/hub.js'
 
 export interface Job {
   name: string
@@ -101,6 +102,47 @@ export const JOBS: Job[] = [
       }
       // Die laufende Woche anlegen, damit es immer eine offene Anmeldung gibt.
       void currentWeek()
+    },
+  },
+  {
+    // Verbund. Tut nichts, solange keiner eingerichtet ist — und wenn einer
+    // eingerichtet ist, aber schweigt, wird das geloggt und sonst nichts.
+    name: 'hub-sync',
+    everyMs: 10 * 60_000,
+    run: async (ctx) => {
+      if (!ctx.config.hubEnabled) return
+      const linked = await linkNew(ctx)
+      const pushed = await pushProfiles(ctx)
+      const rows = await refreshLeaderboard(ctx)
+      if (linked || pushed) console.log(`[job] Verbund: ${linked} angemeldet, ${pushed} Profile, ${rows} in der Rangliste`)
+
+      /*
+       * Den aktuellen Stand erfragen und den Betreiber einmal benachrichtigen.
+       *
+       * Einmal je Stand, nicht je Lauf: eine Nachricht alle zehn Minuten waere
+       * keine Nachricht, sondern eine Belaestigung. Der Zaehler steht in
+       * `hub_cache`, damit ein Neustart ihn nicht vergisst.
+       */
+      await refreshRelease(ctx)
+      const info = releaseInfo(ctx)
+      if (info.outdated && sendReminder) {
+        const gemeldet = ctx.db.prepare("SELECT payload FROM hub_cache WHERE key = 'release_notified'")
+          .get() as { payload: string } | undefined
+        if (gemeldet?.payload !== info.latest) {
+          const admin = ctx.db.prepare('SELECT telegram_id AS tg FROM trainers WHERE is_admin = 1 ORDER BY created_at LIMIT 1')
+            .get() as { tg: string } | undefined
+          if (admin) {
+            const text = `Neuer Stand verfügbar: \`${info.latest}\`${info.notes ? `\n${info.notes}` : ''}`
+              + '\n\nDu läufst auf `' + info.current + '`. In der App unter *Fortschritt → Daten* '
+              + 'steht ein Knopf zum Aktualisieren.'
+            await sendReminder(admin.tg, text, 'progress').catch(() => { /* Chat blockiert */ })
+            ctx.db.prepare(
+              `INSERT INTO hub_cache (key, payload, fetched_at) VALUES ('release_notified', ?, ?)
+               ON CONFLICT(key) DO UPDATE SET payload = excluded.payload, fetched_at = excluded.fetched_at`,
+            ).run(info.latest, Date.now())
+          }
+        }
+      }
     },
   },
   {

@@ -89,6 +89,13 @@ function writeMinimalPack(dataDir: string): void {
     // Zwei Typen: nur damit laesst sich pruefen, dass Verwerten je Typ ein
     // Fragment gibt statt eines je Pokemon.
     species('mischmon', 9, { types: ['normal', 'grass'] }),
+    // Die beiden Tauscharten: eine wie Maschock (nur Tausch), eine wie Onix
+    // (Tausch plus Tragegegenstand). Ohne beide bliebe der teurere Fall
+    // ungeprueft, und genau der ist der, der schiefgehen kann.
+    species('tauschmon', 10, { evolutions: [{ trigger: 'trade', to: 'tauschmon-evo' }] }),
+    species('tauschmon-evo', 11),
+    species('haltmon', 12, { evolutions: [{ trigger: 'trade', to: 'haltmon-evo', heldItemId: 'metal-coat' }] }),
+    species('haltmon-evo', 13),
   ])
   // Dieselben Ids wie im echten Pack: Startausruestung und Pflegelogik nennen
   // sie fest, eine abweichende Fixture wuerde am eigentlichen Verhalten
@@ -111,6 +118,14 @@ function writeMinimalPack(dataDir: string): void {
     // Prueflduft: kein Typ, dafuer eine Zusage. Beides zusammen gibt es nicht.
     { id: 'lure-legendary', name: { de: 'Legendärer Lockduft' }, description: { de: 'Zieht ein Legendäres an.' }, category: 'lure', price: null, sellPrice: null, icon: '/media/lure2.svg', params: { legendaryLure: true, packSize: 1 } },
     { id: 'lure-grass', name: { de: 'Lockduft-Pflanze' }, description: { de: 'Lockt Pflanzen an.' }, category: 'lure', price: 50, sellPrice: 10, icon: '/media/lure.png', params: { lureType: 'grass', packSize: 5 } },
+    // Dieselben Ids wie im echten Pack: der Tausch-Auslöser nennt beide fest.
+    { id: 'link-cable', name: { de: 'Verbindungskabel' }, description: { de: 'Simuliert einen Tausch.' }, category: 'key', price: null, sellPrice: 250, icon: '/media/cable.svg', params: { linkCable: true } },
+    { id: 'metal-coat', name: { de: 'Metallmantel' }, description: { de: 'Wird beim Tausch gebraucht.' }, category: 'stone', price: 2000, sellPrice: 200, icon: '/media/coat.png' },
+    // Die zwei Werkstoffe, auf die die Kampfzone ohne eigene Regionszuordnung
+    // zurueckfaellt. Ohne sie faellt dort stumm nichts, und der Beutepfad
+    // bliebe ungeprueft.
+    { id: 'iron-shard', name: { de: 'Eisensplitter' }, description: { de: 'Schrott.' }, category: 'material', price: null, sellPrice: 20, icon: '/media/iron.png' },
+    { id: 'silk-thread', name: { de: 'Seidenfaden' }, description: { de: 'Faden.' }, category: 'material', price: null, sellPrice: 20, icon: '/media/silk.png' },
   ])
   put('regions.json', [
     { id: 'testland', order: 1, name: { de: 'Testland' }, tagline: { de: 'Test' } },
@@ -259,10 +274,7 @@ export interface TestApp {
   put: (path: string, body: unknown, token?: string) => Promise<{ status: number; body: any }>
   patch: (path: string, body: unknown, token?: string) => Promise<{ status: number; body: any }>
   del: (path: string, token?: string) => Promise<{ status: number; body: any }>
-  /** Create an additional trainer, bypassing the invite gate.
-   *
-   *  Social features need two accounts, and going through invites in every
-   *  test would test the invite flow over and over instead of the feature. */
+  /** Einen weiteren Trainer anlegen. Social-Funktionen brauchen zwei Konten. */
   addTrainer: (telegramId: number, name: string) => Promise<{ token: string; id: string }>
   /** Clear the rate-limit window.
    *
@@ -320,11 +332,9 @@ export async function makeTestApp(overrides: Record<string, string> = {}): Promi
     resetRateLimits: () => { ctx.db.prepare('DELETE FROM rate_limits').run() },
     resetPacing: () => { ctx.db.prepare('DELETE FROM action_pulse').run() },
     addTrainer: async (telegramId: number, name: string) => {
-      const { createInvite } = await import('../src/repos/invites.js')
-      const invite = createInvite(ctx.db, { createdBy: null, maxUses: 1 })
       const res = await app.inject({
         method: 'POST', url: '/api/auth/session',
-        payload: { initData: signInitData({ id: telegramId, first_name: name }), inviteCode: invite.code },
+        payload: { initData: signInitData({ id: telegramId, first_name: name }) },
       })
       const body = JSON.parse(res.body)
       if (!body.token) throw new Error(`addTrainer fehlgeschlagen: ${res.body}`)

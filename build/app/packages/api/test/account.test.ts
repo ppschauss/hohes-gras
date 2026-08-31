@@ -116,16 +116,6 @@ describe('Verwaltung', () => {
     expect(asAdmin.body.content.species).toBe(h.ctx.registry.speciesCount)
   })
 
-  it('erzeugt und zieht Einladungen zurueck', async () => {
-    const created = await h.post('/api/admin/invite', { maxUses: 3, expiresInDays: 7, note: 'Test' }, admin.token)
-    expect(created.status).toBe(200)
-    const code = created.body.invite.code
-    expect(created.body.dashboard.invites.some((i: any) => i.code === code)).toBe(true)
-
-    const revoked = await h.post('/api/admin/invite/revoke', { code }, admin.token)
-    expect(revoked.body.invites.some((i: any) => i.code === code)).toBe(false)
-  })
-
   it('sperrt und entsperrt Trainer', async () => {
     const banned = await h.post('/api/admin/ban', { targetId: member.id, value: true }, admin.token)
     expect(banned.status).toBe(200)

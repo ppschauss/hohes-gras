@@ -10,6 +10,9 @@ import { CenterState } from '../ui/States'
 
 export function EggScreen({ onBack }: { onBack: () => void }) {
   const overview = useAsync(() => api.eggs(), [])
+  const bag = useAsync(() => api.bag(), [])
+  /** Prüfgegenstand; im Normalfall null, deshalb sieht ihn niemand. */
+  const warmers = (bag.data?.items ?? []).find((i) => i.id === 'egg-warmer')?.quantity ?? 0
   const action = useAction()
   const [parents, setParents] = useState<string[]>([])
   const [hatched, setHatched] = useState<CreatureLike | null>(null)
@@ -127,6 +130,21 @@ export function EggScreen({ onBack }: { onBack: () => void }) {
                           }
                         }}>
                         {egg.brooder ? t('egg.brooderOff') : t('egg.brooderOn')}
+                      </button>
+                    )}
+                    {/* Der Bruetbeschleuniger. Er erscheint nur, wenn einer im
+                        Beutel liegt — und dorthin kommt er ausschliesslich
+                        ueber `/gegenstand` beim Admin. */}
+                    {warmers > 0 && !egg.ready && (
+                      <button type="button" className="btn btn--ghost btn--sm"
+                        disabled={action.busy}
+                        onClick={() => {
+                          haptic.tap()
+                          void action.run(() => api.rushEgg(egg.id), (res) => {
+                            overview.set(res.overview); bag.reload(); haptic.success()
+                          })
+                        }}>
+                        {t('egg.rush', { n: warmers })}
                       </button>
                     )}
                     <button type="button" className="btn btn--primary btn--sm"

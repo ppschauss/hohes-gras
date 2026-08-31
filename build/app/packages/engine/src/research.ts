@@ -103,6 +103,20 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
     xpPerHour: 200,
   },
   {
+    /*
+     * Das Verbindungskabel.
+     *
+     * Der Schluessel zu elf Arten, die es sonst in dieser Runde nicht gibt.
+     * Deshalb liegt es auf Laborstufe 2 und nicht hoeher: es soll erreichbar
+     * sein, sobald jemand ueberhaupt forscht. Teuer ist nicht die Forschung,
+     * sondern jedes einzelne Kabel danach.
+     */
+    id: 'res-link-cable', kind: 'recipe', tiers: 1, lab: 2, unlocks: null,
+    step: 0, hours: 6, gold: 2000,
+    inputs: [{ itemId: 'iron-shard', quantity: 16 }, { itemId: 'silk-thread', quantity: 8 }],
+    xpPerHour: 200,
+  },
+  {
     id: 'res-rare-candy', kind: 'recipe', tiers: 1, lab: 3, unlocks: null,
     step: 0, hours: 12, gold: 6000,
     inputs: [{ itemId: 'star-piece', quantity: 10 }, { itemId: 'iron-shard', quantity: 20 }],

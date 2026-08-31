@@ -3,8 +3,6 @@
  *  optional detail object the UI can interpolate into a localized string. */
 export const ERROR_CODES = [
   'unauthorized',
-  'invite_required',
-  'invite_invalid',
   'banned',
   'rate_limited',
   'not_found',

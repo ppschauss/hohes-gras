@@ -1,3 +1,4 @@
+import { LINK_CABLE_ITEM_ID } from '@game/engine'
 import type { PokeApi } from './pokeapi-client.ts'
 import { germanName } from './pokeapi-client.ts'
 
@@ -45,7 +46,7 @@ const DETECTOR_CHARGES = 1
 export const SVG_ICONS = new Set([
   'rocket-bait', 'energy-drink', 'exp-candy-s', 'exp-candy-l',
   'golden-razz', 'legendary-berry', 'lure-legendary', 'soul-shiny',
-  'metal-detector',
+  'metal-detector', 'link-cable', 'egg-warmer',
   // Die sechs Gartenhintergruende. Sie waren die einzigen fehlenden Bilder,
   // die im Spiel wirklich zu sehen waren: im Laden trugen alle sechs
   // dasselbe Ersatzsymbol und sahen damit identisch aus.
@@ -53,6 +54,46 @@ export const SVG_ICONS = new Set([
 ])
 
 export const AUTHORED: Authored[] = [
+  {
+    /*
+     * Der Brutbeschleuniger.
+     *
+     * Ein Pruefgegenstand, kein Spielinhalt: er laesst ein Ei sofort schluepfen.
+     * Deshalb hat er keinen Preis — es gibt ihn nur ueber `/gegenstand`, also
+     * beim Admin. Wer die Zucht ausgiebig testen will, wartet sonst je Ei
+     * Stunden, und ohne Test bleibt das Vererbungssystem unbeobachtet.
+     *
+     * Faende er den Weg in den Laden, waere die Brutzeit abgeschafft — und mit
+     * ihr der einzige Preis, den ein Ei ueberhaupt hat.
+     */
+    id: 'egg-warmer', category: 'key', price: null, sellPrice: null,
+    name: 'Brutbeschleuniger',
+    description: 'Prüfgegenstand. Lässt ein Ei sofort schlüpfen.',
+    params: { hatchNow: true },
+  },
+  {
+    /*
+     * Das Verbindungskabel.
+     *
+     * Elf Arten entwickeln sich im Vorbild nur durch einen Tausch — und blieben
+     * damit in einer Runde von vier Leuten unerreichbar: es braucht nicht nur
+     * jemanden, der tauscht, sondern jemanden, der *zurueck*tauscht.
+     *
+     * Das Kabel ist der Weg allein. Es ist bewusst nicht kaeuflich: sein Preis
+     * sind Eisensplitter und Seidenfaeden aus Expeditionen, und das Rezept dazu
+     * will erst erforscht werden. Wer Machomei will, faehrt dafuer eine Woche
+     * lang Expeditionen — genau das war der Wunsch.
+     *
+     * Ein echter Tausch loest die Entwicklung weiterhin aus, und zwar ohne
+     * Kabel. Der Umweg soll den Tausch ergaenzen, nicht ersetzen.
+     */
+    id: LINK_CABLE_ITEM_ID, category: 'key', price: null, sellPrice: 250,
+    name: 'Verbindungskabel',
+    description: 'Simuliert einen Tausch. Löst bei einem Pokémon, das sich nur '
+      + 'durch Tausch entwickelt, genau diese Entwicklung aus — der '
+      + 'Tragegegenstand wird dabei zusätzlich gebraucht.',
+    params: { linkCable: true },
+  },
   {
     /*
      * Ein Überfall auf Bestellung.

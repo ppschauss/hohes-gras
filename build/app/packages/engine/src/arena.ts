@@ -93,6 +93,18 @@ export const findArenaTier = (id: string): ArenaTier | undefined => ARENA_TIERS.
 export const ARENA_ROUNDS = 4
 
 /**
+ * Was ein weiterer Durchlauf am selben Tag noch einbringt.
+ *
+ * Vorher: nichts. Die Prämie fiel einmal am Tag je Stufe, danach blieb nur das
+ * Gold je Sieg — und das fühlte sich an wie eine Sackgasse, genau so gemeldet.
+ *
+ * Ein Viertel ist dieselbe Größenordnung, die Routentrainer für den zweiten
+ * Anlauf bekommen (`repeatRewardRatio`). Die Arena bleibt damit einmal am Tag
+ * klar am besten — sie hört nur auf, den zweiten Besuch zu bestrafen.
+ */
+export const ARENA_REPEAT_RATIO = 0.25
+
+/**
  * Wie viel das Team zwischen zwei Kämpfen zurückbekommt.
  *
  * Zuerst standen hier zehn Prozent, und das war zu wenig: mit vier Kämpfen in

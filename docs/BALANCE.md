@@ -153,12 +153,20 @@ Feinsand, Tautropfen, Eisensplitter, selten Sternenstaub. Vorher kamen
 Werkstoffe ausschließlich von Expeditionen, und damit war die häufigste
 Handlung des Spiels von der Werkbank abgeschnitten.
 
-23 Rezepte statt 6 — vier davon erst durch Forschung. Die neuen zielen auf
+24 Rezepte statt 6 — fünf davon erst durch Forschung. Die neuen zielen auf
 genau diesen Kreislauf: Bälle und
 Medizin aus Fundstücken, und **Entwicklungssteine aus Seelenfragmenten** (8
 Fragmente der passenden Sorte + 2 Sternenstaub + 500 Gold, Labor Stufe 2). Im
 Laden kosten dieselben Steine 1.500 Gold — hier kostet es Arbeit statt
 Kontostand.
+
+Am weitesten geht das **Verbindungskabel**: 6× Eisensplitter, 3× Seidenfaden,
+1× Sternenstaub und 800 Gold, das Rezept erst nach der Forschung (Labor
+Stufe 2). Es hat bewusst keinen Ladenpreis, und ein Kabel reicht für genau eine
+Entwicklung. Elf Arten hängen daran — sie waren vorher gar nicht erreichbar,
+weil sie im Vorbild einen Tauschpartner brauchen, der auch zurücktauscht. Der
+Preis ist deshalb absichtlich in Expeditionen bemessen und nicht in Gold: Gold
+hat, wer lange spielt, Eisensplitter hat, wer *fährt*.
 
 ## Kapazitäten und ihr Ausbau
 
@@ -611,3 +619,179 @@ packages/engine/src/encounter.ts  Fangformel, Spawns
 
 Jede dieser Dateien ist rein und getestet. `npm run simulate` rechnet die
 Kurven über 400 Spieltage durch und meldet, wenn etwas aus dem Ruder läuft.
+
+
+## Expeditionen und Bälle
+
+Der Anlass war das Verbindungskabel: es braucht sechs Eisensplitter, und eine
+**achtstündige Grabung mit perfektem Team gab 2,5**. Zwanzig Stunden Graben für
+ein Kabel, an dem elf Arten hängen — das ging nicht.
+
+Zwei Ursachen, beide gemessen:
+
+**Die Züge waren zu wenige und zu flach.** Gerechnet wurde `1 + yieldFactor/6`.
+Bei der kurzen Reise kamen für ein mieses (0,7 Qualität) und ein perfektes Team
+1,17 bzw. 1,42 heraus — beide runden auf 1. Wen man mitschickte, war also für
+die Beute völlig gleich, und das war der Mechanik nicht anzusehen. Jetzt steht
+die Zahl ausdrücklich in der Dauer: 2 / 5 / 10 Züge, mal `0,5 + Bewertung/2`.
+
+**Die Mengen je Zug waren klein.** Materialien liegen jetzt bei 2–6 statt 1–3;
+die Patrouille wirft 5–12 Pokébälle statt 2–5 aus.
+
+Gemessen danach, jeweils volles Team:
+
+| Reise | vorher | nachher |
+|---|---|---|
+| Graben 8 h | 2,5 Eisensplitter | **13,6** |
+| Patrouille 8 h | 3,3 Pokébälle | **22,1** |
+| Graben 30 min | 0,7 Eisensplitter | **2,7** |
+
+Gold blieb unangetastet. Es war nie der Engpass — 680 Gold aus einer langen
+Grabung standen 2,5 Splittern gegenüber, und das Verhältnis war die eigentliche
+Schieflage: Material war knapp, Gold war es nie.
+
+### Warum die Bälle daran hängen
+
+Fünfzig Superbälle kosten 48 Pokébälle und 12 Eisensplitter — **eine** lange
+Grabung deckt die Splitter. Vorher hätte dieselbe Menge acht Grabungen
+gebraucht, also über zwei Tage für eine Ladung Bälle.
+
+Der **Pokéball** ist jetzt selbst herstellbar. Vorher stand er nur im Laden,
+und weil jedes andere Ballrezept Pokébälle verbraucht, hing die ganze Kette
+doch wieder am Gold. Fünfzig Stück: 16 Eisensplitter + 8 Seidenfaden + 400 Gold
+gegen 1.500 Gold im Laden. Wer fährt, zahlt weniger als wer nur reich ist —
+und genau dafür sind die Expeditionen da.
+
+Der Mengenrabatt (25 → 2,25×, 50 → 4×) ist der kleinere Teil. Der Grund für die
+Chargen ist, dass zehnmal derselbe Knopf keine Entscheidung ist.
+
+### Die Typensperre
+
+Der Typ war ein Bonus (1,4×) und ist jetzt Bedingung. Der Preis dafür war, die
+Typenlisten zu weiten: vorher kamen Feuer, Gift, Geist, Drache, Unlicht und Fee
+in **keiner** der vier Arten vor, und die Sperre hätte 58 der 390 Arten
+ausgesperrt — darunter jeden Feuer-Starter. Nachgezählt an einem echten
+Spielstand: von 104 Pokémon passt jetzt jedes auf mindestens eine Expedition.
+
+Weil der Typmultiplikator wegfällt, zählen nur noch Level und Ausdauer — und
+die volle Bewertung gibt es schon bei **vier** passenden statt sechs. Sechs
+gleichtypige früh im Spiel zu haben ist unrealistisch, und eine Sperre, die
+zusätzlich die Ausbeute drückt, wäre zweimal dieselbe Strafe.
+
+
+## Erholung: die Box als Ruheplatz
+
+**100 Ausdauerpunkte je Stunde in der Box, 6 im Team.** Leer bis voll: eine
+Stunde gegen siebzehn.
+
+Der Abstand ist Absicht und nicht Großzügigkeit. Die Box war bisher Verwahrung;
+mit voller Erholung in einer Stunde wird sie zur zweiten Seite einer echten
+Entscheidung — ein Pokémon, das gerade nicht gebraucht wird, gehört dorthin,
+und man bekommt es ausgeruht zurück. Im Team *arbeitet* es, und dort bleibt
+Ausdauer knapp.
+
+### Der Fehler darunter
+
+Die Rate allein hätte nichts geändert. Die Erholung hing an `last_seen_at` —
+demselben Zeitstempel, den jede Anfrage neu setzt. Unter zehn Minuten Abstand
+stieg die Rechnung aus, und die Zeit war trotzdem verbraucht:
+
+| Rhythmus | kam an (bei 18/h) |
+|---|---|
+| alle 3 / 5 / 9 min | **0/h** |
+| alle 12 min | 15/h |
+| alle 20 / 30 / 60 min | 18/h |
+
+Wer aktiv spielt, sieht selten neun Minuten lang nicht in die App. Gemessen an
+einem echten Spielstand: 40 von 100 eingelagerten Pokémon standen auf exakt
+demselben Wert, drei auf 1, neun auf 4.
+
+Jetzt hat jeder Trainer zwei eigene Uhren — eine fürs Team, eine für die Box —,
+und sie rücken nur um die gewährten Punkte vor. Der Rest bleibt stehen. Damit
+ist der Spielrhythmus gleichgültig, und das ist die eigentliche Zusage: nach
+einer Stunde ist dieselbe Menge da, egal wie oft jemand hereingesehen hat.
+
+Zwei Uhren und nicht eine, weil die Raten verschieden sind: eine gemeinsame
+würde der langsameren ihre Reste stehlen.
+
+
+## Shinys: von 15 auf 205 Begegnungen
+
+Gemeldet mit „viel zu einfach" — und zwar von dem Spieler mit den meisten.
+Nachgerechnet über 200.000 Läufe bei durchgehender Fangserie: ein Schillerndes
+kam im Schnitt nach **15 Begegnungen** (Median 13). In den echten Spielständen
+sah man es: 18,2 %, 12,9 % und 6,7 % der Sammlungen glänzten.
+
+Die Grundchance war nicht das Problem — 1/512 ist in Ordnung. Es war die
+Fangserie, die sie um das Fünfzigfache hob und dort ließ:
+
+| | vorher | jetzt |
+|---|---|---|
+| Plateau erreicht nach | 10 Fängen | **30** |
+| Chance auf dem Plateau | 10 % | **0,35 %** |
+| Garantie bei | 49 | **400** |
+| Serie nach einem Fang | fällt auf 20 | **auf 0** |
+| **Median bis zum ersten** | **13** | **205** |
+| Schnitt / p10 / p90 | 15 / 5 / 28 | **219 / 38 / 401** |
+
+Der Rückfall auf 20 war der stillste Fehler: zwanzig lag *auf* dem Plateau,
+also war die Chance direkt nach einem Treffer wieder die höchste, die es gab.
+Das machte das zweite Schillernde billiger als das erste und das dritte auch —
+daher die Sammlungen mit zwanzig Stück.
+
+Die Garantie liegt beim Doppelten des Medians. Sie ist ein Deckel gegen echtes
+Pech, kein Ziel, das man einplant.
+
+### Was die Serie noch bringt
+
+Weniger, als man denkt, und trotzdem genug. 0,35 % gegen 0,195 % Grundrate ist
+knapp das Doppelte — der eigentliche Wert liegt in der **Zusage bei 400**, die
+es ohne Serie gar nicht gibt. Wer wahllos fängt, hat 0,195 % je Begegnung und
+keine Obergrenze: Median 355 und ein Ende, das nie kommen muss.
+
+### Ein Fehler, den erst die neuen Zahlen sichtbar machten
+
+Der erforschte Zuschlag (`res-shiny`, höchstens 0,1 Prozentpunkte) wirkte
+**allein auf Serie 0**; der Anstieg danach ignorierte ihn. Solange das Plateau
+bei zehn Prozent lag, verschwand er darin. Mit 0,35 % wäre daraus eine sichtbare
+Verkehrung geworden: voll erforscht stünden bei Serie 0 gerade 0,295 %, beim
+ersten Fang aber nur noch 0,20 % — **das Fangen hätte die Chance gesenkt.**
+
+Jetzt hebt der Zuschlag die ganze Kurve. Voll erforscht: Median 159 statt 205.
+
+**Bestehende Schillernde bleiben.** Sie sind ehrlich erspielt, nur unter zu
+leichten Regeln; sie nachträglich abzuwerten würde die Spieler für einen Fehler
+in diesen Zahlen bestrafen.
+
+## Raids werfen Werkstoffe ab
+
+Der Einwand lautete, die Bosse seien zu teuer. Gemessen: ein Raid gab
+**ausschließlich Gold**, es war also nichts versteckt — er brachte wirklich
+nichts, was man sonst nirgends bekommt.
+
+Statt den Preis zu senken, gibt es jetzt Werkstoffe, verteilt wie das Gold
+(halb zu gleichen Teilen, halb nach Beitrag), mit einem Sockel von einem
+Drittel: wer mitschlägt, geht nie leer aus. Eine Stufe-5-Beschwörung zu viert
+bringt jedem 12–19 Eisensplitter, 8–13 Tautropfen und 3–4 Sternenstaub — mehr
+als eine achtstündige Grabung, und Sternenstaub ist sonst der Engpass der
+ganzen Werkbank.
+
+Damit ist der Raid das, was er sein sollte: der schnellste Weg an Material,
+nicht eine zweite Goldquelle.
+
+## Die Arena bestraft den zweiten Besuch nicht mehr
+
+Die Prämie fiel einmal am Tag je Stufe, danach nichts — gemeldet als „fühlt
+sich viel zu wenig belohnend an beim zweiten Mal". Stimmt. Jeder weitere
+Durchlauf zahlt jetzt ein Viertel, dieselbe Größenordnung, die Routentrainer
+für den zweiten Anlauf bekommen (`repeatRewardRatio`).
+
+Gegenstände nur, soweit ein Viertel für ein ganzes Stück reicht: ein halber
+Sternenstaub wäre keine Belohnung, sondern eine Rundungsfrage.
+
+**Nicht geändert** wurde das Antrittsgeld bei wiederholten Trainerkämpfen. Der
+Einwand („nur 20 Gold, egal welches Level") beschreibt die Anti-Grind-Sperre,
+und die tut genau, was sie soll. Dass der Streuner beim Erkunden besser zahlt,
+hat dieselbe Ursache und ist Absicht: er wird zufällig aus der ganzen Region
+gezogen, ist also fast immer ein Gegner, den man heute noch nicht geschlagen
+hat. Erkunden über Kurbeln zu stellen ist der Sinn der Regel.

@@ -66,7 +66,7 @@ describe('Verwerten', () => {
   it('verwertet nichts, was gerade unterwegs ist', async () => {
     const id = addBoxed('wildmon')
     h.resetRateLimits()
-    await h.post('/api/expeditions', { kind: 'forage', duration: 'short', creatureIds: [id] }, token)
+    await h.post('/api/expeditions', { kind: 'patrol', duration: 'short', creatureIds: [id] }, token)
     h.resetRateLimits()
     const r = await h.post('/api/souls/salvage', { creatureId: id }, token)
     expect(r.status).toBe(409)

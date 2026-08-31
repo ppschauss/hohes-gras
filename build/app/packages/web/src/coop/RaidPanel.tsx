@@ -7,6 +7,7 @@ import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
 import { number, untilLabel } from '../lib/format'
 import { CenterState } from '../ui/States'
+import { LootList } from '../ui/LootList'
 
 export function RaidPanel() {
   const raids = useAsync(() => api.raids(), [])
@@ -52,6 +53,9 @@ export function RaidPanel() {
           {last.reward && (
             <>
               <p className="harvest__gold num">{t('raid.rewardGold', { n: number(last.reward.gold) })}</p>
+              {/* Werkstoffe. Vorher gab ein Raid nur Gold, und genau so kam er
+                  an: "474 Gold, ziemlich mau". */}
+              <LootList items={last.reward.items} />
               {last.reward.caught && last.reward.creature && (
                 <p className="harvest__gold">{t('raid.rewardCaught', { name: last.reward.creature.displayName })}</p>
               )}

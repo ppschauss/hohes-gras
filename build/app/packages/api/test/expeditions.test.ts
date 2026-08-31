@@ -35,7 +35,7 @@ describe('Expeditionen', () => {
   it('startet eine Expedition und zieht Energie ab', async () => {
     const id = await teamId()
     const before = (await h.get('/api/garden', token)).body.team[0].energy
-    const r = await h.post('/api/expeditions', { kind: 'forage', duration: 'short', creatureIds: [id] }, token)
+    const r = await h.post('/api/expeditions', { kind: 'patrol', duration: 'short', creatureIds: [id] }, token)
     expect(r.status).toBe(200)
     expect(r.body.expedition.ready).toBe(false)
     expect(r.body.expedition.members[0].id).toBe(id)
@@ -45,8 +45,8 @@ describe('Expeditionen', () => {
 
   it('sperrt Pokemon, die schon unterwegs sind', async () => {
     const id = await teamId()
-    await h.post('/api/expeditions', { kind: 'forage', duration: 'short', creatureIds: [id] }, token)
-    const again = await h.post('/api/expeditions', { kind: 'dig', duration: 'short', creatureIds: [id] }, token)
+    await h.post('/api/expeditions', { kind: 'patrol', duration: 'short', creatureIds: [id] }, token)
+    const again = await h.post('/api/expeditions', { kind: 'patrol', duration: 'short', creatureIds: [id] }, token)
     expect(again.status).toBe(409)
     expect(again.body.detail.reason).toBe('already_away')
     const list = await h.get('/api/expeditions', token)
@@ -56,14 +56,14 @@ describe('Expeditionen', () => {
   it('weist zu erschoepfte Pokemon ab', async () => {
     const id = await teamId()
     h.ctx.db.prepare('UPDATE creatures SET energy = 1 WHERE id = ?').run(id)
-    const r = await h.post('/api/expeditions', { kind: 'forage', duration: 'long', creatureIds: [id] }, token)
+    const r = await h.post('/api/expeditions', { kind: 'patrol', duration: 'long', creatureIds: [id] }, token)
     expect(r.status).toBe(409)
     expect(r.body.detail.reason).toBe('too_tired')
   })
 
   it('weist fremde Pokemon ab', async () => {
     const r = await h.post('/api/expeditions', {
-      kind: 'forage', duration: 'short', creatureIds: ['00000000-0000-4000-8000-000000000000'],
+      kind: 'patrol', duration: 'short', creatureIds: ['00000000-0000-4000-8000-000000000000'],
     }, token)
     expect(r.status).toBe(404)
   })
@@ -82,7 +82,7 @@ describe('Expeditionen', () => {
     for (let i = 0; i < 4; i++) {
       h.resetRateLimits()
       const r = await h.post('/api/expeditions', {
-        kind: 'forage', duration: 'short', creatureIds: [available[i].id],
+        kind: 'patrol', duration: 'short', creatureIds: [available[i].id],
       }, token)
       expect(r.status).toBe(200)
     }
@@ -91,7 +91,7 @@ describe('Expeditionen', () => {
 
   it('verweigert das Einsammeln vor Ablauf', async () => {
     const id = await teamId()
-    const start = await h.post('/api/expeditions', { kind: 'forage', duration: 'long', creatureIds: [id] }, token)
+    const start = await h.post('/api/expeditions', { kind: 'patrol', duration: 'long', creatureIds: [id] }, token)
     const r = await h.post('/api/expeditions/collect', { id: start.body.expedition.id }, token)
     expect(r.status).toBe(409)
     expect(r.body.detail.reason).toBe('not_ready')
@@ -99,7 +99,7 @@ describe('Expeditionen', () => {
 
   it('zahlt Beute, Gold und EP aus', async () => {
     const id = await teamId()
-    const start = await h.post('/api/expeditions', { kind: 'forage', duration: 'medium', creatureIds: [id] }, token)
+    const start = await h.post('/api/expeditions', { kind: 'patrol', duration: 'medium', creatureIds: [id] }, token)
     finishNow(start.body.expedition.id)
 
     const goldBefore = (await h.get('/api/bag', token)).body.gold
@@ -115,7 +115,7 @@ describe('Expeditionen', () => {
 
   it('laesst sich nicht zweimal einsammeln', async () => {
     const id = await teamId()
-    const start = await h.post('/api/expeditions', { kind: 'dig', duration: 'short', creatureIds: [id] }, token)
+    const start = await h.post('/api/expeditions', { kind: 'patrol', duration: 'short', creatureIds: [id] }, token)
     finishNow(start.body.expedition.id)
     expect((await h.post('/api/expeditions/collect', { id: start.body.expedition.id }, token)).status).toBe(200)
     const second = await h.post('/api/expeditions/collect', { id: start.body.expedition.id }, token)
@@ -127,7 +127,7 @@ describe('Expeditionen', () => {
     // Das Ergebnis wird beim Start durch den Seed festgelegt; spaeter oder
     // frueher einsammeln darf daran nichts aendern.
     const id = await teamId()
-    const start = await h.post('/api/expeditions', { kind: 'dive', duration: 'short', creatureIds: [id] }, token)
+    const start = await h.post('/api/expeditions', { kind: 'patrol', duration: 'short', creatureIds: [id] }, token)
     finishNow(start.body.expedition.id)
     const first = await h.post('/api/expeditions/collect', { id: start.body.expedition.id }, token)
 
@@ -135,6 +135,33 @@ describe('Expeditionen', () => {
     const again = await h.post('/api/expeditions/collect', { id: start.body.expedition.id }, token)
     expect(again.body.result.gold).toBe(first.body.result.gold)
     expect(again.body.result.loot).toEqual(first.body.result.loot)
+  })
+
+  it('laesst nur passende Typen mit', async () => {
+    // Testmon ist Normal und gehoert damit auf die Streife, nicht ins
+    // Unterholz. Die Sperre ersetzt den frueheren Bonus: vorher durfte jeder
+    // ueberall hin und passende Typen bekamen 1,4x.
+    const id = await teamId()
+    const r = await h.post('/api/expeditions', { kind: 'forage', duration: 'short', creatureIds: [id] }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.detail.reason).toBe('wrong_type')
+  })
+
+  it('sagt in der Uebersicht, wer wohin darf', async () => {
+    const r = await h.get('/api/expeditions', token)
+    // Normal steht nur bei der Streife.
+    expect(r.body.available[0].fitsKinds).toEqual(['patrol'])
+  })
+
+  it('nennt vorab, was ungefaehr herauskommt', async () => {
+    const r = await h.get('/api/expeditions', token)
+    const long = r.body.expected.find((e: any) => e.kindId === 'patrol' && e.durationId === 'long')
+    const short = r.body.expected.find((e: any) => e.kindId === 'patrol' && e.durationId === 'short')
+    expect(long.gold).toBeGreaterThan(short.gold)
+    // Die Vorschau kommt aus derselben Tabelle wie die Aufloesung; steht dort
+    // ein Ball, muss er auch hier stehen.
+    expect(long.loot.map((l: any) => l.itemId)).toContain('poke-ball')
+    expect(long.loot[0].quantity).toBeGreaterThan(short.loot[0].quantity)
   })
 
   it('weist eine unbekannte Art ab', async () => {
@@ -148,7 +175,7 @@ describe('Vorziehen', () => {
   const startShort = async () => {
     const creature = await teamId()
     h.resetRateLimits()
-    return h.post('/api/expeditions', { kind: 'dig', duration: 'short', creatureIds: [creature] }, token)
+    return h.post('/api/expeditions', { kind: 'patrol', duration: 'short', creatureIds: [creature] }, token)
   }
 
   it('kostet Energie und macht die Expedition sofort fertig', async () => {
@@ -211,7 +238,7 @@ describe('Truppgröße', () => {
     const ids = [await teamId()]
     for (let i = 1; i < MAX_PARTY; i++) ids.push(addMember())
     h.resetRateLimits()
-    const r = await h.post('/api/expeditions', { kind: 'forage', duration: 'short', creatureIds: ids }, token)
+    const r = await h.post('/api/expeditions', { kind: 'patrol', duration: 'short', creatureIds: ids }, token)
     expect(r.status).toBe(200)
     expect(r.body.expedition.members).toHaveLength(MAX_PARTY)
   })
@@ -220,7 +247,7 @@ describe('Truppgröße', () => {
     const ids = [await teamId()]
     for (let i = 1; i <= MAX_PARTY; i++) ids.push(addMember())
     h.resetRateLimits()
-    expect((await h.post('/api/expeditions', { kind: 'forage', duration: 'short', creatureIds: ids }, token)).status)
+    expect((await h.post('/api/expeditions', { kind: 'patrol', duration: 'short', creatureIds: ids }, token)).status)
       .toBe(400)
   })
 })

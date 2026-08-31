@@ -3,7 +3,6 @@ import { t } from './i18n'
 import { useGame } from './store'
 import { NavBar } from './ui/NavBar'
 import { CenterState, PartnerSkeleton } from './ui/States'
-import { InviteGate } from './ui/InviteGate'
 import { LinkGate } from './ui/LinkGate'
 import { GameRouter } from './tabs/GameRouter'
 import { Sidebar } from './ui/Sidebar'
@@ -14,7 +13,7 @@ export function App() {
   const wide = useWide()
   const {
     auth, boot, screen, submitting,
-    start, submitInvite, submitLinkCode, setScreen, syncScreenFromLocation, refresh,
+    start, submitLinkCode, setScreen, syncScreenFromLocation, refresh,
   } = useGame()
 
   useEffect(() => { void start() }, [start])
@@ -29,14 +28,6 @@ export function App() {
     return (
       <Shell>
         <LinkGate message={auth.message} submitting={submitting} onSubmit={submitLinkCode} />
-      </Shell>
-    )
-  }
-
-  if (auth.status === 'needs_invite') {
-    return (
-      <Shell>
-        <InviteGate message={auth.message} submitting={submitting} onSubmit={submitInvite} />
       </Shell>
     )
   }

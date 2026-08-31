@@ -97,7 +97,7 @@ describe('Energie', () => {
 
     const creature = (await h.get('/api/garden', token)).body.team[0].id
     const before = await energyOf()
-    await h.post('/api/expeditions', { kind: 'forage', duration: 'long', creatureIds: [creature] }, token)
+    await h.post('/api/expeditions', { kind: 'patrol', duration: 'long', creatureIds: [creature] }, token)
     expect(await energyOf()).toBe(before - long)
   })
 

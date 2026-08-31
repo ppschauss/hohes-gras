@@ -7,7 +7,7 @@ import {
   isEventTrainer, makeSide, referenceLevel,
   rollLureDrop,
   LEGENDARY_BERRY_ID, npcFighter, PERFECT_IV, resolveTurn, rollBerryDrop, rollPerfect,
-  toFighter, xpForLevel,
+  toFighter, xpForLevel, checkLeagueGate,
   type AiLevel, type BattleContent, type BattleEvent, type BattleState,
   type Fighter, type PlayerAction,
 } from '@game/engine'
@@ -25,7 +25,7 @@ import { refreshMoves } from './garden.js'
 import { awardSeasonPoints, bumpMetric } from './progression.js'
 import * as energy from './energy.js'
 import { referenceOf, scaledLevel, trainerOffset } from './scaling.js'
-import { gateFor } from './league.js'
+import { gateFor, leagueOf } from './league.js'
 import { capOf } from './travel.js'
 import { contributeToGoal } from './guilds.js'
 import { busyCreatureIds } from './busy.js'
@@ -207,6 +207,9 @@ export function opponentsIn(ctx: AppContext, trainer: Trainer, areaId: string) {
   const defeats = battles.defeatsOf(ctx.db, trainer.id)
   const badges = world.badgesOf(ctx.db, trainer.id)
   const reference = referenceOf(ctx, trainer)
+  const defeatedIds = new Set(defeats.keys())
+  // Die Liga der Region, aus der einen Stelle, die sie kennt.
+  const league = area.regionId ? leagueOf(ctx, area.regionId) : null
 
   const toEntry = (id: string, isGym: boolean) => {
     const def = ctx.registry.trainer(id)
@@ -229,14 +232,46 @@ export function opponentsIn(ctx: AppContext, trainer: Trainer, areaId: string) {
       badgeId: def.badgeId,
       badgeEarned: def.badgeId ? badges.has(def.badgeId) : false,
       intro: ctx.registry.localized(def.dialogue.intro, trainer.locale),
+      /*
+       * Warum gerade nicht — oder null, wenn es geht.
+       *
+       * Der Grund gehoert an den Gegner und nicht in eine Fehlermeldung nach
+       * dem Antippen: eine Liste, in der vier Knoepfe gleich aussehen und drei
+       * davon scheitern, ist keine Liste, sondern ein Ratespiel.
+       */
+      locked: (() => {
+        if (!league) return null
+        const gate = checkLeagueGate(id, league.eliteIds, league.championId, defeatedIds)
+        if (gate.ok) return null
+        return gate.reason === 'elite_locked'
+          ? {
+              reason: gate.reason,
+              requiresName: ctx.registry.localized(ctx.registry.trainer(gate.requires).name, trainer.locale),
+            }
+          : { reason: gate.reason, missing: gate.missing }
+      })(),
     }
   }
 
+  const entries = area.trainerIds.map((id) => toEntry(id, false))
+  const gymEntry = area.gymId ? toEntry(area.gymId, true) : null
   return {
     areaId,
     areaName: ctx.registry.localized(area.name, trainer.locale),
-    trainers: area.trainerIds.map((id) => toEntry(id, false)),
-    gym: area.gymId ? toEntry(area.gymId, true) : null,
+    /*
+     * Drei Listen statt einer.
+     *
+     * Vorher standen die Top Vier und der Champion zwischen den Streunern der
+     * Route, unter der Ueberschrift „Training". Ein Champion, der neben einem
+     * Taucher steht, ist kein Champion — und „Training" war fuer die Liga
+     * schlicht das falsche Wort.
+     */
+    trainers: entries.filter((e) => e.kind !== 'elite' && e.kind !== 'champion'),
+    elites: entries.filter((e) => e.kind === 'elite'),
+    // Der Champion sitzt im Arena-Platz des Gebiets, nicht in der Trainerliste
+    // — deshalb kommt er von dort und nicht aus `entries`.
+    champion: gymEntry?.kind === 'champion' ? gymEntry : null,
+    gym: gymEntry?.kind === 'champion' ? null : gymEntry,
   }
 }
 

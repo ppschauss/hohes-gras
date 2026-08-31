@@ -5,10 +5,38 @@
  * loot which would otherwise pile up unread has a destination — a bag full of
  * "Feinsand" is only interesting if it becomes something.
  */
+/**
+ * Eine Chargengröße.
+ *
+ * `factor` ist nicht `count / erste Charge` — darin steckt der Mengenrabatt.
+ * Fünfzig Bälle kosten das Vierfache von zehn, nicht das Fünffache: wer auf
+ * Vorrat baut, bindet Material lange im Voraus und soll dafür etwas bekommen.
+ * Das ist auch der Grund, warum die Chargen überhaupt existieren — zehnmal
+ * denselben Knopf zu drücken ist keine Entscheidung, sondern Arbeit.
+ */
+export interface RecipeBatch {
+  /** Wie viele Stück herauskommen. */
+  count: number
+  /** Womit Zutaten und Gold multipliziert werden. */
+  factor: number
+}
+
+/** Zehn, fünfundzwanzig, fünfzig — mit 10 % bzw. 20 % Nachlass. */
+export const BALL_BATCHES: RecipeBatch[] = [
+  { count: 10, factor: 1 },
+  { count: 25, factor: 2.25 },
+  { count: 50, factor: 4 },
+]
+
 export interface Recipe {
   id: string
-  /** What it produces. */
+  /** What it produces. Bei Chargen gilt das für die kleinste. */
   output: { itemId: string; quantity: number }
+  /**
+   * Wählbare Mengen. Fehlt das Feld, gibt es genau eine — das ist der
+   * Normalfall und bleibt für alles außer Bällen so.
+   */
+  batches?: RecipeBatch[]
   inputs: Array<{ itemId: string; quantity: number }>
   goldCost: number
   /** Buildings are not required, but a lab makes some recipes available. */
@@ -25,16 +53,59 @@ export interface Recipe {
 
 export const RECIPES: Recipe[] = [
   {
+    /*
+     * Der Pokeball aus eigener Hand.
+     *
+     * Er stand lange nur im Laden, und damit war die ganze Ballkette an Gold
+     * gebunden: jedes andere Ballrezept verbraucht Pokebaelle, also kaufte man
+     * sie. Jetzt gibt es den Weg ueber Werkstoffe — fuenfzig Stueck kosten
+     * 16 Eisensplitter statt 1.500 Gold. Wer faehrt, zahlt weniger als wer
+     * nur reich ist, und genau darum geht es bei den Expeditionen.
+     */
+    id: 'craft-poke-ball',
+    output: { itemId: 'poke-ball', quantity: 10 },
+    batches: BALL_BATCHES,
+    inputs: [{ itemId: 'iron-shard', quantity: 4 }, { itemId: 'silk-thread', quantity: 2 }],
+    goldCost: 100,
+  },
+  {
     id: 'craft-great-ball',
-    output: { itemId: 'great-ball', quantity: 5 },
-    inputs: [{ itemId: 'poke-ball', quantity: 8 }, { itemId: 'iron-shard', quantity: 2 }],
-    goldCost: 120,
+    output: { itemId: 'great-ball', quantity: 10 },
+    batches: BALL_BATCHES,
+    inputs: [{ itemId: 'poke-ball', quantity: 12 }, { itemId: 'iron-shard', quantity: 3 }],
+    goldCost: 200,
   },
   {
     id: 'craft-ultra-ball', research: 'res-ultra-ball',
-    output: { itemId: 'ultra-ball', quantity: 3 },
-    inputs: [{ itemId: 'great-ball', quantity: 5 }, { itemId: 'iron-shard', quantity: 4 }, { itemId: 'star-piece', quantity: 1 }],
-    goldCost: 400,
+    output: { itemId: 'ultra-ball', quantity: 10 },
+    batches: BALL_BATCHES,
+    inputs: [
+      { itemId: 'great-ball', quantity: 12 },
+      { itemId: 'iron-shard', quantity: 8 },
+      // Nur einer je zehn: Sternenstaub faellt am seltensten von allem
+      // (etwa einer je langer Reise) und waere sonst der heimliche Deckel
+      // ueber der ganzen Kette.
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 900,
+    requiresBuilding: { buildingId: 'lab', level: 2 },
+  },
+  {
+    /*
+     * Ein Kabel je Entwicklung.
+     *
+     * Sechs Eisensplitter sind etwa zwei bis drei Expeditionen in die Ruine,
+     * der Sternenstaub kommt aus den langen. Das ist bewusst spuerbar: elf
+     * Arten haengen daran, und wer sie alle will, faehrt dafuer eine Weile.
+     */
+    id: 'craft-link-cable', research: 'res-link-cable',
+    output: { itemId: 'link-cable', quantity: 1 },
+    inputs: [
+      { itemId: 'iron-shard', quantity: 6 },
+      { itemId: 'silk-thread', quantity: 3 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 800,
     requiresBuilding: { buildingId: 'lab', level: 2 },
   },
   {
@@ -73,21 +144,24 @@ export const RECIPES: Recipe[] = [
    */
   {
     id: 'craft-net-ball',
-    output: { itemId: 'net-ball', quantity: 5 },
-    inputs: [{ itemId: 'poke-ball', quantity: 6 }, { itemId: 'silk-thread', quantity: 4 }],
-    goldCost: 150,
+    output: { itemId: 'net-ball', quantity: 10 },
+    batches: BALL_BATCHES,
+    inputs: [{ itemId: 'poke-ball', quantity: 10 }, { itemId: 'silk-thread', quantity: 6 }],
+    goldCost: 250,
   },
   {
     id: 'craft-dusk-ball',
-    output: { itemId: 'dusk-ball', quantity: 5 },
-    inputs: [{ itemId: 'poke-ball', quantity: 6 }, { itemId: 'soft-sand', quantity: 4 }],
-    goldCost: 150,
+    output: { itemId: 'dusk-ball', quantity: 10 },
+    batches: BALL_BATCHES,
+    inputs: [{ itemId: 'poke-ball', quantity: 10 }, { itemId: 'soft-sand', quantity: 6 }],
+    goldCost: 250,
   },
   {
     id: 'craft-timer-ball',
-    output: { itemId: 'timer-ball', quantity: 5 },
-    inputs: [{ itemId: 'great-ball', quantity: 3 }, { itemId: 'iron-shard', quantity: 3 }],
-    goldCost: 200,
+    output: { itemId: 'timer-ball', quantity: 10 },
+    batches: BALL_BATCHES,
+    inputs: [{ itemId: 'great-ball', quantity: 6 }, { itemId: 'iron-shard', quantity: 5 }],
+    goldCost: 350,
   },
   {
     id: 'craft-revive',
@@ -225,6 +299,32 @@ export type CraftCheck =
   | { ok: false; reason: 'missing_items'; itemId: string; need: number; have: number }
   | { ok: false; reason: 'insufficient_gold'; need: number }
 
+/** Die Chargen eines Rezepts; ohne eigene ist es genau eine zum Grundpreis. */
+export const batchesOf = (recipe: Recipe): RecipeBatch[] =>
+  recipe.batches ?? [{ count: recipe.output.quantity, factor: 1 }]
+
+/** Die Charge zu einer Stückzahl. Unbekannte Zahlen gibt es nicht — sonst
+ *  könnte der Client sich seinen eigenen Rabatt ausdenken. */
+export const findBatch = (recipe: Recipe, count?: number): RecipeBatch | undefined => {
+  const list = batchesOf(recipe)
+  return count === undefined ? list[0] : list.find((b) => b.count === count)
+}
+
+/**
+ * Was eine Charge kostet.
+ *
+ * Aufgerundet, damit der Rabatt nie eine Zutat verschluckt: 3 × 2,25 = 6,75
+ * wird zu 7, nicht zu 6.
+ */
+export function batchCost(recipe: Recipe, batch: RecipeBatch): {
+  inputs: Array<{ itemId: string; quantity: number }>; goldCost: number
+} {
+  return {
+    inputs: recipe.inputs.map((i) => ({ itemId: i.itemId, quantity: Math.ceil(i.quantity * batch.factor) })),
+    goldCost: Math.ceil(recipe.goldCost * batch.factor),
+  }
+}
+
 export function canCraft(
   recipe: Recipe,
   bag: Record<string, number>,
@@ -232,6 +332,8 @@ export function canCraft(
   buildings: Array<{ buildingId: string; level: number }>,
   /** Abgeschlossene Forschungsprojekte. Leer heisst: nichts erforscht. */
   researched: ReadonlySet<string> = new Set(),
+  /** Welche Menge geprüft wird; ohne Angabe die kleinste. */
+  batch: RecipeBatch = batchesOf(recipe)[0]!,
 ): CraftCheck {
   // Die Forschung steht vor dem Gebaeude: wer das Labor hat, aber die
   // Erkenntnis nicht, soll das auch als Grund genannt bekommen.
@@ -248,12 +350,13 @@ export function canCraft(
       }
     }
   }
-  for (const input of recipe.inputs) {
+  const cost = batchCost(recipe, batch)
+  for (const input of cost.inputs) {
     const have = bag[input.itemId] ?? 0
     if (have < input.quantity) {
       return { ok: false, reason: 'missing_items', itemId: input.itemId, need: input.quantity, have }
     }
   }
-  if (gold < recipe.goldCost) return { ok: false, reason: 'insufficient_gold', need: recipe.goldCost }
+  if (gold < cost.goldCost) return { ok: false, reason: 'insufficient_gold', need: cost.goldCost }
   return { ok: true }
 }

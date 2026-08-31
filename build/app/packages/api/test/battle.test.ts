@@ -45,12 +45,32 @@ describe('Gegneruebersicht', () => {
   it('listet Trainer und Arena des aktuellen Gebiets', async () => {
     const r = await h.get('/api/battle/opponents', token)
     expect(r.status).toBe(200)
-    // Seit die Testregion eine Top Vier hat, stehen die mit im Gebiet.
-    expect(r.body.trainers.map((t: any) => t.id)).toEqual(['test-rival', 'elite-eins', 'elite-zwei'])
+    /*
+     * Drei Listen statt einer.
+     *
+     * Vorher standen die Top Vier zwischen den Streunern der Route, unter der
+     * Ueberschrift "Training" — genau so gemeldet. Die Liga hat jetzt ihren
+     * eigenen Platz, und dass sie nicht mehr unter `trainers` auftaucht, ist
+     * die Zusage, auf der die Anzeige aufbaut.
+     */
+    expect(r.body.trainers.map((t: any) => t.id)).toEqual(['test-rival'])
+    expect(r.body.elites.map((t: any) => t.id)).toEqual(['elite-eins', 'elite-zwei'])
     expect(r.body.gym.id).toBe('test-gym')
     expect(r.body.gym.badgeId).toBe('test-badge')
     expect(r.body.gym.badgeEarned).toBe(false)
     expect(r.body.trainers[0].defeated).toBe(false)
+  })
+
+  it('zeigt an, welcher Liga-Gegner noch gesperrt ist', async () => {
+    const r = await h.get('/api/battle/opponents', token)
+    const [erster, zweiter] = r.body.elites
+    // Der erste steht offen, der zweite wartet auf ihn — und das steht an der
+    // Karte, nicht erst in der Fehlermeldung nach dem Antippen.
+    expect(erster.locked).toBeNull()
+    expect(zweiter.locked).toMatchObject({ reason: 'elite_locked' })
+    expect(zweiter.locked.requiresName).toBeTruthy()
+    // Der Streuner der Route hat mit alldem nichts zu tun.
+    expect(r.body.trainers[0].locked).toBeNull()
   })
 })
 

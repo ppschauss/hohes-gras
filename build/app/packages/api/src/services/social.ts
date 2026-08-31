@@ -15,7 +15,8 @@ import { logEvent } from '../repos/events.js'
 import * as gifts from './gifts.js'
 import { worldClock } from '../worldClock.js'
 import { creatureView } from './views.js'
-import { bumpMetric } from './progression.js'
+import { bumpMetric, evolveByTrade } from './progression.js'
+import * as hub from './hub.js'
 import { busyCreatureIds } from './busy.js'
 
 /** Market prices are bounded so a listing cannot be used to move a fortune
@@ -417,12 +418,28 @@ export function respondToTrade(ctx: AppContext, trainer: Trainer, tradeId: strin
       dex.markCaught(ctx.db, offer.fromId, wanted.speciesId)
     }
 
+    /*
+     * Und jetzt das, wofuer im Vorbild ueberhaupt getauscht wird.
+     *
+     * Elf Arten entwickeln sich nur beim Besitzerwechsel. Beide Seiten werden
+     * geprueft, denn beide bekommen etwas — beim Ringtausch koennen sich zwei
+     * Pokemon gleichzeitig entwickeln.
+     */
+    const evolved: string[] = []
+    const mine = evolveByTrade(ctx, trainer.id, offer.offeredId)
+    if (mine) evolved.push(mine)
+    if (offer.requestedId) {
+      const theirs = evolveByTrade(ctx, offer.fromId, offer.requestedId)
+      if (theirs) evolved.push(theirs)
+    }
+
     social.refreshStats(ctx.db, trainer.id)
     social.refreshStats(ctx.db, offer.fromId)
     bumpMetric(ctx, trainer.id, 'catches')
     bumpMetric(ctx, offer.fromId, 'catches')
-    logEvent(ctx.db, trainer.id, 'trade.accepted', { tradeId, fromId: offer.fromId })
-    return { accepted: true }
+    logEvent(ctx.db, trainer.id, 'trade.accepted', { tradeId, fromId: offer.fromId, evolved })
+    /** Was sich durch den Tausch entwickelt hat — die App sagt es beiden an. */
+    return { accepted: true, evolved }
   })
 }
 
@@ -431,10 +448,15 @@ export function respondToTrade(ctx: AppContext, trainer: Trainer, tradeId: strin
 export function leaderboardView(ctx: AppContext, trainer: Trainer) {
   social.refreshStats(ctx.db, trainer.id)
   const rows = social.leaderboard(ctx.db, 50)
+  // Die globale Liste kommt aus dem Zwischenspeicher und ist null, solange
+  // kein Verbund eingerichtet ist. Die Ansicht blendet sie dann einfach aus.
+  const globalId = hub.linkedId(ctx, trainer.id)
+  const global = hub.cachedLeaderboard(ctx)
   return {
     rows: rows.map((r, i) => ({ ...r, rank: i + 1, isSelf: r.trainerId === trainer.id })),
     ownRank: trainer.privacy.hideFromLeaderboard ? null : social.rankOf(ctx.db, trainer.id),
     hidden: trainer.privacy.hideFromLeaderboard,
+    global: global?.map((r, i) => ({ ...r, rank: i + 1, isSelf: r.trainerId === globalId })) ?? null,
   }
 }
 

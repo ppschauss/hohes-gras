@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ArenaContext, BattleFighterView, BattleMoveView, BattleView, OpponentEntry } from '../lib/api'
+import type { ArenaContext, BattleFighterView, BattleMoveView, BattleView, GauntletSummary, OpponentEntry } from '../lib/api'
 import { t } from '../i18n'
 import { errorText } from '../lib/errors'
 import { ItemIcon } from '../ui/ItemIcon'
+import { number as zahl } from '../lib/format'
 import { api } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
 import { describeTurn, effectivenessLabel } from '../lib/battleLog'
 import { Screen } from '../ui/Screen'
+import { LootList, type LootItem } from '../ui/LootList'
 import { CenterState } from '../ui/States'
 import { useGame } from '../store'
 
@@ -43,11 +45,17 @@ export function BattleScreen({ onBack, onArena }: { onBack: () => void; onArena:
   useEffect(() => { logEnd.current?.scrollIntoView({ block: 'end' }) }, [log])
 
   const medicine = (bag.data?.items ?? []).filter((i) => i.category === 'medicine' && i.quantity > 0)
+  const [arenaPayout, setArenaPayout] = useState<ArenaPayout | null>(null)
+  const [gauntletDrops, setGauntletDrops] = useState<LootItem[]>([])
+  const [gauntletMilestone, setGauntletMilestone] = useState<GauntletStep | null>(null)
+  const [gauntletSummary, setGauntletSummary] = useState<GauntletSummary | null>(null)
 
   const apply = (view: BattleView & {
     arena?: ArenaContext | null
     arenaAdvance?: { healed: number; round: number | null }
-    arenaDone?: { payout: { gold: number } | null }
+    arenaDone?: { payout: ArenaPayout | null }
+    gauntletAdvance?: { healed: number; streak: number; payout: GauntletStep | null; drops: LootItem[] }
+    gauntletDone?: { streak: number; summary: GauntletSummary | null }
   }) => {
     setBattle(view)
     if (view.arena !== undefined) setArena(view.arena)
@@ -56,7 +64,22 @@ export function BattleScreen({ onBack, onArena }: { onBack: () => void; onArena:
     if (view.arenaAdvance) {
       setLog((prev) => [...prev, t('arena.advanced', { round: view.arenaAdvance!.round ?? 0 })])
     }
-    if (view.arenaDone) setArena(null)
+    /*
+     * Kampfzone: nach jedem Sieg das, was dabei abgefallen ist — und am Ende
+     * die Abrechnung ueber den ganzen Lauf.
+     */
+    if (view.gauntletAdvance) {
+      setGauntletDrops(view.gauntletAdvance.drops)
+      setGauntletMilestone(view.gauntletAdvance.payout)
+    }
+    if (view.gauntletDone) setGauntletSummary(view.gauntletDone.summary)
+
+    if (view.arenaDone) {
+      setArena(null)
+      // Die Praemie des Durchlaufs kam bisher nur in der Antwort an und wurde
+      // stumm verbucht — Gold *und* Gegenstaende.
+      setArenaPayout(view.arenaDone.payout)
+    }
     setPanel('main')
     if (view.lastEvents.length) setLog((prev) => [...prev, ...describeTurn(view.lastEvents, view)].slice(-40))
     if (view.finished) haptic[view.winner === 0 ? 'success' : 'error']()
@@ -113,34 +136,68 @@ export function BattleScreen({ onBack, onArena }: { onBack: () => void; onArena:
     if (cameFrom.current !== 'area') onBack()
   }
 
+  const d = opponents.data
+  const hasLeague = (d?.elites.length ?? 0) > 0 || d?.champion != null
+  const nobody = Boolean(d) && !hasLeague && d!.trainers.length === 0 && !d!.gym
+
   if (!battle) {
     return (
-      <Screen eyebrow={opponents.data?.areaName ?? ''} title={t('area.trainers')} onBack={onBack}>
+      <Screen
+        eyebrow={opponents.data?.areaName ?? ''}
+        /* Steht hier eine Liga, ist „Training" das falsche Wort fuer die Seite. */
+        title={hasLeague ? t('battle.league') : t('area.trainers')}
+        onBack={onBack}
+      >
         <main className="content">
           {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
+
           {opponents.data?.gym && (
             <section className="section">
               <h2>{t('area.gym')}</h2>
               <OpponentCard entry={opponents.data.gym} busy={action.busy} onChallenge={challenge} />
             </section>
           )}
-          <section className="section">
-            <h2>{t('area.trainers')}</h2>
-            {opponents.data?.trainers.length === 0
-              ? (
-                <CenterState glyph="🕊️" title={t('soon.title')} body={t('area.trainers.hint')}>
-                  {/* Ein Ausweg gehoert auf jede leere Seite. */}
-                  <button type="button" className="btn btn--primary" onClick={onBack}>
-                    {t('app.back')}
-                  </button>
-                </CenterState>
-              )
-              : <div className="stack">
-                  {opponents.data?.trainers.map((o) => (
-                    <OpponentCard key={o.id} entry={o} busy={action.busy} onChallenge={challenge} />
-                  ))}
-                </div>}
-          </section>
+
+          {/* Die Liga zuerst und fuer sich. Vorher standen die Top Vier und der
+              Meister zwischen den Streunern der Route, unter der Ueberschrift
+              „Training" — ein Champion neben einem Taucher ist kein Champion. */}
+          {hasLeague && (
+            <section className="section">
+              <h2>{t('battle.league')}</h2>
+              <p className="explain">{t('battle.leagueOrder')}</p>
+              <div className="stack">
+                {opponents.data?.elites.map((o) => (
+                  <OpponentCard key={o.id} entry={o} busy={action.busy} onChallenge={challenge} />
+                ))}
+              </div>
+              {opponents.data?.champion && (
+                <>
+                  <span className="section__eyebrow">{t('battle.championHead')}</span>
+                  <OpponentCard entry={opponents.data.champion} busy={action.busy} onChallenge={challenge} />
+                </>
+              )}
+            </section>
+          )}
+
+          {(opponents.data?.trainers.length ?? 0) > 0 && (
+            <section className="section">
+              <h2>{t('area.trainers')}</h2>
+              <div className="stack">
+                {opponents.data?.trainers.map((o) => (
+                  <OpponentCard key={o.id} entry={o} busy={action.busy} onChallenge={challenge} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {nobody && (
+            <CenterState glyph="🕊️" title={t('soon.title')} body={t('area.trainers.hint')}>
+              {/* Ein Ausweg gehoert auf jede leere Seite. */}
+              <button type="button" className="btn btn--primary" onClick={onBack}>
+                {t('app.back')}
+              </button>
+            </CenterState>
+          )}
         </main>
       </Screen>
     )
@@ -169,7 +226,10 @@ export function BattleScreen({ onBack, onArena }: { onBack: () => void; onArena:
         {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
         {battle.finished
-          ? <Result battle={battle} arena={arena} busy={action.busy} onNext={nextRound} onLeave={leave} />
+          ? <Result battle={battle} arena={arena} arenaPayout={arenaPayout}
+              gauntletDrops={gauntletDrops} gauntletMilestone={gauntletMilestone}
+              gauntletSummary={gauntletSummary}
+              busy={action.busy} onNext={nextRound} onLeave={leave} />
           : panel === 'main'
             ? <div className="battleActions">
                 <button type="button" className="btn btn--primary" disabled={action.busy}
@@ -203,8 +263,23 @@ export function BattleScreen({ onBack, onArena }: { onBack: () => void; onArena:
 function OpponentCard({ entry, busy, onChallenge }: {
   entry: OpponentEntry; busy: boolean; onChallenge: (o: OpponentEntry) => void
 }) {
+  /*
+   * Warum es nicht geht, steht an der Karte — nicht in einer Fehlermeldung
+   * nach dem Antippen. Die Sperre gab es serverseitig schon lange; sichtbar
+   * war sie nie, also sahen vier Knoepfe gleich aus und drei davon scheiterten.
+   */
+  const lockText = entry.locked?.reason === 'elite_locked'
+    ? t('battle.locked.elite', { name: entry.locked.requiresName ?? '' })
+    : entry.locked?.reason === 'champion_locked'
+      ? t('battle.locked.champion', { n: entry.locked.missing ?? 0 })
+      : null
+
+  const tone = entry.kind === 'champion' ? ' opponent--champion'
+    : entry.kind === 'elite' ? ' opponent--elite'
+      : entry.isGym ? ' opponent--gym' : ''
+
   return (
-    <article className={`opponent${entry.isGym ? ' opponent--gym' : ''}`}>
+    <article className={`opponent${tone}${lockText ? ' opponent--locked' : ''}`}>
       <span className="opponent__text">
         <span className="opponent__head">
           <span className="opponent__name">{entry.name}</span>
@@ -213,10 +288,13 @@ function OpponentCard({ entry, busy, onChallenge }: {
         </span>
         <span className="opponent__title">{entry.title}</span>
         <span className="opponent__meta num">{t('battle.team', { n: entry.teamSize, level: entry.maxLevel })}</span>
-        <span className="opponent__intro">„{entry.intro}"</span>
+        {lockText
+          ? <span className="opponent__locked">{lockText}</span>
+          : <span className="opponent__intro">„{entry.intro}"</span>}
       </span>
-      <button type="button" className="btn btn--primary btn--sm" disabled={busy} onClick={() => onChallenge(entry)}>
-        {entry.defeated ? t('battle.rematch') : t('battle.challenge')}
+      <button type="button" className="btn btn--primary btn--sm"
+        disabled={busy || Boolean(lockText)} onClick={() => onChallenge(entry)}>
+        {lockText ? t('battle.locked') : entry.defeated ? t('battle.rematch') : t('battle.challenge')}
       </button>
     </article>
   )
@@ -299,9 +377,25 @@ function SwitchPanel({ party, activeId, busy, onPick, onCancel }: {
   )
 }
 
-function Result({ battle, arena, busy, onNext, onLeave }: {
+export interface ArenaPayout {
+  gold: number
+  repeat: boolean
+  items: Array<{ itemId: string; name: string; icon: string; quantity: number }>
+}
+
+export interface GauntletStep {
+  at: number
+  gold: number
+  items: LootItem[]
+}
+
+function Result({ battle, arena, arenaPayout, gauntletDrops, gauntletMilestone, gauntletSummary, busy, onNext, onLeave }: {
   battle: BattleView
   arena: ArenaContext | null
+  arenaPayout: ArenaPayout | null
+  gauntletDrops: LootItem[]
+  gauntletMilestone: GauntletStep | null
+  gauntletSummary: GauntletSummary | null
   busy: boolean
   onNext: () => void
   onLeave: () => void
@@ -319,6 +413,57 @@ function Result({ battle, arena, busy, onNext, onLeave }: {
           keine gekommen. */}
       {r && r.energy > 0 && <p className="num">{t('battle.reward.energy', { n: r.energy })}</p>}
       {r && r.xpPerMember > 0 && <p className="num">{t('battle.reward.xp', { n: r.xpPerMember })}</p>}
+
+      {/* Die Beute eines Ueberfalls. Sie stand in der Antwort, aber nie auf
+          dem Bildschirm — Lockduefte und Sagenbeeren landeten stumm im
+          Beutel, und man haette ihn auswendig kennen muessen. */}
+      {r?.event && (
+        <>
+          {r.event.gold > 0 && <p className="num">{t('battle.reward.eventGold', { n: r.event.gold })}</p>}
+          <LootList items={r.event.items} />
+          {r.event.perfect && (
+            <p className="result__badge">{t('battle.reward.perfect', { name: r.event.perfect.name })}</p>
+          )}
+        </>
+      )}
+      {/* Was der Gegner fallen liess — jeder Kampf, nicht nur die Stufen. */}
+      <LootList items={gauntletDrops} />
+
+      {gauntletMilestone && (
+        <>
+          <p className="result__badge">{t('gauntlet.milestone', { n: gauntletMilestone.at })}</p>
+          <p className="num">{t('battle.reward.gold', { n: gauntletMilestone.gold })}</p>
+          <LootList items={gauntletMilestone.items} />
+        </>
+      )}
+
+      {/* Die Abrechnung ueber den ganzen Lauf. */}
+      {gauntletSummary && (
+        <div className="summary">
+          <h3 className="summary__title">
+            {t('gauntlet.summary', { n: gauntletSummary.streak, region: gauntletSummary.regionName })}
+          </h3>
+          <p className="num">
+            {t('gauntlet.summaryTotals', {
+              gold: zahl(gauntletSummary.gold), xp: zahl(gauntletSummary.xp),
+            })}
+          </p>
+          <p className="center__body num">{t('gauntlet.best', { n: gauntletSummary.best })}</p>
+          <LootList items={gauntletSummary.items} label={t('gauntlet.summaryLoot')} />
+        </div>
+      )}
+
+      {/* Die Praemie des Arena-Durchlaufs. */}
+      {arenaPayout && (
+        <>
+          <p className="num">
+            {arenaPayout.repeat
+              ? t('arena.payoutRepeat', { n: arenaPayout.gold })
+              : t('arena.payout', { n: arenaPayout.gold })}
+          </p>
+          <LootList items={arenaPayout.items} />
+        </>
+      )}
       {r?.levelUps.map((l) => (
         <span key={l.creatureId} className="tag tag--level">{l.name} → {t('creature.level', { n: l.newLevel })}</span>
       ))}

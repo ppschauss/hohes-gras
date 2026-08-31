@@ -1,7 +1,7 @@
 import { CARE_ACTIONS, GameError, type CareAction, type GardenState, type Trainer } from '@game/shared'
 import {
   applyCare, CARE_RULES, ENERGY_COSTS, ENERGY_MAX, ENERGY_REGEN_BOX_PER_HOUR,
-  TEAM_CAPACITY as CAPACITY, randomIvs, regenerateEnergy,
+  TEAM_CAPACITY as CAPACITY, randomIvs, energyTick, ENERGY_REGEN_PER_HOUR,
   computeStats, createRng, xpForLevel, type CareCreature,
 } from '@game/engine'
 import { NATURES } from '@game/shared'
@@ -372,24 +372,41 @@ function xpFloorForLevel(ctx: AppContext, speciesId: string, level: number): num
 }
 
 /**
- * Called on every garden read: energy ticks up in the background so a player
- * who was away returns to a rested team.
+ * Erholung nachziehen — Team und Box.
  *
- * Die Box lief hier lange gar nicht mit — wer eine Kreatur einlagerte, fand
- * sie Wochen spaeter genauso erschoepft wieder vor. Jetzt erholt sie sich
- * dort, und zwar schneller als im Dienst.
+ * Wird überall aufgerufen, wo die Ausdauer einer Kreatur zählt: im Garten, in
+ * der Expeditionsübersicht und beim Start einer Expedition. Nicht in der
+ * Auth-Schicht, obwohl das lückenlos wäre — eine ausgebaute Box fasst über
+ * tausend Kreaturen, und bei 100/h wäre fast jede Anfrage ein Massen-Update.
+ *
+ * Die Uhren stehen an jedem Trainer und rücken nur um die gewährten Punkte
+ * vor. Vorher hing beides an `last_seen_at`, den *jede* Anfrage neu setzt:
+ * wer alle fünf Minuten hereinsah, bekam nie etwas. In einem echten Spielstand
+ * standen 40 von 100 eingelagerten Pokémon seit Tagen auf demselben Wert.
  */
 export function catchUpEnergy(ctx: AppContext, trainer: Trainer, now = Date.now()): void {
-  const minutes = Math.floor((now - trainer.lastSeenAt) / 60_000)
-  if (minutes < 10) return
-  const team = creatures.teamOf(ctx.db, trainer.id)
-  for (const c of team) {
-    const next = regenerateEnergy(c.energy, minutes)
-    if (next !== c.energy) {
-      ctx.db.prepare('UPDATE creatures SET energy = ? WHERE id = ?').run(next, c.id)
+  const row = ctx.db
+    .prepare('SELECT box_energy_at AS box, team_energy_at AS team FROM trainers WHERE id = ?')
+    .get(trainer.id) as { box: number; team: number } | undefined
+  if (!row) return
+
+  const box = energyTick(row.box, now, ENERGY_REGEN_BOX_PER_HOUR)
+  if (box.gain > 0) {
+    creatures.regenerateBoxEnergy(ctx.db, trainer.id, box.gain, ENERGY_MAX)
+  }
+
+  const team = energyTick(row.team, now, ENERGY_REGEN_PER_HOUR)
+  if (team.gain > 0) {
+    for (const c of creatures.teamOf(ctx.db, trainer.id)) {
+      const next = Math.min(ENERGY_MAX, c.energy + team.gain)
+      if (next !== c.energy) {
+        ctx.db.prepare('UPDATE creatures SET energy = ? WHERE id = ?').run(next, c.id)
+      }
     }
   }
-  creatures.regenerateBoxEnergy(
-    ctx.db, trainer.id, (minutes / 60) * ENERGY_REGEN_BOX_PER_HOUR, ENERGY_MAX,
-  )
+
+  // Auch dann schreiben, wenn nichts gewährt wurde: eine Uhr, die noch nie
+  // lief (0), muss anfangen zu laufen.
+  ctx.db.prepare('UPDATE trainers SET box_energy_at = ?, team_energy_at = ? WHERE id = ?')
+    .run(box.nextAt, team.nextAt, trainer.id)
 }

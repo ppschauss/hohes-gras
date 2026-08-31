@@ -212,12 +212,14 @@ describe('Team und Box', () => {
   })
 
   it('weist fremde Pokemon ab', async () => {
-    const other = await h.post('/api/auth/session', { initData: signInitData({ id: 222, first_name: 'Misty' }) })
-    // Zweiter Trainer braucht eine Einladung; direkt in der DB anlegen waere
-    // umstaendlich, also pruefen wir mit einer erfundenen ID.
-    expect(other.status).toBe(403)
-    const r = await h.post('/api/team', { creatureIds: ['00000000-0000-4000-8000-000000000000'] }, token)
-    expect(r.status).toBe(404)
+    const misty = await h.addTrainer(222, 'Misty')
+    const hers = (await h.post('/api/starter', { speciesId: 'testmon' }, misty.token)).body.team[0].id
+    // Es gibt dieses Pokemon — es gehoert nur jemand anderem. Vorher stand
+    // hier eine erfundene Id, weil ein zweiter Trainer eine Einladung
+    // brauchte; die Antwort war 404, und der eigentliche Fall blieb ungeprueft.
+    const r = await h.post('/api/team', { creatureIds: [hers] }, token)
+    expect(r.status).toBe(403)
+    expect(r.body.error).toBe('not_owner')
   })
 
   it('weist doppelte Eintraege ab', async () => {
@@ -351,16 +353,23 @@ describe('Ereignis-Wesen', () => {
     const inTeam = add(1)
     const inBox = add(null)
 
-    // Zwei Stunden abwesend — die Aufholrechnung laeuft beim naechsten Blick
-    // in den Garten.
-    h.ctx.db.prepare('UPDATE trainers SET last_seen_at = ? WHERE id = ?')
-      .run(Date.now() - 2 * 3_600_000, trainerId)
+    /*
+     * Zwei Stunden abwesend — die Aufholrechnung laeuft beim naechsten Blick
+     * in den Garten.
+     *
+     * Gestellt wird die eigene Uhr der Erholung, nicht mehr `last_seen_at`:
+     * das ist derselbe Zeitstempel, den *jede* Anfrage neu setzt, und daran
+     * hing der Fehler, bei dem eingelagerte Pokemon tagelang stehenblieben.
+     */
+    h.ctx.db.prepare('UPDATE trainers SET box_energy_at = ?, team_energy_at = ? WHERE id = ?')
+      .run(Date.now() - 2 * 3_600_000, Date.now() - 2 * 3_600_000, trainerId)
     h.resetRateLimits()
     expect((await h.get('/api/garden', token)).status).toBe(200)
 
     const energyOf = (id: string) =>
       (h.ctx.db.prepare('SELECT energy FROM creatures WHERE id = ?').get(id) as { energy: number }).energy
+    // Im Team zwei Stunden zu je sechs; in der Box laengst voll.
     expect(energyOf(inTeam)).toBe(12)
-    expect(energyOf(inBox)).toBe(36)
+    expect(energyOf(inBox)).toBe(100)
   })
 })

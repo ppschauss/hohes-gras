@@ -29,6 +29,7 @@ import { ProgressScreen } from '../screens/ProgressScreen'
 import { BaseScreen } from '../screens/BaseScreen'
 import { RecordsScreen } from '../screens/RecordsScreen'
 import { ArenaScreen } from '../screens/ArenaScreen'
+import { GauntletScreen } from '../screens/GauntletScreen'
 
 interface Props {
   boot: Bootstrap
@@ -117,6 +118,8 @@ export function GameRouter({ boot, onTrainerChanged }: Props) {
       return <RecordsScreen onBack={back} />
     case 'arena':
       return <ArenaScreen onBack={back} onBattle={() => setScreen('battle')} />
+    case 'gauntlet':
+      return <GauntletScreen onBack={back} onBattle={() => setScreen('battle')} />
     default:
       break
   }

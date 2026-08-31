@@ -16,7 +16,7 @@ import { useTheme } from './lib/theme'
 export const SCREENS = [
   'home', 'garden', 'box', 'teams', 'dex', 'shop', 'map', 'area', 'safari',
   'battle', 'expeditions', 'eggs', 'friends', 'coop', 'progress', 'energy', 'center', 'plots', 'themes',
-  'arena',
+  'arena', 'gauntlet',
   'bag',
   // Basis (Ausbau, Labor, Werkstatt) und Erfolge (Erfolge, Saison, Rangliste):
   // beides stand vorher als Reiter im Fortschritt und ging dort unter.
@@ -41,7 +41,6 @@ export function screenFromLocation(): Screen {
 export type AuthPhase =
   | { status: 'booting' }
   | { status: 'needs_link'; message: string | null }
-  | { status: 'needs_invite'; message: string | null }
   | { status: 'ready' }
   | { status: 'failed'; code: string; detail: Record<string, unknown> }
 
@@ -61,7 +60,6 @@ interface GameState {
   submitting: boolean
 
   start: () => Promise<void>
-  submitInvite: (code: string) => Promise<void>
   refresh: () => Promise<void>
   setScreen: (screen: Screen) => void
   /** Einen Schritt zurück — oder zum Start, wenn der Stapel leer ist. */
@@ -109,20 +107,6 @@ export const useGame = create<GameState>((set, get) => ({
       }
     }
     await authenticate(set, get)
-  },
-
-  async submitInvite(code) {
-    set({ submitting: true })
-    try {
-      const res = await api.authenticate(initData(), code.trim().toUpperCase())
-      setToken(res.token)
-      const boot = await api.state()
-      applyTrainer(set, boot)
-    } catch (err) {
-      set({ auth: inviteErrorPhase(err) })
-    } finally {
-      set({ submitting: false })
-    }
   },
 
   async refresh() {
@@ -194,29 +178,12 @@ async function authenticate(set: Setter, get: () => GameState): Promise<void> {
     const boot = await api.state()
     applyTrainer(set, boot)
   } catch (err) {
-    if (err instanceof ApiFailure && (err.code === 'invite_required' || err.code === 'invite_invalid')) {
-      set({ auth: inviteErrorPhase(err) })
-      return
-    }
     if (err instanceof ApiFailure) {
       set({ auth: { status: 'failed', code: err.code, detail: err.detail } })
       return
     }
     set({ auth: { status: 'failed', code: 'network', detail: {} } })
   }
-}
-
-function inviteErrorPhase(err: unknown): AuthPhase {
-  if (err instanceof ApiFailure) {
-    if (err.code === 'invite_required') return { status: 'needs_invite', message: null }
-    if (err.code === 'invite_invalid') {
-      const reason = String(err.detail.reason ?? 'unknown')
-      return { status: 'needs_invite', message: `auth.invalid.${reason}` }
-    }
-    if (err.code === 'banned') return { status: 'failed', code: 'banned', detail: {} }
-    return { status: 'failed', code: err.code, detail: err.detail }
-  }
-  return { status: 'failed', code: 'network', detail: {} }
 }
 
 function applyTrainer(set: Setter, boot: Bootstrap): void {

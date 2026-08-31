@@ -205,3 +205,31 @@ describe('Elo', () => {
     expect(tierOf(2000)).toBe('meister')
   })
 })
+
+describe('Raid-Beute', () => {
+  it('gibt jedem Werkstoffe, auch bei winzigem Beitrag', () => {
+    /*
+     * Vorher gab ein Raid **nur Gold**, und genau so kam er an: „474 Gold für
+     * den Raid boss, ziemlich mau". Der Einwand lautete, die Bosse seien zu
+     * teuer — das eigentliche Problem war, dass ein Raid nichts einbrachte,
+     * was man sonst nirgends bekommt.
+     */
+    const [stark, schwach] = distributeRewards(
+      [{ trainerId: 'a', damage: 9000 }, { trainerId: 'b', damage: 100 }], 3,
+    )
+    expect(stark!.items.length).toBeGreaterThan(0)
+    // Der Sockel: wer mitschlaegt, geht nie leer aus.
+    expect(schwach!.items.every((i) => i.quantity > 0)).toBe(true)
+    const eisenStark = stark!.items.find((i) => i.itemId === 'iron-shard')!.quantity
+    const eisenSchwach = schwach!.items.find((i) => i.itemId === 'iron-shard')!.quantity
+    expect(eisenStark).toBeGreaterThan(eisenSchwach)
+  })
+
+  it('gibt bei hoeherer Stufe mehr und seltenere Werkstoffe', () => {
+    const klein = distributeRewards([{ trainerId: 'a', damage: 100 }], 1)[0]!
+    const gross = distributeRewards([{ trainerId: 'a', damage: 100 }], 5)[0]!
+    expect(gross.items.length).toBeGreaterThan(klein.items.length)
+    expect(gross.items.some((i) => i.itemId === 'star-piece')).toBe(true)
+    expect(klein.items.some((i) => i.itemId === 'star-piece')).toBe(false)
+  })
+})

@@ -5,7 +5,6 @@ import { EnergyPackSchema, EnergyStateSchema } from './energy.js'
 /** POST /api/auth/session — exchange Telegram initData for a session token. */
 export const AuthRequestSchema = z.object({
   initData: z.string().min(1),
-  inviteCode: z.string().trim().min(4).max(32).optional(),
 })
 export type AuthRequest = z.infer<typeof AuthRequestSchema>
 

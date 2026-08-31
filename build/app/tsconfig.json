@@ -1,9 +1,20 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/shared" },
-    { "path": "packages/content" },
-    { "path": "packages/engine" },
-    { "path": "packages/api" }
+    {
+      "path": "packages/shared"
+    },
+    {
+      "path": "packages/content"
+    },
+    {
+      "path": "packages/engine"
+    },
+    {
+      "path": "packages/hub"
+    },
+    {
+      "path": "packages/api"
+    }
   ]
 }

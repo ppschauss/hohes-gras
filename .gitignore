@@ -7,3 +7,8 @@ build/app/packages/api/public/
 *.log
 build/app/packages/api/public/__*.html
 *.tsbuildinfo
+
+# Wrangler: lokale Testgeheimnisse und Build-Ausgabe des Workers.
+.dev.vars
+dist-worker/
+.wrangler/

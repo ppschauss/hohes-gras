@@ -1,0 +1,28 @@
+{
+  "name": "@game/hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "hub:dev": "wrangler dev -c worker/wrangler.toml --local",
+    "hub:build": "wrangler deploy --dry-run --outdir dist-worker -c worker/wrangler.toml",
+    "hub:schema": "wrangler d1 execute hohes-gras-verbund --file worker/schema.sql -c worker/wrangler.toml",
+    "hub:deploy": "wrangler deploy -c worker/wrangler.toml",
+    "hub:e2e": "node worker/e2e.mjs",
+    "hub:setup": "bash worker/deploy.sh"
+  },
+  "dependencies": {
+    "@game/shared": "*"
+  },
+  "devDependencies": {
+    "wrangler": "^4.127.1"
+  }
+}

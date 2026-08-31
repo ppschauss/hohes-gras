@@ -94,10 +94,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export const api = {
   health: () => request<{ ok: boolean; species: number; pack: string }>('/api/health'),
 
-  authenticate: (initData: string, inviteCode?: string) =>
+  authenticate: (initData: string) =>
     request<AuthResponse>('/api/auth/session', {
       method: 'POST',
-      body: JSON.stringify({ initData, ...(inviteCode ? { inviteCode } : {}) }),
+      body: JSON.stringify({ initData }),
     }),
 
   state: () => request<Bootstrap>('/api/state'),
@@ -248,6 +248,15 @@ export const api = {
       '/api/arena/next', { method: 'POST', body: '{}' }),
   arenaAbandon: () => request<{ arena: ArenaView }>('/api/arena/abandon', { method: 'POST', body: '{}' }),
 
+  gauntlet: () => request<GauntletView>('/api/gauntlet'),
+  gauntletStart: (regionId: string) =>
+    request<{ gauntlet: GauntletView }>('/api/gauntlet/start', {
+      method: 'POST', body: JSON.stringify({ regionId }),
+    }),
+  gauntletAbandon: () =>
+    request<{ gauntlet: GauntletView; summary: GauntletSummary | null }>(
+      '/api/gauntlet/abandon', { method: 'POST', body: '{}' }),
+
   login: () => request<LoginView>('/api/login'),
   claimLogin: () => request<{
     day: number; streak: number; bonus: boolean; label: string; state: LoginView
@@ -282,12 +291,8 @@ export const api = {
     }),
 
   admin: () => request<AdminDashboard>('/api/admin'),
-  createInvite: (maxUses: number, expiresInDays: number | null, note: string) =>
-    request<{ invite: { code: string }; dashboard: AdminDashboard }>('/api/admin/invite', {
-      method: 'POST', body: JSON.stringify({ maxUses, expiresInDays, note }),
-    }),
-  revokeInvite: (code: string) =>
-    request<AdminDashboard>('/api/admin/invite/revoke', { method: 'POST', body: JSON.stringify({ code }) }),
+  release: () => request<ReleaseInfo>('/api/admin/release'),
+  requestUpdate: () => request<ReleaseInfo>('/api/admin/update', { method: 'POST', body: '{}' }),
   setBan: (targetId: string, value: boolean) =>
     request<AdminDashboard>('/api/admin/ban', { method: 'POST', body: JSON.stringify({ targetId, value }) }),
 
@@ -298,6 +303,8 @@ export const api = {
     }),
 
   evolutions: () => request<{ candidates: EvolutionCandidate[] }>('/api/evolutions'),
+  tradeStation: () => request<TradeStationView>('/api/trade-station'),
+
   evolve: (creatureId: string, targetSpeciesId: string) =>
     request<{
       creature: CreatureLike; fromName: string; newDexEntry: boolean
@@ -357,9 +364,9 @@ export const api = {
     }),
 
   crafting: () => request<CraftingView>('/api/crafting'),
-  craft: (recipeId: string) =>
+  craft: (recipeId: string, count?: number) =>
     request<{ output: { itemId: string; quantity: number }; crafting: CraftingView }>('/api/crafting/craft', {
-      method: 'POST', body: JSON.stringify({ recipeId }),
+      method: 'POST', body: JSON.stringify({ recipeId, ...(count === undefined ? {} : { count }) }),
     }),
 
   season: () => request<SeasonView>('/api/season'),
@@ -443,12 +450,21 @@ export const api = {
       /** Der Durchlauf ist weitergegangen: geheilt und naechster Gegner. */
       arenaAdvance?: { healed: number; round: number | null }
       /** Der Durchlauf ist zu Ende. */
-      arenaDone?: { payout: { gold: number; items: Array<{ name: string; quantity: number }> } | null }
+      arenaDone?: {
+        payout: {
+          gold: number
+          /** Ein weiterer Durchlauf am selben Tag zahlt ein Viertel. */
+          repeat: boolean
+          items: Array<{ itemId: string; name: string; icon: string; quantity: number }>
+        } | null
+      }
     }>('/api/battle/action', { method: 'POST', body: JSON.stringify(action) }),
   forfeitBattle: () => request<BattleView>('/api/battle/forfeit', { method: 'POST', body: '{}' }),
   healTeam: () => request<{ cost: number; healed: number; gold: number }>('/api/team/heal', { method: 'POST', body: '{}' }),
 
   eggs: () => request<EggOverview>('/api/eggs'),
+  rushEgg: (id: string) =>
+    request<{ overview: EggOverview }>('/api/eggs/rush', { method: 'POST', body: JSON.stringify({ id }) }),
   pairEggs: (creatureIdA: string, creatureIdB: string) =>
     request<{ overview: EggOverview }>('/api/eggs/pair', {
       method: 'POST', body: JSON.stringify({ creatureIdA, creatureIdB }),
@@ -820,7 +836,19 @@ export interface ExpeditionOverview {
   energy: EnergyState
   kinds: Array<{ id: string; name: string; favouredTypes: TypeChip[] }>
   durations: Array<{ id: string; minutes: number; energyCost: number; trainerEnergyCost: number }>
-  available: Array<{ id: string; name: string; sprite: string; level: number; energy: number; types: string[] }>
+  available: Array<{
+    id: string; name: string; sprite: string; level: number; energy: number; types: string[]
+    /** Auf welche Arten von Expedition dieses Pokémon überhaupt darf. */
+    fitsKinds: string[]
+  }>
+  /** Was ungefähr herauskommt, je Art und Dauer, bei vollem passendem Team. */
+  expected: Array<{
+    kindId: string
+    durationId: string
+    gold: number
+    xpPerMember: number
+    loot: Array<{ itemId: string; name: string; icon: string; quantity: number }>
+  }>
   partyRange: { min: number; max: number }
 }
 
@@ -884,12 +912,24 @@ export interface OpponentEntry {
   badgeId: string | null
   badgeEarned: boolean
   intro: string
+  /** Warum gerade nicht — null, wenn es geht. Nur bei Liga-Gegnern gesetzt. */
+  locked: {
+    reason: 'elite_locked' | 'champion_locked'
+    /** Wer vorher dran ist (bei `elite_locked`). */
+    requiresName?: string
+    /** Wie viele der Top Vier noch offen sind (bei `champion_locked`). */
+    missing?: number
+  } | null
 }
 
 export interface OpponentList {
   areaId: string
   areaName: string
+  /** Streuner der Route — ohne Liga. */
   trainers: OpponentEntry[]
+  /** Die Top Vier, in ihrer Reihenfolge. */
+  elites: OpponentEntry[]
+  champion: OpponentEntry | null
   gym: OpponentEntry | null
 }
 
@@ -1050,6 +1090,18 @@ export interface LeaderboardView {
   }>
   ownRank: number | null
   hidden: boolean
+  /** Die Rangliste ueber alle Instanzen — null, wenn kein Verbund laeuft. */
+  global: Array<{
+    rank: number
+    trainerId: string
+    displayName: string
+    instanceId: string
+    badges: number
+    dexCaught: number
+    battlesWon: number
+    level: number
+    isSelf: boolean
+  }> | null
 }
 
 
@@ -1126,7 +1178,13 @@ export interface RaidAttackResponse {
   contributions: Array<{ creatureId: string; name: string; damage: number; effectiveness: number }>
   raid: RaidView
   defeated: boolean
-  reward: { gold: number; caught: boolean; creature: CreatureLike | null } | null
+  reward: {
+    gold: number
+    caught: boolean
+    creature: CreatureLike | null
+    /** Werkstoffe aus dem Raid — vorher gab es hier nur Gold. */
+    items: Array<{ itemId: string; name: string; icon: string; quantity: number }>
+  } | null
 }
 
 export interface PvpOverview {
@@ -1235,6 +1293,14 @@ export interface CraftingView {
     requiresBuilding: { buildingId: string; level: number } | null
     craftable: boolean
     blockedReason: string | null
+    /** Wählbare Mengen mit eigenem Preis. Bei den meisten Rezepten genau eine. */
+    batches: Array<{
+      count: number
+      goldCost: number
+      inputs: Array<{ itemId: string; name: string; icon: string; category: string; quantity: number; have: number }>
+      craftable: boolean
+      blockedReason: string | null
+    }>
   }>
 }
 
@@ -1301,7 +1367,6 @@ export interface AdminDashboard {
     creatures: number; shinies: number; battles: number; duels: number
     raids: number; guilds: number; marketSales: number; goldInCirculation: number
   }
-  invites: Array<{ code: string; uses: number; maxUses: number; expiresAt: number | null; note: string; exhausted: boolean }>
   recentTrainers: Array<{
     id: string; displayName: string; trainerCode: string
     createdAt: number; lastSeenAt: number; isAdmin: number; isBanned: number; gold: number
@@ -1420,4 +1485,68 @@ export interface SessionView {
   lastSeenAt: number
   expiresAt: number
   current: boolean
+}
+
+
+export interface TradeStationView {
+  /** Wie viele Verbindungskabel im Beutel liegen. */
+  cables: number
+  /** Ist das Rezept erforscht? Sonst weiss niemand, wo Kabel herkommen. */
+  recipeUnlocked: boolean
+  rows: Array<{
+    creatureId: string
+    name: string
+    level: number
+    sprite: string
+    targetSpeciesId: string
+    targetName: string
+    targetSprite: string
+    heldItem: { id: string; name: string; owned: number } | null
+    ready: boolean
+  }>
+}
+
+
+export interface GauntletView {
+  regions: Array<{
+    id: string
+    name: string
+    best: number
+    /** Werkstoffe, die es in dieser Region gibt — der Grund, sie zu wählen. */
+    drops: Array<{ itemId: string; name: string; icon: string }>
+  }>
+  energyCost: number
+  healPercent: number
+  xpMultiplier: number
+  averageLevel: number
+  milestones: Array<{ at: number; gold: number; materials: number; heals: boolean }>
+  run: {
+    regionId: string
+    regionName: string
+    streak: number
+    next: { at: number; gold: number; materials: number } | null
+    battleOpen: boolean
+  } | null
+}
+
+
+/** Die Abrechnung eines Kampfzonen-Laufs — was am Ende zusammengekommen ist. */
+export interface GauntletSummary {
+  streak: number
+  best: number
+  regionName: string
+  gold: number
+  xp: number
+  items: Array<{ itemId: string; name: string; icon: string; quantity: number }>
+}
+
+
+/** Der Stand dieser Installation gegen den, den der Verbund als aktuell nennt. */
+export interface ReleaseInfo {
+  current: string
+  latest: string | null
+  notes: string
+  outdated: boolean
+  /** Update angefordert, der Wächter auf dem Wirt ist dran. */
+  pending: boolean
 }

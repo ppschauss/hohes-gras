@@ -145,6 +145,14 @@ export function registerWorldRoutes(app: FastifyInstance, ctx: AppContext): void
     return { ...result, overview: breeding.overview(ctx, req.trainer!) }
   })
 
+  /** Nur mit dem Bruetbeschleuniger — den es ausschliesslich ueber
+   *  `/gegenstand` beim Admin gibt. */
+  app.post('/api/eggs/rush', write, async (req) => {
+    const { id } = IdSchema.parse(req.body)
+    breeding.rushEgg(ctx, req.trainer!, id)
+    return { overview: breeding.overview(ctx, req.trainer!) }
+  })
+
   app.post('/api/eggs/tend', write, async (req) => {
     const { id } = IdSchema.parse(req.body)
     breeding.tend(ctx, req.trainer!, id)

@@ -4,7 +4,6 @@ import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import { displayNameOf, verifyInitData } from '../auth/initData.js'
 import { issueSession } from '../auth/session.js'
-import { checkInvite, redeemInvite } from '../repos/invites.js'
 import { countTrainers, createTrainer, findById, findByTelegramId, updateDisplayName } from '../repos/trainers.js'
 import { logEvent } from '../repos/events.js'
 import { rateLimit, requireTrainer } from './plugin.js'
@@ -85,30 +84,30 @@ export function registerAuthRoutes(app: FastifyInstance, ctx: AppContext): void 
       return reply.send(response)
     }
 
-    // New account. The invite may come from the form field or from a deep link
-    // (`t.me/bot/app?startapp=CODE`), which Telegram forwards as start_param.
+    /*
+     * Neuer Trainer. Jeder mit dem Link darf mitspielen.
+     *
+     * Frueher stand hier eine Einladungsschranke. Sie ist raus: sie hat den
+     * Kreis klein gehalten, den sie schuetzen sollte, und der Aufwand lag bei
+     * dem, der einladen wollte. Wer den Bot findet, spielt.
+     *
+     * Admin bleibt geregelt: der erste ueberhaupt, oder wer in `secrets.env`
+     * als `ADMIN_TELEGRAM_ID` steht.
+     */
     const isFirstEver = countTrainers(ctx.db) === 0
     const isConfiguredAdmin = ctx.config.adminTelegramId !== null && ctx.config.adminTelegramId === user.id
-    const skipsInvite = isFirstEver || isConfiguredAdmin
-
-    const code = (body.inviteCode ?? verified.startParam ?? '').trim().toUpperCase()
-    if (!skipsInvite) {
-      if (!code) throw new GameError('invite_required', {}, 403)
-      const check = checkInvite(ctx.db, code)
-      if (!check.ok) throw new GameError('invite_invalid', { reason: check.reason }, 403)
-    }
+    const isAdmin = isFirstEver || isConfiguredAdmin
 
     const created = tx(ctx.db, () => {
       const trainer = createTrainer(ctx.db, {
         telegramId: user.id,
         displayName: displayNameOf(user),
         locale: user.languageCode.startsWith('de') ? 'de' : 'de',
-        isAdmin: skipsInvite,
+        isAdmin,
         startingGold: STARTING_GOLD,
         startingAreaId: ctx.registry.manifest.startingArea,
       })
-      if (!skipsInvite && code) redeemInvite(ctx.db, code, trainer.id)
-      logEvent(ctx.db, trainer.id, 'trainer.created', { viaInvite: skipsInvite ? null : code, isAdmin: skipsInvite })
+      logEvent(ctx.db, trainer.id, 'trainer.created', { isAdmin })
       return trainer
     })
 

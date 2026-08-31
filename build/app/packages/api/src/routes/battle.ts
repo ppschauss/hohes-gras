@@ -5,6 +5,7 @@ import { rateLimit, requireTrainer, withEnergy } from './plugin.js'
 import { findById } from '../repos/trainers.js'
 import * as battle from '../services/battle.js'
 import * as arena from '../services/arena.js'
+import * as gauntlet from '../services/gauntlet.js'
 import { requireCurrentArea } from '../services/world.js'
 
 const StartSchema = z.object({ opponentId: z.string() })
@@ -32,6 +33,7 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: AppContext): voi
   app.get('/api/battle', auth, async (req) => ({
     battle: battle.current(ctx, req.trainer!),
     arena: arena.contextFor(ctx, req.trainer!),
+    gauntlet: gauntlet.contextFor(ctx, req.trainer!),
   }))
 
   app.post('/api/battle/event', write, async (req) => battle.startEvent(ctx, req.trainer!))
@@ -66,7 +68,33 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: AppContext): voi
       return { ...view, arena: null, arenaDone: { payout: step.payout } }
     }
 
-    return { ...view, arena: arena.contextFor(ctx, req.trainer!) }
+    /*
+     * In der Kampfzone genauso — nur ohne Ende.
+     *
+     * Gewonnen heisst: Serie plus eins, vielleicht eine Stufe, naechster
+     * Gegner. Verloren beendet den Lauf, und die Antwort sagt, wie weit man
+     * gekommen ist.
+     */
+    if (view.finished && gauntlet.contextFor(ctx, req.trainer!)) {
+      const step = gauntlet.next(ctx, req.trainer!, view.reward)
+      if (step.battle) {
+        return {
+          ...step.battle,
+          gauntlet: gauntlet.contextFor(ctx, req.trainer!),
+          gauntletAdvance: {
+            healed: step.healed, streak: step.streak, payout: step.payout, drops: step.drops,
+          },
+          previous: { winner: view.winner, reward: view.reward },
+        }
+      }
+      return { ...view, gauntlet: null, gauntletDone: { streak: step.streak, summary: step.summary } }
+    }
+
+    return {
+      ...view,
+      arena: arena.contextFor(ctx, req.trainer!),
+      gauntlet: gauntlet.contextFor(ctx, req.trainer!),
+    }
   })
 
   app.post('/api/battle/forfeit', write, async (req) => battle.forfeit(ctx, req.trainer!))
@@ -83,6 +111,17 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: AppContext): voi
   app.post('/api/arena/next', write, async (req) => arena.next(ctx, req.trainer!))
 
   app.post('/api/arena/abandon', write, async (req) => ({ arena: arena.abandon(ctx, req.trainer!) }))
+
+  /* ------------------------------------------------------- Kampfzone */
+
+  app.get('/api/gauntlet', auth, async (req) => gauntlet.view(ctx, req.trainer!))
+
+  app.post('/api/gauntlet/start', write, async (req) => {
+    const { regionId } = z.object({ regionId: z.string() }).parse(req.body)
+    return gauntlet.start(ctx, req.trainer!, regionId)
+  })
+
+  app.post('/api/gauntlet/abandon', write, async (req) => gauntlet.abandon(ctx, req.trainer!))
 
   app.post('/api/team/heal', write, async (req) => {
     const result = battle.healTeam(ctx, req.trainer!)

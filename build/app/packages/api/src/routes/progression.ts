@@ -12,7 +12,11 @@ import * as quests from '../services/quests.js'
 
 const EvolveSchema = z.object({ creatureId: z.string().uuid(), targetSpeciesId: z.string() })
 const BuildingSchema = z.object({ buildingId: z.string() })
-const RecipeSchema = z.object({ recipeId: z.string() })
+const RecipeSchema = z.object({
+  recipeId: z.string(),
+  /** Welche Charge; ohne Angabe die kleinste. */
+  count: z.number().int().positive().optional(),
+})
 const TierSchema = z.object({ tier: z.number().int().min(1).max(30) })
 const AchievementSchema = z.object({ achievementId: z.string() })
 const ResearchSchema = z.object({ projectId: z.string(), creatureId: z.string().uuid() })
@@ -28,6 +32,9 @@ export function registerProgressionRoutes(app: FastifyInstance, ctx: AppContext)
   const write = { preHandler: [requireTrainer(ctx), rateLimit(ctx, 'write_heavy')] }
 
   app.get('/api/evolutions', auth, async (req) => ({ candidates: progression.evolvable(ctx, req.trainer!) }))
+
+  /** Die Tausch-Station: was sich durch Tausch entwickeln koennte, und was fehlt. */
+  app.get('/api/trade-station', auth, async (req) => progression.tradeStation(ctx, req.trainer!))
 
   app.post('/api/evolutions/evolve', write, async (req) => {
     const { creatureId, targetSpeciesId } = EvolveSchema.parse(req.body)
@@ -45,8 +52,8 @@ export function registerProgressionRoutes(app: FastifyInstance, ctx: AppContext)
   app.get('/api/crafting', auth, async (req) => progression.craftingView(ctx, req.trainer!))
 
   app.post('/api/crafting/craft', write, async (req) => {
-    const { recipeId } = RecipeSchema.parse(req.body)
-    const result = progression.craft(ctx, req.trainer!, recipeId)
+    const { recipeId, count } = RecipeSchema.parse(req.body)
+    const result = progression.craft(ctx, req.trainer!, recipeId, count)
     return { ...result, crafting: progression.craftingView(ctx, findById(ctx.db, req.trainer!.id)!) }
   })
 

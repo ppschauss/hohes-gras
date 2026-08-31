@@ -104,8 +104,16 @@ describe('rollEncounter', () => {
       }
       return n
     }
+    /*
+     * Die Serie hebt die Chance, aber sie verdreifacht sie nicht mehr.
+     *
+     * Das Plateau lag einmal bei zehn Prozent gegen 0,195 % Grundrate — ein
+     * Faktor von fuenfzig. Jetzt sind es 0,35 % gegen 0,195 %, also knapp das
+     * Doppelte. Der Vorteil der Serie liegt weniger in der Einzelchance als in
+     * der Zusage bei 400, die es sonst nirgends gibt.
+     */
     const jagd = { speciesId: 'tag-mon', streak: 40 }
-    expect(count(jagd, 'tag-mon')).toBeGreaterThan(count(null, 'tag-mon') * 3)
+    expect(count(jagd, 'tag-mon')).toBeGreaterThan(count(null, 'tag-mon') * 1.4)
   })
 
   it('laesst andere Arten unberuehrt', () => {
@@ -275,19 +283,43 @@ describe('Shiny-Kurve der Fangserie', () => {
     expect(shinyOdds(SHINY_CHAIN_GUARANTEE)).toBe(1)
   })
 
-  it('steigt bis zum Plateau gleichmaessig, ohne Durststrecke', () => {
-    // Vorher lag die Chance nach fuenf Faengen noch unter einem Prozent —
-    // die Serie fuehlte sich an wie gar keine.
+  it('steigt bis zum Plateau gleichmaessig und bleibt bescheiden', () => {
+    /*
+     * Die Serie ist ein Weg, kein Schalter.
+     *
+     * Vorher stand das Plateau bei zehn Prozent und war nach zehn Faengen
+     * erreicht: gemessen ueber 200.000 Laeufe kam ein Schillerndes im Schnitt
+     * nach **15 Begegnungen**, und in einem echten Spielstand glaenzten 18 %
+     * einer Box. Jetzt sind es rund 54 Begegnungen.
+     */
     expect(shinyOdds(0)).toBeCloseTo(SHINY_BASE_ODDS, 6)
-    expect(shinyOdds(5)).toBeGreaterThan(0.04)
+    expect(shinyOdds(5)).toBeGreaterThan(SHINY_BASE_ODDS)
+    expect(shinyOdds(5)).toBeLessThan(0.01)
     for (let s = 1; s <= 60; s++) {
       expect(shinyOdds(s)).toBeGreaterThanOrEqual(shinyOdds(s - 1))
       expect(shinyOdds(s)).toBeLessThanOrEqual(1)
     }
   })
 
-  it('garantiert den Fang auch ueber die Zusage hinaus', () => {
-    expect(shinyOdds(200)).toBe(1)
+  it('garantiert den Fang ab der Zusage und darueber hinaus', () => {
+    expect(shinyOdds(SHINY_CHAIN_GUARANTEE)).toBe(1)
+    expect(shinyOdds(SHINY_CHAIN_GUARANTEE + 500)).toBe(1)
+    // Knapp davor gilt noch das Plateau — die Zusage ist ein Deckel gegen
+    // Pech, keine Rampe.
+    expect(shinyOdds(SHINY_CHAIN_GUARANTEE - 1)).toBe(SHINY_PLATEAU_ODDS)
+  })
+
+  it('hebt mit dem erforschten Zuschlag die ganze Kurve', () => {
+    /*
+     * Vorher wirkte er allein auf Serie 0. Mit dem alten Plateau von zehn
+     * Prozent fiel das nicht auf; mit 0,35 % waere daraus eine Verkehrung
+     * geworden — voll erforscht 0,295 % bei Serie 0, aber nur 0,20 % nach dem
+     * ersten Fang. Der Fang haette die Chance gesenkt.
+     */
+    for (let s = 0; s < SHINY_CHAIN_GUARANTEE; s++) {
+      expect(shinyOdds(s, 0.1)).toBeGreaterThan(shinyOdds(s))
+      if (s > 0) expect(shinyOdds(s, 0.1)).toBeGreaterThanOrEqual(shinyOdds(s - 1, 0.1))
+    }
   })
 })
 

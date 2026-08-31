@@ -20,6 +20,14 @@ export function ExpeditionScreen({ onBack }: { onBack: () => void }) {
 
   const data = overview.data
   const maxParty = data?.partyRange.max ?? 3
+  /*
+   * Nur, wer hierher darf.
+   *
+   * Der Server weist Unpassende ohnehin ab; sie erst anzuzeigen und dann mit
+   * einem Fehler zu antworten waere eine Falle. Die Liste ist die Regel.
+   */
+  const eligible = data?.available.filter((c) => c.fitsKinds.includes(kind)) ?? []
+  const expected = data?.expected.find((e) => e.kindId === kind && e.durationId === duration)
   const selected = data?.durations.find((d) => d.id === duration)
   const cost = selected?.energyCost ?? 0
   const trainerCost = selected?.trainerEnergyCost ?? 0
@@ -138,14 +146,22 @@ export function ExpeditionScreen({ onBack }: { onBack: () => void }) {
           <div className="segmented">
             {data?.kinds.map((k) => (
               <button key={k.id} type="button" className="segmented__btn"
-                aria-pressed={kind === k.id} onClick={() => { haptic.select(); setKind(k.id) }}>
+                aria-pressed={kind === k.id}
+                onClick={() => {
+                  haptic.select()
+                  setKind(k.id)
+                  // Wer bei der neuen Art nicht mitdarf, faellt aus der Auswahl —
+                  // sonst blieben unsichtbar Ausgewaehlte im Team stehen.
+                  setParty((prev) => prev.filter((id) =>
+                    data?.available.find((c) => c.id === id)?.fitsKinds.includes(k.id)))
+                }}>
                 {t(k.name)}
               </button>
             ))}
           </div>
 
           <div className="favoured">
-            <span className="section__eyebrow">{t('expedition.favoured')}</span>
+            <span className="section__eyebrow">{t('expedition.onlyTypes')}</span>
             <span className="favoured__chips">
               {data?.kinds.find((k) => k.id === kind)?.favouredTypes.map((ty) => (
                 <span key={ty.id} className="chip" style={{ '--chip': ty.color } as React.CSSProperties}>{ty.name}</span>
@@ -165,12 +181,35 @@ export function ExpeditionScreen({ onBack }: { onBack: () => void }) {
             {t('expedition.energyCost', { n: cost })} · {t('expedition.trainerCost', { n: trainerCost })}
           </p>
 
+          {/* Was ungefaehr dabei herauskommt. Vorher stand nirgends, wofuer man
+              acht Stunden wartet — man waehlte zwischen "Graben" und "Tauchen",
+              ohne den Unterschied sehen zu koennen. */}
+          {expected && (
+            <div className="yield">
+              <span className="section__eyebrow">{t('expedition.expected', { n: maxParty })}</span>
+              <p className="yield__gold num">
+                {t('expedition.expectedGold', { gold: number(expected.gold), xp: number(expected.xpPerMember) })}
+              </p>
+              <ul className="yield__list">
+                {expected.loot.map((l) => (
+                  <li key={l.itemId} className="yield__row">
+                    {l.icon && <img src={l.icon} alt="" width={22} height={22} />}
+                    <span className="yield__name">{l.name}</span>
+                    <span className="yield__num num">~{l.quantity}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div>
             <span className="section__eyebrow">{t('expedition.chooseParty', { max: maxParty })}</span>
-            {data && data.available.length === 0
-              ? <p className="center__body">{t('expedition.noneAvailable')}</p>
+            {data && eligible.length === 0
+              ? <p className="center__body">
+                  {data.available.length === 0 ? t('expedition.noneAvailable') : t('expedition.noneFit')}
+                </p>
               : <div className="picks">
-                  {data?.available.map((c) => {
+                  {eligible.map((c) => {
                     const chosen = party.includes(c.id)
                     const tooTired = c.energy < cost
                     return (

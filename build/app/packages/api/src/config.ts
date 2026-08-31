@@ -17,6 +17,18 @@ const EnvSchema = z.object({
   DEV_AUTH_BYPASS: z.string().default('0'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  /*
+   * Verbund — alle drei leer heisst: es gibt keinen, und nichts aendert sich.
+   *
+   * Das ist die wichtigste Eigenschaft daran. Eine Instanz ohne Verbund
+   * verhaelt sich exakt wie vorher; keine Anfrage geht hinaus, kein Fehler
+   * kommt herein. Siehe `docs/VERBUND.md`.
+   */
+  HUB_URL: z.string().default(''),
+  HUB_INSTANCE_ID: z.string().default(''),
+  HUB_SECRET: z.string().default(''),
+  /** Der Git-Stand, mit dem dieses Image gebaut wurde. Setzt das Dockerfile. */
+  GIT_SHA: z.string().default('unbekannt'),
 })
 
 export type Config = z.infer<typeof EnvSchema> & {
@@ -28,6 +40,8 @@ export type Config = z.infer<typeof EnvSchema> & {
   dbPath: string
   devAuthBypass: boolean
   adminTelegramId: string | null
+  /** Ist ein Verbund eingerichtet? Alles Weitere haengt daran. */
+  hubEnabled: boolean
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -43,6 +57,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
   return {
     ...c,
+    hubEnabled: Boolean(c.HUB_URL && c.HUB_INSTANCE_ID && c.HUB_SECRET),
     packsDir: `${c.DATA_DIR}/packs`,
     mediaDir: `${c.DATA_DIR}/media`,
     backupsDir: `${c.DATA_DIR}/backups`,

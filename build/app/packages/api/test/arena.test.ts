@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ARENA_HEAL_PERCENT, ARENA_ROUNDS, ARENA_TIERS, arenaTypeFor, ENERGY_COSTS } from '@game/engine'
+import { ARENA_HEAL_PERCENT, ARENA_REPEAT_RATIO, ARENA_ROUNDS, ARENA_TIERS, arenaTypeFor, ENERGY_COSTS } from '@game/engine'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -252,7 +252,7 @@ describe('Trainingsarena', () => {
     expect(r.body.teamHealth).toBeLessThan(20)
   })
 
-  it('zahlt die Praemie eines Durchlaufs einmal am Tag je Stufe', async () => {
+  it('zahlt voll beim ersten Durchlauf und ein Viertel bei jedem weiteren', async () => {
     const tier = ARENA_TIERS[0]!
     const goldBefore = (await h.get('/api/bag', token)).body.gold
 
@@ -272,7 +272,13 @@ describe('Trainingsarena', () => {
     h.resetRateLimits()
     expect((await h.get('/api/bag', token)).body.gold).toBeGreaterThan(goldBefore)
 
-    // Zweiter Durchlauf am selben Tag: gekaempft ja, bezahlt nein.
+    /*
+     * Zweiter Durchlauf am selben Tag: ein Viertel.
+     *
+     * Vorher gab es gar nichts, und das fuehlte sich an wie eine Sackgasse —
+     * genau so gemeldet. Dieselbe Groessenordnung, die Routentrainer fuer den
+     * zweiten Anlauf bekommen.
+     */
     h.resetRateLimits()
     await h.post('/api/arena/start', { tier: tier.id }, token)
     h.ctx.db.prepare('UPDATE arena_runs SET wins = ? WHERE trainer_id = ?').run(ARENA_ROUNDS - 1, trainerId)
@@ -282,9 +288,16 @@ describe('Trainingsarena', () => {
     h.ctx.db.prepare('UPDATE battles SET winner = 0, finished_at = ? WHERE id = ?').run(Date.now(), second.id)
 
     h.resetRateLimits()
+    const goldMitte = (await h.get('/api/bag', token)).body.gold
+    h.resetRateLimits()
     const again = await h.post('/api/arena/next', {}, token)
     expect(again.body.done).toBe(true)
-    expect(again.body.payout).toBeNull()
+    expect(again.body.payout.repeat).toBe(true)
+    expect(again.body.payout.gold).toBe(Math.round(tier.bonusGold * ARENA_REPEAT_RATIO))
+    h.resetRateLimits()
+    // Und es kommt auch wirklich an.
+    expect((await h.get('/api/bag', token)).body.gold)
+      .toBe(goldMitte + Math.round(tier.bonusGold * ARENA_REPEAT_RATIO))
   })
 })
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SpeciesDef } from '@game/content'
 import {
-  applyCare, condition, currentHpRatio, ENERGY_REGEN_BOX_PER_HOUR, friendshipTier, regenerateEnergy,
+  applyCare, condition, currentHpRatio, ENERGY_REGEN_BOX_PER_HOUR, ENERGY_REGEN_PER_HOUR, energyTick, friendshipTier, regenerateEnergy,
   CARE_RULES, ENERGY_MAX, FRIENDSHIP_MAX, type CareCreature,
 } from './care.js'
 import { xpForLevel } from './leveling.js'
@@ -135,11 +135,12 @@ describe('regenerateEnergy', () => {
   it('bleibt bei null Minuten unveraendert', () => {
     expect(regenerateEnergy(42, 0)).toBe(42)
   })
-  it('erholt in der Box dreimal so schnell', () => {
-    expect(regenerateEnergy(0, 120, ENERGY_REGEN_BOX_PER_HOUR)).toBe(36)
-    expect(regenerateEnergy(0, 120)).toBe(12)
-    // Leer bis voll: in der Box knapp sechs Stunden, im Team siebzehn.
-    expect(regenerateEnergy(0, 340, ENERGY_REGEN_BOX_PER_HOUR)).toBe(ENERGY_MAX)
+  it('erholt in der Box in einer Stunde, im Team in siebzehn', () => {
+    // Die Box ist der Ruheplatz: leer bis voll in genau einer Stunde. Im Team
+    // arbeitet das Pokemon, und darin liegt der Unterschied.
+    expect(regenerateEnergy(0, 60, ENERGY_REGEN_BOX_PER_HOUR)).toBe(ENERGY_MAX)
+    expect(regenerateEnergy(0, 30, ENERGY_REGEN_BOX_PER_HOUR)).toBe(50)
+    expect(regenerateEnergy(0, 60)).toBe(ENERGY_REGEN_PER_HOUR)
     expect(regenerateEnergy(0, 340)).toBeLessThan(ENERGY_MAX)
   })
 })
@@ -220,5 +221,67 @@ describe('Pflege-EP wachsen mit dem Level', () => {
     // Unter Level 17 ist eine Levelspanne kleiner als die Bezugsgroesse — dort
     // gilt weiter der flache Wert, sonst waere die Aenderung eine Bremse.
     expect(feedOnce(5)).toBe(32)
+  })
+})
+
+describe('Erholung der Kreaturen', () => {
+  const H = 3_600_000
+
+  /**
+   * Eine Uhr in kleinen Schritten weiterstellen.
+   *
+   * Genau so sieht ein Spieltag aus: viele Blicke in die App, jeder einzelne
+   * kuerzer als ein voller Erholungspunkt.
+   */
+  const tickeDurch = (perHour: number, schritte: number, msJeSchritt: number): number => {
+    let uhr = 1_000_000
+    let jetzt = uhr
+    let summe = 0
+    for (let i = 0; i < schritte; i++) {
+      jetzt += msJeSchritt
+      const r = energyTick(uhr, jetzt, perHour)
+      summe += r.gain
+      uhr = r.nextAt
+    }
+    return summe
+  }
+
+  it('gibt nach einer Stunde in der Box die volle Ausdauer', () => {
+    expect(energyTick(1, 1 + H, ENERGY_REGEN_BOX_PER_HOUR).gain).toBe(ENERGY_MAX)
+  })
+
+  /*
+   * Der eigentliche Fehler, und der Grund fuer die ganze Uhr.
+   *
+   * Vorher wurde die verstrichene Zeit auf ganze Punkte abgerundet und der
+   * Zeitstempel trotzdem auf *jetzt* gesetzt. Wer haeufiger hereinsah, als ein
+   * Punkt brauchte, bekam nie einen — und verlor bei jedem Blick die Zeit.
+   * Gemessen an einem echten Spielstand: 40 von 100 eingelagerten Pokemon
+   * standen seit Tagen auf demselben Wert.
+   *
+   * Viele kleine Schritte muessen dasselbe ergeben wie ein grosser.
+   */
+  it('verschluckt kurze Abstaende nicht — Box', () => {
+    expect(tickeDurch(ENERGY_REGEN_BOX_PER_HOUR, 3600, 1_000)).toBe(ENERGY_MAX)
+    expect(tickeDurch(ENERGY_REGEN_BOX_PER_HOUR, 60, 60_000)).toBe(ENERGY_MAX)
+  })
+
+  it('verschluckt kurze Abstaende nicht — Team', () => {
+    // Sechs je Stunde heisst ein Punkt alle zehn Minuten. Wer jede Minute
+    // hereinsieht, muss nach einer Stunde trotzdem sechs haben.
+    expect(tickeDurch(ENERGY_REGEN_PER_HOUR, 60, 60_000)).toBe(ENERGY_REGEN_PER_HOUR)
+    expect(tickeDurch(ENERGY_REGEN_PER_HOUR, 3600, 1_000)).toBe(ENERGY_REGEN_PER_HOUR)
+  })
+
+  it('faengt erst an zu laufen, statt rueckwirkend zu schenken', () => {
+    const r = energyTick(0, 5_000_000, ENERGY_REGEN_BOX_PER_HOUR)
+    expect(r.gain).toBe(0)
+    expect(r.nextAt).toBe(5_000_000)
+  })
+
+  it('laesst die Uhr stehen, solange kein ganzer Punkt zusammenkommt', () => {
+    const r = energyTick(1_000_000, 1_000_010, ENERGY_REGEN_BOX_PER_HOUR)
+    expect(r.gain).toBe(0)
+    expect(r.nextAt).toBe(1_000_000)
   })
 })

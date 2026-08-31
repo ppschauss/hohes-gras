@@ -32,6 +32,8 @@ export type QuestMetric =
   | 'research' | 'raidsWon'
   /* Kampfaufgaben, die auf Wiederholung zielen. */
   | 'gymWins' | 'routeTrainerWins' | 'rocketWins' | 'arenaRuns'
+  /** Siege in der Kampfzone — jeder einzelne, nicht der Lauf. */
+  | 'gauntletWins'
 
 export interface QuestReward {
   gold: number
@@ -65,6 +67,7 @@ export const DAILY_QUESTS: QuestSpec[] = [
   { id: 'd-gift', cadence: 'daily', metric: 'gifts', target: 1, reward: { gold: 200, items: [{ itemId: 'silk-thread', quantity: 2 }] } },
   { id: 'd-dex', cadence: 'daily', metric: 'dexNew', target: 2, reward: { gold: 400, items: [{ itemId: 'soft-sand', quantity: 2 }] } },
   { id: 'd-arena', cadence: 'daily', metric: 'arenaRuns', target: 1, reward: { gold: 400, items: [{ itemId: 'exp-candy-s', quantity: 2 }] } },
+  { id: 'd-gauntlet', cadence: 'daily', metric: 'gauntletWins', target: 10, reward: { gold: 450, items: [{ itemId: 'iron-shard', quantity: 3 }] } },
   { id: 'd-duel', cadence: 'daily', metric: 'duelsWon', target: 2, reward: { gold: 350, items: [{ itemId: 'razz-berry', quantity: 3 }] } },
 ]
 
@@ -80,6 +83,7 @@ export const WEEKLY_QUESTS: QuestSpec[] = [
   { id: 'w-route', cadence: 'weekly', metric: 'routeTrainerWins', target: 20, reward: { gold: 2000, items: [{ itemId: 'exp-candy-l', quantity: 1 }] } },
   { id: 'w-rocket', cadence: 'weekly', metric: 'rocketWins', target: 5, reward: { gold: 2500, items: [{ itemId: 'legendary-berry', quantity: 1 }] } },
   { id: 'w-arena', cadence: 'weekly', metric: 'arenaRuns', target: 5, reward: { gold: 2200, items: [{ itemId: 'exp-candy-l', quantity: 1 }] } },
+  { id: 'w-gauntlet', cadence: 'weekly', metric: 'gauntletWins', target: 60, reward: { gold: 2600, items: [{ itemId: 'star-piece', quantity: 3 }] } },
   { id: 'w-battle', cadence: 'weekly', metric: 'battles', target: 30, reward: { gold: 2000, items: [{ itemId: 'star-piece', quantity: 2 }] } },
   { id: 'w-catch', cadence: 'weekly', metric: 'catches', target: 40, reward: { gold: 2000, items: [{ itemId: 'ultra-ball', quantity: 3 }] } },
   { id: 'w-explore', cadence: 'weekly', metric: 'explores', target: 150, reward: { gold: 1800, items: [{ itemId: 'golden-razz', quantity: 2 }] } },

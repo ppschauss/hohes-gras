@@ -2,7 +2,7 @@ import { GameError, type Trainer } from '@game/shared'
 import {
   createRng, energyCost, findDuration, findKind, partyRating, resolveExpedition,
   grantXpTo, computeStats, DURATIONS, ENERGY_COSTS, EXPEDITION_ENERGY, KINDS,
-  MAX_PARTY, MIN_PARTY, rushCost, type ExpeditionParty,
+  MAX_PARTY, MIN_PARTY, rushCost, expectedOutcome, fitsExpedition, type ExpeditionParty,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
@@ -15,6 +15,7 @@ import * as energy from './energy.js'
 import { capOf } from './travel.js'
 import { awardSeasonPoints, bonuses } from './progression.js'
 import { busyCreatureIds } from './busy.js'
+import { catchUpEnergy } from './garden.js'
 import { researchBonuses } from './research.js'
 
 /**
@@ -81,6 +82,9 @@ export const trainerEnergyFor = (durationId: string): number =>
 
 export function overview(ctx: AppContext, trainer: Trainer) {
   const now = Date.now()
+  // Erst erholen, dann anzeigen. Sonst steht hier die Ausdauer von zuletzt,
+  // und ein Pokemon sieht zu erschoepft aus, obwohl es laengst wieder kann.
+  catchUpEnergy(ctx, trainer, now)
   const open = expeditions.openOf(ctx.db, trainer.id)
   const busy = busyCreatureIds(ctx, trainer.id)
 
@@ -109,6 +113,38 @@ export function overview(ctx: AppContext, trainer: Trainer) {
       /** Trainer-Energie, die der Start kostet. */
       trainerEnergyCost: trainerEnergyFor(d.id),
     })),
+    /*
+     * Was ungefaehr herauskommt — je Art und Dauer, bei vollem Team.
+     *
+     * Gerechnet aus derselben Tabelle, aus der auch gezogen wird. Vorher stand
+     * nirgends, was eine Expedition einbringt; man waehlte zwischen "Graben"
+     * und "Tauchen", ohne den Unterschied sehen zu koennen.
+     *
+     * Angegeben wird der beste Fall. Die Alternative waere, es an die gerade
+     * angetippte Auswahl zu binden — dann aendert sich die Zahl bei jedem
+     * Tipp, und man vergleicht Aepfel mit dem, was man gerade anhat.
+     */
+    expected: KINDS.flatMap((k) =>
+      DURATIONS.map((d) => {
+        const e = expectedOutcome(k, d, 1, MAX_PARTY)
+        return {
+          kindId: k.id,
+          durationId: d.id,
+          gold: e.gold,
+          xpPerMember: e.xpPerMember,
+          loot: e.loot
+            .sort((a, b) => b.quantity - a.quantity)
+            .map((l) => {
+              const item = ctx.registry.tryItem(l.itemId)
+              return {
+                itemId: l.itemId,
+                name: item ? ctx.registry.localized(item.name, trainer.locale) : l.itemId,
+                icon: item?.icon ?? '',
+                quantity: l.quantity,
+              }
+            }),
+        }
+      })),
     available: creatures.teamOf(ctx.db, trainer.id)
       .concat(creatures.boxOf(ctx.db, trainer.id, 500))
       .filter((c) => !busy.has(c.id))
@@ -121,6 +157,8 @@ export function overview(ctx: AppContext, trainer: Trainer) {
           level: c.level,
           energy: c.energy,
           types: species.types,
+          /** Auf welche Arten von Expedition dieses Pokemon ueberhaupt darf. */
+          fitsKinds: KINDS.filter((k) => fitsExpedition(species.types, k)).map((k) => k.id),
         }
       }),
     partyRange: { min: MIN_PARTY, max: MAX_PARTY },
@@ -144,6 +182,9 @@ export function start(
   }
 
   return tx(ctx.db, () => {
+    // Und erst recht vor dem Start: an einer veralteten Zahl darf niemand
+    // scheitern.
+    catchUpEnergy(ctx, trainer)
     const busy = busyCreatureIds(ctx, trainer.id)
     const cost = energyCost(duration)
 
@@ -152,6 +193,11 @@ export function start(
       if (!c) throw new GameError('not_found', { creatureId: id }, 404)
       if (c.ownerId !== trainer.id) throw new GameError('not_owner', { creatureId: id }, 403)
       if (busy.has(id)) throw new GameError('invalid_state', { reason: 'already_away', creatureId: id }, 409)
+      // Der Typ ist die Eintrittskarte. Der Client blendet Unpassende schon
+      // aus; hier steht die Regel, denn der Client ist nur eine Anzeige.
+      if (!fitsExpedition(ctx.registry.species(c.speciesId).types, kind)) {
+        throw new GameError('invalid_state', { reason: 'wrong_type', creatureId: id, kindId: kind.id }, 409)
+      }
       if (c.energy < cost) {
         throw new GameError('invalid_state', { reason: 'too_tired', creatureId: id, need: cost, have: c.energy }, 409)
       }

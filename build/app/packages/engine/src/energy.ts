@@ -88,8 +88,8 @@ export type EnergyAction =
   | 'care' | 'explore' | 'expedition' | 'battle' | 'duel' | 'raid'
   /* Nur fuers Abbrechen: Anfangen kostet Material und Gold, nicht Energie. */
   | 'research' | 'boarding'
-  /* Der ganze Arenadurchlauf auf einmal. */
-  | 'arena'
+  /* Der ganze Arenadurchlauf bzw. Kampfzonen-Lauf auf einmal. */
+  | 'arena' | 'gauntlet'
 
 /**
  * Was eine Aktion kostet.
@@ -126,6 +126,14 @@ export const ENERGY_COSTS: Record<EnergyAction, number> = {
    * im Voraus festlegt.
    */
   arena: 6,
+  /*
+   * Die Kampfzone kostet mehr als die Arena und ebenfalls nur einmal.
+   *
+   * Zehn statt sechs, weil ein Lauf kein festes Ende hat: wer gut steht,
+   * kaempft dort fuenfzig Mal fuer denselben Einsatz. Der Preis liegt vorne,
+   * damit er nie mitten in einer Serie zuschlaegt — genau wie bei der Arena.
+   */
+  gauntlet: 10,
 }
 
 /**

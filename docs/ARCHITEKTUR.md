@@ -32,10 +32,25 @@ packages/content   Pack-Schema, Loader mit Querprüfung, Registry
 packages/engine    Spiellogik — rein, ohne I/O, mit injiziertem RNG
 packages/api       Fastify + SQLite + grammY-Bot + Scheduler
 packages/web       React/Vite Mini-App
+packages/hub       Verbund-Dienst — reine Logik + Cloudflare-Worker
 ```
 
 Die Abhängigkeiten laufen nur nach links: `web` und `api` kennen `engine` und
 `shared`, `engine` kennt `content` und `shared`, `shared` kennt nichts.
+
+### Warum `hub` denselben Schnitt hat wie `engine`
+
+Der Verbund-Dienst kennt keine Datenbank. `createHub()` nimmt eine Anfrage und
+gibt eine Antwort zurück — kein Fastify, kein Worker, kein Netz; der Speicher
+ist eine Schnittstelle mit acht Methoden, und D1 wie Arbeitsspeicher sind zwei
+Umsetzungen davon. Der Grund ist derselbe wie bei `engine`: was ohne I/O
+auskommt, lässt sich in Millisekunden durchrechnen statt in einer Testumgebung
+mit Netz. Der Worker ist danach vierzig Zeilen, die HTTP übersetzen.
+
+Die Instanz-Seite (`packages/api/src/services/hub.ts`) hält eine einzige
+Zusage: **ein Verbund darf nie zur Voraussetzung dafür werden, dass eine
+Instanz läuft.** Ohne Schlüssel geht keine Anfrage hinaus; mit Schlüsseln, aber
+ohne Antwort, wird geloggt und sonst nichts. Siehe `docs/VERBUND.md`.
 
 ### Warum `shared` existiert
 

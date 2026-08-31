@@ -1,12 +1,12 @@
-import { GameError, type Trainer } from '@game/shared'
+import { GameError, type OwnedCreature, type TimeOfDay, type Trainer } from '@game/shared'
 
 /** Zaehlt die Entwicklungen des Tages, die Energie eingebracht haben. */
 const EVOLUTION_ENERGY_COUNTER = 'evolution_energy'
 import {
   ACHIEVEMENTS, BUILDINGS, MAX_SEASON_TIER, RECIPES, SEASON_POINTS, SEASON_LENGTH_DAYS,
-  bonusOf, canCraft, computeStats, ENERGY_REWARDS, findBuilding, findRecipe, isUnlocked,
+  batchCost, batchesOf, bonusOf, canCraft, computeStats, findBatch, ENERGY_REWARDS, findBuilding, findRecipe, isUnlocked,
   pointsForTier, rewardForTier, seasonTiers, tierForPoints, upgradeCost, visibleAchievements,
-  EVOLUTION_ENERGY_PER_DAY,
+  EVOLUTION_ENERGY_PER_DAY, LINK_CABLE_ITEM_ID, tradeEvolutionFor,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
@@ -18,6 +18,7 @@ import { bumpCounter, counterValue } from '../repos/counters.js'
 import * as world from '../repos/world.js'
 import * as socialRepo from '../repos/social.js'
 import { logEvent } from '../repos/events.js'
+import { findById as findTrainer } from '../repos/trainers.js'
 import { worldClock, berlinParts } from '../worldClock.js'
 import { creatureView, evolutionOptions } from './views.js'
 import { refreshMoves } from './garden.js'
@@ -57,6 +58,33 @@ export function evolve(ctx: AppContext, trainer: Trainer, creatureId: string, ta
       if (evo && evo.trigger === 'stone') inventory.consume(ctx.db, trainer.id, evo.itemId, 1)
     }
 
+    // Dasselbe fuer den Kabel-Weg: das Kabel geht drauf, und der
+    // Tragegegenstand ebenfalls — er ist im Vorbild Teil des Tauschs.
+    if (chosen.how === 'trade') {
+      const species = ctx.registry.species(creature.speciesId)
+      const evo = species.evolutions.find((e) => e.trigger === 'trade' && e.to === targetSpeciesId)
+      inventory.consume(ctx.db, trainer.id, LINK_CABLE_ITEM_ID, 1)
+      if (evo && evo.trigger === 'trade' && evo.heldItemId) {
+        inventory.consume(ctx.db, trainer.id, evo.heldItemId, 1)
+      }
+    }
+
+    return applyEvolution(ctx, trainer, creature, targetSpeciesId, chosen.how, clock)
+  })
+}
+
+/**
+ * Die Entwicklung selbst — losgeloest davon, wodurch sie ausgeloest wurde.
+ *
+ * Es gibt zwei Ausloeser, die nicht durch `evolve()` kommen: ein echter Tausch
+ * entwickelt beim Empfaenger, ohne dass jemand einen Knopf drueckt. Damit dabei
+ * nichts vergessen wird — Attacken, Dex-Eintrag, Saisonpunkte, Erfolge —, steht
+ * alles davon genau hier und nirgends sonst.
+ */
+function applyEvolution(
+  ctx: AppContext, trainer: Trainer, creature: OwnedCreature,
+  targetSpeciesId: string, how: string, clock: { timeOfDay: TimeOfDay },
+) {
     const target = ctx.registry.species(targetSpeciesId)
     const before = ctx.registry.species(creature.speciesId)
     const beforeStats = computeStats(before, creature.level, creature.ivs, creature.evs, creature.nature)
@@ -91,7 +119,7 @@ export function evolve(ctx: AppContext, trainer: Trainer, creatureId: string, ta
     if (newDexEntry) awardSeasonPoints(ctx, trainer.id, 'newDexEntry')
     bumpMetric(ctx, trainer.id, 'evolutions')
 
-    logEvent(ctx.db, trainer.id, 'creature.evolved', { from: before.id, to: target.id, how: chosen.how })
+    logEvent(ctx.db, trainer.id, 'creature.evolved', { from: before.id, to: target.id, how })
     return {
       creature: creatureView(ctx.registry, creatures.byId(ctx.db, creature.id)!, trainer.locale, clock.timeOfDay),
       fromName: ctx.registry.localized(before.name, trainer.locale),
@@ -100,7 +128,88 @@ export function evolve(ctx: AppContext, trainer: Trainer, creatureId: string, ta
       energyLeftToday: Math.max(0, EVOLUTION_ENERGY_PER_DAY - (rewarded ? rewardedToday + 1 : rewardedToday)),
       newDexEntry,
     }
+}
+
+/**
+ * Was ein echter Tausch ausloest.
+ *
+ * Elf Arten entwickeln sich im Vorbild nur beim Besitzerwechsel, und genau das
+ * passiert hier — ohne Verbindungskabel, denn das simuliert ja nur, was hier
+ * echt ist. Ein noetiger Tragegegenstand muss trotzdem beim Empfaenger liegen
+ * und wird verbraucht.
+ *
+ * Nur der **Direkttausch** loest aus, nicht der Marktkauf: der Markt tauscht
+ * Gold gegen Pokemon, und mit einem zweiten Konto waere er sonst der billigste
+ * Weg an alle elf. Der Tausch braucht zwei Leute, die beide zustimmen.
+ *
+ * Gibt den Namen der neuen Art zurueck, oder null, wenn nichts passiert ist.
+ */
+export function evolveByTrade(ctx: AppContext, trainerId: string, creatureId: string): string | null {
+  const trainer = findTrainer(ctx.db, trainerId)
+  const creature = creatures.byId(ctx.db, creatureId)
+  if (!trainer || !creature) return null
+
+  const species = ctx.registry.species(creature.speciesId)
+  const options = species.evolutions
+    .filter((e) => e.trigger === 'trade')
+    .map((e) => ({ to: e.to, heldItemId: e.trigger === 'trade' ? e.heldItemId : undefined }))
+  if (options.length === 0) return null
+
+  const bag = inventory.bagOf(ctx.db, trainer.id)
+  const held = new Set(Object.keys(bag).filter((id) => (bag[id] ?? 0) > 0))
+  const chosen = tradeEvolutionFor(options, held, 'trade')
+  if (!chosen) return null
+
+  if (chosen.heldItemId) inventory.consume(ctx.db, trainer.id, chosen.heldItemId, 1)
+  const result = applyEvolution(ctx, trainer, creature, chosen.to, 'trade', worldClock())
+  return result.creature.speciesName
+}
+
+/**
+ * Die Tausch-Station.
+ *
+ * Sie zeigt mehr als die Entwicklungsliste: dort steht nur, was *jetzt* geht.
+ * Hier steht auch, was nicht geht und warum — dass dem Sichlor ein
+ * Metallmantel fehlt, erfaehrt man sonst nirgends, und ohne diese Auskunft
+ * ist eine Entwicklung, die es nur einmal im Spiel gibt, schlicht unsichtbar.
+ */
+export function tradeStation(ctx: AppContext, trainer: Trainer) {
+  const clock = worldClock()
+  const bag = inventory.bagOf(ctx.db, trainer.id)
+  const cables = bag[LINK_CABLE_ITEM_ID] ?? 0
+  const all = creatures.teamOf(ctx.db, trainer.id).concat(creatures.boxOf(ctx.db, trainer.id, 200))
+
+  const rows = all.flatMap((c) => {
+    const species = ctx.registry.species(c.speciesId)
+    return species.evolutions.filter((e) => e.trigger === 'trade').map((evo) => {
+      const heldItemId = evo.trigger === 'trade' ? evo.heldItemId : undefined
+      const item = heldItemId ? ctx.registry.tryItem(heldItemId) : null
+      const owned = heldItemId ? (bag[heldItemId] ?? 0) : 0
+      const target = ctx.registry.species(evo.to)
+      return {
+        creatureId: c.id,
+        name: c.nickname ?? ctx.registry.localized(species.name, trainer.locale),
+        level: c.level,
+        sprite: species.sprite,
+        targetSpeciesId: evo.to,
+        targetName: ctx.registry.localized(target.name, trainer.locale),
+        targetSprite: target.sprite,
+        /** Der Tragegegenstand, falls einer noetig ist — mit Bestand. */
+        heldItem: item
+          ? { id: item.id, name: ctx.registry.localized(item.name, trainer.locale), owned }
+          : null,
+        ready: cables > 0 && (!heldItemId || owned > 0),
+      }
+    })
   })
+
+  return {
+    cables,
+    /** Ist das Rezept schon erforscht? Sonst weiss niemand, wo Kabel herkommen. */
+    recipeUnlocked: unlockedRecipes(ctx, trainer.id).has('res-link-cable'),
+    // Die naechstliegenden zuerst: was fertig ist, steht oben.
+    rows: rows.sort((a, b) => Number(b.ready) - Number(a.ready) || b.level - a.level),
+  }
 }
 
 /** Everything in the player's collection that could evolve right now. */
@@ -210,6 +319,24 @@ export function craftingView(ctx: AppContext, trainer: Trainer) {
         output: { ...label(recipe.output.itemId), quantity: recipe.output.quantity },
         inputs: recipe.inputs.map((i) => ({ ...label(i.itemId), quantity: i.quantity, have: bag[i.itemId] ?? 0 })),
         goldCost: recipe.goldCost,
+        /*
+         * Jede waehlbare Menge mit ihrem eigenen Preis.
+         *
+         * Gerechnet wird hier, nicht im Client: der Rabatt ist eine Spielregel,
+         * und eine Spielregel, die der Browser ausrechnet, ist eine, die der
+         * Browser auch anders ausrechnen kann.
+         */
+        batches: batchesOf(recipe).map((b) => {
+          const cost = batchCost(recipe, b)
+          const c = canCraft(recipe, bag, gold, owned, unlocked, b)
+          return {
+            count: b.count,
+            goldCost: cost.goldCost,
+            inputs: cost.inputs.map((i) => ({ ...label(i.itemId), quantity: i.quantity, have: bag[i.itemId] ?? 0 })),
+            craftable: c.ok,
+            blockedReason: c.ok ? null : c.reason,
+          }
+        }),
         requiresBuilding: recipe.requiresBuilding ?? null,
         /** Welches Projekt es freischaltet — null, wenn es offen liegt. */
         research: recipe.research ?? null,
@@ -220,27 +347,34 @@ export function craftingView(ctx: AppContext, trainer: Trainer) {
   }
 }
 
-export function craft(ctx: AppContext, trainer: Trainer, recipeId: string) {
+export function craft(ctx: AppContext, trainer: Trainer, recipeId: string, count?: number) {
   const recipe = findRecipe(recipeId)
   if (!recipe) throw new GameError('not_found', { recipeId }, 404)
+
+  // Nur die vorgesehenen Mengen. Eine freie Zahl liesse sich zu einem eigenen
+  // Rabatt verrechnen — der Nachlass gehoert zur Charge, nicht zum Wunsch.
+  const batch = findBatch(recipe, count)
+  if (!batch) throw new GameError('validation_failed', { field: 'count', allowed: batchesOf(recipe).map((b) => b.count) })
 
   return tx(ctx.db, () => {
     const bag = inventory.bagOf(ctx.db, trainer.id)
     const gold = inventory.goldOf(ctx.db, trainer.id)
     const owned = progression.buildingsOf(ctx.db, trainer.id)
 
-    const check = canCraft(recipe, bag, gold, owned, unlockedRecipes(ctx, trainer.id))
+    const check = canCraft(recipe, bag, gold, owned, unlockedRecipes(ctx, trainer.id), batch)
     // Der Grund steht schon in `check`; ihn davor zu setzen wuerde ihn
     // ueberschreiben lassen.
     if (!check.ok) throw new GameError('invalid_state', { ...check }, 409)
 
-    for (const input of recipe.inputs) inventory.consume(ctx.db, trainer.id, input.itemId, input.quantity)
-    inventory.spendGold(ctx.db, trainer.id, recipe.goldCost)
-    inventory.grant(ctx.db, trainer.id, recipe.output.itemId, recipe.output.quantity)
+    const cost = batchCost(recipe, batch)
+    for (const input of cost.inputs) inventory.consume(ctx.db, trainer.id, input.itemId, input.quantity)
+    inventory.spendGold(ctx.db, trainer.id, cost.goldCost)
+    inventory.grant(ctx.db, trainer.id, recipe.output.itemId, batch.count)
 
-    logEvent(ctx.db, trainer.id, 'crafted', { recipeId, output: recipe.output })
+    const output = { itemId: recipe.output.itemId, quantity: batch.count }
+    logEvent(ctx.db, trainer.id, 'crafted', { recipeId, output })
     bumpMetric(ctx, trainer.id, 'crafted')
-    return { output: recipe.output }
+    return { output }
   })
 }
 

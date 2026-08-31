@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createInvite } from '../src/repos/invites.js'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 let h: TestApp
@@ -29,48 +28,21 @@ describe('POST /api/auth/session', () => {
     expect(r.body.token).toBeTypeOf('string')
   })
 
-  it('verlangt vom zweiten Trainer eine Einladung', async () => {
+  it('laesst jeden weiteren Trainer ohne Umweg herein', async () => {
     await h.post('/api/auth/session', { initData: signInitData(userA) })
     const r = await h.post('/api/auth/session', { initData: signInitData(userB) })
-    expect(r.status).toBe(403)
-    expect(r.body.error).toBe('invite_required')
-  })
-
-  it('laesst den zweiten Trainer mit gueltigem Code herein', async () => {
-    await h.post('/api/auth/session', { initData: signInitData(userA) })
-    const invite = createInvite(h.ctx.db, { createdBy: null, maxUses: 1 })
-    const r = await h.post('/api/auth/session', { initData: signInitData(userB), inviteCode: invite.code })
     expect(r.status).toBe(200)
+    expect(r.body.isNewTrainer).toBe(true)
+    // Nur der erste wird Admin — daran hat sich nichts geaendert.
     expect(r.body.trainer.isAdmin).toBe(false)
   })
 
-  it('akzeptiert den Code auch aus dem Deep-Link (start_param)', async () => {
+  it('macht den in der Konfiguration genannten Trainer zum Admin', async () => {
+    await h.close()
+    h = await makeTestApp({ ADMIN_TELEGRAM_ID: String(userB.id) })
     await h.post('/api/auth/session', { initData: signInitData(userA) })
-    const invite = createInvite(h.ctx.db, { createdBy: null, maxUses: 1 })
-    const r = await h.post('/api/auth/session', {
-      initData: signInitData(userB, { start_param: invite.code }),
-    })
-    expect(r.status).toBe(200)
-  })
-
-  it('verbraucht einen Code nur einmal', async () => {
-    await h.post('/api/auth/session', { initData: signInitData(userA) })
-    const invite = createInvite(h.ctx.db, { createdBy: null, maxUses: 1 })
-    await h.post('/api/auth/session', { initData: signInitData(userB), inviteCode: invite.code })
-    const third = await h.post('/api/auth/session', {
-      initData: signInitData({ id: 333, first_name: 'Brock' }), inviteCode: invite.code,
-    })
-    expect(third.status).toBe(403)
-    expect(third.body.detail.reason).toBe('used_up')
-  })
-
-  it('weist einen abgelaufenen Code ab', async () => {
-    await h.post('/api/auth/session', { initData: signInitData(userA) })
-    const invite = createInvite(h.ctx.db, { createdBy: null }, Date.now() - 10_000)
-    h.ctx.db.prepare('UPDATE invites SET expires_at = ? WHERE code = ?').run(Date.now() - 1000, invite.code)
-    const r = await h.post('/api/auth/session', { initData: signInitData(userB), inviteCode: invite.code })
-    expect(r.status).toBe(403)
-    expect(r.body.detail.reason).toBe('expired')
+    const r = await h.post('/api/auth/session', { initData: signInitData(userB) })
+    expect(r.body.trainer.isAdmin).toBe(true)
   })
 
   it('legt bei erneuter Anmeldung keinen zweiten Trainer an', async () => {

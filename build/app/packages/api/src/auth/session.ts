@@ -128,7 +128,7 @@ export function purgeExpiredSessions(db: Db, now = Date.now()): number {
   return db.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(now).changes
 }
 
-/** Constant-time compare for anything else that needs it (invite codes etc.). */
+/** Constant-time compare for anything else that needs it. */
 export function safeEqual(a: string, b: string): boolean {
   const ba = Buffer.from(a)
   const bb = Buffer.from(b)

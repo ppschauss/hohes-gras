@@ -5,7 +5,7 @@ eine Entscheidung war, steht die Begründung in **[BALANCE.md](BALANCE.md)**;
 wie die Teile geschnitten sind, in **[ARCHITEKTUR.md](ARCHITEKTUR.md)**.
 
 Stand: 3 Regionen · 38 Gebiete · 390 Arten · 533 Attacken · 85 Gegenstände ·
-57 Trainer · 26 Orden · 21 Story-Kapitel · 23 Rezepte · 15 Forschungsprojekte ·
+57 Trainer · 26 Orden · 21 Story-Kapitel · 24 Rezepte · 16 Forschungsprojekte ·
 965 Tests.
 
 ## Wo was liegt
@@ -49,11 +49,14 @@ Der Code-Endpunkt ist der einzige, an dem sich ohne Anmeldung etwas raten
 lässt; er ist deshalb auf **10 Versuche je Minute und Adresse** begrenzt. Bei
 32⁸ möglichen Codes und fünf Minuten Gültigkeit ist Raten aussichtslos.
 
-### Einladungen
+### Zugang
 
-Kein Trainer ohne **Einladungscode**. Codes erzeugt ein Admin per `/einladen`
-(bis zu 50 Nutzungen, 30 Tage gültig), offene Codes zeigt `/codes`. Der Bot
-liefert wahlweise einen Deep-Link, der die App direkt mit dem Code öffnet.
+Offen: wer den Bot startet, wählt einen Starter und spielt. Eine
+Einladungsschranke gab es einmal; sie ist raus, weil sie den Kreis klein
+gehalten hat, den sie schützen sollte.
+
+Der **erste** Trainer auf einem frischen Server wird automatisch Admin, ebenso
+wer in `secrets.env` als `ADMIN_TELEGRAM_ID` steht.
 
 ---
 
@@ -66,7 +69,7 @@ liefert wahlweise einen Deep-Link, der die App direkt mit dem Code öffnet.
 | **Designs** | 14 Farbwelten (eine gratis, 13 für 3.000 bis 40.000 Gold), dazu Tag-/Nacht-Modus, der der Weltuhr folgen kann |
 | **Erinnerungen** | Höchstens **eine stille Telegram-Nachricht am Tag**, abschaltbar |
 | **Datenschutz** | Vollständiger Export als JSON, endgültige Löschung des Kontos |
-| **Admin** | Bannen, Rollen vergeben, Einladungen verwalten, Laufzeit und Zahlen einsehen |
+| **Admin** | Bannen, Rollen vergeben, Laufzeit und Zahlen einsehen |
 
 ---
 
@@ -156,10 +159,42 @@ Richtungsumschalter. Bei Gleichstand entscheidet immer Nummer, dann Name —
 ohne festen Ausgleich springen Zeilen bei jedem Neuladen. Die Wahl überlebt den
 Besuch.
 
-**Eingelagerte erholen sich dreimal so schnell** (18 statt 6 Ausdauerpunkte je
-Stunde): leer bis voll in knapp sechs Stunden statt siebzehn. Damit ist die Box
-auch ein Ruheort. Vorher regenerierte dort *gar nichts* — wer ein Pokémon
-einlagerte, fand es Wochen später genauso erschöpft wieder vor.
+**Eingelagerte erholen sich in einer Stunde vollständig** (100 statt 6
+Ausdauerpunkte je Stunde). Die Box ist damit der Ruheplatz: wer ein Pokémon
+einlagert, findet es eine Stunde später einsatzbereit vor. Im Team bleibt es
+bewusst siebzehnmal langsamer — dort *arbeitet* das Pokémon, und darin liegt
+der Unterschied zwischen den beiden Orten.
+
+### Die Uhr der Erholung
+
+Jeder Trainer hat zwei eigene Uhren, eine fürs Team und eine für die Box, und
+sie rücken **nur um die tatsächlich gewährten Punkte** vor — nicht bis „jetzt".
+
+Das ist kein Detail, sondern der Kern. Vorher hing die Erholung an
+`last_seen_at`, also an dem Zeitstempel, den *jede* Anfrage neu setzt. Lag der
+Abstand unter zehn Minuten, stieg die Rechnung aus — und die verstrichene Zeit
+war trotzdem verloren, weil der Zeitstempel schon weitergerückt war. Wer alle
+fünf Minuten in die App sah, bekam damit **nie etwas**:
+
+| Rhythmus | kam an (bei 18/h) |
+|---|---|
+| alle 3 min | 0/h |
+| alle 5 min | 0/h |
+| alle 9 min | 0/h |
+| alle 20 min | 18/h |
+
+Gemessen an einem echten Spielstand: von 100 eingelagerten Pokémon standen 40
+auf exakt demselben Wert, drei auf 1 und neun auf 4 — seit Tagen unverändert.
+
+Mit den eigenen Uhren ist der Rhythmus gleichgültig: hundert kleine Schritte
+ergeben dasselbe wie ein großer. Nachgeprüft am echten Spielstand — zwölf
+Blicke im Zwei-Minuten-Takt hoben das Minimum der Box von 1 auf 41, also genau
+die 100 je Stunde.
+
+Nachgezogen wird die Erholung im Garten, in der Expeditionsübersicht und beim
+Start einer Expedition. Nicht in der Auth-Schicht, obwohl das lückenlos wäre:
+eine ausgebaute Box fasst über tausend Kreaturen, und bei 100/h wäre fast jede
+Anfrage ein Massen-Update.
 
 ---
 
@@ -398,6 +433,107 @@ gibt.
 
 ---
 
+### Die Liga
+
+Die Top Vier werden **der Reihe nach** bestritten, der Champion **zuletzt** —
+er lässt sich erst herausfordern, wenn alle vier gefallen sind. Sonst wäre die
+Reihenfolge Dekoration: man liefe an vier Prüfungen vorbei und direkt zum
+Meister, und die vierte ist nur dann die schwerste, wenn die ersten drei davor
+liegen.
+
+Die Regel selbst gab es lange (`engine/league.ts`, geprüft beim Kampfstart).
+Was fehlte, war die **Anzeige**: die Top Vier standen zwischen den Streunern
+der Route, unter der Überschrift „Training", und alle vier trugen denselben
+aktiven Knopf. Man erfuhr von der Sperre erst durch eine Fehlermeldung nach dem
+Antippen — vier Knöpfe, die gleich aussehen und von denen drei scheitern, sind
+keine Liste, sondern ein Ratespiel.
+
+Jetzt hat die Liga ihren eigenen Abschnitt mit eigener Überschrift, der
+Champion sitzt abgesetzt darunter, und an jedem gesperrten Gegner steht, worauf
+er wartet („Erst Anton besiegen", „Noch 3 aus den Top Vier offen").
+
+---
+
+## 8b. Kampfzone
+
+Eine Serie gegen **wilde Pokémon** einer Region, ohne festes Ende: man kämpft,
+solange man steht. Die Arena ist der Ort zum *Üben* — bekannter Typ, vier
+Runden. Die Kampfzone ist der Ort zum **Farmen**, und zwar für die Werkstoffe
+der jeweiligen Region.
+
+| | |
+|---|---|
+| Gegner | **eines** je Kampf, auf dem eigenen Durchschnittslevel |
+| Steigerung | +1 Level je 10 Siege, Werte von 8 auf 31 über die Serie |
+| Erfahrung | **2,5×** |
+| Energie | **10 für den ganzen Lauf**, nicht je Kampf |
+| Heilung | 8 % nach jedem Sieg, **vollständig an jeder Stufe** |
+| Ende | eine Niederlage — oder freiwillig aufhören |
+
+### Die Stufen
+
+| Serie | Gold | Werkstoffe |
+|---|---|---|
+| 10 | 400 | 3 |
+| 15 | 700 | 4 |
+| 25 | 1.500 | 7 |
+| 50 | 4.000 | 15 |
+| 100 | 12.000 | 35 |
+
+Die ersten beiden liegen dicht beieinander, damit auch ein kurzer Besuch etwas
+abwirft; danach zieht es sich, damit hundert eine Zahl bleibt, die man erzählt.
+Jede Stufe heilt vollständig — ohne das wären fünfzig unerreichbar, mit einer
+Heilung nach jedem Kampf gäbe es kein Risiko. Die Stufen sind die Rastplätze.
+
+Dazu Gold je Sieg, mit der Serie wachsend (30 + 4 je Sieg), damit auch die
+Kämpfe *zwischen* zwei Stufen etwas wert sind.
+
+### Beute je Kampf
+
+Nicht nur an den Stufen — **jeder** besiegte Gegner kann etwas fallen lassen.
+Ohne das sind neun Siege in Folge neun Kämpfe für nichts, und die Zehn ist eine
+Klippe statt eines Meilensteins.
+
+Zwei getrennte Würfe, weil sie Verschiedenes bedeuten: **35 % ein Ball**, den
+man beim Fangen wieder verbraucht, **30 % ein Werkstoff** der Region, wofür man
+überhaupt herkommt. Etwa 45 % der Kämpfe gehen leer aus.
+
+Der Ball wird mit der Serie **besser statt mehr** — ab 20 Superbälle, ab 50
+Hyperbälle. Zwanzig Pokébälle mehr ändern nichts, drei Hyperbälle schon.
+
+Gemessen, ein Lauf über 30 Kämpfe in Hoenn: 11 Pokébälle, 3 Superbälle,
+7 Tautropfen, 6 Sternenstaub — zusätzlich zu den Stufen bei 10, 15 und 25.
+
+### Die Abrechnung am Ende
+
+Endet ein Lauf — durch Niederlage oder freiwillig —, steht da, **was insgesamt
+zusammengekommen ist**: Gold, Erfahrung je Pokémon und jeder Gegenstand mit
+Menge, das Häufigste zuerst. Dazu die erreichte Serie und die Bestmarke.
+
+Ohne sie verschwindet alles stumm im Beutel, und eine Serie von dreißig fühlt
+sich an wie nichts — dieselbe Lücke wie früher bei Kämpfen und Raids, nur über
+eine ganze Sitzung hinweg.
+
+### Warum regional
+
+| Region | Werkstoffe |
+|---|---|
+| Kanto | Eisensplitter, Feinsand |
+| Johto | Seidenfaden, Tautropfen |
+| Hoenn | Tautropfen, Sternenstaub |
+
+Wer Eisensplitter braucht, soll wissen, wohin er reist. Ein Ort, der überall
+dasselbe abwirft, ist kein Ort, sondern ein Knopf. Zur Wahl stehen alle
+Regionen, in denen man war oder die man bezwungen hat — auch die, in die man
+gerade nicht reisen darf, weil die laufende noch offen ist.
+
+Die **beste Serie je Region** bleibt stehen, wenn ein Lauf endet. Ohne sie
+gäbe es nichts, worauf man hinarbeitet, sobald man einmal verloren hat.
+
+Dazu zwei Aufgaben: **10 Siege am Tag** und **60 in der Woche**.
+
+---
+
 ## 8a. Trainingsarena
 
 Ein Ort zum Üben: **vier Kämpfe in Folge** gegen Gegner **eines einzigen Typs**,
@@ -459,9 +595,50 @@ lässt sich nur einmal am Tag eingraben.
 ## 11. Expeditionen
 
 **Vier Arten** — Sammeln, Graben, Tauchen, Patrouille — **× drei Dauern**, 1 bis
-6 Pokémon je Auftrag. Jede Art bevorzugt bestimmte Typen im Team. Die Beute hängt an
-Art, Dauer und Eignung des Teams. Energie ist hier ein **Beschleuniger**: sie
-verkürzt die Wartezeit, statt Voraussetzung zu sein.
+6 Pokémon je Auftrag. Energie ist hier ein **Beschleuniger**: sie verkürzt die
+Wartezeit, statt Voraussetzung zu sein.
+
+### Nur passende Typen
+
+Der Typ war früher ein Bonus (1,4× für passende), jetzt ist er die
+**Eintrittskarte**: eine Expedition ist eine Aufgabe, und ein Karpador gräbt
+nicht. Die vier Listen decken deshalb zusammen **alle achtzehn Typen** ab —
+vorher taten sie das nicht, und eine Sperre hätte 58 der 390 Arten ausgesperrt,
+darunter jeden Feuer-Starter.
+
+| Art | Typen |
+|---|---|
+| **Sammeln** | Pflanze, Käfer, Boden, Gift, Fee |
+| **Graben** | Boden, Gestein, Stahl, Feuer, Unlicht |
+| **Tauchen** | Wasser, Eis, Flug, Drache |
+| **Patrouille** | Normal, Kampf, Elektro, Psycho, Geist |
+
+Die Auswahlliste zeigt nur, wer mitdarf; der Server prüft es noch einmal, denn
+der Client ist eine Anzeige und keine Regel. `expedition.test.ts` besteht auf
+der vollständigen Abdeckung — wer die Listen ändert, merkt es dort.
+
+### Was ungefähr herauskommt
+
+Vor dem Start steht, was die Reise einbringt: Gold, EP und die erwarteten
+Gegenstände. Gerechnet aus **derselben Tabelle**, aus der auch gezogen wird
+(`Züge × Anteil × Mittelwert`), damit Vorschau und Wirklichkeit nicht
+auseinanderlaufen können. Angegeben ist der beste Fall — ein volles, passendes
+Team.
+
+### Wie viel es ist
+
+Gezogen wird `baseDraws × (0,5 + Bewertung/2)`: 2 Züge kurz, 5 mittel, 10 lang.
+Die Zahl steht ausdrücklich in der Dauer und wird nicht mehr aus dem
+Goldfaktor abgeleitet — vorher kam bei der kurzen Reise für ein mieses und ein
+perfektes Team dasselbe heraus, weil beide Werte auf 1 rundeten. Wen man
+mitschickte, war also schlicht egal, und das war der Mechanik nicht anzusehen.
+
+Die Bewertung ist bei **vier** passenden Pokémon voll, nicht erst bei sechs:
+zusammen mit der Typensperre wären sechs früh im Spiel unerreichbar.
+
+Gemessen, achtstündige Grabung mit vollem Team: **13,6 Eisensplitter** — vorher
+waren es 2,5, und ein Verbindungskabel braucht sechs davon. Zwanzig Stunden
+Graben für ein Kabel war der Grund für die Überarbeitung.
 
 ---
 
@@ -511,9 +688,38 @@ arbeiten — wer drei Tage stehen lässt, bekommt trotzdem zehn Level.
 
 ## 13. Entwicklungen
 
-Auslöser: Level, Stein, Freundschaft, Tageszeit. Die Abfrage steht **direkt auf
-der Karte des Pokémon** („… jetzt zu … entwickeln? Ja / Nein"), nicht in einem
-eigenen Menü.
+Auslöser: Level, Stein, Freundschaft, Tageszeit — und **Tausch**. Die Abfrage
+steht **direkt auf der Karte des Pokémon** („… jetzt zu … entwickeln? Ja /
+Nein"), nicht in einem eigenen Menü.
+
+### Entwicklung durch Tausch
+
+Zwölf Entwicklungen bei elf Arten hängen im Vorbild am Besitzerwechsel:
+Kadabra, Maschock, Georok, Alpollo, Quaputzi, Flegmon, Onix, Seemon, Sichlor,
+Porygon und Perlu (das sich je nach Gegenstand in zwei Richtungen entwickelt).
+Acht davon brauchen zusätzlich einen Tragegegenstand — Metallmantel,
+King-Stein, Drachenhaut, Up-Grade, Abysszahn, Abyssplatte.
+
+Es gibt zwei Wege dorthin:
+
+**Ein echter Tausch.** Löst die Entwicklung beim *Empfänger* aus, sobald das
+Pokémon ankommt — ohne Kabel. Beim Ringtausch können sich beide Seiten
+gleichzeitig entwickeln. Ein nötiger Tragegegenstand muss beim Empfänger liegen
+und wird verbraucht.
+
+**Die Tausch-Station** (Basis → Tausch-Station). Ein **Verbindungskabel**
+simuliert einen Tausch. Das Kabel ist nicht käuflich: es wird aus
+Expeditions-Werkstoffen gebaut (6× Eisensplitter, 3× Seidenfaden, 1×
+Sternenstaub, 800 Gold), und das Rezept will erst erforscht werden — Labor
+Stufe 2, `res-link-cable`. Ein Kabel je Entwicklung.
+
+Die Station zeigt bewusst **auch, was nicht geht**: dass dem Sichlor ein
+Metallmantel fehlt, erfährt man sonst nirgends, und eine Entwicklung, die
+niemand sehen kann, gibt es nicht.
+
+Der **Marktkauf** löst nichts aus. Er tauscht Gold gegen Pokémon; mit einem
+zweiten Konto wäre er sonst der billigste Weg an alle elf Arten. Der
+Direkttausch braucht zwei Leute, die beide zustimmen.
 
 Die ersten **zehn Entwicklungen am Tag** bringen Energie (+15) und
 Saisonpunkte (+15); danach bleibt die Entwicklung erlaubt, aber ohne Ertrag.
@@ -567,16 +773,46 @@ aber bis hierher hat nichts sie je erhöht. Ein Trainingsdurchlauf gibt **+32
 Fleißpunkte** auf einen frei gewählten Wert, dauert 3 Stunden und ist beliebig
 wiederholbar. Grenzen wie im Vorbild: 252 je Wert, 510 insgesamt.
 
+### Was man bekommen hat
+
+Jede Belohnung nennt jetzt auch die **Gegenstände**, nicht nur Gold und EP.
+Vorher wurden sie stumm in den Beutel gelegt: nach einem Überfall lagen dort
+plötzlich zwei Lockdüfte und eine Sagenbeere, ohne dass es irgendwo gestanden
+hätte, und die Arena-Prämie kam in der Antwort an, aber nie auf dem Bildschirm.
+Man hätte den Beutel auswendig kennen und nach jedem Kampf nachsehen müssen.
+
+Eine Liste, überall dieselbe (`ui/LootList.tsx`): Kampf, Überfall, Arena, Raid.
+
+---
+
 ## 15. Handwerk
 
-**23 Rezepte.** Werkstoffe kommen aus Expeditionen, aus dem Gras (jeder achte
+**24 Rezepte.** Werkstoffe kommen aus Expeditionen, aus dem Gras (jeder achte
 Fang) und aus Fundstücken beim Erkunden.
+
+### Bälle in Chargen
+
+Bälle lassen sich zu **10, 25 oder 50** Stück bauen, mit Mengenrabatt: 25
+kosten das 2,25-Fache von 10, 50 das Vierfache statt des Fünffachen. Wer auf
+Vorrat baut, bindet Material lange im Voraus und bekommt dafür etwas. Der
+eigentliche Grund ist aber ein anderer — zehnmal denselben Knopf zu drücken ist
+keine Entscheidung, sondern Arbeit.
+
+Die Mengen sind fest: eine freie Zahl ließe sich zu einem eigenen Rabatt
+verrechnen, also weist der Server alles ab, was in keiner Charge steht.
+
+Der **Pokéball** ist jetzt selbst herstellbar (4 Eisensplitter + 2 Seidenfaden
++ 100 Gold je zehn). Vorher stand er nur im Laden, und damit hing die ganze
+Ballkette an Gold, weil jedes andere Ballrezept Pokébälle verbraucht. Fünfzig
+Stück kosten so 16 Eisensplitter statt 1.500 Gold: wer fährt, zahlt weniger als
+wer nur reich ist.
 
 Acht davon — Hyperball, Sonderbonbon und die sechs Entwicklungssteine — und
 alle vier neuen müssen erst im Labor **erforscht** werden. Die Grundrezepte
 bleiben offen: wer heute Bälle und Tränke baut, soll das morgen noch können.
 
-- **Bälle:** Superball, Hyperball, Netzball, Finsterball, Timerball
+- **Bälle:** Pokéball, Superball, Hyperball, Netzball, Finsterball, Timerball
+  — alle in 10/25/50
 - **Medizin:** Hypertrank, Beleber, Top-Genesung, Energydrink
 - **Sonstiges:** Goldene Himmihbeere, EP-Bonbon S und L, Sonderbonbon, Sinelbeeren
 - **Aus eigener Werkstatt:** Metalldetektor (fünf je Bauvorgang), Sternenstaub
@@ -803,8 +1039,6 @@ verhandelbar.
 
 | Befehl | Wirkung |
 |---|---|
-| `/einladen [n]` | Einladungscode erzeugen (bis 50 Nutzungen, 30 Tage) |
-| `/codes` | Offene Einladungen anzeigen |
 | `/event <Code> [Art]` | Ereignis-Wesen vergeben — schillernd, makellose Werte |
 | `/gegenstand <Code> <Id> [n]` | Beliebigen Gegenstand vergeben |
 

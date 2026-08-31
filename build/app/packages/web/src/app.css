@@ -1239,12 +1239,26 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 /* ================================================================== Gegner === */
 
 .opponent {
-  display: grid; grid-template-columns: auto minmax(0, 1fr);
+  /* Text zuerst und dehnbar, Knopf danach und so breit wie noetig.
+     Vorher stand hier `auto minmax(0, 1fr)` — also andersherum: der lange
+     Sprechtext sass in der `auto`-Spalte, wuchs mit seinem Inhalt und schob
+     den Knopf aus der Karte. Auf einem Telefon war von "Herausfordern" nur
+     noch "usfor" zu sehen. */
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
   align-items: center; gap: var(--s3);
   padding: var(--s3);
   background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
 }
 .opponent--gym { border-color: color-mix(in oklab, var(--gold) 45%, var(--edge)); }
+/* Liga: die Top Vier und der Meister sind kein Streuner auf der Route. */
+.opponent--elite { border-color: color-mix(in oklab, var(--accent) 45%, var(--edge)); }
+.opponent--champion {
+  border-color: var(--gold, var(--accent));
+  background: linear-gradient(180deg,
+    color-mix(in oklab, var(--gold, var(--accent)) 8%, var(--surface)), var(--surface));
+}
+.opponent--locked { opacity: 0.62; }
+.opponent__locked { font-size: var(--t-xs); color: var(--ink-faint); text-wrap: balance; }
 .opponent__text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .opponent__head { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
 .opponent__name { font-weight: 650; font-size: var(--t-md); }
@@ -1638,8 +1652,83 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .evoTarget:disabled { opacity: 0.5; cursor: default; }
 .evoTarget__name { font-size: var(--t-xs); font-weight: 600; }
 .evoTarget__how { font-size: 10px; color: var(--ink-faint); }
+/* Was noch fehlt, steht am Ziel selbst. Eine Fussnote haette denselben Text
+   an eine Stelle gestellt, an der niemand ihn sucht. */
+.evoTarget__need {
+  font-size: 10px; color: var(--ink-faint); text-align: center;
+  max-width: 15ch; text-wrap: balance;
+}
 
 .packRow__warn { font-size: var(--t-xs); color: var(--warn, var(--accent)); }
+
+/* Abrechnung am Ende eines Laufs: abgesetzt, damit sie nicht mit der
+   Belohnung des einzelnen Kampfes verschwimmt. */
+.summary {
+  margin: var(--s3) 0;
+  padding: var(--s3);
+  background: var(--surface-sunken);
+  border: 1px solid color-mix(in oklab, var(--accent) 35%, var(--edge));
+  border-radius: var(--radius);
+  text-align: left;
+}
+.summary__title { margin: 0 0 var(--s2); font-size: var(--t-md); }
+
+/*
+ * Blatt von unten.
+ *
+ * Fuer Auswahlen, die zu einer Handlung weiter unten auf der Seite gehoeren.
+ * Ein Abschnitt am Seitenanfang zwingt sonst zum Hochscrollen, und auf einem
+ * Telefon ist der Daumen unten, nicht oben.
+ */
+.sheet { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; justify-content: flex-end; }
+.sheet__scrim {
+  position: absolute; inset: 0; border: 0; padding: 0;
+  background: color-mix(in oklab, #000 55%, transparent);
+  backdrop-filter: blur(2px);
+}
+.sheet__panel {
+  position: relative;
+  max-height: 78vh; display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s3) var(--s3) calc(var(--s3) + env(safe-area-inset-bottom));
+  background: var(--surface-raised, var(--surface));
+  border-top: 1px solid var(--edge);
+  border-radius: var(--radius) var(--radius) 0 0;
+  box-shadow: 0 -8px 32px color-mix(in oklab, #000 35%, transparent);
+  animation: sheetUp 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sheet__title { margin: 0; font-size: var(--t-md); }
+/* Der Bildlauf gehoert ins Blatt, nicht auf die Seite dahinter. */
+.sheet__body { overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+@keyframes sheetUp { from { transform: translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sheet__panel { animation: none; } }
+
+/* Erhaltene Gegenstaende, ueberall gleich: Kampf, Arena, Ueberfall, Raid. */
+.loot { margin: var(--s2) 0; text-align: left; }
+.loot__list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 2px; }
+.loot__row {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: 3px var(--s2);
+  background: var(--surface-sunken); border-radius: var(--radius-sm);
+}
+.loot__name { flex: 1; font-size: var(--t-sm); }
+.loot__num { font-weight: 650; color: var(--accent); }
+
+/* Mengenschalter im Rezept: dieselbe Optik wie die grossen Reiter, nur enger,
+   weil er in einer Karte sitzt und nicht ueber einem Bildschirm. */
+.segmented--tight { margin: var(--s2) 0; }
+.segmented--tight .segmented__btn { padding: 4px var(--s2); font-size: var(--t-xs); }
+
+/* Erwartete Beute einer Expedition. */
+.yield { margin-top: var(--s3); }
+.yield__gold { font-weight: 650; color: var(--accent); }
+.yield__list { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; gap: 2px; }
+.yield__row {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: 3px var(--s2);
+  background: var(--surface-sunken); border-radius: var(--radius-sm);
+}
+.yield__name { flex: 1; font-size: var(--t-sm); }
+.yield__num { color: var(--ink-faint); font-size: var(--t-sm); }
 
 .earnGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s2); }
 .earnRow {

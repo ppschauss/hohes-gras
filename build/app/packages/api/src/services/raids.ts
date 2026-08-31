@@ -114,7 +114,13 @@ export interface RaidAttackOutcome {
   contributions: Array<{ creatureId: string; name: string; damage: number; effectiveness: number }>
   raid: ReturnType<typeof raidView>
   defeated: boolean
-  reward: { gold: number; caught: boolean; creature: unknown } | null
+  reward: {
+    gold: number
+    caught: boolean
+    creature: unknown
+    /** Werkstoffe aus dem Raid — vorher gab es hier nur Gold. */
+    items: Array<{ itemId: string; name: string; icon: string; quantity: number }>
+  } | null
 }
 
 export function attack(ctx: AppContext, trainer: Trainer, raidId: string): RaidAttackOutcome {
@@ -206,6 +212,20 @@ function payOut(ctx: AppContext, raidId: string, viewer: Trainer): RaidAttackOut
     if (!raids.markParticipantRewarded(ctx.db, raid.id, r.trainerId)) continue
     inventory.earnGold(ctx.db, r.trainerId, r.gold)
 
+    // Werkstoffe. Sie sind der eigentliche Grund, einen Raid zu beschwoeren:
+    // Gold hat, wer lange spielt.
+    const items = r.items.flatMap((d) => {
+      const item = ctx.registry.tryItem(d.itemId)
+      if (!item) return []
+      inventory.grant(ctx.db, r.trainerId, d.itemId, d.quantity)
+      return [{
+        itemId: d.itemId,
+        quantity: d.quantity,
+        name: ctx.registry.localized(item.name, viewer.locale),
+        icon: item.icon,
+      }]
+    })
+
     // Everyone rolls for the boss species; a bigger share means better odds.
     const rng = createRng(deriveSeed(raid.seed, 'reward', r.trainerId))
     const caught = rng.next() < r.catchChance
@@ -236,7 +256,7 @@ function payOut(ctx: AppContext, raidId: string, viewer: Trainer): RaidAttackOut
       }
     }
 
-    if (r.trainerId === viewer.id) mine = { gold: r.gold, caught, creature: created }
+    if (r.trainerId === viewer.id) mine = { gold: r.gold, caught, creature: created, items }
   }
 
   if (raid.guildId) guilds.addToTreasury(ctx.db, raid.guildId, Math.round(TIER_SPECS[raid.tier as RaidTier].goldPool * 0.1))

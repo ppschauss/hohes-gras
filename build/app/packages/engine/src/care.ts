@@ -169,7 +169,45 @@ export const ENERGY_REGEN_PER_HOUR = 6
  * Ruheort und das Auswechseln zur Erholungsstrategie, statt beides gleich
  * langsam vor sich hin laufen zu lassen.
  */
-export const ENERGY_REGEN_BOX_PER_HOUR = 18
+/**
+ * Erholung in der Box: voll in einer Stunde.
+ *
+ * Die Box ist der Ruheplatz. Wer ein Pokémon einlagert, soll es eine Stunde
+ * später einsatzbereit vorfinden — sonst ist Einlagern nur Verwahrung, und
+ * die Entscheidung „ins Team oder in die Box" hat keine zweite Seite.
+ *
+ * Im Team ist es bewusst um ein Vielfaches langsamer: dort *arbeitet* das
+ * Pokémon, und genau darin liegt der Unterschied.
+ */
+export const ENERGY_REGEN_BOX_PER_HOUR = ENERGY_MAX
+
+/**
+ * Ein Erholungsschritt — und was von der Zeit übrig bleibt.
+ *
+ * Der Rest ist der eigentliche Punkt. Vorher wurde die verstrichene Zeit auf
+ * ganze Punkte abgerundet und der Zeitstempel trotzdem auf *jetzt* gesetzt:
+ * was für einen vollen Punkt nicht reichte, war weg. Bei kurzen Abständen
+ * reichte es nie, also kam nie etwas an.
+ *
+ * `nextAt` rückt deshalb nur um die tatsächlich gewährten Punkte vor, nicht
+ * bis `now`. Damit ist es gleichgültig, ob jemand einmal am Tag oder alle
+ * zwei Minuten hereinsieht — nach einer Stunde ist dieselbe Menge da.
+ */
+export interface EnergyTick {
+  /** Ganze Punkte, die jetzt gutgeschrieben werden. */
+  gain: number
+  /** Der neue Stand der Uhr. */
+  nextAt: number
+}
+
+export function energyTick(at: number, now: number, perHour: number): EnergyTick {
+  // Eine Uhr, die noch nie lief, fängt jetzt an — und schenkt nichts für die
+  // Zeit davor, in der es sie nicht gab.
+  if (at <= 0 || now <= at || perHour <= 0) return { gain: 0, nextAt: Math.max(at, now) }
+  const msPerPoint = 3_600_000 / perHour
+  const gain = Math.floor((now - at) / msPerPoint)
+  return { gain, nextAt: gain > 0 ? Math.round(at + gain * msPerPoint) : at }
+}
 
 export function regenerateEnergy(
   current: number,

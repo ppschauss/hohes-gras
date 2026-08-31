@@ -1,7 +1,7 @@
 import { GameError, type Trainer } from '@game/shared'
 import type { TrainerDef } from '@game/content'
 import {
-  ARENA_HEAL_PERCENT, ARENA_ROUNDS, ARENA_TIERS, arenaLevel, arenaTypeFor, ENERGY_COSTS,
+  ARENA_HEAL_PERCENT, ARENA_REPEAT_RATIO, ARENA_ROUNDS, ARENA_TIERS, arenaLevel, arenaTypeFor, ENERGY_COSTS,
   computeStats, createRng, findArenaTier, LEGENDARY_CATCH_RATE, type ArenaTier,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
@@ -304,7 +304,9 @@ export function next(ctx: AppContext, trainer: Trainer) {
     const wins = run.wins + 1
     if (wins >= ARENA_ROUNDS) {
       const tier = findArenaTier(run.tier)!
-      const payout = clearedToday(ctx, trainer.id, tier.id, date) ? null : pay(ctx, trainer, tier, date)
+      // Der erste Durchlauf am Tag zahlt voll, jeder weitere ein Viertel.
+      const wiederholung = clearedToday(ctx, trainer.id, tier.id, date)
+      const payout = pay(ctx, trainer, tier, date, wiederholung)
       ctx.db.prepare('UPDATE arena_runs SET wins = ? WHERE trainer_id = ?').run(wins, trainer.id)
       // Der ganze Durchlauf ist die Einheit, nicht der einzelne Kampf: eine
       // Aufgabe "fuenf Durchlaeufe" soll fuenf Durchlaeufe heissen.
@@ -327,17 +329,33 @@ export function next(ctx: AppContext, trainer: Trainer) {
   })
 }
 
-/** Die Prämie eines vollständigen Durchlaufs — einmal am Tag je Stufe. */
-function pay(ctx: AppContext, trainer: Trainer, tier: ArenaTier, date: string) {
-  inventory.earnGold(ctx.db, trainer.id, tier.bonusGold)
-  for (const item of tier.bonus) inventory.grant(ctx.db, trainer.id, item.itemId, item.quantity)
+/**
+ * Die Prämie eines vollständigen Durchlaufs.
+ *
+ * Voll beim ersten Mal am Tag, danach ein Viertel — Gold immer, Gegenstände
+ * nur, soweit ein Viertel noch für ein ganzes Stück reicht. Ein halber
+ * Sternenstaub wäre keine Belohnung, sondern eine Rundungsfrage.
+ */
+function pay(ctx: AppContext, trainer: Trainer, tier: ArenaTier, date: string, wiederholung: boolean) {
+  const anteil = wiederholung ? ARENA_REPEAT_RATIO : 1
+  const gold = Math.round(tier.bonusGold * anteil)
+  inventory.earnGold(ctx.db, trainer.id, gold)
+  const items = tier.bonus
+    .map((item) => ({ ...item, quantity: Math.floor(item.quantity * anteil) }))
+    .filter((item) => item.quantity > 0)
+  for (const item of items) inventory.grant(ctx.db, trainer.id, item.itemId, item.quantity)
   ctx.db.prepare(
-    'INSERT INTO arena_clears (trainer_id, game_date, tier, cleared_at) VALUES (?, ?, ?, ?)',
+    `INSERT INTO arena_clears (trainer_id, game_date, tier, cleared_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
   ).run(trainer.id, date, tier.id, Date.now())
 
+  // Zurueckgegeben wird, was wirklich gutgeschrieben wurde — nicht der volle
+  // Satz. Eine Anzeige, die mehr nennt als im Beutel ankommt, ist schlimmer
+  // als gar keine.
   return {
-    gold: tier.bonusGold,
-    items: tier.bonus.map((b) => ({
+    gold,
+    repeat: wiederholung,
+    items: items.map((b) => ({
       ...b,
       name: ctx.registry.tryItem(b.itemId)
         ? ctx.registry.localized(ctx.registry.item(b.itemId).name, trainer.locale)

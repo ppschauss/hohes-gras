@@ -21,10 +21,19 @@ const here = dirname(fileURLToPath(import.meta.url))
 export async function buildServer(ctx: AppContext): Promise<FastifyInstance> {
   const app = Fastify({
     logger: { level: ctx.config.LOG_LEVEL },
-    // The Cloudflare tunnel terminates TLS, so the real client IP and protocol
-    // arrive in X-Forwarded-*. Without this, every request looks like it came
-    // from the tunnel container and rate limiting would key on one address.
-    trustProxy: true,
+    /*
+     * Wem wir `X-Forwarded-For` glauben.
+     *
+     * Der Cloudflare-Tunnel beendet TLS, die echte Client-Adresse steht also
+     * in der Kopfzeile. Ohne das saehe jede Anfrage aus wie vom Tunnel, und
+     * die Ratenbegrenzung liefe fuer alle auf denselben Eimer.
+     *
+     * Aber nicht `true`: das glaubt die Kopfzeile *jedem*. Port 3010 liegt auf
+     * dem LAN offen, also koennte dort jeder eine beliebige Adresse behaupten
+     * und die Begrenzung damit umgehen. Vertraut wird nur den privaten Netzen,
+     * durch die der Tunnel und der Proxy tatsaechlich sprechen.
+     */
+    trustProxy: ['127.0.0.1', '::1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', 'fc00::/7'],
     bodyLimit: 256 * 1024,
   })
 
@@ -104,8 +113,14 @@ export async function buildServer(ctx: AppContext): Promise<FastifyInstance> {
        * Dateien womoeglich gar nicht mehr. Genau das ist passiert: eine Stunde
        * Cache auf index.html hat neue Funktionen unsichtbar gemacht.
        */
+      /*
+       * Ab @fastify/static 10 bekommt der Rueckruf die Fastify-Antwort statt
+       * der rohen Node-Antwort — also `header()` und nicht `setHeader()`. Der
+       * Sprung auf 10 war noetig: Version 8 hatte vier bekannte Luecken,
+       * darunter Path-Traversal und die Umgehung von Routen-Schutz.
+       */
       setHeaders(res, path) {
-        res.setHeader(
+        res.header(
           'cache-control',
           path.includes(`${sep}assets${sep}`)
             ? 'public, max-age=31536000, immutable'

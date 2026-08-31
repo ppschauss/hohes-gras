@@ -6,7 +6,7 @@
 
 <p align="center">
   Ein Kreaturen-Sammelspiel als Telegram Mini-App.<br>
-  Deutschsprachig, einladungsbasiert, selbst gehostet.
+  Deutschsprachig, selbst gehostet, im Freundeskreis gespielt.
 </p>
 
 ---
@@ -46,7 +46,7 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Teams** | Bis zu 8 gespeicherte Aufstellungen, eine davon aktiv; Reihenfolge per Doppeltipp |
 | **Attacken** | Vier Plätze je Pokémon, frei wählbar; die Automatik füllt nur leere Plätze. Lernsätze aus **allen** Spielversionen zusammen (Ø 18,6 je Art), mit Hinweis auf die nächste Attacke |
 | **Energie** | Statt Tageslimits: 2 Punkte/Minute, für Gold nachkaufbar, Vorrat bis 510 ausbaubar; über 1.000 wird sie zu Gold |
-| **Box** | 900 Plätze, mit dem Depot in 25 Stufen auf 2.150; sortierbar nach Nummer, Name, Level, Typ oder schillernd; Verwerten einzeln oder bis zu 50 auf einmal. Eingelagerte erholen sich dreimal so schnell |
+| **Box** | 900 Plätze, mit dem Depot in 25 Stufen auf 2.150; sortierbar nach Nummer, Name, Level, Typ oder schillernd; Verwerten einzeln oder bis zu 50 auf einmal. Eingelagerte erholen sich **in einer Stunde vollständig** (100/h gegen 6/h im Team) |
 | **Seelenfragmente** | Je Typ des verwerteten Pokémon eines; 15 → Ei, 85 → schillerndes Ei, 5 schillernde Fragmente → schillerndes Ei |
 | **Welt** | 3 Regionen, 38 Gebiete inkl. Nachliga, freie Startregion mit eigenen Startern, Wetter und Tageszeit steuern Spawns |
 | **Freischaltung** | Gebiete über Pokédex-Einträge, Regionen über Top Vier und Champion der vorherigen |
@@ -54,10 +54,12 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Reisegrenze** | Level 100 zum Start, +50 je bezwungener Region, absolutes Ende bei 500 |
 | **Safari** | Ball- und Beerenwahl, Schwächen/Beruhigen, Fangserie für Shiny-Jagd |
 | **Kampf** | Typentabelle, Status, Stat-Stufen, Mehrfachtreffer, KI in vier Stufen, 26 Orden, Top Vier je Region |
+| **Liga** | Eigener Abschnitt, nicht mehr unter „Training“: Top Vier der Reihe nach, der Champion erst danach — und an jedem gesperrten Gegner steht, worauf er wartet |
 | **Ereignisse** | Beim Erkunden: **Überfälle** (4 %) mit Gold, Sagenbeeren und selten einem Pokémon mit makellosen Werten, **Streuner** (3 %) mit höchstens zwei Pokémon, **Fundstücke** (3 %) |
 | **Legendäre** | 0,1 % Fundchance nach vollständig bezwungener Region; gefangen nur mit Sagenbeeren |
 | **Lockdüfte** | Ein Duft je Typ, 50 Gold für 5 Erkundungen; vervierfacht das Gewicht des gesuchten Typs |
 | **Fundstücke** | Jeder achte Fang bringt einen Werkstoff. Dazu Funde beim Erkunden: Ware nach Region gestaffelt, Beutel voll Münzen (55–789 Gold), gelegentlich Seelenfragmente. Der **Metalldetektor** (100 Gold) erzwingt einen Fund |
+| **Kampfzone** | Serie gegen wilde Pokémon einer Region, ohne festes Ende. Gegner auf dem eigenen Durchschnittslevel, Stufen bei 10/15/25/50/100 mit Gold und **regionstypischen Werkstoffen**, dazu Beute aus jedem einzelnen Kampf. 2,5× EP, 10 Energie für den ganzen Lauf, Abrechnung am Ende |
 | **Arena** | Trainingsmodus: 4 Kämpfe in Folge gegen den Typ des Tages, drei Stufen (−5/−3/−1 Level), 25 % Heilung zwischen den Kämpfen. **6 Energie für den ganzen Durchlauf**, nicht je Kampf |
 | **Poké-Center** | Alle 15 Minuten kostenlose Vollheilung, gelegentlich mit Fund, Geschenk oder Tauschangebot |
 | **Poké-Beet** | Beeren, Bonbons oder Gold eingraben; Pflege oder ein Pflanzen-Pokémon heben den Ertrag |
@@ -65,10 +67,12 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Labor** | 15 Forschungsprojekte über 26 Stufen: Rezepte freischalten und sieben Dauerboni heben (Fundchance, Werkstoffe, Expeditionsbeute, Kampf-EP und -Gold, Fangchance, Shiny). Jedes bindet ein Pokémon und gibt ihm die Erfahrung |
 | **Fleißpunkte** | Training im Labor: +32 auf einen frei gewählten Wert je Durchlauf, Grenzen wie im Vorbild (252 je Wert, 510 gesamt) |
 | **Pension** | Bis zu 5 Pokémon für 24 Stunden, zehn Level je vollem Aufenthalt. Früher abholen kostet Energie, aber nie den Fortschritt |
-| **Idle** | Expeditionen (4 Arten × 3 Dauern, bis 6 Pokémon), Ei-Zucht mit IV-Vererbung, 3 Brutplätze (ausbaubar auf 8) |
+| **Idle** | Expeditionen (4 Arten × 3 Dauern, bis 6 Pokémon) — **nur passende Typen**, und vorher steht da, was ungefähr herauskommt. Ei-Zucht mit IV-Vererbung, 3 Brutplätze (ausbaubar auf 8) |
 | **Sozial** | Freunde über Trainer-Code, tägliche Geschenke (Trank, Beeren, Bälle, gelegentlich ein Ei), teilbare Trainerkarte, Marktplatz, Direkttausch |
 | **Koop** | Gilden mit Wochenziel — **12 Ziele im Wechsel, das Soll zählt je Mitglied** —, Raid-Bosse als Karte im Telegram-Gruppenchat, asynchrones PvP mit Elo, Wochenturnier |
-| **Progression** | Entwicklungen, 10 Ausbauten, 23 Rezepte, Erfolgsketten, 21 Story-Kapitel mit sichtbarer Belohnung |
+| **Werkstatt** | Bälle in **10/25/50** mit Mengenrabatt; der Pokéball ist selbst herstellbar, damit die Ballkette an Werkstoffen hängt und nicht an Gold |
+| **Progression** | Entwicklungen, 10 Ausbauten, 24 Rezepte, Erfolgsketten, 21 Story-Kapitel mit sichtbarer Belohnung |
+| **Tausch-Evo** | 11 Arten entwickeln sich nur beim Besitzerwechsel. Ein echter Tausch löst das aus — oder ein **Verbindungskabel** aus Expeditions-Werkstoffen (Labor Stufe 2). Die **Tausch-Station** zeigt auch, was noch fehlt |
 | **Pokédex** | 390 Arten; jede gesehene lässt sich antippen und zeigt, **wo sie lebt** — nach Häufigkeit, mit Levelband und Bedingungen |
 | **Aufgaben** | Drei am Tag und drei in der Woche, aus 12 bzw. 10 im Wechsel — für alle Spieler dieselben. Die Wochenaufgaben zählen **jeden** Sieg, auch den wiederholten: dafür lohnt sich der Weg zurück in ein altes Gebiet |
 | **Saison** | Eine Woche, 25 Stufen, 13 davon mit Gegenstand; die letzte bringt ein Schillerndes Seelenfragment |
@@ -76,6 +80,8 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Zugang** | Telegram-`initData`; für den Browser ein Einmalcode aus dem Chat, verbundene Geräte einzeln kündbar |
 | **Designs** | 13 kaufbare Farbwelten plus Tag-/Nacht-Modus, der der Weltuhr folgt |
 | **Fairness** | Taktkontrolle gegen Automatik-Klicker (Fenster, Mindestabstand, Rhythmuserkennung). Der volle Siegbetrag fällt einmal am Tag je Gegner — darüber hinaus bleibt das **Antrittsgeld**, damit kein Kampf leer ausgeht |
+| **Verbund** | Optional: mehrere Instanzen teilen eine Spielerbasis und eine globale Rangliste. Alle drei `HUB_*`-Schlüssel leer heißt: kein Verbund, und nichts ändert sich |
+| **Updates** | Der Verbund meldet neue Stände per Telegram; ein Knopf löst aus. Gebaut wird auf dem Wirt (`manage.sh watch`) mit Sicherung und Rückweg — der Container bekommt bewusst kein Recht, sich selbst zu ersetzen |
 | **Konto** | Telegram-Erinnerungen (max. 1/Tag), DSGVO-Export und -Löschung, Admin-Panel |
 
 ## Aufbau
@@ -92,6 +98,7 @@ build/app/             npm-Workspace-Monorepo
   packages/content     Pack-Schema, Loader mit Querprüfung, Registry
   packages/engine      Spiellogik — rein, ohne I/O, mit injiziertem RNG
   packages/api         Fastify + SQLite + grammY-Bot + Scheduler
+  packages/hub         Verbund-Dienst — reine Logik + Cloudflare-Worker
   packages/web         React/Vite Mini-App
   tools/               Import, Weltaufbau, Balancing-Simulation
 data/                  game.db, packs/, media/, backups/   (gitignored)
@@ -121,7 +128,7 @@ ohne Telegram durchrechnen. Warum das so gebaut ist, steht in
 - **[docs/INHALT.md](docs/INHALT.md)** — Content-Pack, Pipeline, Rechtslage
 - **[docs/BETRIEB.md](docs/BETRIEB.md)** — Einrichtung, Deploy, Datenbank, Fallstricke
 - **[docs/BALANCE.md](docs/BALANCE.md)** — alle Stellschrauben mit Begründung
-- **[docs/VERBUND.md](docs/VERBUND.md)** — Entwurf: mehrere Instanzen, eine Spielerwelt
+- **[docs/VERBUND.md](docs/VERBUND.md)** — mehrere Instanzen, eine Spielerwelt: Entwurf, Stand, Ausrollen
 - **[SETUP-EXTERN.md](SETUP-EXTERN.md)** — Cloudflare-Tunnel und BotFather
 
 ## Rechtliches
@@ -133,5 +140,5 @@ Projekt.
 Sprites und Regionen stammen aus dem Pokémon-Universum und sind geistiges
 Eigentum von Nintendo / Game Freak / The Pokémon Company. Die Engine selbst
 kennt keine Pokémon: sie lädt austauschbare Content-Packs. Betrieben wird
-privat und nur mit Einladungscode. Details in
+privat, im Freundeskreis. Details in
 [docs/INHALT.md](docs/INHALT.md#rechtslage--zuerst-weil-es-den-rest-erklärt).

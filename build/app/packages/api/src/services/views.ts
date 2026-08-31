@@ -2,6 +2,7 @@ import type { CreatureView, DexRow, OwnedCreature, TimeOfDay } from '@game/share
 import type { Registry } from '@game/content'
 import {
   computeStats, condition, currentHpRatio, friendshipTier, ivPercent, levelProgress, powerRating,
+  LINK_CABLE_ITEM_ID,
 } from '@game/engine'
 import type { DexEntry } from '../repos/dex.js'
 
@@ -94,6 +95,19 @@ export function evolutionOptions(
         if (heldItems.has(evo.itemId)) out.push({ speciesId: evo.to, name, how: 'stone' })
         break
       case 'trade':
+        /*
+         * Elf Arten entwickeln sich im Vorbild nur durch einen Tausch. Hier
+         * stand lange `break` — sie waren damit nicht erreichbar, und die
+         * Eintraege im Pack blosse Zierde.
+         *
+         * Zwei Wege gibt es jetzt: ein echter Tausch loest es aus, oder ein
+         * Verbindungskabel simuliert einen. Braucht die Entwicklung zusaetzlich
+         * einen Tragegegenstand, muss auch der im Beutel liegen — beides wird
+         * beim Entwickeln verbraucht.
+         */
+        if (heldItems.has(LINK_CABLE_ITEM_ID) && (!evo.heldItemId || heldItems.has(evo.heldItemId))) {
+          out.push({ speciesId: evo.to, name, how: 'trade' })
+        }
         break
     }
   }

@@ -1,6 +1,5 @@
 import { Bot, GrammyError, HttpError, InlineKeyboard } from 'grammy'
 import type { AppContext } from '../context.js'
-import { createInvite, listInvites } from '../repos/invites.js'
 import { findByTelegramId, setAdmin, countTrainers } from '../repos/trainers.js'
 import { logEvent } from '../repos/events.js'
 import { createCode as createLinkCode, LINK_CODE_TTL_MS } from '../services/link.js'
@@ -18,15 +17,16 @@ const COMMANDS = [
   { command: 'hilfe', description: 'Was der Bot kann' },
 ]
 
+const ADMIN_COMMANDS = [
+  { command: 'event', description: 'Ereignis-Wesen vergeben (Admin)' },
+  { command: 'gegenstand', description: 'Gegenstände vergeben (Admin)' },
+]
+
 const GROUP_COMMANDS = [
   { command: 'gilde', description: 'Chat mit deiner Gilde verbinden' },
   { command: 'raid', description: 'Laufende Raids anzeigen' },
 ]
 
-const ADMIN_COMMANDS = [
-  { command: 'einladen', description: 'Einladungscode erzeugen (Admin)' },
-  { command: 'codes', description: 'Offene Einladungen (Admin)' },
-]
 
 export function createBot(ctx: AppContext): Bot {
   const bot = new Bot(ctx.config.BOT_TOKEN)
@@ -53,7 +53,7 @@ export function createBot(ctx: AppContext): Bot {
       ? `Willkommen zurück, ${known.displayName}!\nTipp auf *Spielen*, um in deinen Garten zu kommen.`
       : countTrainers(ctx.db) === 0
         ? 'Der Server ist frisch — du bist der erste Trainer und wirst automatisch Admin.\nTipp auf *Spielen*.'
-        : 'Willkommen! Für den Start brauchst du einen Einladungscode.\nHast du einen, tipp auf *Spielen* und gib ihn dort ein.'
+        : 'Willkommen bei *Hohes Gras*!\nTipp auf *Spielen*, such dir ein Starter-Pokémon aus und los geht\'s.'
 
     await c.reply(text, { parse_mode: 'Markdown', reply_markup: openKeyboard })
   })
@@ -139,27 +139,11 @@ export function createBot(ctx: AppContext): Bot {
     if (isAdmin(String(c.from?.id ?? ''))) {
       lines.push(
       '', '*Admin*',
-      '/einladen — neuen Code erzeugen',
-      '/codes — offene Codes anzeigen',
       '/event — Ereignis-Wesen vergeben',
       '/gegenstand — Gegenstände vergeben',
     )
     }
     await c.reply(lines.join('\n'), { parse_mode: 'Markdown', reply_markup: openKeyboard })
-  })
-
-  bot.command('einladen', async (c) => {
-    const tgId = String(c.from?.id ?? '')
-    if (!isAdmin(tgId)) return c.reply('Das kann nur ein Admin.')
-    const me = findByTelegramId(ctx.db, tgId)
-    const arg = (c.match ?? '').toString().trim()
-    const uses = Math.min(50, Math.max(1, Number.parseInt(arg, 10) || 1))
-    const invite = createInvite(ctx.db, { createdBy: me?.id ?? null, maxUses: uses, expiresInDays: 30, note: 'per Bot' })
-    const deepLink = `https://t.me/${c.me.username}/app?startapp=${invite.code}`
-    await c.reply(
-      `Einladungscode: \`${invite.code}\`\nGültig 30 Tage, ${uses}× nutzbar.\n\nOder direkt weiterleiten:\n${deepLink}`,
-      { parse_mode: 'Markdown' },
-    )
   })
 
   bot.command('event', async (c) => {
@@ -233,14 +217,6 @@ export function createBot(ctx: AppContext): Bot {
           : `Ging nicht: ${reason}`,
       )
     }
-  })
-
-  bot.command('codes', async (c) => {
-    if (!isAdmin(String(c.from?.id ?? ''))) return c.reply('Das kann nur ein Admin.')
-    const open = listInvites(ctx.db, 20).filter((i) => i.uses < i.maxUses)
-    if (open.length === 0) return c.reply('Keine offenen Einladungen. /einladen erzeugt eine.')
-    const lines = open.map((i) => `\`${i.code}\` — ${i.uses}/${i.maxUses} genutzt`)
-    await c.reply(['*Offene Einladungen*', ...lines].join('\n'), { parse_mode: 'Markdown' })
   })
 
   // --- Gruppen: Gilde an den Chat binden und Raid-Karten posten -----------

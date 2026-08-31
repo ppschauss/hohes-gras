@@ -9,39 +9,56 @@ export const SHINY_BASE_ODDS = 1 / 512
 /**
  * Bei so vielen Fängen derselben Art ist der nächste sicher schillernd.
  *
- * Neunundvierzig gefangen, das fünfzigste glänzt. Die Zahl ist die Zusage, auf
- * die man hinarbeitet — und der Punkt, an dem die Kurve genau 1 erreicht,
- * nicht bloß fast.
+ * Vierhundert gefangen, das vierhunderterste glänzt. Die Zahl ist die Zusage,
+ * auf die man hinarbeitet — und der Punkt, an dem die Kurve genau 1 erreicht,
+ * nicht bloß fast. Sie liegt bewusst beim Doppelten des Medians: als Deckel
+ * gegen echtes Pech, nicht als Ziel, das man einplant.
+ *
+ * Vorher stand hier 49, und zusammen mit dem alten Plateau war das viel zu
+ * früh: gemessen über 200.000 Läufe kam ein Schillerndes im Schnitt nach
+ * **15 Begegnungen**. In einem echten Spielstand glänzten daraufhin 18 % einer
+ * Box. Ein Shiny, das jeder Zwanzigste ist, ist kein Shiny mehr — gemeldet
+ * ausgerechnet von dem Spieler mit den meisten.
  */
-export const SHINY_CHAIN_GUARANTEE = 49
+export const SHINY_CHAIN_GUARANTEE = 400
 
 /**
  * Wohin die Serie faellt, nachdem ein Schillerndes gefangen wurde.
  *
- * Vorher fiel sie gar nicht: wer einmal bei 49 war, fing ab da *jedes*
- * Exemplar dieser Art schillernd — die Jagd war nach einem Treffer vorbei und
- * das Besondere zur Regel geworden. Auf null zurueckzusetzen waere das andere
- * Extrem; zwanzig ist die Stelle, an der die Chance bei zehn Prozent liegt.
- * Die Arbeit bleibt also belohnt, nur nicht ewig.
+ * Auf null: die Jagd fängt von vorne an.
+ *
+ * Zwanzig stand hier, damit die Arbeit belohnt bleibt — aber zwanzig lag genau
+ * auf dem Plateau, also war die Chance nach einem Treffer wieder die höchste,
+ * die es gab. Das machte das *zweite* Schillernde billiger als das erste, und
+ * das dritte auch. Genau daher kommen die Sammlungen mit zwanzig Stück.
  */
-export const SHINY_CHAIN_AFTER_CATCH = 20
+export const SHINY_CHAIN_AFTER_CATCH = 0
 
 /** Beibehalten unter altem Namen: die Serie zählt bis zur Zusage. */
 export const SHINY_CHAIN_CAP = SHINY_CHAIN_GUARANTEE
 
 /**
- * Ab hier steht die Chance auf zehn Prozent.
+ * Ab hier steigt die Chance nicht weiter.
  *
- * Die Kurve stieg vorher spät und dann steil — 1,8 % bei zehn Fängen, 28 % bei
- * dreißig. Das war als Ziel gedacht und in der Praxis eine lange Durststrecke:
- * die ersten dreißig Fänge fühlten sich an wie gar keine Serie. Jetzt steigt
- * sie über die ersten zehn Fänge auf zehn Prozent und bleibt dort, bis die
- * Zusage greift.
+ * Dreißig Fänge — die Serie soll ein Weg sein, den man geht, und kein
+ * Schalter, der nach zehn Minuten umgelegt ist.
  */
-export const SHINY_CHAIN_PLATEAU = 10
+export const SHINY_CHAIN_PLATEAU = 30
 
-/** Die Chance auf dem Plateau. */
-export const SHINY_PLATEAU_ODDS = 0.10
+/**
+ * Die Chance auf dem Plateau: 0,35 %.
+ *
+ * Sie stand einmal bei zehn Prozent — das war der eigentliche Fehler, nicht
+ * die Grundchance. Die Serie hob sie um das Fünfzigfache und ließ sie dort,
+ * also traf man nach zehn Fängen jedes zehnte Mal eins.
+ *
+ * Gemessen über 120.000 Läufe ergibt diese Zahl zusammen mit Plateau und
+ * Garantie einen **Median von 203 Begegnungen** (Schnitt 219, zehn Prozent
+ * schaffen es unter 37, neunzig Prozent unter 401). Die Serie ist damit noch
+ * immer der beste Weg — sie verdoppelt die Chance gegenüber der Grundrate und
+ * bringt als Einzige eine Obergrenze mit —, aber sie ist Arbeit.
+ */
+export const SHINY_PLATEAU_ODDS = 0.0035
 
 /**
  * Die Shiny-Chance für eine bestimmte Art, gegeben die laufende Fangserie.
@@ -67,11 +84,22 @@ export const SHINY_PLATEAU_ODDS = 0.10
 export function shinyOdds(chainStreak: number, bonus = 0): number {
   const streak = Math.max(0, Math.floor(chainStreak))
   if (streak >= SHINY_CHAIN_GUARANTEE) return 1
-  if (streak >= SHINY_CHAIN_PLATEAU) return SHINY_PLATEAU_ODDS
-  const base = SHINY_BASE_ODDS + Math.max(0, bonus) / 100
-  if (streak <= 0) return base
-  const progress = streak / SHINY_CHAIN_PLATEAU
-  return SHINY_BASE_ODDS + (SHINY_PLATEAU_ODDS - SHINY_BASE_ODDS) * progress
+
+  /*
+   * Der erforschte Zuschlag hebt die **ganze** Kurve, nicht nur ihren Anfang.
+   *
+   * Vorher wurde er allein auf `streak === 0` gerechnet, und der Anstieg
+   * ignorierte ihn. Solange das Plateau bei zehn Prozent lag, fiel das nicht
+   * auf — der Zuschlag von höchstens 0,1 Prozentpunkten verschwand darin.
+   * Mit 0,35 % wäre daraus eine sichtbare Verkehrung geworden: voll erforscht
+   * stünden bei Serie 0 gerade 0,295 %, beim ersten Fang aber nur noch
+   * 0,20 %. Der Fang hätte die Chance *gesenkt*.
+   */
+  const extra = Math.max(0, bonus) / 100
+  const base = SHINY_BASE_ODDS + extra
+  const plateau = SHINY_PLATEAU_ODDS + extra
+  if (streak >= SHINY_CHAIN_PLATEAU) return plateau
+  return base + (plateau - base) * (streak / SHINY_CHAIN_PLATEAU)
 }
 
 export interface SpawnContext {

@@ -79,16 +79,9 @@ export function DataPanel() {
 
 function AdminSection() {
   const admin = useAsync(() => api.admin(), [])
+  const release = useAsync(() => api.release(), [])
   const action = useAction()
 
-  const create = () => {
-    haptic.tap()
-    void action.run(() => api.createInvite(1, 30, ''), (res) => { admin.set(res.dashboard); haptic.success() })
-  }
-  const revoke = (code: string) => {
-    haptic.tap()
-    void action.run(() => api.revokeInvite(code), (next) => admin.set(next))
-  }
   const ban = (id: string, value: boolean) => {
     haptic.tap()
     void action.run(() => api.setBan(id, value), (next) => admin.set(next))
@@ -99,6 +92,53 @@ function AdminSection() {
 
   return (
     <>
+      {/*
+        * Der Stand dieser Installation.
+        *
+        * Der Knopf baut nichts: er legt eine Marke ab, die `./manage.sh watch`
+        * auf dem Wirt aufgreift. Ein Container, der sich selbst neu bauen darf,
+        * braeuchte den Docker-Socket — also Zugriff auf alles, was auf der
+        * Maschine laeuft.
+        */}
+      {release.data && (
+        <section className="section">
+          <h2>{t('admin.release')}</h2>
+          {release.data.latest === null
+            ? (
+              <p className="center__body num">
+                {t('admin.release.current.only', { sha: release.data.current })}
+                <br /><span className="recipe__req">{t('admin.release.unknown')}</span>
+              </p>
+            )
+            : (
+              <>
+                <p className="center__body num">
+                  {t('admin.release.current', { sha: release.data.current })}
+                  {' · '}{t('admin.release.latest', { sha: release.data.latest })}
+                </p>
+                {release.data.notes && <p className="explain">{release.data.notes}</p>}
+                {release.data.pending
+                  ? <p className="notice notice--ok" role="status">{t('admin.release.pending')}</p>
+                  : release.data.outdated
+                    ? (
+                      <>
+                        <button type="button" className="btn btn--primary btn--block"
+                          disabled={action.busy}
+                          onClick={() => {
+                            haptic.tap()
+                            void action.run(() => api.requestUpdate(), (r) => { release.set(r); haptic.success() })
+                          }}>
+                          {t('admin.release.update')}
+                        </button>
+                        <p className="recipe__req">{t('admin.release.hint')}</p>
+                      </>
+                    )
+                    : null}
+              </>
+            )}
+        </section>
+      )}
+
       <section className="section">
         <h2>{t('admin.title')}</h2>
         <p className="center__body num">
@@ -122,25 +162,6 @@ function AdminSection() {
           <Stat label={t('admin.guilds')} value={d.activity.guilds} />
           <Stat label={t('admin.sales')} value={d.activity.marketSales} />
           <Stat label={t('admin.gold')} value={d.activity.goldInCirculation} />
-        </div>
-      </section>
-
-      <section className="section">
-        <h2>{t('admin.invites')}</h2>
-        <button type="button" className="btn btn--primary btn--block" disabled={action.busy} onClick={create}>
-          {t('admin.newInvite')}
-        </button>
-        <div className="stack">
-          {d.invites.filter((i) => !i.exhausted).map((i) => (
-            <article key={i.code} className="friend">
-              <span className="friend__text">
-                <code className="codeCard__code">{i.code}</code>
-                <span className="friend__meta num">{t('admin.uses', { used: i.uses, max: i.maxUses })}</span>
-              </span>
-              <button type="button" className="btn btn--ghost btn--sm" disabled={action.busy}
-                onClick={() => revoke(i.code)}>{t('admin.revoke')}</button>
-            </article>
-          ))}
         </div>
       </section>
 

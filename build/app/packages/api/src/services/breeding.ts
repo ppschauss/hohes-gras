@@ -11,6 +11,7 @@ import { tx } from '../db/index.js'
 import * as eggs from '../repos/eggs.js'
 import * as creatures from '../repos/creatures.js'
 import * as dex from '../repos/dex.js'
+import * as inventory from '../repos/inventory.js'
 import { logEvent } from '../repos/events.js'
 import { worldClock } from '../worldClock.js'
 import { creatureView } from './views.js'
@@ -275,6 +276,34 @@ export function pair(ctx: AppContext, trainer: Trainer, idA: string, idB: string
     return eggView(ctx, trainer, created)
   })
 }
+
+/**
+ * Ein Ei sofort fertig machen.
+ *
+ * Nur mit dem Brutbeschleuniger, und den gibt es ausschliesslich ueber
+ * `/gegenstand` beim Admin. Verschoben wird der Startzeitpunkt, nicht der
+ * Fortschritt: damit greift alles Weitere — Pflegephasen, IV-Bonus, Shiny-
+ * Faktor — unveraendert, statt dass hier eine zweite Rechnung entsteht.
+ */
+export function rushEgg(ctx: AppContext, trainer: Trainer, eggId: string): EggView {
+  return tx(ctx.db, () => {
+    const egg = eggs.byId(ctx.db, eggId)
+    if (!egg || egg.trainerId !== trainer.id) throw new GameError('not_found', { eggId }, 404)
+    if (egg.hatchedAt !== null) throw new GameError('invalid_state', { reason: 'already_claimed' }, 409)
+    if (inventory.quantityOf(ctx.db, trainer.id, EGG_WARMER_ID) < 1) {
+      throw new GameError('insufficient_items', { itemId: EGG_WARMER_ID }, 409)
+    }
+    inventory.consume(ctx.db, trainer.id, EGG_WARMER_ID, 1)
+    // Weit genug zurueck, dass auch die volle Brutzeit ohne Pflege vorbei ist.
+    ctx.db.prepare('UPDATE eggs SET started_at = ? WHERE id = ?')
+      .run(Date.now() - egg.hatchMinutes * 60_000 - 1000, eggId)
+    logEvent(ctx.db, trainer.id, 'egg.rushed', { eggId })
+    return eggView(ctx, trainer, eggs.byId(ctx.db, eggId)!)
+  })
+}
+
+/** Der Prüfgegenstand, der `rushEgg` freischaltet. */
+export const EGG_WARMER_ID = 'egg-warmer'
 
 export function hatch(ctx: AppContext, trainer: Trainer, eggId: string) {
   return tx(ctx.db, () => {

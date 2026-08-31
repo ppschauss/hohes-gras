@@ -202,17 +202,54 @@ describe('Handwerk', () => {
     expect(ball.blockedReason).toBe('missing_items')
   })
 
-  it('stellt her und verbraucht die Zutaten', async () => {
-    h.ctx.db.prepare("INSERT INTO inventory (trainer_id, item_id, quantity) VALUES (?, 'iron-shard', 10) ON CONFLICT DO UPDATE SET quantity = 10").run(trainerId)
-    h.ctx.db.prepare("UPDATE inventory SET quantity = 20 WHERE trainer_id = ? AND item_id = 'poke-ball'").run(trainerId)
+  const stock = (itemId: string, n: number) =>
+    h.ctx.db.prepare(
+      `INSERT INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)
+       ON CONFLICT(trainer_id, item_id) DO UPDATE SET quantity = excluded.quantity`,
+    ).run(trainerId, itemId, n)
 
+  it('stellt her und verbraucht die Zutaten', async () => {
+    stock('iron-shard', 10)
+    stock('poke-ball', 20)
+
+    // Ohne Mengenangabe die kleinste Charge: zehn Baelle.
     const r = await h.post('/api/crafting/craft', { recipeId: 'craft-great-ball' }, token)
     expect(r.status).toBe(200)
-    expect(r.body.output).toEqual({ itemId: 'great-ball', quantity: 5 })
+    expect(r.body.output).toEqual({ itemId: 'great-ball', quantity: 10 })
 
     const bag = await h.get('/api/bag', token)
-    expect(bag.body.items.find((i: any) => i.id === 'poke-ball').quantity).toBe(12)
-    expect(bag.body.items.find((i: any) => i.id === 'great-ball').quantity).toBe(5)
+    expect(bag.body.items.find((i: any) => i.id === 'poke-ball').quantity).toBe(8)
+    expect(bag.body.items.find((i: any) => i.id === 'great-ball').quantity).toBe(10)
+  })
+
+  it('baut auf Vorrat und gibt dabei Mengenrabatt', async () => {
+    stock('iron-shard', 50)
+    stock('poke-ball', 100)
+    const gold = (await h.get('/api/bag', token)).body.gold
+    h.ctx.db.prepare('UPDATE trainers SET gold = 10000 WHERE id = ?').run(trainerId)
+    void gold
+
+    h.resetRateLimits()
+    const r = await h.post('/api/crafting/craft', { recipeId: 'craft-great-ball', count: 50 }, token)
+    expect(r.status).toBe(200)
+    expect(r.body.output).toEqual({ itemId: 'great-ball', quantity: 50 })
+
+    const bag = await h.get('/api/bag', token)
+    // Fuenfmal so viele Baelle kosten nur das Vierfache: 48 statt 60 Pokebaelle
+    // und 12 statt 15 Eisensplitter. Genau das ist der Sinn der Charge.
+    expect(bag.body.items.find((i: any) => i.id === 'poke-ball').quantity).toBe(100 - 48)
+    expect(bag.body.items.find((i: any) => i.id === 'iron-shard').quantity).toBe(50 - 12)
+    expect(bag.body.gold).toBe(10000 - 800)
+  })
+
+  it('nimmt keine ausgedachte Menge an', async () => {
+    stock('iron-shard', 50)
+    stock('poke-ball', 100)
+    h.resetRateLimits()
+    // 30 steht in keiner Charge — sonst koennte sich der Client seinen eigenen
+    // Rabatt ausrechnen lassen.
+    const r = await h.post('/api/crafting/craft', { recipeId: 'craft-great-ball', count: 30 }, token)
+    expect(r.status).toBe(400)
   })
 
   it('verweigert ohne Zutaten', async () => {

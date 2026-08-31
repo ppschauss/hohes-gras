@@ -92,37 +92,52 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
         {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
         {used && <p className="notice notice--ok" role="status">{used}</p>}
 
+        {/*
+          * Die Ziel-Auswahl als Blatt von unten statt als Abschnitt oben.
+          *
+          * Vorher stand sie am Seitenanfang. Wer ein Material weit unten
+          * antippte, musste erst wieder hochscrollen, um zu sehen, worauf er
+          * es anwendet — gemeldet als „3 km nach oben scrollen". Ein Blatt
+          * ueberdeckt die Seite, liegt am unteren Rand beim Daumen und bringt
+          * seinen eigenen Bildlauf mit.
+          */}
         {target && (
-          <section className="section">
-            <h2>{t('bag.target', { item: target.name })}</h2>
-            {/* Erst das Team, dann die Box — und beschriftet, damit man den
-                Uebergang sieht statt eine Liste ohne Ordnung. */}
-            {[
-              { key: 'team', label: t('box.inTeam'), list: garden.data?.team ?? [] },
-              { key: 'box', label: t('box.title'), list: box.data?.creatures ?? [] },
-            ].filter((g) => g.list.length > 0).map((g) => (
-              <div key={g.key}>
-                <p className="section__eyebrow">{g.label}</p>
-                <div className="switchList">
-                  {g.list.map((c) => (
-                    <button key={c.id} type="button" className="switchRow" disabled={action.busy}
-                      onClick={() => useOn(target, c.id)}>
-                      <img src={c.sprite} alt="" width={40} height={40} />
-                      <span className="switchRow__text">
-                        <span className="switchRow__name">{c.displayName}</span>
-                        <span className="switchRow__hp num">
-                          {t('creature.level', { n: c.level })} · {c.hpCurrent}/{c.hpMax} KP
-                        </span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
+          <div className="sheet" role="dialog" aria-modal="true" aria-label={t('bag.target', { item: target.name })}>
+            <button type="button" className="sheet__scrim" aria-label={t('app.back')}
+              onClick={() => setTarget(null)} />
+            <section className="sheet__panel">
+              <h2 className="sheet__title">{t('bag.target', { item: target.name })}</h2>
+              <div className="sheet__body">
+                {/* Erst das Team, dann die Box — und beschriftet, damit man den
+                    Uebergang sieht statt eine Liste ohne Ordnung. */}
+                {[
+                  { key: 'team', label: t('box.inTeam'), list: garden.data?.team ?? [] },
+                  { key: 'box', label: t('box.title'), list: box.data?.creatures ?? [] },
+                ].filter((g) => g.list.length > 0).map((g) => (
+                  <div key={g.key}>
+                    <p className="section__eyebrow">{g.label}</p>
+                    <div className="switchList">
+                      {g.list.map((c) => (
+                        <button key={c.id} type="button" className="switchRow" disabled={action.busy}
+                          onClick={() => useOn(target, c.id)}>
+                          <img src={c.sprite} alt="" width={40} height={40} />
+                          <span className="switchRow__text">
+                            <span className="switchRow__name">{c.displayName}</span>
+                            <span className="switchRow__hp num">
+                              {t('creature.level', { n: c.level })} · {c.hpCurrent}/{c.hpMax} KP
+                            </span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-            <button type="button" className="btn btn--ghost btn--block" onClick={() => setTarget(null)}>
-              {t('app.back')}
-            </button>
-          </section>
+              <button type="button" className="btn btn--ghost btn--block" onClick={() => setTarget(null)}>
+                {t('app.back')}
+              </button>
+            </section>
+          </div>
         )}
 
         {/* Fragmente stehen oben und nicht zwischen den Materialien: sie sind

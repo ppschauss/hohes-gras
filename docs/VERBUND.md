@@ -235,3 +235,252 @@ Jeder Schritt ist für sich nützlich; keiner setzt den nächsten voraus.
 Schritt 1 bis 4 sind unkritisch: nichts davon kann einen Spielstand
 beschädigen. Ab Schritt 6 wird es ernst — dort gehört ein Testlauf zwischen
 zwei Instanzen hin, bevor echte Kreaturen die Grenze überqueren.
+
+
+---
+
+## Stand: Schritt 1 und 2 sind gebaut
+
+Was es gibt, und wo es liegt:
+
+| Teil | Ort | Zustand |
+|---|---|---|
+| Dienstlogik, ohne I/O | `packages/hub/src/service.ts` | 13 Tests |
+| Signatur (HMAC, 5-Minuten-Fenster) | `packages/hub/src/auth.ts` | mitgeprüft |
+| Speicher-Schnittstelle | `packages/hub/src/store.ts` | — |
+| Speicher im Arbeitsspeicher (Tests) | `packages/hub/src/memory.ts` | — |
+| Speicher auf Cloudflare D1 | `packages/hub/src/d1.ts` | nur Abfragen |
+| Worker-Einstieg | `packages/hub/worker/index.ts` | ~40 Zeilen |
+| D1-Schema | `packages/hub/worker/schema.sql` | — |
+| Instanz-Seite | `packages/api/src/services/hub.ts` | 6 Tests |
+| Hintergrund-Abgleich (alle 10 min) | `packages/api/src/jobs/scheduler.ts`, Job `hub-sync` | — |
+| Globale Rangliste in der App | `packages/web/src/social/RankingPanel.tsx` | Umschalter |
+
+Die Trennung ist dieselbe wie zwischen Engine und Spiel: **der Dienst kennt
+keine Datenbank.** `createHub()` nimmt eine Anfrage und gibt eine Antwort
+zurück — kein Fastify, kein Worker, kein Netz. Deshalb laufen alle 13 Tests des
+Verbunds in Millisekunden und ohne Cloudflare, und deshalb ist der Worker
+selbst so kurz, dass man ihn ganz lesen kann.
+
+### Die Zusage der Instanz-Seite
+
+**Ein Verbund darf nie zur Voraussetzung dafür werden, dass eine Instanz
+läuft.** Konkret heißt das:
+
+- Sind `HUB_URL`, `HUB_INSTANCE_ID` und `HUB_SECRET` leer, tut jede Funktion
+  nichts und gibt `0` oder `null` zurück. Keine Anfrage geht hinaus.
+- Ist ein Verbund eingerichtet, aber nicht erreichbar, wird das geloggt und
+  sonst nichts. Es gibt keinen Pfad, auf dem ein Fehler des Verbunds eine
+  Spielaktion scheitern lässt.
+- Die Rangliste wird im Hintergrund geholt und lokal abgelegt; die Ansicht
+  liest nur den Zwischenspeicher. Ein Blick auf die Rangliste wartet nie auf
+  eine fremde Leitung, und schweigt der Verbund, bleibt der letzte Stand
+  stehen statt einer leeren Liste.
+- `hub_links` und `hub_cache` sind Beiwerk: löscht man sie, verliert das Spiel
+  nichts.
+
+Beides ist getestet, auch der Ausfall (`packages/api/test/hub.test.ts`).
+
+### Was hinausgeht — und was nicht
+
+Hoch geht ein Schnappschuss: Orden, Dex-Fänge, gewonnene Kämpfe, höchstes
+Level, PvP-Wertung. Keine Kreaturen, keine Gegenstände, kein Gold, keine
+Telegram-Id — die globale Id ist ein Hash aus Telegram-Id und einem Salz, das
+nur im Verbund liegt. Aus ihr lässt sich die Nummer nicht zurückrechnen, und
+eine Instanz kann keine Ids für fremde Spieler erfinden.
+
+**Wer sich lokal aus der Rangliste genommen hat, taucht auch global nicht auf.**
+Der Schalter hieß immer „nicht in der Rangliste"; eine zweite, größere
+Rangliste wäre genau das, was er verhindern soll.
+
+Hochgeschoben wird nur, was sich geändert hat — die meisten Trainer spielen an
+den meisten Tagen nicht.
+
+### Den Dienst ausrollen
+
+Ein Befehl. Er braucht ein Cloudflare-API-Token mit genau zwei Rechten —
+**Account · Workers Scripts · Edit** und **Account · D1 · Edit** — und legt
+sonst nichts an:
+
+```bash
+cd build/app
+CLOUDFLARE_API_TOKEN=… npm run hub:setup -w @game/hub
+```
+
+Der Lauf ist wiederholbar: eine vorhandene D1 wird weiterverwendet statt
+danebengestellt, das Schema kommt mit `IF NOT EXISTS`, und **`ID_SALT` wird nur
+gesetzt, wenn es noch keins gibt.** Das ist die wichtigste Regel des ganzen
+Skripts: das Salz steckt in jeder globalen Trainer-Id. Wer es neu setzt, gibt
+allen Spielern neue Ids und fängt die Rangliste bei null an.
+
+Am Ende stehen `HUB_URL`, `HUB_INSTANCE_ID` und `HUB_SECRET` in `secrets.env`
+(chmod 600, gitignored); das Instanz-Geheimnis gibt der Dienst genau einmal
+heraus und es wird nirgends ausgegeben. Danach `./manage.sh up` — **nicht** `restart`, das liest die `--env-file` nicht neu — und der Job
+`hub-sync` erledigt den Rest.
+
+Neue Stände später:
+
+```bash
+npm run hub:deploy -w @game/hub
+```
+
+**Weitere Instanzen** melden sich mit dem `HUB_ADMIN_SECRET` an:
+
+```bash
+curl -X POST "$HUB_URL/instances" -H 'content-type: application/json' \
+     -H "x-hub-admin: $HUB_ADMIN_SECRET" \
+     -d '{"id":"zweite-huette","name":"Bennys Instanz"}'
+```
+
+Sie starten auf der Stufe `read` — lesen und die eigenen Trainer melden, aber
+nicht handeln. Handel wird freigeschaltet, nicht mitgeliefert (siehe
+„Vertrauensstufen").
+
+### Was beim ersten Ausrollen im Weg stand
+
+Zwei Dinge, die keine Fehler im Code sind, aber jeden ersten Lauf aufhalten:
+
+**Das Token braucht wirklich beide Rechte.** Im neuen Cloudflare-Builder heißt
+das Recht **Write**, nicht „Edit", und beide liegen unter *Developer Platform*.
+Die verlässliche Kontrolle ist die Zahl neben der Kategorie: dort muss **2/51**
+stehen. Bei uns stand 1/51 — Workers ja, D1 nein —, und der Lauf scheiterte
+erst an der Datenbank. Prüfen lässt es sich in zwei Sekunden:
+
+```bash
+A=<account-id>
+curl -so /dev/null -w "Workers %{http_code}\n" \
+  "https://api.cloudflare.com/client/v4/accounts/$A/workers/scripts" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+curl -so /dev/null -w "D1      %{http_code}\n" \
+  "https://api.cloudflare.com/client/v4/accounts/$A/d1/database" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN"
+```
+
+Beide müssen **200** liefern.
+
+**Das Konto braucht eine workers.dev-Subdomain.** Ohne sie lädt der Worker zwar
+hoch, ist aber unter keiner Adresse erreichbar. Sie entsteht, sobald man die
+Seite *Workers & Pages* im Dashboard einmal öffnet — Cloudflare legt sie dabei
+selbst an. Danach dauert es allerdings **einige Minuten**, bis das Zertifikat
+für `*.<name>.workers.dev` ausgestellt ist; bis dahin scheitert schon der
+TLS-Handschlag mit „no peer certificate available". Das Skript wartet deshalb
+in Zwanzig-Sekunden-Schritten, statt aufzugeben.
+
+### Warum das Skript so sortiert ist
+
+`HUB_URL`, `HUB_INSTANCE_ID` und `HUB_ADMIN_SECRET` werden **vor** der
+Anmeldung nach `secrets.env` geschrieben, nicht danach. Der Grund ist genau der
+Fall oben: das Admin-Geheimnis existiert nach `wrangler secret put` nur noch
+auf dem Worker und in einer Shell-Variablen. Bricht der nächste Schritt ab,
+wäre es verloren — und das ist der Schlüssel, mit dem man *weitere* Instanzen
+anmeldet.
+
+Aus demselben Grund ist `ID_SALT` das Einzige, das ein zweiter Lauf **nicht**
+neu setzt. Es steckt in jeder globalen Trainer-Id; wer es erneuert, gibt allen
+Spielern neue Ids und fängt die Rangliste bei null an.
+
+### Vor dem Ausrollen prüfen
+
+Der Worker lässt sich vollständig lokal betreiben, mit echtem D1:
+
+```bash
+npm run hub:dev -w @game/hub     # Worker auf :8787, liest worker/.dev.vars
+npm run hub:e2e -w @game/hub     # Instanz-Client dagegen, über echtes HTTP
+```
+
+Das ist kein Ersatz für die Vitest-Tests, sondern deren Ergänzung: die ersetzen
+`fetch` durch die Dienstlogik und prüfen damit die **Regeln**, nicht die
+**Übersetzung** — Kopfzeilen, rohen Rumpf, D1-Spaltennamen. Genau da gehen
+verteilte Systeme kaputt, und genau da fanden sich zwei Fehler, die alle
+19 Tests überlebt hatten:
+
+- Der Client hängte auch an ein `GET` einen Rumpf. `fetch` weist das rundheraus
+  ab — jeder Abruf der Rangliste wäre im Betrieb gescheitert, im Test mit
+  ersetztem `fetch` nie.
+- Ein Trainer-Upsert **ohne** Namen überschrieb den vorhandenen mit `—`. Der
+  Client schickt heute immer einen mit; „heute schickt niemand das" ist keine
+  Zusicherung, und eine Rangliste voller Striche fällt erst auf, wenn sie schon
+  so aussieht.
+
+Beide sind behoben und haben jetzt einen Test. Der Prüflauf ist wiederholbar:
+jeder Lauf meldet eine eigene Instanz an — eines, das vorher aufgeräumt werden
+will, wird nicht ausgeführt.
+
+### Aktualisierung: Schritt 7 ist gebaut
+
+**Der Besitzer entscheidet, immer.** Der Verbund *sagt* nur, welcher Stand
+aktuell ist — er stößt nichts an. Was auf einer fremden Maschine passiert,
+entscheidet niemand außer der, dem sie gehört.
+
+Der Ablauf:
+
+1. **Der Stand steckt im Image.** `manage.sh build` reicht `git rev-parse
+   --short HEAD` als `GIT_SHA` hinein. Ohne Repository — etwa aus einem
+   heruntergeladenen Archiv — steht dort `unbekannt`, und der Abgleich hält
+   sich dann ganz heraus, statt zu raten.
+2. **Du setzt den aktuellen Stand**, von Hand und mit dem Admin-Geheimnis:
+
+   ```bash
+   SHA=$(git rev-parse --short HEAD)
+   curl -X PUT "$HUB_URL/release" -H 'content-type: application/json' \
+        -H "x-hub-admin: $HUB_ADMIN_SECRET" \
+        -d "{\"sha\":\"$SHA\",\"notes\":\"Was drin ist\"}"
+   ```
+
+   Ausdrücklich kein Git-Haken: was alle Installationen betrifft, soll eine
+   Entscheidung sein und nicht der Nebeneffekt eines Pushes.
+3. **Jede Instanz fragt ihn ab**, im selben Zehn-Minuten-Takt wie die
+   Rangliste, und legt ihn im Zwischenspeicher ab.
+4. **Der Betreiber bekommt eine Nachricht** — einmal je Stand, nicht je Lauf.
+   Eine Meldung alle zehn Minuten wäre keine Nachricht, sondern eine
+   Belästigung; der Zähler steht in `hub_cache` und übersteht einen Neustart.
+5. **Ein Knopf in der App** (Fortschritt → Daten, nur für Admins) löst aus.
+
+### Warum der Knopf nicht selbst baut
+
+Er legt eine **Marke** ab: `data/update-requested`. Mehr nicht.
+
+Ein Container, der sich selbst neu bauen darf, braucht den Docker-Socket des
+Wirts — und damit Zugriff auf alles, was auf der Maschine läuft. Bei sich zu
+Hause mag man das vertreten; einer fremden Installation ist es nicht zuzumuten,
+und ein Spiel ist kein Grund, danach zu fragen.
+
+Die Arbeit tut deshalb ein Wächter **auf dem Wirt**:
+
+```bash
+nohup ./manage.sh watch >> ./data/update.log 2>&1 &
+```
+
+Er sieht alle 30 Sekunden nach der Marke und führt dann `./manage.sh update`
+aus. Läuft keiner, passiert schlicht nichts — das ist besser, als wenn etwas
+halb geschieht.
+
+### Der Rückweg
+
+`./manage.sh update` in Reihenfolge:
+
+1. Datenbank sichern (`data/backups/game-vor-update-*.db`)
+2. `git pull --ff-only` — schlägt er fehl, bleibt alles unverändert
+3. neu bauen und starten
+4. **bis zu 60 Sekunden auf `/api/health` warten**
+5. antwortet der Dienst nicht: `git reset --hard` auf den alten Stand, neu
+   bauen, Datenbank zurückspielen
+
+Schritt 4 und 5 sind der eigentliche Punkt. Ein Update, das den Bot stumm
+zurücklässt, ist schlimmer als keins.
+
+### Was die Sicherheit trägt
+
+- **`PUT /release` verlangt das Admin-Geheimnis**, nicht die Instanz-Signatur.
+  Dürfte jede angemeldete Instanz den Stand setzen, könnte eine davon allen
+  anderen einen beliebigen Commit als „aktuell" unterschieben.
+- Angenommen wird nur, was **wie ein Git-Hash aussieht** (`[0-9a-f]{7,40}`).
+- **`requireAdmin` im Dienst**, nicht in einer Schicht davor: die Routen unter
+  `/api/admin` sind allein dadurch geschützt. Ohne diese Zeile könnte jeder
+  Spieler die Installation neu bauen lassen — ein Test besteht genau darauf.
+
+### Was als Nächstes dran ist
+
+Schritt 3 bis 7 stehen oben unverändert. Der nächste sinnvolle ist **Freunde
+über Instanzen**: die Trainer-Codes global auflösen. Das braucht nichts Neues
+an Infrastruktur — nur eine weitere Route auf demselben Dienst.
