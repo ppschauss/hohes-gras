@@ -3,7 +3,8 @@ import type { TrainerDef } from '@game/content'
 import {
   createRng, computeStats, gauntletGoldPerWin, gauntletIv, gauntletLevel,
   GAUNTLET_FOES_PER_FIGHT, GAUNTLET_HEAL_PERCENT, GAUNTLET_MILESTONES,
-  GAUNTLET_XP_MULTIPLIER, gauntletMaxBst, LEGENDARY_CATCH_RATE, milestoneAt, nextMilestone,
+  GAUNTLET_XP_MULTIPLIER, gauntletMaxBst, gauntletXpMultiplier, LEGENDARY_CATCH_RATE,
+  milestoneAt, nextMilestone,
   rollGauntletDrops,
   splitDrops, dropsForRegion,
 } from '@game/engine'
@@ -125,7 +126,7 @@ function buildFoe(ctx: AppContext, trainer: Trainer, regionId: string, streak: n
     team: Array.from({ length: GAUNTLET_FOES_PER_FIGHT }, () => ({ speciesId: species.id, level })),
     badgeId: null,
     rewardGold: gauntletGoldPerWin(streak),
-    xpMultiplier: GAUNTLET_XP_MULTIPLIER,
+    xpMultiplier: gauntletXpMultiplier(streak),
     repeatRewardRatio: 1,
     dialogue: {
       intro: { de: `Nummer ${streak + 1} stellt sich dir.` },
@@ -176,7 +177,9 @@ export function view(ctx: AppContext, trainer: Trainer) {
     regions,
     energyCost: energy.costOf('gauntlet'),
     healPercent: GAUNTLET_HEAL_PERCENT,
-    xpMultiplier: GAUNTLET_XP_MULTIPLIER,
+    // Der Faktor beim aktuellen Stand: er flacht ueber die Serie ab, also ist
+    // eine feste Zahl hier die falsche Auskunft.
+    xpMultiplier: Math.round(gauntletXpMultiplier(run?.streak ?? 0) * 100) / 100,
     averageLevel: Math.round(averageLevel(ctx, trainer.id)),
     milestones: GAUNTLET_MILESTONES.map((m) => ({ ...m })),
     run: run

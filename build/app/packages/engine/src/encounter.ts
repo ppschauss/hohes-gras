@@ -202,6 +202,14 @@ export interface CatchModifiers {
   /** Badges make wild creatures easier to catch — a small, visible reward for
    *  progress that applies everywhere. */
   badgeCount: number
+  /**
+   * Was Labor und Forschung beitragen, in Prozent.
+   *
+   * Eigener Wert und nicht in `badgeCount` eingerechnet: dort greift ein
+   * Deckel bei neun, und ab dem neunten Orden waere jede Laborstufe wirkungslos
+   * gewesen. Genau so gemeldet.
+   */
+  bonusPercent?: number
 }
 
 export const MAX_WEAKEN_STACKS = 2
@@ -260,6 +268,23 @@ export function attemptCatch(
   return { probability, caught, shakes: caught ? 4 : shakesFor(probability, rng) }
 }
 
+/**
+ * Wie viele Orden hoechstens zaehlen.
+ *
+ * Neun, nicht sechsundzwanzig: sonst waere die Fangchance im dritten
+ * Regionsdrittel eine Formalitaet.
+ */
+export const MAX_BADGE_BONUS = 9
+
+/**
+ * Wie viel Labor und Forschung hoechstens beitragen, in Prozent.
+ *
+ * Dreissig — das Labor gibt auf voller Stufe fuenfundzwanzig, die Forschung
+ * neun. Zusammen mehr, als der Deckel zulaesst; das ist Absicht, damit beides
+ * einen Weg hat, ohne dass sich die zwei Wege verdoppeln.
+ */
+export const MAX_CATCH_BONUS_PERCENT = 30
+
 export function catchProbability(species: SpeciesDef, level: number, mods: CatchModifiers): number {
   // Classic shape: rarer species and higher levels resist more.
   const base = species.catchRate / 255
@@ -269,9 +294,19 @@ export function catchProbability(species: SpeciesDef, level: number, mods: Catch
   const berry = mods.berry ? Number(mods.berry.params.catchBonus ?? 1) : 1
   const calm = 1 + clamp(mods.calmStacks, 0, MAX_CALM_STACKS) * 0.12
   const weaken = 1 + clamp(mods.weakenStacks, 0, MAX_WEAKEN_STACKS) * 0.08
-  const badges = 1 + clamp(mods.badgeCount, 0, 9) * 0.02
+  const badges = 1 + clamp(mods.badgeCount, 0, MAX_BADGE_BONUS) * 0.02
+  /*
+   * Labor und Forschung als **eigener** Faktor.
+   *
+   * Sie zaehlten frueher als „zusaetzliche Orden" — und liefen damit in den
+   * Deckel bei neun. Wer neun Orden hatte, bei dem war jede weitere Laborstufe
+   * exakt null Prozentpunkte wert; genau so gemeldet („mit dem Labor upgrade
+   * ist es das Gleiche"). Der Deckel gehoert zu den Orden, nicht zu allem, was
+   * die Fangchance hebt.
+   */
+  const ausbau = 1 + clamp(mods.bonusPercent ?? 0, 0, MAX_CATCH_BONUS_PERCENT) / 100
 
-  return clamp(base * levelPenalty * ball * berry * calm * weaken * badges, 0.01, 0.95)
+  return clamp(base * levelPenalty * ball * berry * calm * weaken * badges * ausbau, 0.01, 0.95)
 }
 
 /** Fewer shakes for a hopeless throw, three for a near miss. */

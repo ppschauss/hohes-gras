@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { createHub, type HubRequest } from './service.js'
+import { CHAT_MAX_LENGTH, CHAT_PER_INSTANCE_PER_WINDOW, createHub, type HubRequest } from './service.js'
 import { memoryStore } from './memory.js'
 import { sign, SIGNATURE_MAX_AGE_MS } from './auth.js'
 import type { Store } from './store.js'
@@ -197,5 +197,76 @@ describe('Aktueller Stand', () => {
       const r = await hub({ method: 'PUT', path: '/release', body: { sha }, adminSecret: ADMIN })
       expect(r.status).toBe(400)
     }
+  })
+})
+
+describe('Chat', () => {
+  const anlegen = async (telegramId: string, name: string) =>
+    (await call({ method: 'POST', path: '/trainers', body: { telegramId, displayName: name } })
+      .then((r) => r.body as { id: string })).id
+
+  it('nimmt eine Nachricht an und gibt sie wieder aus', async () => {
+    const id = await anlegen('1', 'Patte')
+    const gesendet = await call({ method: 'POST', path: '/chat', body: { trainerId: id, text: 'Moin' } })
+    expect(gesendet.status).toBe(200)
+
+    const gelesen = await call({ method: 'POST', path: '/chat/read', body: { since: 0 } })
+    const [m] = (gelesen.body as any).messages
+    expect(m).toMatchObject({ name: 'Patte', body: 'Moin', instanceId: 'heim' })
+  })
+
+  it('laesst keine Instanz im Namen fremder Spieler reden', async () => {
+    /*
+     * Dieselbe Regel wie bei den Profilen, und aus demselben Grund. Ohne sie
+     * koennte eine beliebige Instanz im Verbund alles sagen und es jedem in
+     * den Mund legen.
+     */
+    const meiner = await anlegen('1', 'Patte')
+    const r = await hub({ method: 'POST', path: '/instances', body: { id: 'fremd' }, adminSecret: ADMIN })
+    const otherSecret = (r.body as any).secret as string
+    const body = JSON.stringify({ trainerId: meiner, text: 'ich bin Patte' })
+    const evil = await hub({
+      method: 'POST', path: '/chat', body: { trainerId: meiner, text: 'ich bin Patte' },
+      auth: {
+        instanceId: 'fremd', timestamp: NOW,
+        signature: await sign(otherSecret, 'POST', '/chat', NOW, body),
+      },
+    })
+    expect(evil.status).toBe(403)
+  })
+
+  it('kuerzt zu lange Nachrichten, statt sie abzuweisen', async () => {
+    const id = await anlegen('1', 'Patte')
+    await call({ method: 'POST', path: '/chat', body: { trainerId: id, text: 'a'.repeat(1000) } })
+    const gelesen = await call({ method: 'POST', path: '/chat/read', body: { since: 0 } })
+    expect((gelesen.body as any).messages[0].body.length).toBe(CHAT_MAX_LENGTH)
+  })
+
+  it('weist Leeres und reinen Weissraum ab', async () => {
+    const id = await anlegen('1', 'Patte')
+    for (const text of ['', '   ', '\n\t ']) {
+      expect((await call({ method: 'POST', path: '/chat', body: { trainerId: id, text } })).status).toBe(400)
+    }
+  })
+
+  it('bremst eine flutende Instanz', async () => {
+    const id = await anlegen('1', 'Patte')
+    for (let i = 0; i < CHAT_PER_INSTANCE_PER_WINDOW; i++) {
+      await call({ method: 'POST', path: '/chat', body: { trainerId: id, text: `n${i}` } })
+    }
+    const zuviel = await call({ method: 'POST', path: '/chat', body: { trainerId: id, text: 'noch eine' } })
+    expect(zuviel.status).toBe(429)
+  })
+
+  it('liefert nur, was seit der letzten Nummer dazukam', async () => {
+    const id = await anlegen('1', 'Patte')
+    await call({ method: 'POST', path: '/chat', body: { trainerId: id, text: 'eins' } })
+    const nach1 = (await call({ method: 'POST', path: '/chat/read', body: { since: 0 } })).body as any
+    const letzte = nach1.messages[nach1.messages.length - 1].id
+
+    await call({ method: 'POST', path: '/chat', body: { trainerId: id, text: 'zwei' } })
+    const neu = (await call({ method: 'POST', path: '/chat/read', body: { since: letzte } })).body as any
+    expect(neu.messages).toHaveLength(1)
+    expect(neu.messages[0].body).toBe('zwei')
   })
 })

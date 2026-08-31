@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   dropsForRegion, gauntletGoldPerWin, gauntletIv, gauntletLevel, gauntletMaxBst,
-  GAUNTLET_MILESTONES, milestoneAt, nextMilestone, rollGauntletDrops, splitDrops,
+  GAUNTLET_MILESTONES, GAUNTLET_XP_MULTIPLIER, gauntletXpMultiplier, milestoneAt, nextMilestone,
+  rollGauntletDrops, splitDrops,
 } from './gauntlet.js'
 
 describe('Kampfzone', () => {
@@ -135,5 +136,37 @@ describe('Beute je Kampf', () => {
     expect(dropsForRegion('kanto')).toContain(kanto.itemId)
     expect(dropsForRegion('johto')).toContain(johto.itemId)
     expect(kanto.itemId).not.toBe(johto.itemId)
+  })
+})
+
+describe('Erfahrung', () => {
+  it('flacht ueber die Serie ab, statt linear zu wachsen', () => {
+    /*
+     * Gemeldet: 24.529 EP aus 33 Kaempfen. Jeder Gegner hat eine eigene
+     * Kennung, gilt also immer als erster Sieg — bei Faktor 2,5 waren das
+     * 928 EP je Kampf, fuenfmal ein wiederholter Routentrainer, unbegrenzt oft.
+     *
+     * Ohne Abflachung waere eine Serie von zweihundert schlicht
+     * zweihundertmal der erste Kampf.
+     */
+    const a = gauntletXpMultiplier(0)
+    const b = gauntletXpMultiplier(50)
+    const c = gauntletXpMultiplier(200)
+    expect(a).toBeGreaterThan(b)
+    expect(b).toBeGreaterThan(c)
+    expect(a).toBeCloseTo(GAUNTLET_XP_MULTIPLIER, 6)
+  })
+
+  it('bleibt immer positiv', () => {
+    expect(gauntletXpMultiplier(10_000)).toBeGreaterThan(0)
+    // Negative Staende gibt es nicht, sollen aber nichts kaputt machen.
+    expect(gauntletXpMultiplier(-5)).toBeCloseTo(GAUNTLET_XP_MULTIPLIER, 6)
+  })
+
+  it('bleibt beim Einstieg ueber einem wiederholten Routentrainer', () => {
+    // Der Vergleich, der zaehlt: die Kampfzone soll sich lohnen, aber nicht
+    // die Arena und das Kaempfen auf der Route entwerten.
+    expect(GAUNTLET_XP_MULTIPLIER).toBeGreaterThan(0.5)
+    expect(GAUNTLET_XP_MULTIPLIER).toBeLessThan(2)
   })
 })

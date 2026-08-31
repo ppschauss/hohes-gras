@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHub, memoryStore } from '@game/hub'
-import { cachedLeaderboard, linkNew, linkedId, pending, pushProfiles, refreshLeaderboard }
+import { assertGetHasNoBody, cachedLeaderboard, linkNew, linkedId, pending, pushProfiles, refreshLeaderboard }
   from '../src/services/hub.js'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
@@ -142,5 +142,17 @@ describe('ohne Verbund', () => {
     expect(await pushProfiles(h.ctx)).toBe(0)
     expect(await refreshLeaderboard(h.ctx)).toBe(0)
     expect(cachedLeaderboard(h.ctx)).toBeNull()
+  })
+})
+
+
+describe('Signatur und Rumpf', () => {
+  it('verweigert ein GET mit Parametern', () => {
+    expect(() => assertGetHasNoBody('GET', '/chat', '{"since":5}')).toThrow(/POST/)
+  })
+
+  it('laesst ein leeres GET und jeden POST durch', () => {
+    expect(() => assertGetHasNoBody('GET', '/leaderboard', '{}')).not.toThrow()
+    expect(() => assertGetHasNoBody('POST', '/chat/read', '{"since":5}')).not.toThrow()
   })
 })

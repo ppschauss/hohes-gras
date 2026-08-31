@@ -5,7 +5,7 @@ import {
   attemptCatch, availableSpawns, ballMultiplier, catchProbability, catchReward,
   rollEncounter, shinyOdds, SHINY_BASE_ODDS, SHINY_CHAIN_GUARANTEE,
   SHINY_CHAIN_PLATEAU, SHINY_PLATEAU_ODDS,
-  MAX_CALM_STACKS, CATCH_DROP_CHANCE, rollCatchDrop,
+  MAX_CALM_STACKS, MAX_BADGE_BONUS, MAX_CATCH_BONUS_PERCENT, CATCH_DROP_CHANCE, rollCatchDrop,
   type CatchModifiers, type SpawnContext,
 } from './encounter.js'
 import { RECIPES } from './crafting.js'
@@ -382,5 +382,47 @@ describe('Saison', () => {
       (t) => t.reward.kind === 'item' && t.reward.itemId === SHINY_SOUL_ID,
     )
     expect(shinyTiers).toHaveLength(1)
+  })
+})
+
+describe('Labor und Forschung in der Fangchance', () => {
+  const art = {
+    id: 'x', catchRate: 45, rarity: 'rare', types: ['dragon'],
+    baseStats: { hp: 80, atk: 100, def: 80, spa: 80, spd: 80, spe: 80 },
+  } as never as Parameters<typeof catchProbability>[0]
+  const ball = { id: 'ultra-ball', category: 'ball', params: { catchMultiplier: 2 } } as never
+  const mods = (badges: number, bonus: number) => ({
+    ball, berry: null, calmStacks: 2, weakenStacks: 2,
+    badgeCount: badges, turn: 1, timeOfDay: 'day' as const, bonusPercent: bonus,
+  })
+
+  it('wirkt auch dann, wenn der Ordensdeckel laengst erreicht ist', () => {
+    /*
+     * Der gemeldete Fehler. Labor und Forschung wurden halbiert auf die
+     * Ordenszahl addiert — und die ist bei neun gedeckelt. Wer neun Orden
+     * hatte, bei dem war jede weitere Laborstufe exakt null Prozentpunkte
+     * wert: „mit dem Labor upgrade ist es das Gleiche".
+     */
+    const ohne = catchProbability(art, 55, mods(12, 0))
+    const mit = catchProbability(art, 55, mods(12, 25))
+    expect(mit).toBeGreaterThan(ohne)
+  })
+
+  it('deckelt die Orden weiter bei neun', () => {
+    // Sechsundzwanzig Orden duerfen das Fangen nicht zur Formalitaet machen.
+    expect(catchProbability(art, 55, mods(MAX_BADGE_BONUS, 0)))
+      .toBeCloseTo(catchProbability(art, 55, mods(26, 0)), 10)
+  })
+
+  it('deckelt auch den Ausbau', () => {
+    expect(catchProbability(art, 55, mods(9, MAX_CATCH_BONUS_PERCENT)))
+      .toBeCloseTo(catchProbability(art, 55, mods(9, 500)), 10)
+  })
+
+  it('kommt ohne Angabe klar', () => {
+    const ohneFeld = { ...mods(9, 0) } as Record<string, unknown>
+    delete ohneFeld.bonusPercent
+    expect(catchProbability(art, 55, ohneFeld as never))
+      .toBeCloseTo(catchProbability(art, 55, mods(9, 0)), 10)
   })
 })

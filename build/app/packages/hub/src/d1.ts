@@ -1,4 +1,4 @@
-import type { InstanceRow, ProfileRow, ReleaseRow, Store, TrainerRow } from './store.js'
+import type { InstanceRow, ChatRow, ProfileRow, ReleaseRow, Store, TrainerRow } from './store.js'
 
 /**
  * Der Speicher auf Cloudflare D1.
@@ -32,6 +32,38 @@ export const SCORE_SQL = '(p.badges * 1000 + p.dex_caught * 10 + p.battles_won)'
 
 export function d1Store(db: D1Like): Store {
   return {
+    async addChat(row) {
+      await db.prepare(
+        'INSERT INTO chat (trainer_id, instance_id, name, body, created_at) VALUES (?, ?, ?, ?, ?)',
+      ).bind(row.trainerId, row.instanceId, row.name, row.body, row.createdAt).run()
+      const last = await db.prepare('SELECT MAX(id) AS id FROM chat').bind().first<{ id: number }>()
+      return last?.id ?? 0
+    },
+
+    async chatSince(since, limit) {
+      /*
+       * Die neuesten `limit`, dann wieder aufsteigend.
+       *
+       * `ORDER BY id DESC LIMIT n` holt das Ende der Liste; ohne das zweite
+       * Sortieren kaeme der Chat verkehrt herum an, sobald jemand mit
+       * `since = 0` einsteigt.
+       */
+      const res = await db.prepare(
+        `SELECT id, trainer_id AS trainerId, instance_id AS instanceId, name, body,
+                created_at AS createdAt
+           FROM (SELECT * FROM chat WHERE id > ? ORDER BY id DESC LIMIT ?)
+          ORDER BY id ASC`,
+      ).bind(since, limit).all<ChatRow>()
+      return res.results
+    },
+
+    async chatCountSince(instanceId, after) {
+      const row = await db.prepare(
+        'SELECT COUNT(*) AS n FROM chat WHERE instance_id = ? AND created_at >= ?',
+      ).bind(instanceId, after).first<{ n: number }>()
+      return row?.n ?? 0
+    },
+
     async getRelease() {
       return db.prepare(
         'SELECT sha, notes, published_at AS publishedAt FROM releases WHERE id = 1',

@@ -34,12 +34,32 @@ export interface HubLeaderboardRow {
 
 const enabled = (ctx: AppContext): boolean => ctx.config.hubEnabled
 
+/**
+ * Ein GET darf nichts zu sagen haben.
+ *
+ * Signiert wird der Rumpf, geschickt wird er bei GET nicht — `fetch` verbietet
+ * das. Wer trotzdem Parameter mitgibt, signiert etwas anderes, als ankommt, und
+ * erntet eine 401, die nach einem Schlüsselproblem aussieht statt nach dem, was
+ * es ist. Genau so ist der Chat beim ersten Versuch gescheitert: der Client
+ * signierte `{"since":N}` und schickte nichts.
+ *
+ * Lieber laut hier als leise dort. Parameter gehören in einen POST.
+ */
+export function assertGetHasNoBody(method: string, path: string, raw: string): void {
+  if (method === 'GET' && raw !== '{}') {
+    throw new Error(`GET ${path} mit Rumpf: Parameter gehoeren in einen POST.`)
+  }
+}
+
 /** Eine signierte Anfrage an den Verbund. Wirft nie — der Aufrufer bekommt null. */
 async function call(
   ctx: AppContext, method: 'GET' | 'POST' | 'PUT', path: string, body: unknown = {},
 ): Promise<unknown | null> {
   if (!enabled(ctx)) return null
   const raw = JSON.stringify(body ?? {})
+
+  assertGetHasNoBody(method, path, raw)
+
   const timestamp = Date.now()
   try {
     const signature = await sign(ctx.config.HUB_SECRET, method, path, timestamp, raw)
@@ -292,4 +312,118 @@ export function requestUpdate(ctx: AppContext, trainer: Trainer): ReleaseInfo {
   writeFileSync(join(ctx.config.DATA_DIR, UPDATE_FLAG), `${info.latest}\n`, 'utf8')
   logEvent(ctx.db, trainer.id, 'update.requested', { from: info.current, to: info.latest })
   return { ...info, pending: true }
+}
+
+
+/* -------------------------------------------------------------------- Chat */
+
+/**
+ * Der globale Chat.
+ *
+ * Wie die Rangliste über einen lokalen Zwischenspeicher: die Ansicht liest nur
+ * daraus, geholt wird im Hintergrund. Ein Blick in den Chat darf nie auf eine
+ * fremde Leitung warten, und ein stummer Verbund soll die letzten Nachrichten
+ * stehen lassen statt eines leeren Fensters.
+ */
+
+/** Wie oft höchstens geholt wird, wenn jemand den Chat offen hat. */
+export const CHAT_POLL_MS = 8_000
+
+export interface ChatMessage {
+  id: number
+  trainerId: string
+  instanceId: string
+  name: string
+  body: string
+  createdAt: number
+}
+
+/** Die höchste Nummer, die wir kennen — der Verbund schickt nur Neueres. */
+const lastChatId = (ctx: AppContext): number =>
+  (ctx.db.prepare('SELECT MAX(id) AS id FROM chat_cache').get() as { id: number | null }).id ?? 0
+
+/**
+ * Neues holen und ablegen.
+ *
+ * Gibt zurück, wie viele dazukamen. Scheitert der Abruf, bleibt der alte Stand
+ * stehen — auch das ist eine Antwort.
+ */
+export async function refreshChat(ctx: AppContext): Promise<number> {
+  if (!enabled(ctx)) return 0
+  const res = await call(ctx, 'POST', '/chat/read', { since: lastChatId(ctx) }) as
+    { messages?: ChatMessage[] } | null
+  if (!res?.messages?.length) return 0
+
+  const einfuegen = ctx.db.prepare(
+    `INSERT INTO chat_cache (id, trainer_id, instance_id, name, body, created_at)
+     VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`,
+  )
+  for (const m of res.messages) {
+    einfuegen.run(m.id, m.trainerId, m.instanceId, m.name, m.body, m.createdAt)
+  }
+  // Alt aufräumen: der Verbund hebt auf, die Kopie muss es nicht.
+  ctx.db.prepare(
+    'DELETE FROM chat_cache WHERE id <= (SELECT MAX(id) - 500 FROM chat_cache)',
+  ).run()
+  return res.messages.length
+}
+
+/**
+ * Neues holen, aber nicht öfter als nötig.
+ *
+ * Der Bildschirm fragt im Sekundentakt nach; der Verbund muss das nicht
+ * mitbekommen. Der Zeitpunkt des letzten Abrufs steht in `hub_cache` und
+ * übersteht damit einen Neustart.
+ */
+export async function refreshChatThrottled(ctx: AppContext): Promise<number> {
+  if (!enabled(ctx)) return 0
+  const row = ctx.db.prepare("SELECT fetched_at AS at FROM hub_cache WHERE key = 'chat_at'")
+    .get() as { at: number } | undefined
+  if (row && Date.now() - row.at < CHAT_POLL_MS) return 0
+  ctx.db.prepare(
+    `INSERT INTO hub_cache (key, payload, fetched_at) VALUES ('chat_at', '', ?)
+     ON CONFLICT(key) DO UPDATE SET fetched_at = excluded.fetched_at`,
+  ).run(Date.now())
+  return refreshChat(ctx)
+}
+
+/** Was im Chat steht — ohne Netz. */
+export function chatView(ctx: AppContext, trainer: Trainer) {
+  if (!enabled(ctx)) return { enabled: false as const, messages: [], me: null }
+  const rows = ctx.db.prepare(
+    `SELECT id, trainer_id AS trainerId, instance_id AS instanceId, name, body,
+            created_at AS createdAt
+       FROM chat_cache ORDER BY id DESC LIMIT 80`,
+  ).all() as ChatMessage[]
+  const me = linkedId(ctx, trainer.id)
+  return {
+    enabled: true as const,
+    // Aufsteigend, damit das Neueste unten steht wie in jedem Chat.
+    messages: rows.reverse().map((m) => ({ ...m, isSelf: m.trainerId === me })),
+    me,
+  }
+}
+
+/**
+ * Etwas sagen.
+ *
+ * Die Nachricht geht zum Verbund und kommt beim nächsten Abruf zurück — auch
+ * die eigene. Das ist einen Wimpernschlag langsamer als sie sofort lokal
+ * einzutragen, aber alle sehen dann dieselbe Reihenfolge, und die Nummer
+ * vergibt genau eine Stelle.
+ */
+export async function sendChat(ctx: AppContext, trainer: Trainer, text: string): Promise<number> {
+  if (!enabled(ctx)) throw new GameError('invalid_state', { reason: 'no_hub' }, 409)
+  const globalId = linkedId(ctx, trainer.id)
+  if (!globalId) throw new GameError('invalid_state', { reason: 'not_linked' }, 409)
+
+  const sauber = text.replace(/\s+/g, ' ').trim()
+  if (sauber.length === 0) throw new GameError('validation_failed', { field: 'text' })
+
+  const res = await call(ctx, 'POST', '/chat', { trainerId: globalId, text: sauber }) as
+    { id?: number } | null
+  if (!res?.id) throw new GameError('invalid_state', { reason: 'hub_unreachable' }, 503)
+  logEvent(ctx.db, trainer.id, 'chat.sent', { id: res.id })
+  await refreshChat(ctx)
+  return res.id
 }

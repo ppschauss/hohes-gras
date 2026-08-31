@@ -57,7 +57,32 @@ export interface ReleaseRow {
   publishedAt: number
 }
 
+/**
+ * Eine Nachricht im globalen Chat.
+ *
+ * Bewusst flach und ohne Räume: bei einer Handvoll Instanzen ist ein Raum
+ * genau richtig, und mehrere wären leere Zimmer. Der Name wird **mitgespeichert**
+ * statt beim Lesen nachgeschlagen — wer seinen Namen ändert, ändert damit nicht
+ * rückwirkend, was er gesagt hat.
+ */
+export interface ChatRow {
+  /** Fortlaufend. Der Client fragt „alles seit N" und braucht keine Uhr. */
+  id: number
+  trainerId: string
+  instanceId: string
+  name: string
+  body: string
+  createdAt: number
+}
+
 export interface Store {
+  /** Anhängen; gibt die vergebene Nummer zurück. */
+  addChat(row: Omit<ChatRow, 'id'>): Promise<number>
+  /** Die neuesten Nachrichten, aufsteigend. `since` = 0 heißt: von vorn. */
+  chatSince(since: number, limit: number): Promise<ChatRow[]>
+  /** Wie viele eine Instanz zuletzt geschickt hat — gegen Fluten. */
+  chatCountSince(instanceId: string, after: number): Promise<number>
+
   getRelease(): Promise<ReleaseRow | null>
   putRelease(row: ReleaseRow): Promise<void>
 

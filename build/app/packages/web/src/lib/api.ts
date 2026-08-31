@@ -436,6 +436,10 @@ export const api = {
       method: 'POST', body: JSON.stringify({ tradeId, accept }),
     }),
 
+  chat: () => request<ChatView>('/api/chat'),
+  sendChat: (text: string) =>
+    request<ChatView>('/api/chat', { method: 'POST', body: JSON.stringify({ text }) }),
+
   leaderboard: () => request<LeaderboardView>('/api/leaderboard'),
   setPrivacy: (changes: Record<string, boolean>) =>
     request<unknown>('/api/privacy', { method: 'POST', body: JSON.stringify(changes) }),
@@ -1549,4 +1553,20 @@ export interface ReleaseInfo {
   outdated: boolean
   /** Update angefordert, der Wächter auf dem Wirt ist dran. */
   pending: boolean
+}
+
+
+/** Der globale Chat des Verbunds. `enabled: false` heißt: kein Verbund. */
+export interface ChatView {
+  enabled: boolean
+  me: string | null
+  messages: Array<{
+    id: number
+    trainerId: string
+    instanceId: string
+    name: string
+    body: string
+    createdAt: number
+    isSelf: boolean
+  }>
 }

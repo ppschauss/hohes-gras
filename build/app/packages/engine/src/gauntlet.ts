@@ -25,13 +25,33 @@
  * zweite Wahrheit. */
 
 /**
- * Wie viel Erfahrung ein Kampf hier einbringt, verglichen mit dem gleichen
- * Kampf in der Wildnis.
+ * Wie viel Erfahrung ein Kampf hier einbringt.
  *
- * Deutlich mehr, und das ist der Punkt: die Kampfzone soll sich lohnen, auch
- * wenn man die Region längst durchhat.
+ * Der Faktor allein sagt wenig — entscheidend ist, dass **jeder** Gegner als
+ * „erster Sieg" zählt, weil jeder eine eigene Kennung hat. Ein Routentrainer
+ * gibt beim ersten Mal 371 und danach 186; die Kampfzone gab bei 2,5 volle
+ * 928 — jeden Kampf, unbegrenzt oft. 33 Kämpfe waren 30.000 EP.
+ *
+ * Gemeldet als „24k exp ist vielleicht doch etwas arg viel", und das stimmt.
  */
-export const GAUNTLET_XP_MULTIPLIER = 2.5
+export const GAUNTLET_XP_MULTIPLIER = 1.2
+
+/**
+ * Wie schnell die Erfahrung über die Serie abflacht.
+ *
+ * `Faktor / (1 + Serie / 60)`. Ohne das wäre eine Serie von zweihundert
+ * schlicht zweihundertmal der erste Kampf, und die einzige sinnvolle
+ * Spielweise wäre, ewig weiterzukämpfen.
+ *
+ * Mit ihr sind die ersten Kämpfe die wertvollsten und die späten der Preis
+ * für die Stufen bei 50 und 100 — die tragen sich über Gold und Werkstoffe,
+ * nicht über Erfahrung.
+ */
+export const GAUNTLET_XP_TAPER = 60
+
+/** Der Faktor für den Kampf bei diesem Stand der Serie. */
+export const gauntletXpMultiplier = (streak: number): number =>
+  GAUNTLET_XP_MULTIPLIER / (1 + Math.max(0, streak) / GAUNTLET_XP_TAPER)
 
 /** Anteil der KP, den das Team nach jedem gewonnenen Kampf zurückbekommt. */
 export const GAUNTLET_HEAL_PERCENT = 8

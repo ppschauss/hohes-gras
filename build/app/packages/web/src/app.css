@@ -1661,6 +1661,36 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 
 .packRow__warn { font-size: var(--t-xs); color: var(--warn, var(--accent)); }
 
+/* Globaler Chat. Eigener Bildlauf, damit die Seite darunter ruhig bleibt. */
+.chat {
+  display: flex; flex-direction: column; gap: var(--s2);
+  max-height: 58vh; overflow-y: auto; overscroll-behavior: contain;
+  padding: var(--s2); margin-bottom: var(--s2);
+  background: var(--surface-sunken); border-radius: var(--radius);
+}
+.chat__row {
+  align-self: flex-start; max-width: 85%;
+  padding: var(--s2); border-radius: var(--radius-sm);
+  background: var(--surface); border: 1px solid var(--edge);
+}
+/* Eigene Nachrichten rechts — die einzige Ortsangabe, die ein Chat braucht. */
+.chat__row--self {
+  align-self: flex-end;
+  background: color-mix(in oklab, var(--accent) 14%, var(--surface));
+  border-color: color-mix(in oklab, var(--accent) 40%, var(--edge));
+}
+.chat__head { display: flex; align-items: baseline; gap: var(--s2); }
+.chat__name { font-size: var(--t-xs); font-weight: 650; }
+.chat__where { font-size: 10px; color: var(--ink-faint); }
+.chat__body { display: block; font-size: var(--t-sm); overflow-wrap: anywhere; }
+.chat__form { display: flex; gap: var(--s2); }
+.chat__input {
+  flex: 1; min-width: 0;
+  padding: var(--s2) var(--s3);
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--edge); border-radius: var(--radius-sm);
+}
+
 /* Abrechnung am Ende eines Laufs: abgesetzt, damit sie nicht mit der
    Belohnung des einzelnen Kampfes verschwimmt. */
 .summary {

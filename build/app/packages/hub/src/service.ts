@@ -53,6 +53,14 @@ const bad = (status: number, error: string, detail: unknown = {}): HubResponse =
  *  Hunderte erfindet, faellt damit auf, bevor sie handeln kann. */
 export const TRAINERS_PER_INSTANCE = 500
 
+/** Wie lang eine Nachricht sein darf. Laenger wird abgeschnitten, nicht abgelehnt. */
+export const CHAT_MAX_LENGTH = 400
+/** Wie viele Nachrichten eine Instanz je Fenster schicken darf. */
+export const CHAT_PER_INSTANCE_PER_WINDOW = 60
+export const CHAT_WINDOW_MS = 60_000
+/** Wie viele auf einmal ausgeliefert werden. */
+export const CHAT_PAGE = 50
+
 export function createHub(config: HubConfig) {
   const now = config.now ?? (() => Date.now())
   const { store } = config
@@ -165,6 +173,51 @@ export function createHub(config: HubConfig) {
     if (req.method === 'GET' && req.path === '/release') {
       const release = await store.getRelease()
       return { status: 200, body: { release } }
+    }
+
+    /* --------------------------------------------------------------- Chat */
+    /*
+     * Ein Raum für den ganzen Verbund.
+     *
+     * Geschrieben wird nur im Namen eigener Trainer — dieselbe Regel wie bei
+     * den Profilen, und aus demselben Grund: sonst könnte eine Instanz im
+     * Namen fremder Spieler reden.
+     */
+    if (req.method === 'POST' && req.path === '/chat') {
+      const { trainerId, text } = body as { trainerId?: string; text?: string }
+      if (!trainerId || typeof text !== 'string') return bad(400, 'validation_failed')
+      const sauber = text.replace(/\s+/g, ' ').trim().slice(0, CHAT_MAX_LENGTH)
+      if (sauber.length === 0) return bad(400, 'validation_failed', { field: 'text' })
+
+      const trainer = await store.getTrainer(trainerId)
+      if (!trainer) return bad(404, 'not_found')
+      if (trainer.instanceId !== instance.id) return bad(403, 'not_owner')
+
+      // Eine Instanz, die flutet, faellt hier auf, bevor der Raum unlesbar ist.
+      const zuletzt = await store.chatCountSince(instance.id, now() - CHAT_WINDOW_MS)
+      if (zuletzt >= CHAT_PER_INSTANCE_PER_WINDOW) {
+        return bad(429, 'rate_limited', { reason: 'too_chatty' })
+      }
+
+      const id = await store.addChat({
+        trainerId, instanceId: instance.id, name: trainer.displayName,
+        body: sauber, createdAt: now(),
+      })
+      return { status: 200, body: { id } }
+    }
+
+    /*
+     * Lesen ist ein POST, und das ist Absicht.
+     *
+     * Signiert wird der Rumpf. Ein GET darf laut `fetch` keinen tragen — also
+     * muesste `since` in die Adresse, und die steckt nicht in der Signatur.
+     * Genau daran ist der erste Versuch gescheitert: der Client signierte
+     * `{"since":N}` und schickte nichts, die Gegenseite rechnete mit `{}`.
+     */
+    if (req.method === 'POST' && req.path === '/chat/read') {
+      const { since } = body as { since?: number }
+      const von = typeof since === 'number' && Number.isFinite(since) ? Math.max(0, Math.floor(since)) : 0
+      return { status: 200, body: { messages: await store.chatSince(von, CHAT_PAGE) } }
     }
 
     /* -------------------------------------------------------- Rangliste */

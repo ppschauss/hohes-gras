@@ -4,6 +4,7 @@ import type { AppContext } from '../context.js'
 import { rateLimit, requireTrainer } from './plugin.js'
 import { findById } from '../repos/trainers.js'
 import * as social from '../services/social.js'
+import * as hub from '../services/hub.js'
 import * as gifts from '../services/gifts.js'
 
 const CodeSchema = z.object({ code: z.string().trim().min(4).max(16) })
@@ -88,6 +89,21 @@ export function registerSocialRoutes(app: FastifyInstance, ctx: AppContext): voi
     const { listingId } = z.object({ listingId: z.string().uuid() }).parse(req.body)
     const result = social.buyListing(ctx, req.trainer!, listingId)
     return { ...result, market: social.marketOverview(ctx, findById(ctx.db, req.trainer!.id)!) }
+  })
+
+  /* --------------------------------------------------------- Globaler Chat */
+
+  app.get('/api/chat', auth, async (req) => {
+    // Beim Blick in den Chat auch gleich neues holen — hoechstens alle paar
+    // Sekunden, damit haeufiges Nachsehen keine Flut wird.
+    await hub.refreshChatThrottled(ctx)
+    return hub.chatView(ctx, req.trainer!)
+  })
+
+  app.post('/api/chat', { preHandler: [requireTrainer(ctx), rateLimit(ctx, 'social')] }, async (req) => {
+    const { text } = z.object({ text: z.string().min(1).max(400) }).parse(req.body)
+    await hub.sendChat(ctx, req.trainer!, text)
+    return hub.chatView(ctx, req.trainer!)
   })
 
   app.get('/api/trades', auth, async (req) => social.tradeOverview(ctx, req.trainer!))

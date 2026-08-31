@@ -629,7 +629,17 @@ function applyOutcome(
    * ihn neu.
    */
   const lastWin = battles.lastWinAt(ctx.db, trainer.id, def.id)
-  const firstWin = battles.recordWin(ctx.db, trainer.id, def.id)
+  /*
+   * Arena und Kampfzone stellen **Kunstgegner**: jeder Kampf hat eine eigene
+   * Kennung (`arena-2026-08-31-hard-3`, `gauntlet-hoenn-42`). Sie dauerhaft zu
+   * vermerken laesst `trainer_defeats` unbegrenzt wachsen — gemessen standen
+   * dort schon 119 solcher Zeilen gegen 39 echte Trainer, und keine davon
+   * wird je wieder gelesen.
+   *
+   * Ein erster Sieg sind sie trotzdem: jeder von ihnen tritt genau einmal an.
+   */
+  const fluechtig = def.id.startsWith('arena-') || def.id.startsWith('gauntlet-')
+  const firstWin = fluechtig ? true : battles.recordWin(ctx.db, trainer.id, def.id)
   const firstToday = firstWin || (lastWin !== null && lastWin < dayStart())
   /*
    * Gold gibt es einmal am Tag je Gegner.

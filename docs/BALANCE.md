@@ -795,3 +795,65 @@ und die tut genau, was sie soll. Dass der Streuner beim Erkunden besser zahlt,
 hat dieselbe Ursache und ist Absicht: er wird zufällig aus der ganzen Region
 gezogen, ist also fast immer ein Gegner, den man heute noch nicht geschlagen
 hat. Erkunden über Kurbeln zu stellen ist der Sinn der Regel.
+
+
+## Zwei Fehler, die erst der Betrieb zeigte
+
+### Das Labor hob die Fangchance um exakt nichts
+
+Gemeldet: „vor dem Upgrade 83–86 %, mit dem Labor-Upgrade das Gleiche."
+
+Labor und Forschung wurden halbiert auf die **Ordenszahl** addiert — und die
+ist bei neun gedeckelt (`MAX_BADGE_BONUS`), weil sechsundzwanzig Orden das
+Fangen sonst zur Formalität machen. Wer neun Orden hatte, bei dem verpuffte
+jede weitere Laborstufe restlos. Nachgerechnet: Orden+Labor 9, 12 oder 16
+ergaben alle exakt 91,2 %.
+
+Der Deckel gehört zu den Orden, nicht zu allem, was die Fangchance hebt. Beides
+ist jetzt getrennt: Orden bleiben bei neun gedeckelt, Labor und Forschung sind
+ein eigener Faktor mit eigener Grenze (30 %).
+
+Seltene Art, Level 55, Hyperball, zwei Stapel:
+
+| | vorher | jetzt |
+|---|---|---|
+| ohne Labor | 36,8 % | 36,8 % |
+| Labor 1 | 36,8 % | 38,6 % |
+| Labor 3 | 36,8 % | 42,3 % |
+| Labor 5 | 36,8 % | 46,0 % |
+| + Forschung | 36,8 % | 47,8 % |
+
+### Die Kampfzone zahlte jedem Kampf den ersten Sieg
+
+Gemeldet: 24.529 EP aus 33 Kämpfen.
+
+Jeder Gegner dort hat eine eigene Kennung (`gauntlet-hoenn-42`), gilt also
+immer als **erster Sieg** — und der zahlt voll, während eine Wiederholung sonst
+halbiert wird. Mit Faktor 2,5 waren das 928 EP je Kampf: fünfmal ein
+wiederholter Routentrainer (186), und das unbegrenzt oft.
+
+| | EP je Kampf |
+|---|---|
+| Routentrainer, erster Sieg | 371 |
+| Routentrainer, Wiederholung | 186 |
+| Arena „schwer" | 1.113 |
+| Kampfzone **vorher** | 928 — jeden Kampf |
+| Kampfzone **jetzt**, Serie 0 | 445 |
+| Kampfzone jetzt, Serie 50 | 243 |
+| Kampfzone jetzt, Serie 100 | 167 |
+
+Der Faktor sank auf 1,2 und flacht über die Serie ab
+(`Faktor / (1 + Serie/60)`). Ohne die Abflachung wäre eine Serie von
+zweihundert schlicht zweihundertmal der erste Kampf, und die einzige sinnvolle
+Spielweise wäre, ewig weiterzukämpfen. 33 Kämpfe bringen jetzt **11.787 statt
+30.624**.
+
+Die späten Kämpfe tragen sich über die Stufen bei 50 und 100 — über Gold und
+Werkstoffe, nicht über Erfahrung.
+
+### Nebenbei: eine Tabelle, die unbegrenzt wuchs
+
+Beim Nachmessen aufgefallen: Arena und Kampfzone vermerkten ihre Kunstgegner
+dauerhaft in `trainer_defeats`. Dort standen **119 solcher Zeilen gegen
+39 echte Trainer** — und keine davon wird je wieder gelesen. Sie werden jetzt
+gar nicht mehr angelegt, und eine Migration hat die alten entfernt.

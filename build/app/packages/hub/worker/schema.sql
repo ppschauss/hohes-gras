@@ -41,3 +41,17 @@ CREATE TABLE IF NOT EXISTS releases (
   notes        TEXT NOT NULL DEFAULT '',
   published_at INTEGER NOT NULL
 );
+
+-- Der globale Chat. Ein Raum für den ganzen Verbund.
+--
+-- Der Name steht mit in der Zeile und wird nicht beim Lesen nachgeschlagen:
+-- wer sich umbenennt, ändert damit nicht rückwirkend, was er gesagt hat.
+CREATE TABLE IF NOT EXISTS chat (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  trainer_id  TEXT NOT NULL,
+  instance_id TEXT NOT NULL,
+  name        TEXT NOT NULL,
+  body        TEXT NOT NULL,
+  created_at  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_chat_instance_time ON chat(instance_id, created_at);

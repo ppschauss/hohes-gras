@@ -138,12 +138,16 @@ function buildModifiers(
   if (berryId && (!berry || berry.category !== 'berry')) {
     throw new GameError('validation_failed', { field: 'berryId' })
   }
-  // Das Labor zaehlt wie zusaetzliche Orden: derselbe kleine, spuerbare
-  // Dauerbonus, statt eine weitere Zahl in die Fangformel einzubauen.
-  // Labor und Forschung zaehlen beide wie zusaetzliche Orden: derselbe kleine,
-  // spuerbare Dauerbonus, statt zwei weitere Zahlen in der Fangformel.
+  /*
+   * Labor und Forschung als eigener Prozentwert.
+   *
+   * Frueher wurden sie halbiert und auf die Ordenszahl addiert — und liefen
+   * damit in deren Deckel bei neun. Wer neun Orden hatte, bei dem war jede
+   * weitere Laborstufe exakt null wert; genau so gemeldet. Jetzt zaehlen sie
+   * voll und in einem eigenen Faktor.
+   */
   const research = researchBonuses(ctx, trainer.id)
-  const labBonus = Math.round((bonuses(ctx, trainer.id).catchRateBonus + research.catchRate) / 2)
+  const ausbauBonus = bonuses(ctx, trainer.id).catchRateBonus + research.catchRate
 
   return {
     ball,
@@ -152,7 +156,8 @@ function buildModifiers(
     timeOfDay: worldClock().timeOfDay,
     weakenStacks: e.weakenStacks,
     calmStacks: e.calmStacks,
-    badgeCount: world.badgesOf(ctx.db, trainer.id).size + labBonus,
+    badgeCount: world.badgesOf(ctx.db, trainer.id).size,
+    bonusPercent: ausbauBonus,
   }
 }
 

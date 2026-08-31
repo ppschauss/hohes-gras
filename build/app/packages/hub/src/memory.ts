@@ -1,4 +1,4 @@
-import type { InstanceRow, ProfileRow, Store, TrainerRow, ReleaseRow } from './store.js'
+import type { InstanceRow, ProfileRow, Store, TrainerRow, ReleaseRow, ChatRow } from './store.js'
 
 /**
  * Ein Speicher im Arbeitsspeicher.
@@ -19,7 +19,19 @@ export function memoryStore(): Store {
     .sort((a, b) => score(b) - score(a) || a.trainerId.localeCompare(b.trainerId))
 
   let release: ReleaseRow | null = null
+  const chat: ChatRow[] = []
   return {
+    async addChat(row) {
+      const id = chat.length + 1
+      chat.push({ ...row, id })
+      return id
+    },
+    async chatSince(since, limit) {
+      return chat.filter((m) => m.id > since).slice(-limit)
+    },
+    async chatCountSince(instanceId, after) {
+      return chat.filter((m) => m.instanceId === instanceId && m.createdAt >= after).length
+    },
     async getRelease() { return release },
     async putRelease(row) { release = row },
     async getInstance(id) { return instances.get(id) ?? null },
