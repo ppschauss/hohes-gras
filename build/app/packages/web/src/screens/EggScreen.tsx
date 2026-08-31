@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { t } from '../i18n'
 import { errorText } from '../lib/errors'
-import { api, type CreatureLike } from '../lib/api'
+import { api, type CreatureLike, type EggOverview } from '../lib/api'
 import { haptic } from '../lib/telegram'
 import { useAction, useAsync } from '../lib/useAsync'
 import { minutesLabel } from '../lib/format'
 import { Screen } from '../ui/Screen'
 import { CenterState } from '../ui/States'
+import { StatTable } from '../ui/DetailsPanel'
 
 export function EggScreen({ onBack }: { onBack: () => void }) {
   const overview = useAsync(() => api.eggs(), [])
@@ -18,6 +19,16 @@ export function EggScreen({ onBack }: { onBack: () => void }) {
   const [hatched, setHatched] = useState<CreatureLike | null>(null)
   /** Welches Ei gerade einen Brueter sucht. */
   const [brooding, setBrooding] = useState<string | null>(null)
+  /*
+   * Der Kandidat, ueber dem gerade die Maus steht — samt Platz, an dem seine
+   * Kachel sitzt.
+   *
+   * Die Merkmale werden vererbt; welches Paar sich lohnt, entscheidet sich an
+   * ihnen. Ein Fenster statt einer Zeile war die Bitte, und es haengt an
+   * `position: fixed`: `.viewport` scrollt, und darin haette ein absolut
+   * gesetztes Fenster am Rand schlicht die Haelfte verloren.
+   */
+  const [info, setInfo] = useState<{ kandidat: Kandidat; oben: number; links: number } | null>(null)
 
   const data = overview.data
 
@@ -190,10 +201,10 @@ export function EggScreen({ onBack }: { onBack: () => void }) {
                     return (
                       <button key={c.id} type="button" className={`pick${chosen ? ' pick--on' : ''}`}
                         aria-pressed={chosen} onClick={() => toggle(c.id)}
-                        /* Vererbt wird beides. Am Rechner steht die volle
-                           Aufschluesselung im Tooltip, auf dem Telefon reichen
-                           Wesen und Gesamtwert auf der Kachel. */
-                        title={werteText(c)}>
+                        onMouseEnter={(e) => setInfo(platziere(c, e.currentTarget))}
+                        onMouseLeave={() => setInfo(null)}
+                        onFocus={(e) => setInfo(platziere(c, e.currentTarget))}
+                        onBlur={() => setInfo(null)}>
                         <img src={c.sprite} alt="" width={40} height={40} className="pick__mon" />
                         <span className="pick__name">{c.name}</span>
                         <span className="pick__meta">{t('egg.groups', { groups: c.eggGroups.join(', ') })}</span>
@@ -210,21 +221,46 @@ export function EggScreen({ onBack }: { onBack: () => void }) {
                 </button>
               </>}
         </section>
+
+        {/* Ausserhalb der Liste gerendert, damit kein scrollender Vorfahr es
+            beschneidet. Fuer die Maus unsichtbar, sonst fluechtet es vor dem
+            Zeiger, sobald es unter ihn geraet. */}
+        {info && (
+          <aside className="pickCard" role="tooltip"
+            style={{ top: `${info.oben}px`, left: `${info.links}px` }}>
+            <p className="pickCard__head">
+              <span className="pickCard__name">{info.kandidat.name}</span>
+              <span className="pickCard__level num">{t('creature.level', { n: info.kandidat.level })}</span>
+            </p>
+            <p className="pickCard__groups">
+              {t('egg.groups', { groups: info.kandidat.eggGroups.join(', ') })}
+            </p>
+            <StatTable werte={info.kandidat} />
+          </aside>
+        )}
       </main>
     </Screen>
   )
 }
 
+type Kandidat = EggOverview['candidates'][number]
+
+/** Breite und Abstand des Fensters — auch die Rechnung unten braucht sie. */
+const KARTE_BREITE = 268
+const LUFT = 10
+
 /**
- * Die Zeile fuer den Tooltip: Wesen und alle sechs Anlagen.
+ * Wo das Fenster steht.
  *
- * Am Rechner faehrt man mit der Maus darueber und sieht, was das Pokemon
- * wirklich mitbringt, ohne die Kachel zu vergroessern — genau darum wurde
- * gebeten ("beim Drueberhovern die Werte anzeigen wie im Garten und der Box").
+ * Rechts neben der Kachel, wenn dort Platz ist, sonst links; senkrecht an ihr
+ * ausgerichtet und in den Bildschirm hineingeschoben, damit es am unteren Rand
+ * nicht halb abgeschnitten steht. Gerechnet wird in Fensterkoordinaten, weil
+ * das Fenster `fixed` sitzt.
  */
-function werteText(c: { nature: string; ivPercent: number; ivs: Record<string, number> }): string {
-  const werte = (['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const)
-    .map((k) => `${t(`stat.${k}`)} ${c.ivs[k]}`)
-    .join(' · ')
-  return `${t('creature.nature')}: ${t(`nature.${c.nature}`)}\n${t('creature.ivs')}: ${c.ivPercent} %\n${werte}`
+function platziere(kandidat: Kandidat, el: HTMLElement) {
+  const r = el.getBoundingClientRect()
+  const passtRechts = r.right + LUFT + KARTE_BREITE <= window.innerWidth
+  const links = passtRechts ? r.right + LUFT : Math.max(LUFT, r.left - LUFT - KARTE_BREITE)
+  const oben = Math.max(LUFT, Math.min(r.top, window.innerHeight - 360))
+  return { kandidat, oben, links }
 }

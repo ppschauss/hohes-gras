@@ -1,4 +1,4 @@
-import { STATS, type CreatureView, type StatKey } from '@game/shared'
+import { STATS, type CreatureView, type Nature, type StatBlock, type StatKey } from '@game/shared'
 import { IV_MAX, natureMultiplier } from '@game/engine'
 import { t } from '../i18n'
 
@@ -16,15 +16,50 @@ import { t } from '../i18n'
  * klappt deshalb ohne Wartezeit auf.
  */
 export function DetailsPanel({ creature: c }: { creature: CreatureView }) {
+  return (
+    <section className="detail">
+      <StatTable werte={c} />
+
+      <ul className="detail__facts">
+        <Fact label={t('creature.energy')} value={`${c.energy}/100`} />
+        <Fact label={t('creature.condition')} value={`${c.condition}/100`} />
+        <Fact label={t('creature.friendship')} value={`${c.friendship}/255`} />
+        <Fact label={t('detail.caught')} value={datum(c.caughtAt)} />
+      </ul>
+    </section>
+  )
+}
+
+/**
+ * Alles, was an einem Pokemon rechnerisch feststeht.
+ *
+ * Eigenes Bauteil, weil es an zwei Stellen gebraucht wird: unter der
+ * Kreaturenkarte in Garten und Box, und im Fenster bei der Zucht. Zweimal
+ * dieselbe Tabelle zu schreiben hiesse, sie beim naechsten Mal an einer Stelle
+ * zu aendern — und genau darum ging die Bitte, es solle dort aussehen wie hier.
+ *
+ * Der Zuschnitt ist bewusst schmal: Wesen, Anlagen, Werte. Alles, was nur ein
+ * *besessenes* Pokemon hat — Ausdauer, Verfassung, Fangdatum —, bleibt
+ * draussen, damit auch ein Zuchtkandidat hineinpasst.
+ */
+export interface Werte {
+  nature: Nature
+  ivs: StatBlock
+  stats: StatBlock
+  ivPercent: number
+  evs?: StatBlock
+}
+
+export function StatTable({ werte: c }: { werte: Werte }) {
   const hebt = STATS.find((s) => natureMultiplier(c.nature, s) > 1) ?? null
   const senkt = STATS.find((s) => natureMultiplier(c.nature, s) < 1) ?? null
   const ivSumme = STATS.reduce((sum, s) => sum + c.ivs[s], 0)
   // Die Spalte erscheint nur, wenn es etwas zu zeigen gibt: sechs Nullen
   // saehen aus wie ein Fehler, nicht wie ein unbenutztes System.
-  const hatEvs = STATS.some((s) => c.evs[s] > 0)
+  const hatEvs = STATS.some((s) => (c.evs?.[s] ?? 0) > 0)
 
   return (
-    <section className="detail">
+    <>
       <p className="detail__nature">
         <span className="detail__natureName">{t(`nature.${c.nature}`)}</span>
         <span className="detail__natureEffect">
@@ -48,18 +83,11 @@ export function DetailsPanel({ creature: c }: { creature: CreatureView }) {
         </thead>
         <tbody>
           {STATS.map((stat) => (
-            <Row key={stat} creature={c} stat={stat} hebt={hebt} senkt={senkt} evs={hatEvs} />
+            <Row key={stat} werte={c} stat={stat} hebt={hebt} senkt={senkt} evs={hatEvs} />
           ))}
         </tbody>
       </table>
-
-      <ul className="detail__facts">
-        <Fact label={t('creature.energy')} value={`${c.energy}/100`} />
-        <Fact label={t('creature.condition')} value={`${c.condition}/100`} />
-        <Fact label={t('creature.friendship')} value={`${c.friendship}/255`} />
-        <Fact label={t('detail.caught')} value={datum(c.caughtAt)} />
-      </ul>
-    </section>
+    </>
   )
 }
 
@@ -71,8 +99,8 @@ export function DetailsPanel({ creature: c }: { creature: CreatureView }) {
  * trotzdem stehen, weil man beim Zuechten damit rechnet.
  */
 function Row(
-  { creature: c, stat, hebt, senkt, evs }:
-  { creature: CreatureView; stat: StatKey; hebt: StatKey | null; senkt: StatKey | null; evs: boolean },
+  { werte: c, stat, hebt, senkt, evs }:
+  { werte: Werte; stat: StatKey; hebt: StatKey | null; senkt: StatKey | null; evs: boolean },
 ) {
   const iv = c.ivs[stat]
   const perfekt = iv >= IV_MAX
@@ -93,7 +121,7 @@ function Row(
         </span>
       </td>
       <td className={`num detail__iv${perfekt ? ' detail__iv--perfect' : ''}`}>{iv}</td>
-      {evs && <td className="num detail__ev">{c.evs[stat] > 0 ? c.evs[stat] : '—'}</td>}
+      {evs && <td className="num detail__ev">{(c.evs?.[stat] ?? 0) > 0 ? c.evs![stat] : '—'}</td>}
     </tr>
   )
 }

@@ -1252,8 +1252,28 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
   cursor: pointer; min-width: 0;
   transition: border-color var(--fast) var(--ease), background var(--fast) var(--ease);
 }
-/* Wesen und Veranlagung: die zwei Zahlen, nach denen man das Paar waehlt. */
+/* Wesen und Veranlagung: die zwei Zahlen, nach denen man das Paar waehlt.
+   Auf der Kachel, weil ein Telefon kein Darueberfahren kennt. */
 .pick__werte { font-size: 10px; color: var(--ink-muted); text-align: center; }
+
+/* Das Fenster mit allen Werten. `fixed`, damit der scrollende Inhalt es nicht
+   beschneidet, und ohne Zeigerereignisse, damit es nicht vor der Maus
+   fluechtet, sobald es unter sie geraet. */
+.pickCard {
+  position: fixed; z-index: var(--z-modal); pointer-events: none;
+  width: 268px;
+  display: flex; flex-direction: column; gap: var(--s2);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px oklch(0 0 0 / 0.45);
+}
+.pickCard__head { display: flex; align-items: baseline; gap: var(--s2); margin: 0; }
+.pickCard__name { font-weight: 650; font-size: var(--t-sm); }
+.pickCard__level { margin-left: auto; font-size: var(--t-xs); color: var(--ink-muted); }
+.pickCard__groups { margin: 0; font-size: var(--t-xs); color: var(--ink-faint); }
+/* Im Fenster steht die Tabelle auf der Kartenflaeche, nicht in einer Mulde. */
+.pickCard .detail__barCell .bar { background: var(--surface-sunken); }
 .pick--on { border-color: var(--accent); background: var(--surface-raised); }
 .pick:disabled { opacity: 0.4; cursor: default; }
 .pick__mon { image-rendering: pixelated; }

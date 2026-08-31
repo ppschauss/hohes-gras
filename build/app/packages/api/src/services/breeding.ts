@@ -236,6 +236,7 @@ export function overview(ctx: AppContext, trainer: Trainer) {
           nature: c.nature,
           ivs: c.ivs,
           ivPercent: ivPercent(c.ivs),
+          stats: computeStats(species, c.level, c.ivs, c.evs, c.nature),
         }
       }),
   }

@@ -1,7 +1,7 @@
 import type {
   ApiError, AuthResponse, Bootstrap, CareAction, CareResponse, CenterState, CenterVisit,
-  DexRow, EnergyOverview, EnergyState, GardenState, MoveSet, PlotsState, ShopState,
-  StartRegion, StarterOption, TeamsState, ThemesState,
+  DexRow, EnergyOverview, EnergyState, GardenState, MoveSet, Nature, PlotsState, ShopState,
+  StartRegion, StarterOption, StatBlock, TeamsState, ThemesState,
 } from '@game/shared'
 
 import { looksLikeEnergy, useEnergy } from './energyStore.js'
@@ -915,8 +915,9 @@ export interface EggOverview {
     id: string; name: string; sprite: string; level: number
     eggGroups: string[]; shiny: boolean
     /** Was vererbt wird — und damit das, wonach man das Paar auswaehlt. */
-    nature: string
-    ivs: { hp: number; atk: number; def: number; spa: number; spd: number; spe: number }
+    nature: Nature
+    ivs: StatBlock
+    stats: StatBlock
     ivPercent: number
   }>
 }
