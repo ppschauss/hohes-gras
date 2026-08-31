@@ -656,7 +656,8 @@ Raid-Schaden hochgezählt: eine Woche mit dem Ziel „Fänge" oder
 „Pflegeaktionen" blieb bei null stehen, egal was die Gilde tat. Jetzt meldet
 dieselbe Funktion, die schon die Erfolge zählt, auch ans Wochenziel.
 
-- **Raid-Bosse als Karte im Telegram-Gruppenchat**: Der Bot postet, Mitglieder
+- **Raid-Bosse als Karte im Telegram-Gruppenchat** — Stufe 1 schafft ein
+  Trainer allein, Stufe 3 zwei, Stufe 5 vier: Der Bot postet, Mitglieder
   treten per Knopf bei, ihre Teams tragen Schaden bei, die Beute verteilt sich
   nach Beitrag. `/gilde` verbindet einen Chat mit der Gilde, `/raid` zeigt
   laufende Raids.

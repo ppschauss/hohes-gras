@@ -121,6 +121,16 @@ seltenen, die bedingten und die übersehenen Arten, und es rechnet sich selbst
 nach, wenn sich der Inhalt ändert. Hoenns achtes Gebiet fordert damit 28 statt
 36.
 
+## Raids: an der Gruppe gemessen, die es gibt
+
+Die Zielgrößen waren **zwei, fünf und zehn** Trainer mit vollem Team — gedacht
+als „eine Gruppe von Freunden statt einer großen Gilde", und trotzdem zu groß.
+Gespielt wird hier zu viert: Stufe 3 verlangte fünf und Stufe 5 zehn, also
+waren zwei von drei Stufen unerreichbar, egal wie gut jemand spielt.
+
+Jetzt **einer, zwei, vier**. Stufe 1 schafft man allein, Stufe 5 braucht die
+ganze Runde. Dieselbe Staffelung, nur an der wirklichen Gruppe gemessen.
+
 ## Antrittsgeld
 
 Ganz ohne Ertrag blieb der Wiederholungskampf trotzdem falsch: gekämpft hat man

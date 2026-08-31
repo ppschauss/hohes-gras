@@ -29,23 +29,30 @@ export interface RaidTierSpec {
  * Boss health is tuned to a target group size, not to a feeling.
  *
  * One trainer with a full team of five contributes roughly
- * `5 creatures × ~450 damage × 5 attacks ≈ 2200` over a raid. The multipliers
- * below aim for tier 1 falling to about two trainers, tier 3 to five and
- * tier 5 to ten — sized for a group of friends rather than a large guild.
- * `raid.test.ts` asserts these targets, so a later balance change has to
- * restate the intent instead of silently drifting.
+ * `5 creatures × ~450 damage × 5 attacks ≈ 2200` over a raid.
+ *
+ * Die Zielgroessen waren zwei, fuenf und zehn Trainer — "eine Gruppe von
+ * Freunden statt einer grossen Gilde", und trotzdem zu gross gedacht. Gespielt
+ * wird hier zu viert; Stufe 3 verlangte fuenf und Stufe 5 zehn, also waren
+ * zwei von drei Stufen unerreichbar, egal wie gut jemand spielt. Gemeldet als
+ * "Raids sollen einfacher sein".
+ *
+ * Jetzt: einer, zwei, vier. Stufe 1 schafft man allein, Stufe 5 braucht die
+ * ganze Runde — das ist dieselbe Staffelung, nur an der Gruppe gemessen, die
+ * es wirklich gibt. `raid.test.ts` prueft die Zielgroessen, damit eine spaetere
+ * Aenderung die Absicht neu formulieren muss, statt still zu verrutschen.
  */
 export const DAMAGE_PER_TRAINER_ESTIMATE = 2200
 
 export const TIER_SPECS: Record<RaidTier, RaidTierSpec> = {
-  1: { tier: 1, levelRange: [12, 22], hpMultiplier: 16, durationHours: 6, goldPool: 1200, minRarity: 'common' },
-  3: { tier: 3, levelRange: [28, 42], hpMultiplier: 36, durationHours: 12, goldPool: 4500, minRarity: 'uncommon' },
-  5: { tier: 5, levelRange: [50, 68], hpMultiplier: 61, durationHours: 24, goldPool: 14000, minRarity: 'rare' },
+  1: { tier: 1, levelRange: [12, 22], hpMultiplier: 8, durationHours: 6, goldPool: 1200, minRarity: 'common' },
+  3: { tier: 3, levelRange: [28, 42], hpMultiplier: 15, durationHours: 12, goldPool: 4500, minRarity: 'uncommon' },
+  5: { tier: 5, levelRange: [50, 68], hpMultiplier: 25, durationHours: 24, goldPool: 14000, minRarity: 'rare' },
 }
 
 /** Trainers with full teams needed to finish a boss. Used by the UI to set
  *  expectations before a guild summons something it cannot beat. */
-export const TARGET_TRAINERS: Record<RaidTier, number> = { 1: 2, 3: 5, 5: 10 }
+export const TARGET_TRAINERS: Record<RaidTier, number> = { 1: 1, 3: 2, 5: 4 }
 
 /** Boss health scales with tier and level, not with how many people joined:
  *  a raid nobody helps with should stay unfinished rather than shrink. */
