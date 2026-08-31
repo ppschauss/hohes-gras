@@ -289,6 +289,7 @@ export function bonuses(ctx: AppContext, trainerId: string) {
     centerSpeedBonus: bonusOf(owned, 'centerSpeedBonus'),
     boxSlotBonus: bonusOf(owned, 'boxSlotBonus'),
     eggSlotBonus: bonusOf(owned, 'eggSlotBonus'),
+    expeditionSlotBonus: bonusOf(owned, 'expeditionSlotBonus'),
   }
 }
 

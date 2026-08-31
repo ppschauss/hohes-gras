@@ -68,7 +68,7 @@ describe('Expeditionen', () => {
     expect(r.status).toBe(404)
   })
 
-  it('begrenzt die Zahl offener Expeditionen', async () => {
+  it('laesst so viele gleichzeitig zu, wie Plaetze da sind', async () => {
     // Drei zusaetzliche Pokemon, damit jede Expedition ein eigenes bekommt.
     for (let i = 0; i < 4; i++) {
       h.ctx.db.prepare(
@@ -78,15 +78,28 @@ describe('Expeditionen', () => {
       ).run(crypto.randomUUID(), trainerId, Date.now())
     }
     const available = (await h.get('/api/expeditions', token)).body.available
-    // Vier gleichzeitig — frueher war bei drei Schluss.
-    for (let i = 0; i < 4; i++) {
+    /*
+     * Drei — und der vierte prallt ab.
+     *
+     * Frueher stand hier "vier gleichzeitig, frueher war bei drei Schluss":
+     * die Grenze war irgendwann entfallen, und damit war die einzige Schranke
+     * die Zahl der eigenen Pokemon. Wer zweihundert hatte, schickte zwanzig
+     * Trupps los.
+     */
+    for (let i = 0; i < 3; i++) {
       h.resetRateLimits()
       const r = await h.post('/api/expeditions', {
         kind: 'patrol', duration: 'short', creatureIds: [available[i].id],
       }, token)
       expect(r.status).toBe(200)
     }
-    expect((await h.get('/api/expeditions', token)).body.open).toHaveLength(4)
+    expect((await h.get('/api/expeditions', token)).body.open).toHaveLength(3)
+    h.resetRateLimits()
+    const vierte = await h.post('/api/expeditions', {
+      kind: 'patrol', duration: 'short', creatureIds: [available[3].id],
+    }, token)
+    expect(vierte.status).toBe(409)
+    expect(vierte.body.detail.reason).toBe('no_slot')
   })
 
   it('verweigert das Einsammeln vor Ablauf', async () => {
@@ -249,5 +262,61 @@ describe('Truppgröße', () => {
     h.resetRateLimits()
     expect((await h.post('/api/expeditions', { kind: 'patrol', duration: 'short', creatureIds: ids }, token)).status)
       .toBe(400)
+  })
+})
+
+describe('Platzgrenze', () => {
+  const starten = async () => {
+    const frei = (await h.get('/api/expeditions', token)).body.available
+      .find((c: any) => c.fitsKinds.includes('patrol'))
+    h.resetRateLimits()
+    return h.post('/api/expeditions', { kind: 'patrol', duration: 'long', creatureIds: [frei.id] }, token)
+  }
+
+  it('laesst nur drei gleichzeitig zu', async () => {
+    /*
+     * Vorher war es unbegrenzt, und die einzige Schranke war die Zahl der
+     * eigenen Pokemon: wer zweihundert hatte, schickte zwanzig Trupps
+     * gleichzeitig los. Im Spielstand nachgezaehlt standen 20 offene gegen 4
+     * und 2 bei den anderen.
+     */
+    const { EXPEDITION_SLOTS_BASE } = await import('@game/engine')
+    for (let i = 0; i < EXPEDITION_SLOTS_BASE; i++) {
+      // Genug Pokemon in die Box legen, damit nicht die Truppe der Engpass ist.
+      const id = crypto.randomUUID()
+      h.ctx.db.prepare(
+        `INSERT INTO creatures (id, owner_id, species_id, level, xp, nature, shiny,
+           iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, ev_hp, ev_atk, ev_def, ev_spa, ev_spd, ev_spe,
+           hp_current, friendship, energy, caught_at, moves)
+         VALUES (?, ?, 'testmon', 20, 0, 'hardy', 0, 15,15,15,15,15,15, 0,0,0,0,0,0, 50, 70, 100, ?, ?)`,
+      ).run(id, trainerId, Date.now(), JSON.stringify([{ moveId: 'tackle', pp: 35 }]))
+    }
+    h.ctx.db.prepare('UPDATE trainers SET energy = 500 WHERE id = ?').run(trainerId)
+
+    for (let i = 0; i < EXPEDITION_SLOTS_BASE; i++) {
+      expect((await starten()).status).toBe(200)
+    }
+    const zuviel = await starten()
+    expect(zuviel.status).toBe(409)
+    expect(zuviel.body.detail.reason).toBe('no_slot')
+    expect(zuviel.body.detail.max).toBe(EXPEDITION_SLOTS_BASE)
+  })
+
+  it('nennt die Grenze in der Uebersicht', async () => {
+    const { EXPEDITION_SLOTS_BASE } = await import('@game/engine')
+    const r = await h.get('/api/expeditions', token)
+    expect(r.body.maxOpen).toBe(EXPEDITION_SLOTS_BASE)
+  })
+
+  it('hebt sie mit dem Expeditionsbuero', async () => {
+    const { EXPEDITION_SLOTS_BASE, EXPEDITION_SLOTS_MAX, expeditionSlots } = await import('@game/engine')
+    h.ctx.db.prepare(
+      `INSERT INTO buildings (trainer_id, building_id, level, built_at) VALUES (?, 'expedition-office', 4, ?)
+       ON CONFLICT(trainer_id, building_id) DO UPDATE SET level = 4`,
+    ).run(trainerId, Date.now())
+    h.resetRateLimits()
+    expect((await h.get('/api/expeditions', token)).body.maxOpen).toBe(EXPEDITION_SLOTS_BASE + 4)
+    // Und nie ueber neun: darueber ist nicht die Zahl der Plaetze der Engpass.
+    expect(expeditionSlots(99)).toBe(EXPEDITION_SLOTS_MAX)
   })
 })

@@ -115,6 +115,23 @@ export interface ExpeditionParty {
   energy: number
 }
 
+/**
+ * Wie viele Expeditionen gleichzeitig laufen dürfen.
+ *
+ * Drei ohne Ausbau. Vorher war es unbegrenzt, und die einzige Schranke war die
+ * Zahl der eigenen Pokémon — wer zweihundert hatte, schickte zwanzig Trupps
+ * gleichzeitig los. Damit war die Werkbank keine Frage der Zeit mehr, sondern
+ * eine der Sammlungsgröße.
+ *
+ * Das **Expeditionsbüro** hebt es in sechs Stufen auf neun.
+ */
+export const EXPEDITION_SLOTS_BASE = 3
+export const EXPEDITION_SLOTS_MAX = 9
+
+/** Wie viele Plätze jemand mit diesem Ausbau hat. */
+export const expeditionSlots = (bonus: number): number =>
+  Math.min(EXPEDITION_SLOTS_MAX, EXPEDITION_SLOTS_BASE + Math.max(0, bonus))
+
 export const MIN_PARTY = 1
 /** Bis zu sechs Kreaturen pro Expedition. Mehr Koepfe heben die Bewertung und
  *  damit die Ausbeute — dafuer sind sie waehrenddessen anderswo nicht nutzbar,

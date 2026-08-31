@@ -23,6 +23,7 @@ export interface BuildingSpec {
     | 'centerSpeedBonus'   // Stufen, um die die Abklingzeit des Centers sinkt
     | 'boxSlotBonus'       // zusaetzliche Plaetze in der Box
     | 'eggSlotBonus'       // zusaetzliche Brutplaetze
+    | 'expeditionSlotBonus'// zusaetzliche gleichzeitige Expeditionen
 }
 
 /**
@@ -101,6 +102,23 @@ export const BUILDINGS: BuildingSpec[] = [
     id: 'storage', maxLevel: 25, effectKind: 'boxSlotBonus',
     cost: () => 5000,
     effect: (level) => level * 50,
+  },
+  {
+    /*
+     * Das Expeditionsbuero.
+     *
+     * Gleichzeitige Expeditionen waren unbegrenzt — die einzige Schranke war
+     * die Zahl der eigenen Pokemon. Wer zweihundert hatte, schickte zwanzig
+     * Trupps gleichzeitig los und flutete die Werkbank im Alleingang; im
+     * Spielstand nachgezaehlt standen 20 offene gegen 4 und 2 bei den anderen.
+     *
+     * Drei sind der Grundstock, sechs Stufen heben ihn auf neun. Neun ist die
+     * Grenze, weil ein Trupp bis zu sechs Pokemon bindet: darueber hinaus ist
+     * nicht mehr die Zahl der Plaetze der Engpass, sondern die Box.
+     */
+    id: 'expedition-office', maxLevel: 6, effectKind: 'expeditionSlotBonus',
+    cost: (level) => 3000 * level ** 2,
+    effect: (level) => level,
   },
   {
     /*

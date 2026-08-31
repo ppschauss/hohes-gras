@@ -742,6 +742,7 @@ Mit Eiern, Bonbons und einer vollen Box entwickelt man sonst zwanzig am Stück
 | **Gewächshaus** | +20 Energie-Obergrenze | 3 | 6.000 × Stufe² |
 | **Brutkammer** | +1 Brutplatz | 5 | 2.500 × Stufe² |
 | **Depot** | +50 Boxplätze | 25 | 5.000 (fest) |
+| **Expeditionsbüro** | +1 gleichzeitige Expedition | 6 | 3.000 × Stufe² |
 
 Das Depot ist der einzige mit festem Preis: Platz ist eine Ware, fünfzig Plätze
 sind fünfzig Plätze. Alle anderen wirken auf alles Kommende und wachsen deshalb

@@ -28,6 +28,8 @@ export function ExpeditionScreen({ onBack }: { onBack: () => void }) {
    */
   const eligible = data?.available.filter((c) => c.fitsKinds.includes(kind)) ?? []
   const expected = data?.expected.find((e) => e.kindId === kind && e.durationId === duration)
+  /** Sind alle Plätze belegt? Dann gar nicht erst antreten lassen. */
+  const voll = data?.maxOpen != null && data.open.length >= data.maxOpen
   const selected = data?.durations.find((d) => d.id === duration)
   const cost = selected?.energyCost ?? 0
   const trainerCost = selected?.trainerEnergyCost ?? 0
@@ -229,9 +231,17 @@ export function ExpeditionScreen({ onBack }: { onBack: () => void }) {
                 </div>}
           </div>
 
+          {/* Wie viele Plaetze belegt sind. Vorher gab es keine Grenze, und
+              wer viele Pokemon hatte, schickte zwanzig Trupps gleichzeitig. */}
+          {data?.maxOpen != null && (
+            <p className="center__body num">
+              {t('expedition.slots', { have: data.open.length, max: data.maxOpen })}
+            </p>
+          )}
+
           <button type="button" className="btn btn--primary btn--block"
-            disabled={!canStart || action.busy} onClick={start}>
-            {t('expedition.start')}
+            disabled={!canStart || voll || action.busy} onClick={start}>
+            {voll ? t('expedition.slotsFull') : t('expedition.start')}
           </button>
         </section>
       </main>

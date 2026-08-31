@@ -2,7 +2,8 @@ import { GameError, type Trainer } from '@game/shared'
 import {
   createRng, energyCost, findDuration, findKind, partyRating, resolveExpedition,
   grantXpTo, computeStats, DURATIONS, ENERGY_COSTS, EXPEDITION_ENERGY, KINDS,
-  MAX_PARTY, MIN_PARTY, rushCost, expectedOutcome, fitsExpedition, type ExpeditionParty,
+  MAX_PARTY, MIN_PARTY, rushCost, expectedOutcome, expeditionSlots, fitsExpedition,
+  type ExpeditionParty,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
@@ -12,8 +13,8 @@ import * as inventory from '../repos/inventory.js'
 import { logEvent } from '../repos/events.js'
 import { requireCurrentArea } from './world.js'
 import * as energy from './energy.js'
+import { awardSeasonPoints, bonuses, bumpMetric } from './progression.js'
 import { capOf } from './travel.js'
-import { awardSeasonPoints, bonuses } from './progression.js'
 import { busyCreatureIds } from './busy.js'
 import { catchUpEnergy } from './garden.js'
 import { researchBonuses } from './research.js'
@@ -90,9 +91,15 @@ export function overview(ctx: AppContext, trainer: Trainer) {
 
   return {
     open: open.map((e) => toView(ctx, trainer, e, now)),
-    /** null = unbegrenzt. Das Feld bleibt, damit der Client eine Zahl anzeigen
-     *  koennte, falls je wieder eine Grenze noetig wird. */
-    maxOpen: null as number | null,
+    /*
+     * Wie viele gleichzeitig laufen duerfen.
+     *
+     * Vorher stand hier `null` — unbegrenzt —, und die einzige Schranke war
+     * die Zahl der eigenen Pokemon. Wer zweihundert hatte, schickte zwanzig
+     * Trupps gleichzeitig los; im Spielstand nachgezaehlt standen 20 offene
+     * gegen 4 und 2 bei den anderen.
+     */
+    maxOpen: expeditionSlots(bonuses(ctx, trainer.id).expeditionSlotBonus),
     energy: energy.state(ctx, trainer.id),
     kinds: KINDS.map((k) => ({
       id: k.id,
@@ -185,6 +192,17 @@ export function start(
     // Und erst recht vor dem Start: an einer veralteten Zahl darf niemand
     // scheitern.
     catchUpEnergy(ctx, trainer)
+
+    /*
+     * Die Platzgrenze zuerst: eine Expedition, die gar nicht erst zustande
+     * kommt, soll auch keine Ausdauer kosten.
+     */
+    const plaetze = expeditionSlots(bonuses(ctx, trainer.id).expeditionSlotBonus)
+    const laufend = expeditions.openOf(ctx.db, trainer.id).length
+    if (laufend >= plaetze) {
+      throw new GameError('invalid_state', { reason: 'no_slot', max: plaetze }, 409)
+    }
+
     const busy = busyCreatureIds(ctx, trainer.id)
     const cost = energyCost(duration)
 

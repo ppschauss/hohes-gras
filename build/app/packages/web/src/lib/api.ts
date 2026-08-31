@@ -855,7 +855,7 @@ export interface ExpeditionView {
 
 export interface ExpeditionOverview {
   open: ExpeditionView[]
-  /** null = unbegrenzt viele gleichzeitig. */
+  /** Wie viele gleichzeitig laufen dürfen — drei, mit dem Büro bis neun. */
   maxOpen: number | null
   energy: EnergyState
   kinds: Array<{ id: string; name: string; favouredTypes: TypeChip[] }>

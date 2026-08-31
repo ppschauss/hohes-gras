@@ -912,3 +912,35 @@ Wasser auf „schwer" nur noch zum Wiederholungssatz.
 
 Mit allen achtzehn wäre der „Typ des Tages" keiner mehr — drei geben eine Wahl,
 ohne die Vorbereitung sinnlos zu machen.
+
+
+## Expeditionen: drei Plätze statt unbegrenzt
+
+Gemeldet, und im Spielstand nachgezählt: **28 gleichzeitig offen** bei einem
+Spieler, gegen 4 und 2 bei den anderen. 150 seiner Pokémon waren dabei
+gebunden.
+
+Es gab keine Grenze. Die einzige Schranke war die Zahl der eigenen Pokémon —
+wer zweihundert hatte, schickte zwanzig Trupps gleichzeitig los. Damit war die
+Werkbank keine Frage der Zeit mehr, sondern eine der Sammlungsgröße, und ein
+Spieler konnte den Materialmarkt im Alleingang fluten.
+
+**Drei Plätze** ohne Ausbau. Das **Expeditionsbüro** hebt sie in sechs Stufen
+auf **neun** (3.000 Gold × Stufe²). Neun ist die Obergrenze, weil ein Trupp bis
+zu sechs Pokémon bindet: darüber hinaus ist nicht mehr die Zahl der Plätze der
+Engpass, sondern die Box.
+
+Ein alter Test hielt ausdrücklich fest, dass vier gleichzeitig gehen („früher
+war bei drei Schluss") — die Grenze hatte es also einmal gegeben, und sie war
+irgendwann entfallen. Jetzt steht sie wieder, mit einem Test, der auch den
+vierten Versuch prüft.
+
+Die Platzprüfung läuft **vor** dem Abzug der Ausdauer: eine Expedition, die gar
+nicht erst zustande kommt, soll auch nichts kosten.
+
+### Was mit dem Vorsprung geschah
+
+Die 25 laufenden Expeditionen über der Grenze wurden abgebrochen und ihre
+Pokémon freigegeben; die drei ältesten laufen normal zu Ende. Der **Beutel
+blieb unangetastet** — das war eine Lücke im Spiel und kein Betrug, und wer sie
+findet, hat sie nicht gebaut.
