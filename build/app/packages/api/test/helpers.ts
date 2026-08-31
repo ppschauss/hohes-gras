@@ -165,7 +165,10 @@ function writeMinimalPack(dataDir: string): void {
         { speciesId: 'wildmon', weight: 60, minLevel: 58, maxLevel: 64 },
         { speciesId: 'nachtmon', weight: 40, minLevel: 58, maxLevel: 64 },
       ],
-      trainerIds: [],
+      // Derselbe Trainer wie auf der Testroute. Im echten Pack stehen sechs
+      // Trainer in zwei Gebieten; ohne so einen Fall im Fixture liesse sich
+      // der Fehler dahinter nicht pruefen.
+      trainerIds: ['test-rival'],
     },
     {
       id: 'hoch-gipfel', regionId: 'hochland', order: 2,

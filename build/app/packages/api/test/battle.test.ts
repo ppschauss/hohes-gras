@@ -449,3 +449,27 @@ describe('Kampfprotokoll', () => {
     }
   })
 })
+
+describe('Trainer in zwei Gebieten', () => {
+  it('kaempft dort, wo man steht', async () => {
+    /*
+     * `test-rival` steht auf der Testroute *und* im Hochtal. Vorher gewann
+     * immer das erste Gebiet aus dem Pack: wer im zweiten stand und den
+     * Trainer antippte, bekam "dafuer musst du erst dorthin reisen" — waehrend
+     * er direkt davor stand. Genau so gemeldet.
+     */
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('hoch-tal', trainerId)
+    h.ctx.db.prepare('UPDATE creatures SET hp_current = 9999 WHERE owner_id = ?').run(trainerId)
+    h.resetRateLimits()
+    const r = await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+    expect(r.status).toBe(200)
+  })
+
+  it('verlangt die Reise weiterhin, wenn der Gegner wirklich woanders steht', async () => {
+    h.ctx.db.prepare('UPDATE trainers SET current_area_id = ? WHERE id = ?').run('test-cave', trainerId)
+    h.resetRateLimits()
+    const r = await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.detail.reason).toBe('wrong_area')
+  })
+})

@@ -279,9 +279,19 @@ export function start(ctx: AppContext, trainer: Trainer, opponentId: string): Ba
     const def = ctx.registry.allTrainers.find((t) => t.id === opponentId)
     if (!def) throw new GameError('not_found', { opponentId }, 404)
 
-    const area = ctx.registry.allAreas.find(
-      (a) => a.gymId === opponentId || a.trainerIds.includes(opponentId),
-    )
+    /*
+     * Erst hier nachsehen, dann anderswo.
+     *
+     * Vorher stand hier `allAreas.find(...)` — das erste Gebiet aus dem Pack,
+     * das diesen Gegner fuehrt. Sechs Trainer stehen aber in *zwei* Gebieten:
+     * Bernd der Wanderer am Azuria-Kap und im Felstunnel, der Rocket-Ruepel in
+     * zwei, und so weiter. Wer im zweiten stand und ihn antippte, bekam „dafuer
+     * musst du erst dorthin reisen" — waehrend er direkt davor stand. Genau so
+     * gemeldet.
+     */
+    const placedIn = (a: AreaDef) => a.gymId === opponentId || a.trainerIds.includes(opponentId)
+    const current = trainer.currentAreaId ? ctx.registry.tryArea(trainer.currentAreaId) : null
+    const area = current && placedIn(current) ? current : ctx.registry.allAreas.find(placedIn)
     if (!area) throw new GameError('invalid_state', { reason: 'opponent_not_placed' }, 409)
     if (trainer.currentAreaId !== area.id) {
       throw new GameError('invalid_state', { reason: 'wrong_area', areaId: area.id }, 409)
