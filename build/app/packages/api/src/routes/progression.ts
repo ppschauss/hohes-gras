@@ -8,6 +8,7 @@ import * as story from '../services/story.js'
 import * as login from '../services/login.js'
 import * as research from '../services/research.js'
 import * as boarding from '../services/boarding.js'
+import * as quests from '../services/quests.js'
 
 const EvolveSchema = z.object({ creatureId: z.string().uuid(), targetSpeciesId: z.string() })
 const BuildingSchema = z.object({ buildingId: z.string() })
@@ -73,6 +74,14 @@ export function registerProgressionRoutes(app: FastifyInstance, ctx: AppContext)
     const { id } = ResearchIdSchema.parse(req.body)
     research.abort(ctx, req.trainer!, id)
     return { research: research.view(ctx, findById(ctx.db, req.trainer!.id)!) }
+  })
+
+  app.get('/api/quests', auth, async (req) => quests.view(ctx, req.trainer!))
+
+  app.post('/api/quests/claim', write, async (req) => {
+    const { questId } = z.object({ questId: z.string() }).parse(req.body)
+    const result = quests.claim(ctx, req.trainer!, questId)
+    return { result, quests: quests.view(ctx, findById(ctx.db, req.trainer!.id)!) }
   })
 
   app.get('/api/boarding', auth, async (req) => boarding.view(ctx, req.trainer!))

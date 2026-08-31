@@ -24,6 +24,7 @@ import { refreshMoves } from './garden.js'
 import * as energy from './energy.js'
 import { unlockedRecipes } from './research.js'
 import { contributeToGoal } from './guilds.js'
+import { record as recordQuest } from './quests.js'
 
 /* ------------------------------------------------------------- Entwicklung */
 
@@ -367,6 +368,7 @@ export function metricsOf(ctx: AppContext, trainerId: string): Record<string, nu
  */
 export function bumpMetric(ctx: AppContext, trainerId: string, metric: string, amount = 1): void {
   contributeToGoal(ctx, trainerId, metric, amount)
+  recordQuest(ctx, trainerId, metric, amount)
   refreshAchievements(ctx, trainerId)
 }
 

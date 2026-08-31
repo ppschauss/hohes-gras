@@ -899,6 +899,19 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
   color: var(--warn);
 }
 
+.quest {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center; gap: var(--s3);
+  padding: var(--s3);
+  background: var(--surface); border: 1px solid var(--edge); border-radius: var(--radius);
+}
+/* Erledigt: abgehakt statt ausgegraut — es ist ein Erfolg, kein toter Knopf. */
+.quest--done { border-color: color-mix(in oklab, var(--ok) 45%, var(--edge)); }
+.quest__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.quest__title { font-size: var(--t-sm); font-weight: 650; }
+.quest__meta { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; font-size: var(--t-xs); color: var(--ink-faint); }
+.quest__item { display: inline-flex; align-items: center; gap: 2px; }
+
 .menuGroup__head {
   font-size: var(--t-xs); font-weight: 700; letter-spacing: 0.04em;
   text-transform: uppercase; color: var(--ink-faint); margin: 0;

@@ -40,6 +40,8 @@ export function HomeScreen({ boot }: { boot: Bootstrap }) {
   const today = useAsync(() => api.today(), [])
   const tasks = today.data?.tasks ?? []
   const login = useAsync(() => api.login(), [])
+  /* Was heute noch offen ist — der Start beantwortet "hat sich etwas getan". */
+  const quests = useAsync(() => api.quests(), [])
   const claim = useAction()
   const [got, setGot] = useState<{ label: string; bonus: boolean } | null>(null)
 
@@ -73,6 +75,24 @@ export function HomeScreen({ boot }: { boot: Bootstrap }) {
 
       <main className="content content--home">
         {login.data && <LoginCard data={login.data} busy={claim.busy} got={got} onClaim={collect} />}
+
+        {quests.data && (() => {
+          const open = [...quests.data.daily, ...quests.data.weekly].filter((q) => !q.claimed)
+          const ready = open.filter((q) => q.complete).length
+          return (
+            <button type="button" className="task task--quests" onClick={() => go('records')}>
+              <span className="task__icon"><Icon name="trophy" size={20} /></span>
+              <span className="task__text">
+                <span className="task__title">
+                  {ready > 0 ? t('home.questsReady', { n: ready }) : t('home.questsOpen', { n: open.length })}
+                </span>
+                <span className="task__hint">{t('home.questsHint')}</span>
+              </span>
+              {ready > 0 && <span className="task__count num">{ready}</span>}
+              <Icon name="chevron" size={16} className="task__go" />
+            </button>
+          )
+        })()}
 
         <section className="today">
           <h2 className="today__head">{t('home.now')}</h2>

@@ -70,6 +70,7 @@ machen in **[SETUP-EXTERN.md](SETUP-EXTERN.md)**.
 | **Koop** | Gilden mit Wochenziel — **12 Ziele im Wechsel, das Soll zählt je Mitglied** —, Raid-Bosse als Karte im Telegram-Gruppenchat, asynchrones PvP mit Elo, Wochenturnier |
 | **Progression** | Entwicklungen, 10 Ausbauten, 23 Rezepte, Erfolgsketten, 21 Story-Kapitel mit sichtbarer Belohnung |
 | **Pokédex** | 390 Arten; jede gesehene lässt sich antippen und zeigt, **wo sie lebt** — nach Häufigkeit, mit Levelband und Bedingungen |
+| **Aufgaben** | Drei am Tag und drei in der Woche, aus 12 bzw. 10 im Wechsel — für alle Spieler dieselben. Die Wochenaufgaben zählen **jeden** Sieg, auch den wiederholten: dafür lohnt sich der Weg zurück in ein altes Gebiet |
 | **Saison** | Eine Woche, 25 Stufen, 13 davon mit Gegenstand; die letzte bringt ein Schillerndes Seelenfragment |
 | **Anmeldung** | 28 Tage mit unterschiedlichen Gaben; jede volle Woche zahlt Schillernde Seelenfragmente (1 · 2 · 3 · 5) |
 | **Zugang** | Telegram-`initData`; für den Browser ein Einmalcode aus dem Chat, verbundene Geräte einzeln kündbar |

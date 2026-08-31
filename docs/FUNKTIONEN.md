@@ -701,6 +701,38 @@ Die Karte steht auf dem Startbildschirm und zeigt die laufende Woche als sieben
 Felder; der Prämientag trägt einen Funken. `npm run world` prüft die 28 Gaben
 gegen den Gegenstandskatalog.
 
+## 19b. Tages- und Wochenaufgaben
+
+Das Spiel hatte lange nur zwei Rhythmen: die Anmeldebelohnung (kommt von
+allein) und das Gildenziel (kommt nur mit einer Gilde). Wer allein spielte,
+hatte keinen Grund, heute etwas anderes zu tun als gestern.
+
+**Drei Aufgaben am Tag, drei in der Woche**, aus zwölf bzw. zehn im Wechsel —
+aus dem Datum abgeleitet und damit für alle Spieler dieselben. Belohnt wird in
+Gold und Ware: täglich ~200–400 Gold plus Bälle, Tränke oder Werkstoffe,
+wöchentlich das Fünf- bis Zehnfache plus Sternenstaub, EP-Bonbons oder eine
+Sagenbeere.
+
+### Warum Wiederholungen zählen
+
+Die Wochenaufgaben zählen **jeden** Sieg, auch den fünften über denselben
+Arenaleiter. Das ist der Gegenpol zur Tagesregel beim Gold, die das Wiederholen
+absichtlich nicht mehr bezahlt: Wiederholen bringt kein Vermögen, aber es
+bringt die Woche voran — und damit lohnt sich der Weg zurück in ein altes
+Gebiet, statt nur auf dem höchsten Level zu bleiben.
+
+Vier Kampfmetriken unterscheiden dabei, wogegen man antritt: **Arenaleiter**,
+**Trainer auf Routen**, **Team Rocket** und **abgeschlossene
+Arenadurchläufe**. Ein Arenagegner trägt zwar dieselbe Art wie ein
+Routentrainer, steht aber auf keiner Route — er zählt als Durchlauf, nicht als
+Trainer.
+
+Gezählt wird über dieselbe Meldung, die schon Erfolge und Gildenziel füttert.
+Eine neue Aufgabe braucht deshalb meist nur einen Eintrag in der Liste und
+keinen Code an der Stelle, wo etwas passiert.
+
+---
+
 ## 20. Saison-Reise
 
 Eine Saison dauert **sieben Tage** und hat **25 Stufen**. Der Zähler oben nennt

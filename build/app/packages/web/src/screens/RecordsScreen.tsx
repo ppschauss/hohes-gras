@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { t } from '../i18n'
 import { haptic } from '../lib/telegram'
 import { Screen } from '../ui/Screen'
+import { QuestPanel } from '../progress/QuestPanel'
 import { AchievementPanel } from '../progress/AchievementPanel'
 import { SeasonPanel } from '../progress/SeasonPanel'
 import { RankingPanel } from '../social/RankingPanel'
@@ -14,11 +15,13 @@ import { RankingPanel } from '../social/RankingPanel'
  * neun im Fortschritt, die Rangliste bei den Freunden zwischen Marktplatz und
  * Trainerkarte. Zusammen sind sie ein eigener Ort mit eigenem Symbol.
  */
-type Tab = 'achievements' | 'season' | 'ranking'
-const TABS: Tab[] = ['achievements', 'season', 'ranking']
+/* Aufgaben zuerst: sie sind das, was heute ansteht. Erfolge und Rangliste
+ * sind Rueckblick. */
+type Tab = 'quests' | 'achievements' | 'season' | 'ranking'
+const TABS: Tab[] = ['quests', 'achievements', 'season', 'ranking']
 
 export function RecordsScreen({ onBack }: { onBack: () => void }) {
-  const [tab, setTab] = useState<Tab>('achievements')
+  const [tab, setTab] = useState<Tab>('quests')
 
   return (
     <Screen eyebrow={t('records.eyebrow')} title={t('records.title')} onBack={onBack}>
@@ -32,6 +35,7 @@ export function RecordsScreen({ onBack }: { onBack: () => void }) {
           ))}
         </div>
 
+        {tab === 'quests' && <QuestPanel />}
         {tab === 'achievements' && <AchievementPanel />}
         {tab === 'season' && <SeasonPanel />}
         {tab === 'ranking' && <RankingPanel />}

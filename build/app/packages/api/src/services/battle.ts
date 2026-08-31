@@ -679,7 +679,22 @@ function applyOutcome(
   }
 
   if (firstToday) awardSeasonPoints(ctx, trainer.id, def.badgeId ? 'gymWin' : 'battleWin')
-  contributeToGoal(ctx, trainer.id, 'battles', 1)
+  bumpMetric(ctx, trainer.id, 'battles')
+  /*
+   * Wofuer dieser Sieg zaehlt.
+   *
+   * Die Wochenaufgaben zaehlen **jeden** Sieg, auch den fuenften ueber
+   * denselben Arenaleiter. Das ist der Gegenpol zur Tagesregel beim Gold: die
+   * bezahlt Wiederholung absichtlich nicht mehr, und ohne einen anderen Grund
+   * lohnte sich der Weg zurueck in ein altes Gebiet nicht.
+   */
+  if (def.badgeId) bumpMetric(ctx, trainer.id, 'gymWins')
+  else if (isEventTrainer(def.id)) bumpMetric(ctx, trainer.id, 'rocketWins')
+  // Arenagegner tragen `kind: 'trainer'`, stehen aber auf keiner Route. Der
+  // Durchlauf zaehlt als Ganzes, gemeldet aus dem Arena-Dienst.
+  else if (def.kind === 'trainer' && !def.id.startsWith('arena-')) {
+    bumpMetric(ctx, trainer.id, 'routeTrainerWins')
+  }
   bumpMetric(ctx, trainer.id, 'badges')
   logEvent(ctx.db, trainer.id, 'battle.win', {
     opponentId: def.id, gold, firstWin, firstToday, badge: badge?.id ?? null,

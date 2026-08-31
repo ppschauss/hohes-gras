@@ -332,6 +332,12 @@ export const api = {
       method: 'POST', body: JSON.stringify({ id }),
     }),
 
+  quests: () => request<QuestOverview>('/api/quests'),
+  claimQuest: (questId: string) =>
+    request<{ result: { questId: string; gold: number }; quests: QuestOverview }>('/api/quests/claim', {
+      method: 'POST', body: JSON.stringify({ questId }),
+    }),
+
   research: () => request<ResearchView>('/api/research'),
   startResearch: (projectId: string, creatureId: string) =>
     request<{ research: ResearchView }>('/api/research/start', {
@@ -715,6 +721,26 @@ export interface ResearchView {
     xp: number
   }>
   projects: ResearchProjectView[]
+}
+
+export interface QuestView {
+  id: string
+  cadence: 'daily' | 'weekly'
+  metric: string
+  target: number
+  progress: number
+  complete: boolean
+  claimed: boolean
+  reward: { gold: number; items: Array<{ itemId: string; name: string; icon: string; quantity: number }> }
+}
+
+export interface QuestOverview {
+  daily: QuestView[]
+  weekly: QuestView[]
+  perDay: number
+  perWeek: number
+  dayKey: string
+  weekKey: string
 }
 
 export interface HabitatArea {

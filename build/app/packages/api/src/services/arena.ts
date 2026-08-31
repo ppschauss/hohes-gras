@@ -14,6 +14,7 @@ import { gameDate } from '../worldClock.js'
 import { beginBattle, forfeit } from './battle.js'
 import * as energy from './energy.js'
 import { capOf } from './travel.js'
+import { bumpMetric } from './progression.js'
 
 interface RunRow {
   gameDate: string
@@ -305,6 +306,9 @@ export function next(ctx: AppContext, trainer: Trainer) {
       const tier = findArenaTier(run.tier)!
       const payout = clearedToday(ctx, trainer.id, tier.id, date) ? null : pay(ctx, trainer, tier, date)
       ctx.db.prepare('UPDATE arena_runs SET wins = ? WHERE trainer_id = ?').run(wins, trainer.id)
+      // Der ganze Durchlauf ist die Einheit, nicht der einzelne Kampf: eine
+      // Aufgabe "fuenf Durchlaeufe" soll fuenf Durchlaeufe heissen.
+      bumpMetric(ctx, trainer.id, 'arenaRuns')
       logEvent(ctx.db, trainer.id, 'arena.cleared', { tier: tier.id, paid: payout !== null })
       return finish(payout)
     }
