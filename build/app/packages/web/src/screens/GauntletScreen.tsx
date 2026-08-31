@@ -145,6 +145,11 @@ export function GauntletScreen({ onBack, onBattle }: { onBack: () => void; onBat
                           <li key={i.itemId} className="loot__row">
                             {i.icon && <img src={i.icon} alt="" width={22} height={22} />}
                             <span className="loot__name">{i.name}</span>
+                            {/* Die Schwelle ist der eigentliche Anreiz: wer bei
+                                zehn aufhoert, sieht nie, was bei fuenfzig liegt. */}
+                            <span className="loot__num num">
+                              {i.from > 0 ? t('gauntlet.dropFrom', { n: i.from }) : t('gauntlet.dropAlways')}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -157,19 +162,35 @@ export function GauntletScreen({ onBack, onBattle }: { onBack: () => void; onBat
                   </button>
                 </section>
 
-                <section className="section">
-                  <h2>{t('gauntlet.milestones')}</h2>
-                  <ul className="loot__list">
-                    {d?.milestones.map((m) => (
-                      <li key={m.at} className="loot__row">
-                        <span className="loot__name num">{m.at}</span>
-                        <span className="loot__num num">
-                          {number(m.gold)} Gold · {m.materials} Werkstoffe
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                {/* Die Stufen der gewaehlten Region, mit den Gegenstaenden
+                    beim Namen. "7 Werkstoffe" sagt nicht, welche — und genau
+                    danach entscheidet man, wie weit man laeuft. */}
+                {aktiv && (
+                  <section className="section">
+                    <h2>{t('gauntlet.milestones')}</h2>
+                    <ul className="stufen">
+                      {aktiv.milestones.map((m) => (
+                        <li key={m.at} className="stufe">
+                          <span className="stufe__at num">{m.at}</span>
+                          <span className="stufe__body">
+                            <span className="stufe__gold num">
+                              {t('gauntlet.milestoneGold', { n: number(m.gold) })}
+                              {m.heals && <> · {t('gauntlet.milestoneHeals')}</>}
+                            </span>
+                            <span className="stufe__items">
+                              {m.items.map((i) => (
+                                <span key={i.itemId} className="stufe__item">
+                                  {i.icon && <img src={i.icon} alt="" width={18} height={18} />}
+                                  <span className="num">{i.quantity}×</span> {i.name}
+                                </span>
+                              ))}
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
               </>
             )}
       </main>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { createRng } from './rng.js'
 import {
   dropsForRegion, gauntletGoldPerWin, gauntletIv, gauntletLevel, gauntletMaxBst,
   GAUNTLET_FULL_HEAL_EVERY, gauntletHeals,
@@ -108,6 +109,35 @@ describe('Kampfzone', () => {
 
     it('gibt bei null nichts', () => {
       expect(splitDrops('kanto', 0)).toEqual([])
+    })
+
+    it('schaltet Sternenstaub erst ab fuenfzig frei', () => {
+      /*
+       * Der zweite Grund weiterzulaufen — neben den Praemien. Vorher hatte
+       * jede Region ihre zwei Sorten von Anfang an, und was bei fuenfzig lag,
+       * unterschied sich von dem bei zehn nur in der Menge.
+       */
+      expect(dropsForRegion('kanto', 0)).not.toContain('star-piece')
+      expect(dropsForRegion('kanto', 49)).not.toContain('star-piece')
+      expect(dropsForRegion('kanto', 50)).toContain('star-piece')
+      // Auch die Praemie einer Stufe kennt die Schwelle.
+      expect(splitDrops('kanto', 7, 25).some((d) => d.itemId === 'star-piece')).toBe(false)
+      expect(splitDrops('kanto', 15, 50).some((d) => d.itemId === 'star-piece')).toBe(true)
+    })
+
+    it('laesst die spaete Sorte selten fallen, nicht gleich haeufig', () => {
+      // Gleichverteilt waere sie nur spaet, nicht selten. Drei gegen zehn und
+      // zehn heisst etwa jeder achte Werkstoffwurf.
+      const zaehler: Record<string, number> = {}
+      for (let i = 0; i < 4000; i++) {
+        for (const d of rollGauntletDrops(createRng(`w${i}`), 'kanto', 50)) {
+          zaehler[d.itemId] = (zaehler[d.itemId] ?? 0) + 1
+        }
+      }
+      const stern = zaehler['star-piece'] ?? 0
+      const eisen = zaehler['iron-shard'] ?? 0
+      expect(stern).toBeGreaterThan(0)
+      expect(stern).toBeLessThan(eisen / 2)
     })
   })
 })

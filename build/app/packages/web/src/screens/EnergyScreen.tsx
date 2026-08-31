@@ -160,7 +160,7 @@ export function EnergyScreen({ onBack }: { onBack: () => void }) {
               </li>
             ))}
           </ul>
-          <p className="explain">{t('energy.explain', { limit: format(d?.toGoldLimit ?? 0) })}</p>
+          <p className="explain">{t('energy.explain', { fill: d?.fillMinutes ?? 0, limit: format(d?.toGoldLimit ?? 0) })}</p>
         </section>
       </main>
     </Screen>

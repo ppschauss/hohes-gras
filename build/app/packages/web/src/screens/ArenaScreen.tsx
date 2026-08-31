@@ -79,7 +79,7 @@ export function ArenaScreen({ onBack, onBattle }: { onBack: () => void; onBattle
             sind vier Kaempfe nicht zu schaffen, und aus dem Kampf kommt man
             nur mit einer Niederlage wieder heraus. */}
         {d && !d.run && d.teamHealth < 60 && (
-          <p className="notice" role="status">{t('arena.hurt', { n: d.teamHealth })}</p>
+          <p className="notice" role="status">{t('arena.hurt', { n: d.teamHealth, heal: d.healPercent })}</p>
         )}
 
         {d?.run

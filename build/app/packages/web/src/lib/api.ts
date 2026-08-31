@@ -1546,15 +1546,19 @@ export interface GauntletView {
     id: string
     name: string
     best: number
-    /** Werkstoffe, die es in dieser Region gibt — der Grund, sie zu wählen. */
-    drops: Array<{ itemId: string; name: string; icon: string }>
+    /** Werkstoffe, die es in dieser Region gibt — mit der Serie, ab der sie fallen. */
+    drops: Array<{ itemId: string; name: string; icon: string; from: number }>
+    /** Was jede Stufe *hier* abwirft. */
+    milestones: Array<{
+      at: number; gold: number; materials: number; heals: boolean
+      items: Array<{ itemId: string; name: string; icon: string; quantity: number }>
+    }>
   }>
   energyCost: number
   /** Alle wie viel Stufen das Team vollstaendig geheilt wird. */
   fullHealEvery: number
   xpMultiplier: number
   averageLevel: number
-  milestones: Array<{ at: number; gold: number; materials: number }>
   run: {
     regionId: string
     regionName: string

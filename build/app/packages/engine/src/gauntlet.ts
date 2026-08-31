@@ -198,16 +198,55 @@ export function gauntletGoldPerWin(streak: number): number {
  * eigene Zuordnung sonst gar keine Beute hätte; `GAUNTLET_DROPS_FALLBACK`
  * fängt jede unbekannte Region auf.
  */
-export const GAUNTLET_DROPS: Record<string, string[]> = {
-  kanto: ['iron-shard', 'soft-sand'],
-  johto: ['silk-thread', 'dew-drop'],
-  hoenn: ['dew-drop', 'star-piece'],
+export interface GauntletDrop {
+  itemId: string
+  /**
+   * Ab welcher Serie diese Sorte ueberhaupt faellt.
+   *
+   * Der zweite Grund, weiterzulaufen — neben den Praemien. Wer bei zehn
+   * aufhoert, sieht nie, was bei fuenfzig liegt.
+   */
+  from: number
+  /** Gewicht unter den bereits freigeschalteten Sorten. */
+  weight: number
 }
 
-export const GAUNTLET_DROPS_FALLBACK = ['iron-shard', 'silk-thread']
+export const GAUNTLET_DROPS: Record<string, GauntletDrop[]> = {
+  kanto: [
+    { itemId: 'iron-shard', from: 0, weight: 10 },
+    { itemId: 'soft-sand', from: 0, weight: 10 },
+    { itemId: 'star-piece', from: 50, weight: 3 },
+  ],
+  johto: [
+    { itemId: 'silk-thread', from: 0, weight: 10 },
+    { itemId: 'dew-drop', from: 0, weight: 10 },
+    { itemId: 'star-piece', from: 50, weight: 3 },
+  ],
+  hoenn: [
+    { itemId: 'dew-drop', from: 0, weight: 10 },
+    { itemId: 'soft-sand', from: 0, weight: 10 },
+    { itemId: 'star-piece', from: 50, weight: 3 },
+  ],
+}
 
-export const dropsForRegion = (regionId: string): string[] =>
+export const GAUNTLET_DROPS_FALLBACK: GauntletDrop[] = [
+  { itemId: 'iron-shard', from: 0, weight: 10 },
+  { itemId: 'silk-thread', from: 0, weight: 10 },
+  { itemId: 'star-piece', from: 50, weight: 3 },
+]
+
+/** Die vollstaendige Tabelle einer Region, mit Schwellen. */
+export const dropTableFor = (regionId: string): GauntletDrop[] =>
   GAUNTLET_DROPS[regionId] ?? GAUNTLET_DROPS_FALLBACK
+
+/**
+ * Welche Sorten bei diesem Stand fallen.
+ *
+ * Ohne Stand die ganze Tabelle: die Regionsauswahl zeigt, was es hier
+ * ueberhaupt gibt, und dort ist die Serie noch keine Zahl.
+ */
+export const dropsForRegion = (regionId: string, streak = Number.POSITIVE_INFINITY): string[] =>
+  dropTableFor(regionId).filter((d) => streak >= d.from).map((d) => d.itemId)
 
 /**
  * Wie sich `materials` einer Stufe auf die Sorten der Region verteilt.
@@ -216,8 +255,10 @@ export const dropsForRegion = (regionId: string): string[] =>
  * Anzeige und Auszahlung dieselbe Rechnung benutzen und nicht auseinander-
  * laufen können.
  */
-export function splitDrops(regionId: string, total: number): Array<{ itemId: string; quantity: number }> {
-  const sorten = dropsForRegion(regionId)
+export function splitDrops(
+  regionId: string, total: number, streak = Number.POSITIVE_INFINITY,
+): Array<{ itemId: string; quantity: number }> {
+  const sorten = dropsForRegion(regionId, streak)
   if (sorten.length === 0 || total <= 0) return []
   const je = Math.floor(total / sorten.length)
   const rest = total - je * sorten.length
@@ -270,14 +311,32 @@ export function rollGauntletDrops(
   }
 
   if (rng.next() < GAUNTLET_MATERIAL_CHANCE) {
-    const sorten = dropsForRegion(regionId)
-    if (sorten.length > 0) {
+    const offen = dropTableFor(regionId).filter((d) => streak >= d.from)
+    if (offen.length > 0) {
       // Mit der Serie etwas mehr, aber flach: die Stufen sollen der grosse
       // Sprung bleiben, der Einzelkampf das stete Rinnsal.
       const menge = 1 + Math.floor(streak / 25)
-      out.push({ itemId: rng.pick(sorten), quantity: rng.int(1, Math.max(1, menge)) })
+      out.push({ itemId: gewichtet(offen, rng), quantity: rng.int(1, Math.max(1, menge)) })
     }
   }
 
   return out
+}
+
+/**
+ * Eine Sorte nach Gewicht ziehen.
+ *
+ * Gleichverteilt waere die spaete Sorte genauso haeufig wie die beiden
+ * Grundsorten — dann waere sie nur spaet, nicht selten. Sternenstaub mit drei
+ * gegen zehn und zehn faellt etwa in jedem achten Werkstoffwurf.
+ */
+function gewichtet(sorten: readonly GauntletDrop[], rng: GauntletDropRoll): string {
+  const summe = sorten.reduce((n, d) => n + Math.max(0, d.weight), 0)
+  if (summe <= 0) return sorten[0]!.itemId
+  let rest = rng.next() * summe
+  for (const d of sorten) {
+    rest -= Math.max(0, d.weight)
+    if (rest < 0) return d.itemId
+  }
+  return sorten[sorten.length - 1]!.itemId
 }

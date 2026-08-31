@@ -6,7 +6,7 @@ import {
   GAUNTLET_XP_MULTIPLIER, gauntletMaxBst, gauntletXpMultiplier, LEGENDARY_CATCH_RATE,
   milestoneAt, nextMilestone,
   rollGauntletDrops,
-  splitDrops, dropsForRegion,
+  splitDrops, dropTableFor,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
@@ -169,20 +169,46 @@ function heal(ctx: AppContext, trainerId: string, percent: number, revive: boole
 
 export function view(ctx: AppContext, trainer: Trainer) {
   const run = runOf(ctx, trainer.id)
+
+  /** Ein Gegenstand mit Namen und Bild, so wie die Anzeige ihn braucht. */
+  const benannt = (itemId: string) => {
+    const item = ctx.registry.tryItem(itemId)
+    return {
+      itemId,
+      name: item ? ctx.registry.localized(item.name, trainer.locale) : itemId,
+      icon: item?.icon ?? '',
+    }
+  }
+
   const regions = openRegions(ctx, trainer).map((id) => {
     const region = ctx.registry.region(id)
     return {
       id,
       name: ctx.registry.localized(region.name, trainer.locale),
       best: bestOf(ctx, trainer.id, id),
-      drops: dropsForRegion(id).map((itemId) => {
-        const item = ctx.registry.tryItem(itemId)
-        return {
-          itemId,
-          name: item ? ctx.registry.localized(item.name, trainer.locale) : itemId,
-          icon: item?.icon ?? '',
-        }
-      }),
+      /*
+       * Die ganze Tabelle, samt Schwelle.
+       *
+       * "Ab fuenfzig faellt hier auch Sternenstaub" ist der zweite Grund
+       * weiterzulaufen — neben den Praemien. Er nuetzt aber nur, wenn er
+       * vorher dasteht und nicht erst, wenn man zufaellig so weit kommt.
+       */
+      drops: dropTableFor(id).map((d) => ({ ...benannt(d.itemId), from: d.from })),
+      /*
+       * Was jede Stufe *hier* abwirft.
+       *
+       * Je Region, nicht global: die Werkstoffe unterscheiden sich, und ab
+       * fuenfzig kommt eine Sorte dazu. Gerechnet mit derselben Funktion wie
+       * die Auszahlung, damit Anzeige und Wirklichkeit nicht auseinanderlaufen.
+       */
+      milestones: GAUNTLET_MILESTONES.map((m) => ({
+        at: m.at,
+        gold: m.gold,
+        materials: m.materials,
+        heals: m.at % GAUNTLET_FULL_HEAL_EVERY === 0,
+        items: splitDrops(id, m.materials, m.at)
+          .map((dd) => ({ ...benannt(dd.itemId), quantity: dd.quantity })),
+      })),
     }
   })
 
@@ -194,7 +220,6 @@ export function view(ctx: AppContext, trainer: Trainer) {
     // eine feste Zahl hier die falsche Auskunft.
     xpMultiplier: Math.round(gauntletXpMultiplier(run?.streak ?? 0) * 100) / 100,
     averageLevel: Math.round(averageLevel(ctx, trainer.id)),
-    milestones: GAUNTLET_MILESTONES.map((m) => ({ ...m })),
     run: run
       ? {
           regionId: run.regionId,
@@ -413,7 +438,8 @@ function recordBest(ctx: AppContext, trainerId: string, regionId: string, streak
 
 function pay(ctx: AppContext, trainer: Trainer, regionId: string, stufe: typeof GAUNTLET_MILESTONES[number]): GauntletPayout {
   inventory.earnGold(ctx.db, trainer.id, stufe.gold)
-  const items = splitDrops(regionId, stufe.materials).flatMap((d) => {
+  // Mit dem Stand der Stufe: ab fuenfzig gehoert Sternenstaub dazu.
+  const items = splitDrops(regionId, stufe.materials, stufe.at).flatMap((d) => {
     const item = ctx.registry.tryItem(d.itemId)
     if (!item) return []
     inventory.grant(ctx.db, trainer.id, d.itemId, d.quantity)

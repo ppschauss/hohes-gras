@@ -38,7 +38,17 @@ describe('Antreten', () => {
     expect(r.body.regions.length).toBeGreaterThan(0)
     expect(r.body.regions[0].drops.length).toBeGreaterThan(0)
     expect(r.body.run).toBeNull()
-    expect(r.body.milestones.map((m: any) => m.at)).toEqual(GAUNTLET_MILESTONES.map((m) => m.at))
+    // Die Stufen haengen an der Region: die Werkstoffe unterscheiden sich, und
+    // ab fuenfzig kommt eine Sorte dazu.
+    const stufen = r.body.regions[0].milestones
+    expect(stufen.map((m: any) => m.at)).toEqual(GAUNTLET_MILESTONES.map((m) => m.at))
+    // Jede Stufe nennt ihre Gegenstaende beim Namen, nicht nur ihre Anzahl.
+    for (const m of stufen) {
+      expect(m.items.length).toBeGreaterThan(0)
+      expect(m.items.reduce((n: number, i: any) => n + i.quantity, 0)).toBe(m.materials)
+    }
+    // Erholung nur an den Vielfachen von fuenfundzwanzig.
+    expect(stufen.filter((m: any) => m.heals).map((m: any) => m.at)).toEqual([25, 50, 100])
   })
 
   it('kostet die Energie einmal, nicht je Kampf', async () => {
