@@ -256,7 +256,11 @@ export function explore(
     // Nur in einer Region, die vollstaendig bezwungen ist — sonst waere es
     // eine Abkuerzung statt einer Belohnung.
     if (forced.legendary || (clearedRegions(ctx, trainer).has(area.regionId) && rollLegendary(rng))) {
-      const legendary = pickLegendary(ctx, rng)
+      // Der Prueflduft darf nicht ins Leere laufen: hat die Region selbst
+      // keines, nimmt er eines aus dem Paket. Beim Zufallstreffer bleibt es
+      // bei der Region — sonst waere die Bindung wieder nur Zierde.
+      const legendary = pickLegendary(ctx, area.regionId, rng)
+        ?? (forced.legendary ? pickAnyLegendary(ctx, rng) : null)
       if (legendary) {
         const level = Math.min(100, (rolled?.level ?? 60) + LEGENDARY_LEVEL_BONUS)
         dex.markSeen(ctx.db, trainer.id, legendary)
@@ -628,26 +632,36 @@ function useLure(
 
 /** Irgendein Legendaeres des Packs — die Notloesung des Prueflufts. */
 /**
- * Irgendein Legendaeres aus dem Paket.
+ * Ein Legendaeres dieser Region.
  *
- * Frueher suchte diese Stelle nach Region: Legendaere haben keine
- * Spawn-Eintraege, also wurde ueber die Dex-Nummern geschlossen, welche zu
- * einer Region gehoeren. Das hat nie funktioniert. Die Prisma-Glumanda-Linie
- * traegt die Nummern 9002 bis 9004 und kommt in jeder Region vor — damit
- * reichte jede Regionsspanne bis 9002, und jede Region lieferte alle
- * einundzwanzig. Die Regionsbindung war Zierde, genau das, was der alte
- * Kommentar ausschliessen wollte.
+ * Die Liste steht im Paket, ausgeschrieben. Hergeleitet wurde sie schon
+ * einmal — aus der Spanne der Dex-Nummern, die in den Gebieten der Region
+ * vorkommen — und das konnte nie funktionieren: Legendaere tragen die
+ * hoechsten Nummern ihrer Generation und liegen damit immer *ausserhalb*
+ * dessen, was gewoehnliche Wildbegegnungen aufspannen. Kanto reichte bis
+ * Dragonir 148 und verlor Mewtu und Mew; Hoenn reichte bis Metagross 376 und
+ * verlor alle zehn. Unbemerkt blieb es nur, weil die Prisma-Linie mit Nummer
+ * 9002 in jeder Region steht und die Spanne ins Absurde zog — wodurch
+ * versehentlich wieder alles ueberall erschien.
  *
- * Sie zu reparieren waere schlimmer als sie zu streichen: ohne die Ausreisser
- * reicht die weiteste Spanne bis 376, und die zehn Legendaeren darueber —
- * Regirock bis Deoxys — waeren wieder unerreichbar. Genau dieser Fehler war
- * schon einmal gemeldet.
- *
- * Also die ehrliche Fassung: wer eine Region vollstaendig bezwungen hat, kann
- * jedem Legendaeren begegnen. Fuer alle dieselbe Bedingung — ein Promille je
- * Erkundung, bei jedem Wetter, zu jeder Zeit.
+ * Was nicht herleitbar ist, wird aufgeschrieben. Die Bedingung bleibt fuer
+ * alle dieselbe: ein Promille je Erkundung, jedes Wetter, jede Zeit.
  */
-function pickLegendary(ctx: AppContext, rng: Rng): string | null {
+function pickLegendary(ctx: AppContext, regionId: string, rng: Rng): string | null {
+  const region = ctx.registry.allRegions.find((r) => r.id === regionId)
+  // Die Liste steht im Paket; hier wird nur nachgeschlagen, ob es die Art
+  // wirklich gibt und ob sie legendaer ist. Beides pruefte schon der Lader —
+  // ein Paket, das ohne ihn hereinkommt, soll trotzdem nicht abstuerzen.
+  const candidates = (region?.legendarySpeciesIds ?? [])
+    .flatMap((id: string) => {
+      const sp = ctx.registry.trySpecies(id)
+      return sp && isLegendarySpecies(sp) ? [sp] : []
+    })
+  return candidates.length > 0 ? rng.pick(candidates).id : null
+}
+
+/** Notnagel fuer den Prueflduft: irgendeines aus dem ganzen Paket. */
+function pickAnyLegendary(ctx: AppContext, rng: Rng): string | null {
   const candidates = ctx.registry.obtainableSpecies.filter(isLegendarySpecies)
   return candidates.length > 0 ? rng.pick(candidates).id : null
 }

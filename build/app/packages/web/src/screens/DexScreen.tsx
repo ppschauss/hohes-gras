@@ -116,7 +116,13 @@ function Habitat({ speciesId, onClose }: { speciesId: string; onClose: () => voi
       </div>
 
       {habitat.loading && !d && <div className="skeleton skeleton--row" />}
-      {d && d.areas.length === 0 && <p className="center__body">{t('dex.whereNone')}</p>}
+      {/* Ein Legendaeres steht in keiner Spawn-Tabelle. "Kommt nirgends vor"
+          waere hier die falscheste aller Auskuenfte — es kommt ueberall in
+          seiner Region vor, nur selten und erst nach ihr. */}
+      {d && d.areas.length === 0 && d.legendaryRegion && (
+        <p className="center__body">{t('dex.whereLegendary', { region: d.legendaryRegion })}</p>
+      )}
+      {d && d.areas.length === 0 && !d.legendaryRegion && <p className="center__body">{t('dex.whereNone')}</p>}
 
       <ul className="habitat__list">
         {(d?.areas ?? []).map((a) => (

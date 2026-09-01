@@ -363,6 +363,7 @@
   "dex.unknown": "???",
   "dex.where": "Wo findet man {name}?",
   "dex.whereChance": "{n} %",
+  "dex.whereLegendary": "Ein Legendäres — es kann überall in {region} auftauchen, aber nur mit 0,1 % je Erkundung und erst, wenn du die Region durchgespielt hast. Zum Fangen brauchst du Sagenbeeren; der Ball ist egal.",
   "dex.whereLevel": "Lv. {from}–{to}",
   "dex.whereLoading": "Fundorte",
   "dex.whereNone": "In freier Wildbahn kommt diese Art nirgends vor — sie schlüpft aus einem Ei, entwickelt sich, oder gehört zu einem Ereignis.",

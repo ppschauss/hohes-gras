@@ -422,6 +422,19 @@ export const RegionDefSchema = z.object({
    *  Startregion frei wählbar ist, gehört die Wahl des ersten Partners zur
    *  Region — sonst begänne man Hoenn mit einem Kanto-Starter. */
   starterSpeciesIds: z.array(Id).default([]),
+  /*
+   * Welche Legendaeren hier zu finden sind.
+   *
+   * Eine ausgeschriebene Liste, kein Schluss aus Dex-Nummern. Der Versuch, es
+   * herzuleiten, ist gescheitert und musste scheitern: Legendaere tragen die
+   * hoechsten Nummern ihrer Generation, also liegen sie immer *ausserhalb* der
+   * Spanne, die gewoehnliche Wildbegegnungen aufspannen. Kanto reichte bis
+   * Dragonir 148 und verlor damit Mewtu und Mew.
+   *
+   * Leer heisst: diese Region hat keine. Der Prueflduft weicht dann auf das
+   * ganze Paket aus, damit er nicht ins Leere laeuft.
+   */
+  legendarySpeciesIds: z.array(Id).default([]),
 })
 export type RegionDef = z.infer<typeof RegionDefSchema>
 

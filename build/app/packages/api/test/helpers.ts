@@ -131,7 +131,10 @@ function writeMinimalPack(dataDir: string): void {
     { id: 'silk-thread', name: { de: 'Seidenfaden' }, description: { de: 'Faden.' }, category: 'material', price: null, sellPrice: 20, icon: '/media/silk.png' },
   ])
   put('regions.json', [
-    { id: 'testland', order: 1, name: { de: 'Testland' }, tagline: { de: 'Test' } },
+    // Sagenmon gehoert nach Testland. Nicht nur Beiwerk: der Lader besteht
+    // darauf, dass jedes Legendaere eine Region hat — genau die Pruefung, die
+    // verhindert, dass wieder zehn Arten unerreichbar werden.
+    { id: 'testland', order: 1, name: { de: 'Testland' }, tagline: { de: 'Test' }, legendarySpeciesIds: ['sagenmon'] },
     // Zweite Region, bewusst weit oben entworfen: nur mit ihr laesst sich
     // pruefen, dass eine Region ihren Besucher empfaengt statt ihn auszusperren
     // — und dass sie danach nicht mit ihm mitwaechst.

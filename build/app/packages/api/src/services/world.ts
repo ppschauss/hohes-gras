@@ -1,6 +1,6 @@
 import { GameError, type Trainer } from '@game/shared'
 import type { AreaDef } from '@game/content'
-import { areaBand, availableSpawns, shiftLevel } from '@game/engine'
+import { areaBand, availableSpawns, isLegendarySpecies, shiftLevel } from '@game/engine'
 import type { AppContext } from '../context.js'
 import * as world from '../repos/world.js'
 import * as dex from '../repos/dex.js'
@@ -367,7 +367,7 @@ export function habitatsOf(ctx: AppContext, trainer: Trainer, speciesId: string)
   const species = ctx.registry.trySpecies(speciesId)
   if (!species) throw new GameError('not_found', { speciesId }, 404)
   if (!entry) {
-    return { speciesId, known: false, name: null, sprite: null, areas: [] as HabitatArea[] }
+    return { speciesId, known: false, name: null, sprite: null, areas: [] as HabitatArea[], legendaryRegion: null }
   }
 
   const clock = worldClock()
@@ -399,12 +399,25 @@ export function habitatsOf(ctx: AppContext, trainer: Trainer, speciesId: string)
   }
   areas.sort((a, b) => b.chance - a.chance)
 
+  /*
+   * Legendaere stehen in keiner Spawn-Tabelle.
+   *
+   * Der Pokedex sagte deshalb, sie kaemen "in freier Wildbahn nirgends vor" —
+   * was gerade fuer sie am wenigsten stimmt. Sie kommen ueberall in ihrer
+   * Region vor, nur mit einem Promille und erst, wenn die Region bezwungen
+   * ist. Das ist eine Auskunft, keine Fehlanzeige.
+   */
+  const heimat = isLegendarySpecies(species)
+    ? ctx.registry.allRegions.find((r) => r.legendarySpeciesIds.includes(speciesId)) ?? null
+    : null
+
   return {
     speciesId,
     known: true,
     name: ctx.registry.localized(species.name, trainer.locale),
     sprite: entry.caughtAt ? species.sprite : species.sprite,
     areas,
+    legendaryRegion: heimat ? ctx.registry.localized(heimat.name, trainer.locale) : null,
   }
 }
 

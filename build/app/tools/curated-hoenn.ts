@@ -22,6 +22,10 @@ export const HOENN_REGION = {
   name: { de: 'Hoenn' },
   tagline: { de: 'Zwischen Vulkan und Tiefsee.' },
   starterSpeciesIds: ['treecko', 'torchic', 'mudkip'],
+  legendarySpeciesIds: [
+    'regirock', 'regice', 'registeel', 'latias', 'latios',
+    'kyogre', 'groudon', 'rayquaza', 'jirachi', 'deoxys',
+  ],
 }
 
 export const HOENN_BADGES = [

@@ -803,6 +803,9 @@ export interface HabitatView {
   name: string | null
   sprite: string | null
   areas: HabitatArea[]
+  /** Bei einem Legendaeren seine Heimatregion; sonst null. Es steht in keiner
+   *  Spawn-Tabelle, hat aber sehr wohl einen Fundort. */
+  legendaryRegion: string | null
 }
 
 export interface BoardingEntry {

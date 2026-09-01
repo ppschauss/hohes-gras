@@ -235,6 +235,7 @@ async function main(): Promise<void> {
       'Nur für den privaten Betrieb. Nicht öffentlich verteilen.',
     defaultLocale: 'de',
     starterSpeciesIds: ['bulbasaur', 'charmander', 'squirtle'],
+    legendarySpeciesIds: ['articuno', 'zapdos', 'moltres', 'mewtwo', 'mew'],
     startingArea: 'route-1',
   })
 

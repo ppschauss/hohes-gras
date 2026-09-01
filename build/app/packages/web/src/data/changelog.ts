@@ -22,7 +22,9 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
-      'Legendäre sind ausdrücklich nicht mehr an eine Region gebunden: wer eine Region durchgespielt hat, kann jedem der 21 begegnen. So war es schon — nur behauptete der Code das Gegenteil, und wer es „repariert“ hätte, hätte zehn davon wieder unerreichbar gemacht.',
+      'Legendäre gehören wieder in ihre Heimatregion: Kanto hat Arktos, Zapdos, Lavados, Mewtu und Mew; Johto die Hundetrios, Lugia, Ho-Oh und Celebi; Hoenn die restlichen zehn. Die Bedingung bleibt für alle gleich — 0,1 % je Erkundung, jedes Wetter, jede Tageszeit, Sagenbeeren zum Fangen und der Ball egal.',
+      'Welche Legendären wo vorkommen, stand nirgends — es wurde aus Dex-Nummern geraten. Das konnte nie funktionieren: Legendäre tragen die höchsten Nummern ihrer Generation und lagen damit immer außerhalb. Jetzt steht die Liste im Pack, und ein Legendäres ohne Fundort lässt das Spiel gar nicht erst starten.',
+      'Der Pokédex sagte bei Legendären „kommt in freier Wildbahn nirgends vor“. Er nennt jetzt die Region und die Bedingung.',
       'Keine einzige Attacke ohne Wirkung mehr. Von 296 Statuszügen taten anfangs 117 nichts — jetzt keiner. Was blieb, hat entweder eine Wirkung bekommen oder das Spiel verlassen, weil es Fähigkeiten, Tragegegenstände oder Doppelkämpfe bräuchte.',
       'Zuletzt dazugekommen: Delegator, Wandler, Metronom, Spiegeltrick, Egotrip, Imitator, Schlafrede, Natur-Kraft, Mimikry, Nachahmer, Überflutung, Umwandlung, Typenspiegel, Tarnung, Magiemantel, Erdanziehung, Wunderraum und Plasmaschauer.',
       'Einstiegsfallen: Stachler, Giftspitzen, Tarnsteine und Klebenetz erwarten jeden, der neu ins Feld kommt. Fliegende gehen über die meisten hinweg, ein Giftpokémon räumt die Giftspitzen auf.',

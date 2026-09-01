@@ -40,6 +40,9 @@ export const REGIONS = [
   {
     id: 'kanto', order: 1, name: { de: 'Kanto' }, tagline: { de: 'Wo jede Reise beginnt.' },
     starterSpeciesIds: ['bulbasaur', 'charmander', 'squirtle'],
+    // Die fuenf aus der ersten Generation. Ausgeschrieben, weil es sich nicht
+    // herleiten laesst: siehe `legendarySpeciesIds` im Schema.
+    legendarySpeciesIds: ['articuno', 'zapdos', 'moltres', 'mewtwo', 'mew'],
   },
 ]
 

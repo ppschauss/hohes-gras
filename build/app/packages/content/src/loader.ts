@@ -127,6 +127,30 @@ export function crossValidate(pack: ContentPack): string[] {
     if (a.spawns.reduce((sum, sp) => sum + sp.weight, 0) <= 0) issues.push(`area/${a.id}: Spawn-Gewichte summieren sich zu 0`)
   }
 
+  /*
+   * Jedes Legendaere braucht eine Region, und keines zwei.
+   *
+   * Genau hier lag der Fehler, der zweimal auftrat: zehn Arten gehoerten zu
+   * keinem Fundort und waren damit unerreichbar, ohne dass irgendetwas
+   * schiefging. Ein Pack, das eines vergisst, laedt jetzt nicht mehr.
+   */
+  const zugeordnet = new Map<string, string[]>()
+  for (const r of pack.regions.values()) {
+    for (const id of r.legendarySpeciesIds) {
+      if (!has(pack.species, id)) issues.push(`region/${r.id}: unbekannte Art "${id}" in legendarySpeciesIds`)
+      else if (pack.species.get(id)!.rarity !== 'legendary') issues.push(`region/${r.id}: "${id}" ist nicht legendaer`)
+      zugeordnet.set(id, [...(zugeordnet.get(id) ?? []), r.id])
+    }
+  }
+  for (const [id, regionen] of zugeordnet) {
+    if (regionen.length > 1) issues.push(`species/${id}: in mehreren Regionen legendaer (${regionen.join(', ')})`)
+  }
+  for (const s of pack.species.values()) {
+    if (s.rarity === 'legendary' && !s.event && !zugeordnet.has(s.id)) {
+      issues.push(`species/${s.id}: legendaer, aber in keiner Region zu finden`)
+    }
+  }
+
   for (const t of pack.types.values()) {
     const row = pack.typeChart[t.id]
     if (!row) issues.push(`type-chart: Zeile für "${t.id}" fehlt`)

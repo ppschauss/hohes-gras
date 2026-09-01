@@ -13,6 +13,7 @@ export const JOHTO_REGION = {
   name: { de: 'Johto' },
   tagline: { de: 'Alte Türme, neue Namen.' },
   starterSpeciesIds: ['chikorita', 'cyndaquil', 'totodile'],
+  legendarySpeciesIds: ['raikou', 'entei', 'suicune', 'lugia', 'ho-oh', 'celebi'],
 }
 
 export const JOHTO_BADGES = [
