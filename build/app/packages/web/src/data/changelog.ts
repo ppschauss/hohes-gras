@@ -22,6 +22,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Legendäre sind ausdrücklich nicht mehr an eine Region gebunden: wer eine Region durchgespielt hat, kann jedem der 21 begegnen. So war es schon — nur behauptete der Code das Gegenteil, und wer es „repariert“ hätte, hätte zehn davon wieder unerreichbar gemacht.',
       'Keine einzige Attacke ohne Wirkung mehr. Von 296 Statuszügen taten anfangs 117 nichts — jetzt keiner. Was blieb, hat entweder eine Wirkung bekommen oder das Spiel verlassen, weil es Fähigkeiten, Tragegegenstände oder Doppelkämpfe bräuchte.',
       'Zuletzt dazugekommen: Delegator, Wandler, Metronom, Spiegeltrick, Egotrip, Imitator, Schlafrede, Natur-Kraft, Mimikry, Nachahmer, Überflutung, Umwandlung, Typenspiegel, Tarnung, Magiemantel, Erdanziehung, Wunderraum und Plasmaschauer.',
       'Einstiegsfallen: Stachler, Giftspitzen, Tarnsteine und Klebenetz erwarten jeden, der neu ins Feld kommt. Fliegende gehen über die meisten hinweg, ein Giftpokémon räumt die Giftspitzen auf.',

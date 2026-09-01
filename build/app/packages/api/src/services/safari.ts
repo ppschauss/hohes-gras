@@ -256,11 +256,7 @@ export function explore(
     // Nur in einer Region, die vollstaendig bezwungen ist — sonst waere es
     // eine Abkuerzung statt einer Belohnung.
     if (forced.legendary || (clearedRegions(ctx, trainer).has(area.regionId) && rollLegendary(rng))) {
-      // Der Prueflduft darf nicht ins Leere laufen: hat die Region selbst kein
-      // Legendaeres, nimmt er eines aus dem Pack. Beim Zufallstreffer bleibt
-      // es bei der Region — sonst waere die Regionsbindung nur Zierde.
-      const legendary = pickLegendary(ctx, area.regionId, rng)
-        ?? (forced.legendary ? pickAnyLegendary(ctx, rng) : null)
+      const legendary = pickLegendary(ctx, rng)
       if (legendary) {
         const level = Math.min(100, (rolled?.level ?? 60) + LEGENDARY_LEVEL_BONUS)
         dex.markSeen(ctx.db, trainer.id, legendary)
@@ -359,32 +355,6 @@ export function explore(
       lure: lureUsed.current,
     }
   })
-}
-
-/**
- * Ein Legendaeres der Region.
- *
- * Welche das sind, steht nicht in einer Liste, sondern folgt aus dem Pack:
- * Legendaere haben die niedrigste Fangrate, und zu welcher Region sie gehoeren,
- * sagt ihre Dex-Nummer im Vergleich zu dem, was in der Region sonst vorkommt.
- * Damit funktioniert es auch fuer eine dritte Region, die niemand hier
- * eingetragen hat.
- */
-function pickLegendary(ctx: AppContext, regionId: string, rng: Rng): string | null {
-  const inRegion = new Set(
-    ctx.registry.allAreas.filter((a) => a.regionId === regionId).flatMap((a) => a.spawns.map((sp) => sp.speciesId)),
-  )
-  const numbers = [...inRegion]
-    .map((id) => ctx.registry.trySpecies(id)?.dexNumber)
-    .filter((n): n is number => typeof n === 'number')
-  if (numbers.length === 0) return null
-  const low = Math.min(...numbers)
-  const high = Math.max(...numbers)
-
-  const candidates = ctx.registry.obtainableSpecies.filter(
-    (sp) => isLegendarySpecies(sp) && sp.dexNumber >= low && sp.dexNumber <= high,
-  )
-  return candidates.length > 0 ? rng.pick(candidates).id : null
 }
 
 /** Der Ereignis-Gegner der Region, falls das Pack einen mitbringt. */
@@ -657,7 +627,27 @@ function useLure(
 }
 
 /** Irgendein Legendaeres des Packs — die Notloesung des Prueflufts. */
-function pickAnyLegendary(ctx: AppContext, rng: Rng): string | null {
+/**
+ * Irgendein Legendaeres aus dem Paket.
+ *
+ * Frueher suchte diese Stelle nach Region: Legendaere haben keine
+ * Spawn-Eintraege, also wurde ueber die Dex-Nummern geschlossen, welche zu
+ * einer Region gehoeren. Das hat nie funktioniert. Die Prisma-Glumanda-Linie
+ * traegt die Nummern 9002 bis 9004 und kommt in jeder Region vor — damit
+ * reichte jede Regionsspanne bis 9002, und jede Region lieferte alle
+ * einundzwanzig. Die Regionsbindung war Zierde, genau das, was der alte
+ * Kommentar ausschliessen wollte.
+ *
+ * Sie zu reparieren waere schlimmer als sie zu streichen: ohne die Ausreisser
+ * reicht die weiteste Spanne bis 376, und die zehn Legendaeren darueber —
+ * Regirock bis Deoxys — waeren wieder unerreichbar. Genau dieser Fehler war
+ * schon einmal gemeldet.
+ *
+ * Also die ehrliche Fassung: wer eine Region vollstaendig bezwungen hat, kann
+ * jedem Legendaeren begegnen. Fuer alle dieselbe Bedingung — ein Promille je
+ * Erkundung, bei jedem Wetter, zu jeder Zeit.
+ */
+function pickLegendary(ctx: AppContext, rng: Rng): string | null {
   const candidates = ctx.registry.obtainableSpecies.filter(isLegendarySpecies)
   return candidates.length > 0 ? rng.pick(candidates).id : null
 }
