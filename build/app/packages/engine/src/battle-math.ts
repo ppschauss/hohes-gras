@@ -1,6 +1,6 @@
 import type { StatBlock, Weather } from '@game/shared'
 import type { MoveDef } from '@game/content'
-import type { Fighter, StageKey, Stages, Status } from './battle-types.js'
+import type { Fighter, StageKey, Stages, Status, TerrainKind } from './battle-types.js'
 import type { Rng } from './rng.js'
 import { clamp } from './stats.js'
 
@@ -71,6 +71,14 @@ export function computeDamage(
   effectiveness: number,
   weather: Weather,
   rng: Rng,
+  /*
+   * Was ausserhalb der beiden Kaempfer liegt.
+   *
+   * Wahlfrei und hinten angehaengt, damit jeder bestehende Aufruf unveraendert
+   * gueltig bleibt: die Formel rechnet mit zwei Pokemon, und alles, was das
+   * Feld beisteuert, ist ein Zuschlag darauf — kein neuer Rechenweg.
+   */
+  feld: { noCrit?: boolean; terrain?: TerrainKind | null } = {},
 ): DamageResult {
   if (move.category === 'status' || move.power <= 0) {
     return { amount: 0, effectiveness: 1, critical: false, immune: false }
@@ -85,8 +93,9 @@ export function computeDamage(
    * hat. Energiefokus hebt sie fuer den ganzen Kampf, Konzentration verspricht
    * genau einen sicheren Treffer — und wird dabei verbraucht.
    */
-  const critical = attacker.sureCrit === true
-    || rng.next() < (CRIT_CHANCE[clamp(move.critRate + (attacker.critStage ?? 0), 0, 3)] ?? CRIT_CHANCE[0]!)
+  const critical = !feld.noCrit
+    && (attacker.sureCrit === true
+      || rng.next() < (CRIT_CHANCE[clamp(move.critRate + (attacker.critStage ?? 0), 0, 3)] ?? CRIT_CHANCE[0]!))
 
   // A critical hit ignores the defender's positive defense stages and the
   // attacker's negative offense stages — otherwise a crit against a boosted
@@ -103,10 +112,29 @@ export function computeDamage(
   const stab = attacker.types.includes(move.type) ? 1.5 : 1
   const critMult = critical ? 1.5 : 1
   const weatherMult = weatherModifier(move.type, weather)
+  const terrainMult = terrainModifier(move.type, feld.terrain)
   const spread = rng.int(85, 100) / 100
 
-  const amount = Math.max(1, Math.floor(base * stab * effectiveness * critMult * weatherMult * spread))
+  const amount = Math.max(
+    1,
+    Math.floor(base * stab * effectiveness * critMult * weatherMult * terrainMult * spread),
+  )
   return { amount, effectiveness, critical, immune: false }
+}
+
+/**
+ * Was der Boden zum Schaden beitraegt.
+ *
+ * Dieselbe Groessenordnung wie das Wetter und aus demselben Grund: ein Feld
+ * soll eine Entscheidung faerben, nicht sie treffen. Nebelfeld halbiert
+ * Drachenzuege — das ist der einzige Abzug, und er ist der Sinn des Zuges.
+ */
+export function terrainModifier(moveType: string, terrain: TerrainKind | null | undefined): number {
+  if (!terrain) return 1
+  if (terrain === 'grassy' && moveType === 'grass') return 1.3
+  if (terrain === 'electric' && moveType === 'electric') return 1.3
+  if (terrain === 'misty' && moveType === 'dragon') return 0.5
+  return 1
 }
 
 /** Weather nudges two type families. Small on purpose: it should reward

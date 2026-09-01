@@ -51,11 +51,29 @@ const MOVES: Record<string, MoveDef> = {
   'psych-up': mv('psych-up', 'normal', 'status', 0, 100, 10, { kind: 'copy_stages' }, 100),
   // Regentanz: stellt das Wetter um, sonst nichts.
   'rain-dance': mv('rain-dance', 'water', 'status', 0, 100, 5, { kind: 'weather', weather: 'rain' }, 100),
+  earthquake: mv('earthquake', 'ground', 'physical', 100, 100, 10),
+  // Was auf dem Boden liegt, gehoert keiner Seite — daher `field`.
+  'grassy-terrain': ziel(mv('grassy-terrain', 'grass', 'status', 0, 100, 10, { kind: 'terrain', terrain: 'grassy' }, 100), 'field'),
+  'misty-terrain': ziel(mv('misty-terrain', 'fairy', 'status', 0, 100, 10, { kind: 'terrain', terrain: 'misty' }, 100), 'field'),
+  'electric-terrain': ziel(mv('electric-terrain', 'electric', 'status', 0, 100, 10, { kind: 'terrain', terrain: 'electric' }, 100), 'field'),
+  // Vorrang -6 wie im Vorbild: erst einstecken, dann hinausdraengen.
+  whirlwind: mv('whirlwind', 'normal', 'status', 0, 100, 20, { kind: 'force_switch' }, 100, 0, -6),
+  splash: ziel(mv('splash', 'normal', 'status', 0, 100, 40, { kind: 'nothing' }, 100)),
+  'magnet-rise': ziel(mv('magnet-rise', 'electric', 'status', 0, 100, 10, { kind: 'lingering', effect: 'magnet_rise', turns: 5 }, 100)),
+  'lucky-chant': ziel(mv('lucky-chant', 'normal', 'status', 0, 100, 30, { kind: 'side_condition', condition: 'lucky_chant', turns: 5 }, 100)),
+  'lock-on': ziel(mv('lock-on', 'normal', 'status', 0, 100, 5, { kind: 'lingering', effect: 'sure_hit', turns: 2 }, 100)),
+  foresight: mv('foresight', 'normal', 'status', 0, 100, 40, { kind: 'lingering', effect: 'vulnerable' }, 100),
   // Traumfresser: hohe Staerke, halbes Aussaugen — und nur gegen Schlafende.
   'dream-eater': {
     ...mv('dream-eater', 'normal', 'special', 100, 100, 15, { kind: 'drain', ratio: 0.5 }, 100),
     requiresTargetStatus: 'sleep',
   } as MoveDef,
+}
+
+/** Ein Zug, der nicht auf den Gegenueber zielt. Bewusst eine Funktion und
+ *  keine Konstante: `MOVES` steht darueber und braucht sie schon. */
+function ziel(m: MoveDef, target: 'self' | 'field' = 'self'): MoveDef {
+  return { ...m, target }
 }
 
 function mv(
@@ -896,5 +914,148 @@ describe('Zuege nur in der ersten Runde', () => {
     state = resolveTurn(state, { kind: 'switch', partyIndex: 1 }, useMove(), content).state
     const after = resolveTurn(state, useMove(), useMove(), content)
     expect(after.events.some((e) => e.type === 'move_failed')).toBe(false)
+  })
+})
+
+describe('Was auf dem Boden liegt', () => {
+  /*
+   * Grasfeld allein stand in 19 Attackenplaetzen und tat nichts — von allen
+   * wirkungslosen Statuszuegen war es der meistgelernte. Ein Feld gehoert
+   * keiner Seite: es heilt beide, es schuetzt beide, und genau das ist der
+   * Unterschied zu einem Schirm.
+   */
+  it('heilt am Rundenende beide Seiten', () => {
+    const a = fighter('gras', ['grass'], 20, ['grassy-terrain', 'splash'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const start = battle([a], [b])
+    start.sides[0]!.party[0]!.hp = 10
+    start.sides[1]!.party[0]!.hp = 10
+
+    const runde = resolveTurn(start, useMove(), useMove(), content)
+
+    expect(runde.state.terrain).toEqual({ kind: 'grassy', turns: 4 })
+    expect(runde.events.filter((e) => e.type === 'heal')).toHaveLength(2)
+  })
+
+  it('verfliegt nach fuenf Runden', () => {
+    const a = fighter('gras', ['grass'], 20, ['grassy-terrain', 'splash'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    let lauf = resolveTurn(battle([a], [b]), useMove(0), useMove(), content)
+    // Ab hier platschert er nur noch, sonst stellt er das Feld jede Runde neu.
+    for (let i = 0; i < 4; i++) lauf = resolveTurn(lauf.state, useMove(1), useMove(), content)
+
+    expect(lauf.state.terrain).toBeNull()
+    expect(lauf.events.some((e) => e.type === 'terrain' && e.terrain === null)).toBe(true)
+  })
+
+  it('haelt im Nebel jeden Zustand ab', () => {
+    const a = fighter('nebel', ['fairy'], 20, ['misty-terrain', 'sleep-powder'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const erste = resolveTurn(battle([a], [b]), useMove(0), useMove(), content)
+    const zweite = resolveTurn(erste.state, useMove(1), useMove(), content)
+
+    expect(zweite.state.sides[1]!.party[0]!.status).toBe('none')
+    expect(zweite.events.some((e) => e.type === 'blocked' && e.by === 'terrain')).toBe(true)
+  })
+
+  it('haelt im Strom nur den Schlaf ab', () => {
+    /*
+     * Der Unterschied ist der Sinn der beiden Felder: Nebel nimmt alles,
+     * Strom nur das Einschlafen. Ein Test, der nur das Blockieren prueft,
+     * waere von einem zu strengen Feld nicht zu unterscheiden.
+     */
+    const a = fighter('strom', ['electric'], 20, ['electric-terrain', 'sleep-powder', 'ember'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const erste = resolveTurn(battle([a], [b]), useMove(0), useMove(), content)
+    const schlaf = resolveTurn(erste.state, useMove(1), useMove(), content)
+    expect(schlaf.state.sides[1]!.party[0]!.status).toBe('none')
+
+    const brand = resolveTurn(schlaf.state, useMove(2), useMove(), content)
+    expect(brand.state.sides[1]!.party[0]!.status).toBe('burn')
+  })
+})
+
+describe('Jemanden aus dem Kampf draengen', () => {
+  it('tauscht den Gegner gegen jemanden von der Bank', () => {
+    const a = fighter('wind', ['normal'], 20, ['whirlwind'], 80)
+    const erster = fighter('vorne', ['normal'], 20, ['splash'], 60)
+    const zweiter = fighter('bank', ['normal'], 20, ['splash'], 60)
+    const runde = resolveTurn(battle([a], [erster, zweiter]), useMove(), useMove(), content)
+
+    expect(runde.state.sides[1]!.activeIndex).toBe(1)
+    expect(runde.events.some((e) => e.type === 'forced_out' && e.fighter === 'vorne')).toBe(true)
+  })
+
+  it('scheitert, wenn niemand auf der Bank sitzt', () => {
+    const a = fighter('wind', ['normal'], 20, ['whirlwind'], 80)
+    const b = fighter('allein', ['normal'], 20, ['splash'], 60)
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+
+    expect(runde.state.sides[1]!.activeIndex).toBe(0)
+    expect(runde.events.some((e) => e.type === 'move_failed')).toBe(true)
+  })
+})
+
+describe('Magnetflug, Beschwoerung, sichere Treffer', () => {
+  it('laesst Bodenzuege ins Leere gehen', () => {
+    const heben = (zug: number) => {
+      const a = fighter('magnet', ['steel'], 20, ['magnet-rise', 'splash'], 80)
+      const b = fighter('erde', ['ground'], 20, ['earthquake'], 60)
+      return resolveTurn(battle([a], [b]), useMove(zug), useMove(), content)
+    }
+    // Zug 0 hebt ab, Zug 1 platschert — sonst waere nicht zu sehen, woran es lag.
+    expect(heben(0).events.some((e) => e.type === 'damage' && e.amount > 0)).toBe(false)
+    expect(heben(1).events.some((e) => e.type === 'damage' && e.amount > 0)).toBe(true)
+  })
+
+  it('nimmt der Gegenseite die Volltreffer', () => {
+    const kritisch = (zug: number) => {
+      const a = fighter('chor', ['normal'], 20, ['lucky-chant', 'splash'], 80)
+      const b = fighter('scharf', ['normal'], 20, ['always-crit'], 60)
+      const runde = resolveTurn(battle([a], [b]), useMove(zug), useMove(), content)
+      return runde.events.some((e) => e.type === 'damage' && e.critical)
+    }
+    expect(kritisch(0)).toBe(false)
+    expect(kritisch(1)).toBe(true)
+  })
+
+  it('laesst nach dem Zielschuss auch treffen, was nie trifft', () => {
+    const a = fighter('peiler', ['normal'], 20, ['lock-on', 'never-hits'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const gepeilt = resolveTurn(
+      resolveTurn(battle([a], [b]), useMove(0), useMove(), content).state,
+      useMove(1), useMove(), content,
+    )
+    expect(gepeilt.events.some((e) => e.type === 'miss')).toBe(false)
+
+    // Ohne Peilung geht derselbe Zug daneben — sonst pruefte der Test nichts.
+    const blind = resolveTurn(battle([a], [b]), useMove(1), useMove(), content)
+    expect(blind.events.some((e) => e.type === 'miss')).toBe(true)
+  })
+
+  it('macht ein durchschautes Ziel fuer jeden treffbar', () => {
+    const a = fighter('blick', ['normal'], 20, ['foresight', 'never-hits'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const durchschaut = resolveTurn(
+      resolveTurn(battle([a], [b]), useMove(0), useMove(), content).state,
+      useMove(1), useMove(), content,
+    )
+    expect(durchschaut.events.some((e) => e.type === 'miss')).toBe(false)
+  })
+
+  it('laesst alles Anhaltende beim Wechsel zurueck', () => {
+    /*
+     * Ein Egelsamen beschreibt eine Lage auf dem Feld, kein Leiden am Pokemon
+     * — anders als Gift, das genau darum bleibt. Wer sich zurueckzieht,
+     * schuettelt ihn ab; das ist der Grund, sich zurueckzuziehen.
+     */
+    const a = fighter('opfer', ['normal'], 20, ['splash'], 60)
+    const ersatz = fighter('ersatz', ['normal'], 20, ['splash'], 60)
+    const b = fighter('saeer', ['grass'], 20, ['leech-seed'], 80)
+    const gesaet = resolveTurn(battle([a, ersatz], [b]), useMove(), useMove(), content)
+    expect(gesaet.state.sides[0]!.party[0]!.lingering).toHaveLength(1)
+
+    const gewechselt = resolveTurn(gesaet.state, { kind: 'switch', partyIndex: 1 }, useMove(), content)
+    expect(gewechselt.state.sides[0]!.party[0]!.lingering).toEqual([])
   })
 })

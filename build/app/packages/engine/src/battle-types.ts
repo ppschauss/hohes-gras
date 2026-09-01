@@ -96,8 +96,19 @@ export interface Side {
  * zum Einwechseln oder bis die Bedingung entfaellt (Nachtmahr endet mit dem
  * Aufwachen).
  */
+export const LINGERING_KINDS = [
+  'leech_seed', 'aqua_ring', 'nightmare', 'curse', 'yawn', 'encore', 'disable',
+  /** Magnetflug: haelt vom Boden ab, Bodenzuege gehen ins Leere. */
+  'magnet_rise',
+  /** Zielschuss, Willensleser: der naechste eigene Zug trifft, komme was wolle. */
+  'sure_hit',
+  /** Scharfblick, Telekinese: auf dieses Ziel trifft jeder. */
+  'vulnerable',
+] as const
+export type LingeringKind = (typeof LINGERING_KINDS)[number]
+
 export interface Lingering {
-  kind: 'leech_seed' | 'aqua_ring' | 'nightmare' | 'curse' | 'yawn' | 'encore' | 'disable'
+  kind: LingeringKind
   turns: number | null
   /** Bei Zugabe und Aussetzer: welcher Zug gemeint ist. */
   moveId?: string
@@ -105,12 +116,35 @@ export interface Lingering {
   from?: 0 | 1
 }
 
+export const SIDE_CONDITIONS = [
+  'reflect', 'light_screen', 'safeguard', 'mist', 'tailwind',
+  /** Beschwoerung: fuenf Runden ohne Volltreffer gegen diese Seite. */
+  'lucky_chant',
+] as const
+export type SideConditionKind = (typeof SIDE_CONDITIONS)[number]
+
 export interface SideCondition {
-  kind: 'reflect' | 'light_screen' | 'safeguard' | 'mist' | 'tailwind'
+  kind: SideConditionKind
   turns: number
 }
 
 export type BattleKind = 'wild' | 'trainer' | 'gym' | 'pvp' | 'raid'
+
+/**
+ * Was auf dem Boden liegt.
+ *
+ * Anders als ein Schirm gehoert ein Feld keiner Seite: Grasfeld heilt beide,
+ * Nebelfeld schuetzt beide. Es steht deshalb neben dem Wetter im Kampf und
+ * nicht in einer der beiden Seiten — und wie das Wetter aendert es Schaden,
+ * ohne selbst welchen zu machen.
+ */
+export const TERRAINS = ['grassy', 'electric', 'misty'] as const
+export type TerrainKind = (typeof TERRAINS)[number]
+
+export interface Terrain {
+  kind: TerrainKind
+  turns: number
+}
 
 export interface BattleState {
   id: string
@@ -119,6 +153,9 @@ export interface BattleState {
   turn: number
   sides: [Side, Side]
   weather: Weather
+  /** Was gerade auf dem Boden liegt. Wahlfrei: ein Kampf, der vor dieser
+   *  Aenderung begann, liegt als JSON in der Datenbank und kennt es nicht. */
+  terrain?: Terrain | null
   /** Set once the battle ends. */
   outcome: BattleOutcome | null
 }
@@ -168,7 +205,13 @@ export type BattleEvent =
   /** Ein Schirm liegt ueber einer Seite. */
   | { type: 'side_condition'; side: 0 | 1; kind: SideCondition['kind']; started: boolean }
   /** Ein Schirm hat etwas abgewehrt. */
-  | { type: 'blocked'; side: 0 | 1; fighter: string; by: SideCondition['kind'] }
+  | { type: 'blocked'; side: 0 | 1; fighter: string; by: SideConditionKind | 'terrain' }
+  /** Jemand hat den Boden umgestellt — oder er ist verflogen. */
+  | { type: 'terrain'; side: 0 | 1; fighter: string; terrain: TerrainKind | null }
+  /** Jemand wurde aus dem Kampf gedraengt. */
+  | { type: 'forced_out'; side: 0 | 1; fighter: string }
+  /** Der Zug tut, was er soll: nichts. */
+  | { type: 'nothing'; side: 0 | 1; fighter: string }
   | { type: 'end'; outcome: BattleOutcome }
 
 export type PlayerAction =

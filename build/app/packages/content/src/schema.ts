@@ -118,14 +118,17 @@ export const MoveDefSchema = z.object({
        */
       z.object({
         kind: z.literal('lingering'),
-        effect: z.enum(['leech_seed', 'aqua_ring', 'nightmare', 'curse', 'yawn', 'encore', 'disable']),
+        effect: z.enum([
+          'leech_seed', 'aqua_ring', 'nightmare', 'curse', 'yawn', 'encore', 'disable',
+          'magnet_rise', 'sure_hit', 'vulnerable',
+        ]),
         /** Wie viele Runden. Fehlt es, gilt der Effekt bis zum Einwechseln. */
         turns: z.number().int().min(1).max(10).optional(),
       }),
       /** Reflektor, Lichtschild, Bodyguard, Weissnebel, Rueckenwind. */
       z.object({
         kind: z.literal('side_condition'),
-        condition: z.enum(['reflect', 'light_screen', 'safeguard', 'mist', 'tailwind']),
+        condition: z.enum(['reflect', 'light_screen', 'safeguard', 'mist', 'tailwind', 'lucky_chant']),
         turns: z.number().int().min(1).max(10),
       }),
       /** Ausdauer: dieser Treffer laesst mindestens einen Kraftpunkt. */
@@ -142,6 +145,28 @@ export const MoveDefSchema = z.object({
       z.object({ kind: z.literal('copy_stages') }),
       /** Krafttrick: eigenen Angriff und eigene Verteidigung tauschen. */
       z.object({ kind: z.literal('swap_stats') }),
+      /** Grasfeld, Elektrofeld, Nebelfeld: was auf dem Boden liegt. */
+      z.object({
+        kind: z.literal('terrain'),
+        terrain: z.enum(['grassy', 'electric', 'misty']),
+      }),
+      /*
+       * Wirbelwind, Brueller, Teleport: jemand muss das Feld raeumen.
+       *
+       * Wen es trifft, sagt `target`: die beiden ersten draengen den Gegner
+       * hinaus, Teleport bringt den Anwender selbst weg. Wer keinen Ersatz auf
+       * der Bank hat, bleibt stehen — der Zug scheitert dann sichtbar.
+       */
+      z.object({ kind: z.literal('force_switch') }),
+      /*
+       * Platscher.
+       *
+       * Ein eigener Eintrag fuer "tut nichts" statt `none`, weil die beiden
+       * verschiedene Dinge heissen: `none` ist ein Zug, dessen Wirkung hier
+       * noch fehlt, `nothing` ist einer, dessen Wirkung genau darin besteht,
+       * keine zu haben. Nur so bleibt die Liste der offenen Zuege ehrlich.
+       */
+      z.object({ kind: z.literal('nothing') }),
     ])
     .default({ kind: 'none' }),
 })

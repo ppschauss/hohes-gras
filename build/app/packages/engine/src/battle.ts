@@ -231,6 +231,15 @@ function doSwitch(state: BattleState, sideIndex: 0 | 1, partyIndex: number, even
   leaving.confused = false
   leaving.confusionTurns = 0
   leaving.flinched = false
+  /*
+   * Auch was ueber Runden hing, bleibt auf dem Feld zurueck.
+   *
+   * Egelsamen, Zugabe, Magnetflug: alles davon beschreibt eine Lage im Kampf,
+   * nicht einen Schaden am Pokemon — anders als der Zustand, der genau darum
+   * bleibt. Wer sich zurueckzieht, schuettelt es ab; das ist der Grund, warum
+   * man sich zurueckzieht.
+   */
+  leaving.lingering = []
 
   side.activeIndex = partyIndex
   // Frisch im Feld: seine erste eigene Handlung steht noch aus.
@@ -349,7 +358,20 @@ function performMove(
   attacker.lastMoveId = move.id
   events.push({ type: 'move', side: sideIndex, fighter: attacker.id, moveId: move.id, moveName: move.id })
 
-  if (!accuracyCheck(move, attacker, defender, rng)) {
+  /*
+   * Zwei Wege an der Trefferwahrscheinlichkeit vorbei.
+   *
+   * `sure_hit` haengt am Angreifer und gilt fuer genau einen Zug — Zielschuss
+   * und Willensleser versprechen den *naechsten* Treffer, also wird der Merker
+   * hier verbraucht. `vulnerable` haengt am Ziel und gilt fuer alles, was auf
+   * es einschlaegt, bis es ablaeuft: ein Scharfblick nuetzt der ganzen Seite,
+   * nicht nur dem, der ihn eingesetzt hat.
+   */
+  const sichererTreffer = hatEffekt(attacker, 'sure_hit') || hatEffekt(defender, 'vulnerable')
+  if (hatEffekt(attacker, 'sure_hit')) {
+    attacker.lingering = (attacker.lingering ?? []).filter((l) => l.kind !== 'sure_hit')
+  }
+  if (!sichererTreffer && !accuracyCheck(move, attacker, defender, rng)) {
     events.push({ type: 'miss', side: sideIndex, fighter: attacker.id })
     return
   }
@@ -369,6 +391,23 @@ function performMove(
     return
   }
 
+  const gegenseite = (sideIndex === 0 ? 1 : 0) as 0 | 1
+
+  /*
+   * Magnetflug hebt vom Boden ab.
+   *
+   * Behandelt wie eine Typ-Immunitaet und nicht wie ein Fehlschlag: fuer den
+   * Angreifer sieht beides gleich aus, der Zug ist so oder so verbraucht — und
+   * "wirkungslos" ist die Ansage, die zur Sache passt.
+   */
+  if (move.category !== 'status' && move.type === 'ground' && hatEffekt(defender, 'magnet_rise')) {
+    events.push({
+      type: 'damage', side: gegenseite, fighter: defender.id,
+      amount: 0, hpLeft: defender.hp, effectiveness: 0, critical: false,
+    })
+    return
+  }
+
   const effectiveness = move.category === 'status'
     ? 1
     : content.effectiveness(move.type, defender.types)
@@ -379,7 +418,12 @@ function performMove(
   let totalDealt = 0
   for (let i = 0; i < hits; i++) {
     if (defender.hp <= 0) break
-    const roh = computeDamage(attacker, defender, move, effectiveness, state.weather, rng)
+    const roh = computeDamage(attacker, defender, move, effectiveness, state.weather, rng, {
+      // Beschwoerung nimmt der Gegenseite die Volltreffer, das Feld faerbt den
+      // Schaden. Beides gehoert zum Feld und nicht zu den beiden Kaempfern.
+      noCrit: hatSchirm(state, gegenseite, 'lucky_chant'),
+      terrain: state.terrain?.kind ?? null,
+    })
     /*
      * Reflektor gegen physische, Lichtschild gegen spezielle Angriffe.
      *
@@ -388,7 +432,6 @@ function performMove(
      * ueber dem, der gerade vorne steht.
      */
     const schirm = move.category === 'physical' ? 'reflect' : 'light_screen'
-    const gegenseite = (sideIndex === 0 ? 1 : 0) as 0 | 1
     const gemildert = move.category !== 'status' && hatSchirm(state, gegenseite, schirm)
     const dmg = gemildert
       ? { ...roh, amount: Math.max(1, Math.floor(roh.amount / 2)) }
@@ -469,6 +512,17 @@ function applyMoveEffect(
       }
       const target = defender
       if (target.hp <= 0) return
+      /*
+       * Der Boden haelt mit ab.
+       *
+       * Nebelfeld gegen alles, Elektrofeld nur gegen Schlaf — beides gilt fuer
+       * beide Seiten, denn ein Feld gehoert keiner. Vor dem Bodyguard geprueft,
+       * weil ein Feld auch dann wirkt, wenn niemand einen Schirm gestellt hat.
+       */
+      if (state.terrain?.kind === 'misty' || (state.terrain?.kind === 'electric' && status === 'sleep')) {
+        events.push({ type: 'blocked', side: foeIndex, fighter: target.id, by: 'terrain' })
+        return
+      }
       // Bodyguard haelt Zustaende von der ganzen Seite ab.
       if (hatSchirm(state, foeIndex, 'safeguard')) {
         events.push({ type: 'blocked', side: foeIndex, fighter: target.id, by: 'safeguard' })
@@ -551,9 +605,16 @@ function applyMoveEffect(
         return
       }
 
-      // Wer traegt ihn? Wasserring bleibt beim Anwender, alles andere geht
-      // auf den Gegenueber.
-      const traeger = effect.effect === 'aqua_ring' ? attacker : defender
+      /*
+       * Wer traegt ihn?
+       *
+       * Drei bleiben beim Anwender: Wasserring heilt ihn, Magnetflug hebt ihn
+       * an, Zielschuss schaerft seinen naechsten Zug. Alles andere legt man
+       * dem Gegenueber auf — das ist der Normalfall, und die Ausnahmen stehen
+       * deshalb als Liste da statt als Kette von Wenns.
+       */
+      const beimAnwender = new Set(['aqua_ring', 'magnet_rise', 'sure_hit'])
+      const traeger = beimAnwender.has(effect.effect) ? attacker : defender
       const seiteDesTraegers = (traeger === attacker ? sideIndex : foeIndex) as 0 | 1
       if (traeger.hp <= 0) return
       // Zweimal dasselbe waere kein zweiter Effekt, sondern ein verschenkter Zug.
@@ -662,6 +723,41 @@ function applyMoveEffect(
       return
     }
 
+    case 'terrain': {
+      state.terrain = { kind: effect.terrain, turns: 5 }
+      events.push({ type: 'terrain', side: sideIndex, fighter: attacker.id, terrain: effect.terrain })
+      return
+    }
+
+    /*
+     * Jemand muss das Feld raeumen.
+     *
+     * Wirbelwind und Brueller draengen den Gegner hinaus, Teleport bringt den
+     * Anwender weg — welcher Fall vorliegt, sagt das Ziel des Zuges, nicht ein
+     * zweiter Effekt. Der Ersatz wird gewuerfelt und nicht gewaehlt: das ist
+     * der Sinn des Zuges, sonst waere er ein Geschenk an die Gegenseite.
+     */
+    case 'force_switch': {
+      const zielSeite = move.target === 'self' ? sideIndex : foeIndex
+      const seite = state.sides[zielSeite]!
+      const bank = seite.party
+        .map((f, i) => ({ f, i }))
+        .filter(({ f, i }) => f.hp > 0 && i !== seite.activeIndex)
+      const raus = seite.party[seite.activeIndex]!
+      if (bank.length === 0) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      events.push({ type: 'forced_out', side: zielSeite, fighter: raus.id })
+      doSwitch(state, zielSeite, bank[rng.int(0, bank.length - 1)]!.i, events)
+      return
+    }
+
+    case 'nothing': {
+      events.push({ type: 'nothing', side: sideIndex, fighter: attacker.id })
+      return
+    }
+
     case 'weather': {
       if (!triggers) return
       /*
@@ -719,6 +815,10 @@ function applyMoveEffect(
 const hatSchirm = (state: BattleState, side: 0 | 1, kind: SideCondition['kind']): boolean =>
   (state.sides[side]!.conditions ?? []).some((c) => c.kind === kind)
 
+/** Ob an einem Kaempfer ein bestimmter anhaltender Effekt haengt. */
+const hatEffekt = (f: Fighter, kind: Lingering['kind']): boolean =>
+  (f.lingering ?? []).some((l) => l.kind === kind)
+
 function endOfTurn(state: BattleState, rng: Rng, events: BattleEvent[]): void {
   for (const sideIndex of [0, 1] as const) {
     const fighter = active(state.sides[sideIndex]!)
@@ -734,9 +834,23 @@ function endOfTurn(state: BattleState, rng: Rng, events: BattleEvent[]): void {
       })
     }
     tickLingering(state, sideIndex, fighter, events)
+    /*
+     * Grasfeld heilt beide Seiten.
+     *
+     * Nach dem Zustandsschaden und nach den anhaltenden Effekten: so sieht man
+     * am Protokoll, was abgezogen und was zurueckgegeben wurde, statt nur die
+     * Differenz. Wer voll ist, bekommt keine Zeile — sonst stuende in jeder
+     * Runde eine Heilung um null.
+     */
+    if (state.terrain?.kind === 'grassy' && fighter.hp > 0 && fighter.hp < fighter.hpMax) {
+      const zuwachs = Math.min(fighter.hpMax - fighter.hp, Math.max(1, Math.floor(fighter.hpMax / 16)))
+      fighter.hp += zuwachs
+      events.push({ type: 'heal', side: sideIndex, fighter: fighter.id, amount: zuwachs, hpLeft: fighter.hp })
+    }
     fighter.flinched = false
   }
   tickSideConditions(state, events)
+  tickTerrain(state, events)
   void rng
 }
 
@@ -811,8 +925,18 @@ function tickLingering(
         weiter = false
         break
       }
+      /*
+       * Diese wirken nicht *im* Rundenende, sondern werden dort nur aelter.
+       *
+       * Zugabe und Aussetzer greifen in die Zugwahl, Magnetflug in die
+       * Typenrechnung, Zielschuss und Scharfblick in die Treffprobe. Der
+       * gemeinsame Zaehler unten ist alles, was sie hier brauchen.
+       */
       case 'encore':
       case 'disable':
+      case 'magnet_rise':
+      case 'sure_hit':
+      case 'vulnerable':
         break
     }
 
@@ -847,6 +971,18 @@ function tickSideConditions(state: BattleState, events: BattleEvent[]): void {
     }
     seite.conditions = bleibt
   }
+}
+
+/** Der Boden haelt fuenf Runden. Danach ist er wieder nur Boden. */
+function tickTerrain(state: BattleState, events: BattleEvent[]): void {
+  if (!state.terrain) return
+  const rest = state.terrain.turns - 1
+  if (rest > 0) {
+    state.terrain = { ...state.terrain, turns: rest }
+    return
+  }
+  state.terrain = null
+  events.push({ type: 'terrain', side: 0, fighter: '', terrain: null })
 }
 
 function checkFaints(state: BattleState, events: BattleEvent[]): void {

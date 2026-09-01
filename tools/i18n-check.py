@@ -124,6 +124,14 @@ AUFZAEHLUNGEN = [
     ('evo.how.', 'build/app/packages/content/src/schema.ts', r"trigger: z\.literal\('(\w+)'\)", ''),
     ('status.', 'build/app/packages/engine/src/battle-types.ts', None, ''),
     ('weather.', 'build/app/packages/shared/src/domain.ts', None, ''),
+    # Was im Kampf ueber Runden wirkt, bekommt eine Zeile beim Beginnen und
+    # eine beim Enden — sonst steht im Protokoll ein roher Schluessel.
+    ('log.lingering.', 'build/app/packages/engine/src/battle-types.ts', None, '.on'),
+    ('log.lingering.', 'build/app/packages/engine/src/battle-types.ts', None, '.off'),
+    ('log.side.', 'build/app/packages/engine/src/battle-types.ts', None, '.on'),
+    ('log.side.', 'build/app/packages/engine/src/battle-types.ts', None, '.off'),
+    ('log.terrain.', 'build/app/packages/engine/src/battle-types.ts', None, ''),
+    ('terrain.', 'build/app/packages/engine/src/battle-types.ts', None, ''),
 ]
 
 luecken = []
@@ -137,7 +145,11 @@ for praefix, quelle, muster, suffix in AUFZAEHLUNGEN:
         # STATUSES, WEATHERS. Der Name steht nicht in der Tabelle, weil er
         # sich aus dem Praefix ergibt — ein Feld weniger, das auseinanderlaufen
         # kann.
-        name = {'nature.': 'NATURES', 'status.': 'STATUSES', 'weather.': 'WEATHERS'}[praefix]
+        name = {
+            'nature.': 'NATURES', 'status.': 'STATUSES', 'weather.': 'WEATHERS',
+            'log.lingering.': 'LINGERING_KINDS', 'log.side.': 'SIDE_CONDITIONS',
+            'log.terrain.': 'TERRAINS', 'terrain.': 'TERRAINS',
+        }[praefix]
         block = re.search(rf'export const {name} = \[(.*?)\] as const', text, re.S)
         werte = re.findall(r"'([\w-]+)'", block.group(1)) if block else []
     else:

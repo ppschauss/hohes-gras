@@ -37,6 +37,10 @@ export function describeEvent(event: BattleEventView, view: BattleView): string[
     case 'lingering_tick': return [t(`log.lingering.${e.kind}.tick`, { n: Math.abs(Number(e.amount ?? 0)) })]
     case 'side_condition': return [t(`log.side.${e.kind}.${e.started ? 'on' : 'off'}`)]
     case 'blocked': return [t(`log.blocked.${e.by}`)]
+    case 'terrain':
+      return [e.terrain ? t(`log.terrain.${e.terrain}`) : t('log.terrain.off')]
+    case 'forced_out': return [t('log.forced_out', { name: who })]
+    case 'nothing': return [t('log.nothing')]
     case 'heal': return [t('log.heal', { name: who, n: Number(e.amount ?? 0) })]
     case 'status': return [t('log.status', { name: who, status: t(`status.${String(e.status)}`) })]
     case 'status_damage': return [t('log.status_damage', { name: who, status: t(`status.${String(e.status)}`) })]

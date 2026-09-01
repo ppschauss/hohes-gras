@@ -22,6 +22,9 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Fünfzehn weitere Attacken wirken: Grasfeld, Elektrofeld und Nebelfeld verändern den Boden, Wirbelwind und Brüller drängen den Gegner hinaus, dazu Magnetflug, Beschwörung, Zielschuss, Willensleser, Scharfblick, Telekinese, Schnüffler, Wunderauge und Teleport. Platscher tut jetzt ausdrücklich nichts.',
+      'Acht Attacken sind raus: Gegenstände tauschen und Umlenkung im Doppelkampf gibt es hier nicht.',
+      'Wer sich zurückzieht, lässt Egelsamen, Zugabe und alles andere Anhaltende auf dem Feld zurück — das blieb vorher am Pokémon hängen.',
       'Tausch-Entwicklungen brauchen nur noch ein Verbindungskabel. Acht davon verlangten zusätzlich einen Tragegegenstand — den kann hier aber niemand tragen.',
       'Effekte über Runden: Egelsamen, Wasserring, Nachtmahr, Fluch, Gähner, Zugabe und Aussetzer wirken jetzt — dazu die Schirme Reflektor, Lichtschild, Bodyguard, Weißnebel und Rückenwind.',
       'Zwölf Züge, die Fähigkeiten oder Tragegegenstände brauchen, sind aus dem Spiel — beides gibt es hier nicht.',

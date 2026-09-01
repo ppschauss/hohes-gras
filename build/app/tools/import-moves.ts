@@ -102,6 +102,45 @@ const SPECIAL_MOVES: Record<string, Effect> = {
   haze: { kind: 'haze' },
   'psych-up': { kind: 'copy_stages' },
   'power-trick': { kind: 'swap_stats' },
+
+  // Was auf dem Boden liegt: fuenf Runden, beide Seiten.
+  'grassy-terrain': { kind: 'terrain', terrain: 'grassy' },
+  'electric-terrain': { kind: 'terrain', terrain: 'electric' },
+  'misty-terrain': { kind: 'terrain', terrain: 'misty' },
+
+  /*
+   * Zwangswechsel.
+   *
+   * Im Vorbild beenden die ersten beiden einen wilden Kampf. Hier gibt es
+   * keinen: gefangen wird in der Safari, gekaempft wird gegen Trainer. Also
+   * bleibt die zweite Haelfte ihrer Beschreibung, und die ist die
+   * interessantere — der Gegner verliert sein aufgebautes Pokemon.
+   */
+  whirlwind: { kind: 'force_switch' },
+  roar: { kind: 'force_switch' },
+  teleport: { kind: 'force_switch' },
+
+  // Magnetflug, Beschwoerung.
+  'magnet-rise': { kind: 'lingering', effect: 'magnet_rise', turns: 5 },
+  'lucky-chant': { kind: 'side_condition', condition: 'lucky_chant', turns: 5 },
+
+  /*
+   * Sichere Treffer.
+   *
+   * Zwei Runden und nicht eine: der Merker wird am Ende der Runde aelter, in
+   * der er gesetzt wurde. Mit einer Runde waere er weg, bevor der Zug kommt,
+   * den er treffen lassen soll.
+   */
+  'lock-on': { kind: 'lingering', effect: 'sure_hit', turns: 2 },
+  'mind-reader': { kind: 'lingering', effect: 'sure_hit', turns: 2 },
+  telekinesis: { kind: 'lingering', effect: 'vulnerable', turns: 3 },
+  // Scharfblick und Verwandte halten bis zum Einwechseln — daher ohne Runden.
+  foresight: { kind: 'lingering', effect: 'vulnerable' },
+  'odor-sleuth': { kind: 'lingering', effect: 'vulnerable' },
+  'miracle-eye': { kind: 'lingering', effect: 'vulnerable' },
+
+  // Platscher tut nichts. Das ist keine Luecke, das ist der Zug.
+  splash: { kind: 'nothing' },
 }
 
 const WEATHER_MOVES: Record<string, Extract<Effect, { kind: 'weather' }>['weather']> = {
@@ -195,7 +234,11 @@ export interface MoveOut {
  * Seite, und die ist im Einzelkampf man selbst — ein Schild gegen
  * Vorrangattacken bleibt sinnvoll.
  */
-const DOUBLES_ONLY = new Set(['wide-guard', 'helping-hand', 'ally-switch'])
+const DOUBLES_ONLY = new Set([
+  'wide-guard', 'helping-hand', 'ally-switch',
+  // Umlenkung und Zugreihenfolge ergeben nur mit einem Partner Sinn.
+  'after-you', 'follow-me', 'rage-powder', 'spotlight', 'quash', 'snatch',
+])
 
 /**
  * Zuege, die an Mechanik haengen, die es in diesem Spiel nicht gibt.
@@ -209,6 +252,8 @@ const NO_MECHANIC = new Set([
   'worry-seed', 'gastro-acid', 'role-play', 'entrainment', 'simple-beam', 'skill-swap',
   'bestow', 'embargo', 'magic-room', 'recycle',
   'assist', 'attract',
+  // Gegenstaende tauschen setzt voraus, dass jemand einen traegt.
+  'trick', 'switcheroo',
 ])
 
 function isUsable(m: ApiMove, knownTypes: Set<string>): boolean {
