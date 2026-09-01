@@ -22,6 +22,8 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Effekte über Runden: Egelsamen, Wasserring, Nachtmahr, Fluch, Gähner, Zugabe und Aussetzer wirken jetzt — dazu die Schirme Reflektor, Lichtschild, Bodyguard, Weißnebel und Rückenwind.',
+      'Zwölf Züge, die Fähigkeiten oder Tragegegenstände brauchen, sind aus dem Spiel — beides gibt es hier nicht.',
       'Rapidschutz, Akupressur und Abgangsbund wirken jetzt auch. Drei reine Doppelkampf-Züge sind dafür ganz aus dem Spiel — Doppelkämpfe wird es nicht geben.',
       'Zwölf weitere Attacken wirken: Schutzschild, Scanner, Ausdauer, Erholung, Heilung, Vitalglocke, Aromakur, Energiefokus, Konzentration, Dunkelnebel, Psycho-Plus und Krafttrick.',
       'Legendäre erscheinen jetzt mit 0,1 % je Erkundung — bei jedem Wetter und zu jeder Zeit, dafür deutlich seltener. Vorher gab es zwei Wege nebeneinander, einer davon zehnmal zu großzügig.',

@@ -33,6 +33,12 @@ const MOVES: Record<string, MoveDef> = {
     firstTurnOnly: true,
   } as MoveDef,
   protect: mv('protect', 'normal', 'status', 0, 100, 10, { kind: 'protect', against: 'all' }, 100, 0, 4),
+  'leech-seed': mv('leech-seed', 'grass', 'status', 0, 90, 10, { kind: 'lingering', effect: 'leech_seed' }, 100),
+  'aqua-ring': mv('aqua-ring', 'water', 'status', 0, 100, 20, { kind: 'lingering', effect: 'aqua_ring' }, 100),
+  curse: mv('curse', 'ghost', 'status', 0, 100, 10, { kind: 'lingering', effect: 'curse' }, 100),
+  yawn: mv('yawn', 'normal', 'status', 0, 100, 10, { kind: 'lingering', effect: 'yawn', turns: 2 }, 100),
+  reflect: mv('reflect', 'psychic', 'status', 0, 100, 20, { kind: 'side_condition', condition: 'reflect', turns: 5 }, 100),
+  safeguard: mv('safeguard', 'normal', 'status', 0, 100, 25, { kind: 'side_condition', condition: 'safeguard', turns: 5 }, 100),
   'quick-guard': mv('quick-guard', 'steel', 'status', 0, 100, 15, { kind: 'protect', against: 'priority' }, 100, 0, 3),
   'destiny-bond': mv('destiny-bond', 'ghost', 'status', 0, 100, 5, { kind: 'destiny_bond' }, 100),
   endure: mv('endure', 'normal', 'status', 0, 100, 10, { kind: 'endure' }, 100, 0, 4),
@@ -634,6 +640,77 @@ describe('Zuege, die etwas vorbereiten', () => {
 
     const runde = resolveTurn(start, useMove(), useMove(), content)
     expect(runde.state.sides[0]!.party[0]!.stages.atk).toBe(3)
+  })
+})
+
+describe('Effekte, die ueber Runden wirken', () => {
+  it('zieht mit Egelsamen ab und speist den Setzer', () => {
+    const a = { ...fighter('saeer', ['grass'], 20, ['leech-seed']), hp: 30 }
+    const b = fighter('opfer', ['normal'], 20, ['growl'])
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+
+    const opfer = runde.state.sides[1]!.party[0]!
+    const saeer = runde.state.sides[0]!.party[0]!
+    expect(opfer.lingering?.some((l) => l.kind === 'leech_seed')).toBe(true)
+    expect(opfer.hp).toBeLessThan(opfer.hpMax)
+    // Was drueben abgeht, kommt hier an — das ist der ganze Zug.
+    expect(saeer.hp).toBeGreaterThan(30)
+  })
+
+  it('gibt mit dem Wasserring jede Runde etwas zurueck', () => {
+    const a = { ...fighter('ring', ['water'], 20, ['aqua-ring']), hp: 10 }
+    const b = fighter('gegner', ['normal'], 5, ['growl'])
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    expect(runde.state.sides[0]!.party[0]!.hp).toBeGreaterThan(10)
+  })
+
+  it('laesst einen Geist mit Fluch die Haelfte zahlen', () => {
+    const a = fighter('geist', ['ghost'], 20, ['curse'])
+    const b = fighter('ziel', ['normal'], 20, ['growl'])
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+
+    const geist = runde.state.sides[0]!.party[0]!
+    const ziel = runde.state.sides[1]!.party[0]!
+    expect(geist.hp).toBeLessThanOrEqual(Math.ceil(geist.hpMax / 2))
+    expect(ziel.lingering?.some((l) => l.kind === 'curse')).toBe(true)
+  })
+
+  it('schlaefert mit Gaehner erst eine Runde spaeter ein', () => {
+    const a = fighter('muede', ['normal'], 20, ['yawn'])
+    const b = fighter('ziel', ['normal'], 5, ['growl'])
+    const erste = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    expect(erste.state.sides[1]!.party[0]!.status).toBe('none')
+
+    const zweite = resolveTurn(erste.state, useMove(), useMove(), content)
+    expect(zweite.state.sides[1]!.party[0]!.status).toBe('sleep')
+  })
+
+  it('halbiert mit dem Reflektor physischen Schaden', () => {
+    /*
+     * Der Setzer muss schneller sein, sonst steht der Schirm erst, nachdem
+     * der Schlag gefallen ist — richtig so, aber dann misst der Test nichts.
+     */
+    const mit = fighter('schirm', ['psychic'], 40, ['reflect'])
+    const gegner = fighter('gegner', ['normal'], 20, ['tackle'])
+    const runde = resolveTurn(battle([mit], [gegner]), useMove(), useMove(), content)
+    const nachSchirm = runde.state.sides[0]!.party[0]!.hpMax - runde.state.sides[0]!.party[0]!.hp
+
+    // Dieselbe Aufstellung ohne Schirm, damit der Vergleich einer ist.
+    const ohne = fighter('ohne', ['psychic'], 40, ['growl'])
+    const blank = resolveTurn(battle([ohne], [gegner]), useMove(), useMove(), content)
+    const roh = blank.state.sides[0]!.party[0]!.hpMax - blank.state.sides[0]!.party[0]!.hp
+
+    expect(nachSchirm).toBeLessThan(roh)
+    expect(runde.events.some((e) => e.type === 'blocked' && e.by === 'reflect')).toBe(true)
+  })
+
+  it('haelt mit Bodyguard Zustaende ab', () => {
+    const a = fighter('wache', ['normal'], 40, ['safeguard'])
+    const b = fighter('gegner', ['fire'], 20, ['ember'])
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+
+    expect(runde.state.sides[0]!.party[0]!.status).toBe('none')
+    expect(runde.events.some((e) => e.type === 'blocked' && e.by === 'safeguard')).toBe(true)
   })
 })
 

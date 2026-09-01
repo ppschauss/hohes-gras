@@ -35,6 +35,8 @@ type Effect =
   | { kind: 'weather'; weather: 'clear' | 'rain' | 'storm' | 'snow' | 'fog' | 'sandstorm' | 'heat' }
   | { kind: 'protect'; against: 'all' | 'priority' } | { kind: 'endure' } | { kind: 'rest' } | { kind: 'haze' }
   | { kind: 'random_stat_up'; stages: number } | { kind: 'destiny_bond' }
+  | { kind: 'lingering'; effect: 'leech_seed' | 'aqua_ring' | 'nightmare' | 'curse' | 'yawn' | 'encore' | 'disable'; turns?: number }
+  | { kind: 'side_condition'; condition: 'reflect' | 'light_screen' | 'safeguard' | 'mist' | 'tailwind'; turns: number }
   | { kind: 'copy_stages' } | { kind: 'swap_stats' }
   | { kind: 'cure'; scope: 'self' | 'party' }
   | { kind: 'crit_up'; stages: number; sure: boolean }
@@ -78,6 +80,18 @@ const SPECIAL_MOVES: Record<string, Effect> = {
   'quick-guard': { kind: 'protect', against: 'priority' },
   acupressure: { kind: 'random_stat_up', stages: 2 },
   'destiny-bond': { kind: 'destiny_bond' },
+  'leech-seed': { kind: 'lingering', effect: 'leech_seed' },
+  'aqua-ring': { kind: 'lingering', effect: 'aqua_ring' },
+  nightmare: { kind: 'lingering', effect: 'nightmare' },
+  curse: { kind: 'lingering', effect: 'curse' },
+  yawn: { kind: 'lingering', effect: 'yawn', turns: 2 },
+  encore: { kind: 'lingering', effect: 'encore', turns: 3 },
+  disable: { kind: 'lingering', effect: 'disable', turns: 4 },
+  reflect: { kind: 'side_condition', condition: 'reflect', turns: 5 },
+  'light-screen': { kind: 'side_condition', condition: 'light_screen', turns: 5 },
+  safeguard: { kind: 'side_condition', condition: 'safeguard', turns: 5 },
+  mist: { kind: 'side_condition', condition: 'mist', turns: 5 },
+  tailwind: { kind: 'side_condition', condition: 'tailwind', turns: 3 },
   endure: { kind: 'endure' },
   rest: { kind: 'rest' },
   refresh: { kind: 'cure', scope: 'self' },
@@ -183,8 +197,22 @@ export interface MoveOut {
  */
 const DOUBLES_ONLY = new Set(['wide-guard', 'helping-hand', 'ally-switch'])
 
+/**
+ * Zuege, die an Mechanik haengen, die es in diesem Spiel nicht gibt.
+ *
+ * Faehigkeiten, Tragegegenstaende und Geschlecht kommen im Spiel nicht vor:
+ * `held_item` ist eine Spalte, die nie beschrieben wird, Faehigkeiten gibt es
+ * gar nicht. Wer sie kopiert, tauscht, sperrt oder aufhebt, haette hier fuer
+ * immer einen leeren Zug.
+ */
+const NO_MECHANIC = new Set([
+  'worry-seed', 'gastro-acid', 'role-play', 'entrainment', 'simple-beam', 'skill-swap',
+  'bestow', 'embargo', 'magic-room', 'recycle',
+  'assist', 'attract',
+])
+
 function isUsable(m: ApiMove, knownTypes: Set<string>): boolean {
-  if (DOUBLES_ONLY.has(m.name)) return false
+  if (DOUBLES_ONLY.has(m.name) || NO_MECHANIC.has(m.name)) return false
   if (!knownTypes.has(m.type.name)) return false
   if (m.pp === null || m.pp < 1) return false
   if (m.damage_class.name !== 'status' && (m.power ?? 0) <= 0) return false

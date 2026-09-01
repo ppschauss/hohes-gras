@@ -109,6 +109,25 @@ export const MoveDefSchema = z.object({
       z.object({ kind: z.literal('random_stat_up'), stages: z.number().int().min(1).max(3) }),
       /** Abgangsbund: wer den Traeger in dieser Runde faellt, faellt mit. */
       z.object({ kind: z.literal('destiny_bond') }),
+      /*
+       * Was ueber Runden wirkt.
+       *
+       * Der Zustand eines Pokemon kann nur eines auf einmal sein — Schlaf
+       * *oder* Gift. Egelsamen, Wasserring, Nachtmahr und Fluch wirken daneben
+       * und gleichzeitig; sie haengen deshalb an einer eigenen Liste.
+       */
+      z.object({
+        kind: z.literal('lingering'),
+        effect: z.enum(['leech_seed', 'aqua_ring', 'nightmare', 'curse', 'yawn', 'encore', 'disable']),
+        /** Wie viele Runden. Fehlt es, gilt der Effekt bis zum Einwechseln. */
+        turns: z.number().int().min(1).max(10).optional(),
+      }),
+      /** Reflektor, Lichtschild, Bodyguard, Weissnebel, Rueckenwind. */
+      z.object({
+        kind: z.literal('side_condition'),
+        condition: z.enum(['reflect', 'light_screen', 'safeguard', 'mist', 'tailwind']),
+        turns: z.number().int().min(1).max(10),
+      }),
       /** Ausdauer: dieser Treffer laesst mindestens einen Kraftpunkt. */
       z.object({ kind: z.literal('endure') }),
       /** Erholung: voll heilen und dafuer zwei Runden schlafen. */

@@ -7,8 +7,8 @@ import {
 } from './battle-math.js'
 import {
   MAX_TURNS, emptyStages,
-  type BattleEvent, type BattleOutcome, type BattleState, type Fighter,
-  type PlayerAction, type Side, type Status,
+  type BattleEvent, type BattleOutcome, type BattleState, type Fighter, type Lingering,
+  type PlayerAction, type Side, type SideCondition, type Status,
 } from './battle-types.js'
 import { clamp } from './stats.js'
 
@@ -198,7 +198,18 @@ function buildOrder(
   }
 
   const [a, b] = entries as [typeof entries[0], typeof entries[0]]
-  const aFirst = movesFirst(a, b, rng)
+  /*
+   * Rueckenwind verdoppelt das Tempo der eigenen Seite.
+   *
+   * Umgesetzt als Kopie des Kaempfers mit doppelter Initiative statt als
+   * Aenderung an ihm: die Reihenfolge ist eine Momentaufnahme, und ein
+   * verdoppelter Wert, der im Zustand haengenbliebe, waere nach drei Runden
+   * ein Fehler, den niemand mehr zuordnen kann.
+   */
+  const mitWind = (e: typeof entries[0]) => hatSchirm(state, e.side, 'tailwind')
+    ? { ...e, fighter: { ...e.fighter, stats: { ...e.fighter.stats, spe: e.fighter.stats.spe * 2 } } }
+    : e
+  const aFirst = movesFirst(mitWind(a), mitWind(b), rng)
   return (aFirst ? [a, b] : [b, a])
     .map(({ side, moveIndex, fighter }) => ({ side, moveIndex, fighterId: fighter.id }))
 }
@@ -318,7 +329,24 @@ function performMove(
    */
   attacker.turnsOnField = (attacker.turnsOnField ?? 0) + 1
 
+  /*
+   * Aussetzer sperrt genau einen Zug, Zugabe erzwingt genau einen.
+   *
+   * Beide werden hier geprueft und nicht in der Zugwahl: die Zugwahl trifft
+   * auch der Spieler, und der soll eine Ansage bekommen statt einer stumm
+   * geaenderten Eingabe.
+   */
+  const gesperrt = (attacker.lingering ?? []).find((l) => l.kind === 'disable' && l.moveId === move.id)
+  const zugabe = (attacker.lingering ?? []).find((l) => l.kind === 'encore' && l.moveId)
+  if (gesperrt || (zugabe && zugabe.moveId !== move.id)) {
+    slot.pp = Math.max(0, slot.pp - 1)
+    attacker.turnsOnField = (attacker.turnsOnField ?? 0) + 1
+    events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+    return
+  }
+
   slot.pp--
+  attacker.lastMoveId = move.id
   events.push({ type: 'move', side: sideIndex, fighter: attacker.id, moveId: move.id, moveName: move.id })
 
   if (!accuracyCheck(move, attacker, defender, rng)) {
@@ -351,7 +379,23 @@ function performMove(
   let totalDealt = 0
   for (let i = 0; i < hits; i++) {
     if (defender.hp <= 0) break
-    const dmg = computeDamage(attacker, defender, move, effectiveness, state.weather, rng)
+    const roh = computeDamage(attacker, defender, move, effectiveness, state.weather, rng)
+    /*
+     * Reflektor gegen physische, Lichtschild gegen spezielle Angriffe.
+     *
+     * Nach der Formel und nicht in ihr: sie rechnet mit zwei Kaempfern und
+     * kennt die Seiten nicht — und der Schirm liegt ueber der Seite, nicht
+     * ueber dem, der gerade vorne steht.
+     */
+    const schirm = move.category === 'physical' ? 'reflect' : 'light_screen'
+    const gegenseite = (sideIndex === 0 ? 1 : 0) as 0 | 1
+    const gemildert = move.category !== 'status' && hatSchirm(state, gegenseite, schirm)
+    const dmg = gemildert
+      ? { ...roh, amount: Math.max(1, Math.floor(roh.amount / 2)) }
+      : roh
+    if (gemildert && roh.amount > 0) {
+      events.push({ type: 'blocked', side: gegenseite, fighter: defender.id, by: schirm })
+    }
     if (dmg.immune) {
       events.push({
         type: 'damage', side: sideIndex === 0 ? 1 : 0, fighter: defender.id,
@@ -425,6 +469,11 @@ function applyMoveEffect(
       }
       const target = defender
       if (target.hp <= 0) return
+      // Bodyguard haelt Zustaende von der ganzen Seite ab.
+      if (hatSchirm(state, foeIndex, 'safeguard')) {
+        events.push({ type: 'blocked', side: foeIndex, fighter: target.id, by: 'safeguard' })
+        return
+      }
       const check = canApplyStatus(target, status as Status)
       if (!check.applied) return
       target.status = status as Status
@@ -438,6 +487,12 @@ function applyMoveEffect(
       const onSelf = effect.target === 'self'
       const target = onSelf ? attacker : defender
       if (target.hp <= 0) return
+      // Weissnebel schuetzt nur vor fremden *Senkungen* — eigene Zuwaechse
+      // und eigene Abzuege bleiben die Entscheidung des Spielers.
+      if (!onSelf && effect.stages < 0 && hatSchirm(state, foeIndex, 'mist')) {
+        events.push({ type: 'blocked', side: foeIndex, fighter: target.id, by: 'mist' })
+        return
+      }
       const result = applyStage(target.stages, effect.stat, effect.stages)
       target.stages = result.stages
       events.push({
@@ -477,6 +532,60 @@ function applyMoveEffect(
     case 'destiny_bond': {
       attacker.destinyBondUntilTurn = state.turn
       events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'destiny_bond' })
+      return
+    }
+
+    case 'lingering': {
+      /*
+       * Fluch ist zwei Zuege in einem: ein Geist zahlt die Haelfte seiner
+       * Kraftpunkte und laesst das Ziel bluten, alle anderen tauschen Tempo
+       * gegen Angriff und Verteidigung. Das steht so im Vorbild und ist der
+       * einzige Zug, der sich nach dem Typ des Anwenders richtet.
+       */
+      if (effect.effect === 'curse' && !attacker.types.includes('ghost')) {
+        for (const [stat, delta] of [['atk', 1], ['def', 1], ['spe', -1]] as const) {
+          const r = applyStage(attacker.stages, stat, delta)
+          attacker.stages = r.stages
+          events.push({ type: 'stage', side: sideIndex, fighter: attacker.id, stat, delta: r.applied, capped: r.capped })
+        }
+        return
+      }
+
+      // Wer traegt ihn? Wasserring bleibt beim Anwender, alles andere geht
+      // auf den Gegenueber.
+      const traeger = effect.effect === 'aqua_ring' ? attacker : defender
+      const seiteDesTraegers = (traeger === attacker ? sideIndex : foeIndex) as 0 | 1
+      if (traeger.hp <= 0) return
+      // Zweimal dasselbe waere kein zweiter Effekt, sondern ein verschenkter Zug.
+      if ((traeger.lingering ?? []).some((l) => l.kind === effect.effect)) return
+      // Nachtmahr braucht ein schlafendes Ziel; das steht schon als
+      // `requiresTargetStatus` am Zug, hier nur die Sicherung.
+      if (effect.effect === 'nightmare' && traeger.status !== 'sleep') return
+
+      if (effect.effect === 'curse') {
+        const preis = Math.max(1, Math.floor(attacker.hpMax / 2))
+        attacker.hp = Math.max(1, attacker.hp - preis)
+        events.push({ type: 'damage', side: sideIndex, fighter: attacker.id,
+          amount: preis, hpLeft: attacker.hp, effectiveness: 1, critical: false })
+      }
+
+      traeger.lingering = [...(traeger.lingering ?? []), {
+        kind: effect.effect,
+        turns: effect.turns ?? null,
+        ...(effect.effect === 'encore' || effect.effect === 'disable'
+          ? { moveId: traeger.lastMoveId }
+          : {}),
+        ...(effect.effect === 'leech_seed' ? { from: sideIndex } : {}),
+      }]
+      events.push({ type: 'lingering', side: seiteDesTraegers, fighter: traeger.id, kind: effect.effect, started: true })
+      return
+    }
+
+    case 'side_condition': {
+      const seite = state.sides[sideIndex]!
+      if ((seite.conditions ?? []).some((c) => c.kind === effect.condition)) return
+      seite.conditions = [...(seite.conditions ?? []), { kind: effect.condition, turns: effect.turns }]
+      events.push({ type: 'side_condition', side: sideIndex, kind: effect.condition, started: true })
       return
     }
 
@@ -606,6 +715,10 @@ function applyMoveEffect(
   }
 }
 
+/** Liegt dieser Schirm ueber der Seite? */
+const hatSchirm = (state: BattleState, side: 0 | 1, kind: SideCondition['kind']): boolean =>
+  (state.sides[side]!.conditions ?? []).some((c) => c.kind === kind)
+
 function endOfTurn(state: BattleState, rng: Rng, events: BattleEvent[]): void {
   for (const sideIndex of [0, 1] as const) {
     const fighter = active(state.sides[sideIndex]!)
@@ -620,9 +733,120 @@ function endOfTurn(state: BattleState, rng: Rng, events: BattleEvent[]): void {
         status: fighter.status, amount: damage, hpLeft: fighter.hp,
       })
     }
+    tickLingering(state, sideIndex, fighter, events)
     fighter.flinched = false
   }
+  tickSideConditions(state, events)
   void rng
+}
+
+/**
+ * Was ueber Runden wirkt, wirkt hier.
+ *
+ * Nach dem Zustandsschaden und vor dem naechsten Zug: so trifft ein Egelsamen
+ * denselben Kaempfer, der ihn diese Runde abbekommen hat, und ein Nachtmahr
+ * endet in dem Moment, in dem das Ziel aufwacht.
+ */
+function tickLingering(
+  state: BattleState, sideIndex: 0 | 1, fighter: Fighter, events: BattleEvent[],
+): void {
+  const bleibt: Lingering[] = []
+  for (const l of fighter.lingering ?? []) {
+    let weiter = true
+
+    switch (l.kind) {
+      case 'leech_seed': {
+        const abzug = Math.max(1, Math.floor(fighter.hpMax / 8))
+        const vorher = fighter.hp
+        fighter.hp = Math.max(0, fighter.hp - abzug)
+        events.push({ type: 'lingering_tick', side: sideIndex, fighter: fighter.id,
+          kind: l.kind, amount: -(vorher - fighter.hp), hpLeft: fighter.hp })
+        // Was abgezogen wird, kommt drueben an — das ist der ganze Zug.
+        const nutzer = l.from !== undefined ? active(state.sides[l.from]!) : null
+        if (nutzer && nutzer.hp > 0) {
+          const zuwachs = Math.min(vorher - fighter.hp, nutzer.hpMax - nutzer.hp)
+          if (zuwachs > 0) {
+            nutzer.hp += zuwachs
+            events.push({ type: 'heal', side: l.from!, fighter: nutzer.id, amount: zuwachs, hpLeft: nutzer.hp })
+          }
+        }
+        break
+      }
+      case 'aqua_ring': {
+        const zuwachs = Math.min(Math.max(1, Math.floor(fighter.hpMax / 16)), fighter.hpMax - fighter.hp)
+        if (zuwachs > 0) {
+          fighter.hp += zuwachs
+          events.push({ type: 'lingering_tick', side: sideIndex, fighter: fighter.id,
+            kind: l.kind, amount: zuwachs, hpLeft: fighter.hp })
+        }
+        break
+      }
+      case 'nightmare': {
+        // Endet mit dem Aufwachen: ein Albtraum ohne Schlaf ist keiner.
+        if (fighter.status !== 'sleep') { weiter = false; break }
+        const abzug = Math.max(1, Math.floor(fighter.hpMax / 4))
+        const vorher = fighter.hp
+        fighter.hp = Math.max(0, fighter.hp - abzug)
+        events.push({ type: 'lingering_tick', side: sideIndex, fighter: fighter.id,
+          kind: l.kind, amount: -(vorher - fighter.hp), hpLeft: fighter.hp })
+        break
+      }
+      case 'curse': {
+        const abzug = Math.max(1, Math.floor(fighter.hpMax / 4))
+        const vorher = fighter.hp
+        fighter.hp = Math.max(0, fighter.hp - abzug)
+        events.push({ type: 'lingering_tick', side: sideIndex, fighter: fighter.id,
+          kind: l.kind, amount: -(vorher - fighter.hp), hpLeft: fighter.hp })
+        break
+      }
+      case 'yawn': {
+        // Erst am Ende der *naechsten* Runde: deshalb zaehlt er herunter und
+        // schlaeft erst bei null ein.
+        if (l.turns !== null && l.turns > 1) break
+        if (fighter.status === 'none') {
+          fighter.status = 'sleep'
+          fighter.statusCounter = 2
+          events.push({ type: 'status', side: sideIndex, fighter: fighter.id, status: 'sleep' })
+        }
+        weiter = false
+        break
+      }
+      case 'encore':
+      case 'disable':
+        break
+    }
+
+    if (!weiter) {
+      events.push({ type: 'lingering', side: sideIndex, fighter: fighter.id, kind: l.kind, started: false })
+      continue
+    }
+    if (l.turns === null) { bleibt.push(l); continue }
+    const rest = l.turns - 1
+    if (rest <= 0) {
+      events.push({ type: 'lingering', side: sideIndex, fighter: fighter.id, kind: l.kind, started: false })
+      continue
+    }
+    bleibt.push({ ...l, turns: rest })
+  }
+  fighter.lingering = bleibt
+}
+
+/** Die Schirme laufen ab. */
+function tickSideConditions(state: BattleState, events: BattleEvent[]): void {
+  for (const sideIndex of [0, 1] as const) {
+    const seite = state.sides[sideIndex]!
+    if (!seite.conditions?.length) continue
+    const bleibt = []
+    for (const c of seite.conditions) {
+      const rest = c.turns - 1
+      if (rest <= 0) {
+        events.push({ type: 'side_condition', side: sideIndex, kind: c.kind, started: false })
+        continue
+      }
+      bleibt.push({ ...c, turns: rest })
+    }
+    seite.conditions = bleibt
+  }
 }
 
 function checkFaints(state: BattleState, events: BattleEvent[]): void {

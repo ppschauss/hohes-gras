@@ -57,6 +57,17 @@ export interface Fighter {
   priorityGuardUntilTurn?: number
   /** Bis einschliesslich dieser Runde reisst ein Abgang den Gegner mit. */
   destinyBondUntilTurn?: number
+  /**
+   * Was ueber Runden an diesem Kaempfer haengt.
+   *
+   * Der Zustand (`status`) kann nur eines auf einmal sein — Schlaf *oder*
+   * Gift. Egelsamen, Wasserring, Nachtmahr und Fluch wirken daneben und
+   * gleichzeitig, brauchen also eine eigene Liste. Wahlfrei, damit ein Kampf,
+   * der als JSON in der Datenbank liegt, ohne sie weiterlaeuft.
+   */
+  lingering?: Lingering[]
+  /** Der zuletzt eingesetzte Zug — Zugabe und Aussetzer haengen daran. */
+  lastMoveId?: string
   moves: Array<{ id: string; pp: number; ppMax: number }>
   sprite: string
   shiny: boolean
@@ -68,6 +79,35 @@ export interface Side {
   trainerName: string
   party: Fighter[]
   activeIndex: number
+  /**
+   * Was ueber der ganzen Seite liegt statt an einem Kaempfer.
+   *
+   * Reflektor und Lichtschild bleiben, wenn gewechselt wird — das ist der
+   * Unterschied zu allem, was an einem Kaempfer haengt, und der Grund fuer
+   * die zweite Liste.
+   */
+  conditions?: SideCondition[]
+}
+
+/**
+ * Ein Effekt, der an einem Kaempfer haengt und ueber Runden wirkt.
+ *
+ * `turns` zaehlt herunter und wird am Rundenende geprueft; `null` heisst: bis
+ * zum Einwechseln oder bis die Bedingung entfaellt (Nachtmahr endet mit dem
+ * Aufwachen).
+ */
+export interface Lingering {
+  kind: 'leech_seed' | 'aqua_ring' | 'nightmare' | 'curse' | 'yawn' | 'encore' | 'disable'
+  turns: number | null
+  /** Bei Zugabe und Aussetzer: welcher Zug gemeint ist. */
+  moveId?: string
+  /** Wer ihn gesetzt hat — Egelsamen speist den Setzer. */
+  from?: 0 | 1
+}
+
+export interface SideCondition {
+  kind: 'reflect' | 'light_screen' | 'safeguard' | 'mist' | 'tailwind'
+  turns: number
 }
 
 export type BattleKind = 'wild' | 'trainer' | 'gym' | 'pvp' | 'raid'
@@ -121,6 +161,14 @@ export type BattleEvent =
   | { type: 'stages_cleared'; side: 0 | 1; fighter: string }
   /** Ein Zug bereitet etwas vor: Volltrefferchance, sicherer Treffer. */
   | { type: 'prepared'; side: 0 | 1; fighter: string; what: 'crit' | 'sure_crit' | 'stats_copied' | 'stats_swapped' | 'destiny_bond' | 'priority_guard' }
+  /** Ein anhaltender Effekt beginnt oder endet. */
+  | { type: 'lingering'; side: 0 | 1; fighter: string; kind: Lingering['kind']; started: boolean }
+  /** Ein anhaltender Effekt hat gewirkt: Abzug oder Zuwachs. */
+  | { type: 'lingering_tick'; side: 0 | 1; fighter: string; kind: Lingering['kind']; amount: number; hpLeft: number }
+  /** Ein Schirm liegt ueber einer Seite. */
+  | { type: 'side_condition'; side: 0 | 1; kind: SideCondition['kind']; started: boolean }
+  /** Ein Schirm hat etwas abgewehrt. */
+  | { type: 'blocked'; side: 0 | 1; fighter: string; by: SideCondition['kind'] }
   | { type: 'end'; outcome: BattleOutcome }
 
 export type PlayerAction =
