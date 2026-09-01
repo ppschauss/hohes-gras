@@ -37,6 +37,22 @@ export interface Fighter {
   flinched: boolean
   /** Runden seit dem Einwechseln. 0 heißt: gerade erst hereingekommen. */
   turnsOnField?: number
+  /*
+   * Vier Merker fuer Zuege, die etwas *vorbereiten* statt sofort zu wirken.
+   *
+   * Alle vier sind wahlfrei: ein Kampf, der vor dieser Aenderung angefangen
+   * hat, liegt als JSON in der Datenbank und kennt sie nicht. Fehlt der Wert,
+   * gilt er als aus — so laeuft ein halb gekaempfter Kampf weiter, statt beim
+   * naechsten Zug zu zerbrechen.
+   */
+  /** Bis einschliesslich dieser Runde prallt alles ab (Schutzschild). */
+  protectedUntilTurn?: number
+  /** Bis einschliesslich dieser Runde bleibt mindestens ein KP (Ausdauer). */
+  enduringUntilTurn?: number
+  /** Zusaetzliche Volltrefferstufen fuer den ganzen Kampf (Energiefokus). */
+  critStage?: number
+  /** Der naechste Angriff ist ein sicherer Volltreffer (Konzentration). */
+  sureCrit?: boolean
   moves: Array<{ id: string; pp: number; ppMax: number }>
   sprite: string
   shiny: boolean
@@ -93,6 +109,14 @@ export type BattleEvent =
   | { type: 'multi_hit'; side: 0 | 1; fighter: string; hits: number }
   /** Jemand hat das Wetter umgestellt. */
   | { type: 'weather'; side: 0 | 1; fighter: string; weather: Weather }
+  /** Ein Angriff ist an einem Schutz abgeprallt. */
+  | { type: 'protected'; side: 0 | 1; fighter: string }
+  /** Jemand hat einen Treffer mit einem Kraftpunkt ueberstanden. */
+  | { type: 'endured'; side: 0 | 1; fighter: string }
+  /** Alle Wertveraenderungen sind zurueckgesetzt (Dunkelnebel). */
+  | { type: 'stages_cleared'; side: 0 | 1; fighter: string }
+  /** Ein Zug bereitet etwas vor: Volltrefferchance, sicherer Treffer. */
+  | { type: 'prepared'; side: 0 | 1; fighter: string; what: 'crit' | 'sure_crit' | 'stats_copied' | 'stats_swapped' }
   | { type: 'end'; outcome: BattleOutcome }
 
 export type PlayerAction =

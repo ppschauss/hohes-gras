@@ -32,6 +32,15 @@ const MOVES: Record<string, MoveDef> = {
     ...mv('fake-out', 'normal', 'physical', 40, 100, 10, { kind: 'flinch' }, 100, 0, 3),
     firstTurnOnly: true,
   } as MoveDef,
+  protect: mv('protect', 'normal', 'status', 0, 100, 10, { kind: 'protect' }, 100, 0, 4),
+  endure: mv('endure', 'normal', 'status', 0, 100, 10, { kind: 'endure' }, 100, 0, 4),
+  rest: mv('rest', 'psychic', 'status', 0, 100, 5, { kind: 'rest' }, 100),
+  refresh: mv('refresh', 'normal', 'status', 0, 100, 20, { kind: 'cure', scope: 'self' }, 100),
+  'heal-bell': mv('heal-bell', 'normal', 'status', 0, 100, 5, { kind: 'cure', scope: 'party' }, 100),
+  'focus-energy': mv('focus-energy', 'normal', 'status', 0, 100, 30, { kind: 'crit_up', stages: 2, sure: false }, 100),
+  'laser-focus': mv('laser-focus', 'normal', 'status', 0, 100, 30, { kind: 'crit_up', stages: 3, sure: true }, 100),
+  haze: mv('haze', 'ice', 'status', 0, 100, 30, { kind: 'haze' }, 100),
+  'psych-up': mv('psych-up', 'normal', 'status', 0, 100, 10, { kind: 'copy_stages' }, 100),
   // Regentanz: stellt das Wetter um, sonst nichts.
   'rain-dance': mv('rain-dance', 'water', 'status', 0, 100, 5, { kind: 'weather', weather: 'rain' }, 100),
   // Traumfresser: hohe Staerke, halbes Aussaugen — und nur gegen Schlafende.
@@ -536,6 +545,93 @@ describe('Wer besiegt wird, verliert seinen Zug', () => {
     const treffer = turn.events.filter((e) => e.type === 'damage')
     expect(treffer).toHaveLength(1)
     expect(treffer[0]!.side).toBe(1)
+  })
+})
+
+describe('Zuege, die etwas vorbereiten', () => {
+  it('laesst am Schutzschild alles abprallen', () => {
+    const a = fighter('schild', ['normal'], 20, ['protect'])
+    const b = fighter('gegner', ['normal'], 20, ['tackle'])
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+
+    expect(runde.events.some((e) => e.type === 'protected')).toBe(true)
+    expect(runde.events.some((e) => e.type === 'damage' && e.side === 0)).toBe(false)
+    expect(runde.state.sides[0]!.party[0]!.hp).toBe(a.hpMax)
+  })
+
+  it('haelt den Schutz nur eine Runde', () => {
+    const a = fighter('schild', ['normal'], 20, ['protect'])
+    const b = fighter('gegner', ['normal'], 20, ['tackle'])
+    const erste = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    // Zweite Runde: der Schild wurde nicht erneuert.
+    const zweite = resolveTurn(erste.state, { kind: 'move', moveIndex: 0 }, useMove(), content)
+    // Er setzt ihn erneut, also prallt es wieder ab — aber der Merker traegt
+    // die neue Runde, nicht die alte.
+    expect(zweite.state.sides[0]!.party[0]!.protectedUntilTurn).toBe(zweite.state.turn)
+  })
+
+  it('laesst Ausdauer einen Kraftpunkt stehen', () => {
+    const a = { ...fighter('zaeh', ['normal'], 20, ['endure']), hp: 3 }
+    const b = fighter('gegner', ['normal'], 50, ['tackle'])
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+
+    expect(runde.state.sides[0]!.party[0]!.hp).toBe(1)
+    expect(runde.events.some((e) => e.type === 'endured')).toBe(true)
+    expect(runde.events.some((e) => e.type === 'faint')).toBe(false)
+  })
+
+  it('heilt mit Erholung voll und schlaefert dafuer ein', () => {
+    const a = { ...fighter('muede', ['psychic'], 20, ['rest']), hp: 5, status: 'burn' as const }
+    // Ein Gegner mit Statuszug: sonst misst der Test seinen Treffer mit.
+    const b = fighter('gegner', ['normal'], 5, ['growl'])
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    const nachher = runde.state.sides[0]!.party[0]!
+
+    expect(nachher.hp).toBe(nachher.hpMax)
+    expect(nachher.status).toBe('sleep')
+  })
+
+  it('heilt mit Vitalglocke das ganze Team', () => {
+    const a = { ...fighter('glocke', ['normal'], 20, ['heal-bell']), status: 'poison' as const }
+    const zweiter = { ...fighter('hinten', ['normal'], 20, ['tackle']), status: 'burn' as const }
+    const b = fighter('gegner', ['normal'], 5, ['tackle'])
+    const runde = resolveTurn(battle([a, zweiter], [b]), useMove(), useMove(), content)
+
+    expect(runde.state.sides[0]!.party.every((f) => f.status === 'none')).toBe(true)
+  })
+
+  it('macht aus Konzentration genau einen sicheren Volltreffer', () => {
+    const a = fighter('scharf', ['normal'], 20, ['laser-focus', 'tackle'])
+    const b = fighter('gegner', ['normal'], 20, ['tackle'])
+    const vorbereitet = resolveTurn(battle([a], [b]), useMove(0), useMove(), content)
+    expect(vorbereitet.state.sides[0]!.party[0]!.sureCrit).toBe(true)
+
+    const schlag = resolveTurn(vorbereitet.state, useMove(1), useMove(), content)
+    expect(schlag.events.some((e) => e.type === 'damage' && e.side === 1 && e.critical)).toBe(true)
+    // Und er ist verbraucht.
+    expect(schlag.state.sides[0]!.party[0]!.sureCrit).toBe(false)
+  })
+
+  it('raeumt mit Dunkelnebel beide Seiten ab', () => {
+    const a = fighter('nebel', ['ice'], 20, ['haze'])
+    const b = fighter('gegner', ['normal'], 20, ['tackle'])
+    const start = battle([a], [b])
+    start.sides[0]!.party[0]!.stages.atk = 2
+    start.sides[1]!.party[0]!.stages.def = -3
+
+    const runde = resolveTurn(start, useMove(), useMove(), content)
+    expect(runde.state.sides[0]!.party[0]!.stages.atk).toBe(0)
+    expect(runde.state.sides[1]!.party[0]!.stages.def).toBe(0)
+  })
+
+  it('uebernimmt mit Psycho-Plus die Werteaenderungen des Ziels', () => {
+    const a = fighter('kopie', ['normal'], 20, ['psych-up'])
+    const b = fighter('gegner', ['normal'], 20, ['tackle'])
+    const start = battle([a], [b])
+    start.sides[1]!.party[0]!.stages.atk = 3
+
+    const runde = resolveTurn(start, useMove(), useMove(), content)
+    expect(runde.state.sides[0]!.party[0]!.stages.atk).toBe(3)
   })
 })
 

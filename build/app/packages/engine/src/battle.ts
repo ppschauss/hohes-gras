@@ -326,6 +326,19 @@ function performMove(
     return
   }
 
+  /*
+   * Ein Schutzschild faengt alles ab, was auf den Traeger zielt.
+   *
+   * Geprueft nach dem Treffer und vor dem Schaden: der Zug ist verbraucht, der
+   * PP weg, und der Angreifer erfaehrt es. Zuege auf sich selbst laufen
+   * weiter — sonst koennte man sich nicht mehr heilen, waehrend man geschuetzt
+   * ist.
+   */
+  if (move.target === 'foe' && defender.protectedUntilTurn === state.turn) {
+    events.push({ type: 'protected', side: sideIndex === 0 ? 1 : 0, fighter: defender.id })
+    return
+  }
+
   const effectiveness = move.category === 'status'
     ? 1
     : content.effectiveness(move.type, defender.types)
@@ -345,15 +358,28 @@ function performMove(
       return
     }
     if (dmg.amount > 0) {
-      defender.hp = Math.max(0, defender.hp - dmg.amount)
-      totalDealt += dmg.amount
+      // Ausdauer laesst genau einen Kraftpunkt stehen — und nur, wenn vorher
+      // ueberhaupt noch etwas da war.
+      const haelt = defender.enduringUntilTurn === state.turn && defender.hp > 0
+      const vorher = defender.hp
+      defender.hp = haelt
+        ? Math.max(1, defender.hp - dmg.amount)
+        : Math.max(0, defender.hp - dmg.amount)
+      totalDealt += vorher - defender.hp
+      if (haelt && vorher - dmg.amount <= 0) {
+        events.push({ type: 'endured', side: sideIndex === 0 ? 1 : 0, fighter: defender.id })
+      }
       events.push({
         type: 'damage', side: sideIndex === 0 ? 1 : 0, fighter: defender.id,
-        amount: dmg.amount, hpLeft: defender.hp,
+        amount: vorher - defender.hp, hpLeft: defender.hp,
         effectiveness: dmg.effectiveness, critical: dmg.critical,
       })
     }
   }
+
+  // Der sichere Volltreffer gilt fuer *einen* Angriff. Verbraucht wird er
+  // hier und nicht in der Schadensformel: die soll rechnen, nicht aufraeumen.
+  if (totalDealt > 0) attacker.sureCrit = false
 
   applyMoveEffect(state, sideIndex, move, attacker, defender, totalDealt, rng, events)
 }
@@ -407,6 +433,87 @@ function applyMoveEffect(
         type: 'stage', side: onSelf ? sideIndex : foeIndex, fighter: target.id,
         stat: effect.stat, delta: result.applied, capped: result.capped,
       })
+      return
+    }
+
+    case 'protect': {
+      // Nur fuer diese Runde. Ein Schild, das laenger haelt, waere kein Zug
+      // mehr, sondern ein Zustand.
+      attacker.protectedUntilTurn = state.turn
+      events.push({ type: 'protected', side: sideIndex, fighter: attacker.id })
+      return
+    }
+
+    case 'endure': {
+      attacker.enduringUntilTurn = state.turn
+      events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'crit' })
+      return
+    }
+
+    case 'rest': {
+      /*
+       * Voll heilen, dafuer zwei Runden schlafen.
+       *
+       * Der Schlaf ist der Preis und wird deshalb *gesetzt*, nicht angeboten:
+       * `canApplyStatus` wuerde ihn ablehnen, wenn schon ein Leiden anliegt —
+       * aber genau dann will man ihn.
+       */
+      if (attacker.hp >= attacker.hpMax && attacker.status === 'none') return
+      const geheilt = attacker.hpMax - attacker.hp
+      attacker.hp = attacker.hpMax
+      attacker.status = 'sleep'
+      attacker.statusCounter = 2
+      events.push({ type: 'heal', side: sideIndex, fighter: attacker.id, amount: geheilt, hpLeft: attacker.hp })
+      events.push({ type: 'status', side: sideIndex, fighter: attacker.id, status: 'sleep' })
+      return
+    }
+
+    case 'cure': {
+      const seite = state.sides[sideIndex]!
+      const ziele = effect.scope === 'party'
+        ? seite.party.filter((f) => f.hp > 0)
+        : [attacker]
+      for (const f of ziele) {
+        if (f.status === 'none') continue
+        const vorher = f.status
+        f.status = 'none'
+        f.statusCounter = 0
+        events.push({ type: 'status_cured', side: sideIndex, fighter: f.id, status: vorher })
+      }
+      return
+    }
+
+    case 'crit_up': {
+      if (effect.sure) {
+        attacker.sureCrit = true
+        events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'sure_crit' })
+        return
+      }
+      attacker.critStage = Math.min(3, (attacker.critStage ?? 0) + effect.stages)
+      events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'crit' })
+      return
+    }
+
+    case 'haze': {
+      // Beide Seiten, auch die eigene. Dunkelnebel ist ein Gleichmacher und
+      // kein Angriff — wer ihn setzt, gibt seine eigenen Zuwaechse mit auf.
+      for (const seite of state.sides) {
+        for (const f of seite.party) f.stages = emptyStages()
+      }
+      events.push({ type: 'stages_cleared', side: sideIndex, fighter: attacker.id })
+      return
+    }
+
+    case 'copy_stages': {
+      attacker.stages = { ...defender.stages }
+      events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'stats_copied' })
+      return
+    }
+
+    case 'swap_stats': {
+      const { atk, def } = attacker.stats
+      attacker.stats = { ...attacker.stats, atk: def, def: atk }
+      events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'stats_swapped' })
       return
     }
 

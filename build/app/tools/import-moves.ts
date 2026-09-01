@@ -33,6 +33,10 @@ type Effect =
   | { kind: 'status'; status: 'burn' | 'freeze' | 'paralysis' | 'poison' | 'toxic' | 'sleep' | 'confusion' }
   | { kind: 'stat_stage'; target: 'self' | 'foe'; stat: 'atk' | 'def' | 'spa' | 'spd' | 'spe' | 'accuracy' | 'evasion'; stages: number }
   | { kind: 'weather'; weather: 'clear' | 'rain' | 'storm' | 'snow' | 'fog' | 'sandstorm' | 'heat' }
+  | { kind: 'protect' } | { kind: 'endure' } | { kind: 'rest' } | { kind: 'haze' }
+  | { kind: 'copy_stages' } | { kind: 'swap_stats' }
+  | { kind: 'cure'; scope: 'self' | 'party' }
+  | { kind: 'crit_up'; stages: number; sure: boolean }
   | { kind: 'drain'; ratio: number }
   | { kind: 'recoil'; ratio: number }
   | { kind: 'heal'; ratio: number }
@@ -59,6 +63,29 @@ const SELF_TARGETS = new Set(['user', 'users-field', 'user-and-allies', 'all-all
  * Ableitung und standen wirkungslos im Pack; gemessen lagen sie in 79
  * Attackenplaetzen und verschenkten dort jedes Mal einen Zug.
  */
+/**
+ * Zuege, deren Wirkung PokeAPI nur im Fliesstext fuehrt.
+ *
+ * Dieselbe Lage wie beim Wetter und bei Traumfresser: die Metadaten kennen
+ * keine Felder dafuer. Was hier steht, ist bewusst die *kurze* Liste — nur
+ * Zuege, deren Wirkung die Engine wirklich abbildet. Alles andere bleibt
+ * lieber ohne Wirkung, als eine halbe vorzutaeuschen.
+ */
+const SPECIAL_MOVES: Record<string, Effect> = {
+  protect: { kind: 'protect' },
+  detect: { kind: 'protect' },
+  endure: { kind: 'endure' },
+  rest: { kind: 'rest' },
+  refresh: { kind: 'cure', scope: 'self' },
+  'heal-bell': { kind: 'cure', scope: 'party' },
+  aromatherapy: { kind: 'cure', scope: 'party' },
+  'focus-energy': { kind: 'crit_up', stages: 2, sure: false },
+  'laser-focus': { kind: 'crit_up', stages: 3, sure: true },
+  haze: { kind: 'haze' },
+  'psych-up': { kind: 'copy_stages' },
+  'power-trick': { kind: 'swap_stats' },
+}
+
 const WEATHER_MOVES: Record<string, Extract<Effect, { kind: 'weather' }>['weather']> = {
   'rain-dance': 'rain',
   'sunny-day': 'heat',
@@ -77,6 +104,9 @@ const WEATHER_MOVES: Record<string, Extract<Effect, { kind: 'weather' }>['weathe
  */
 function deriveEffect(m: ApiMove): { effect: Effect; chance: number } {
   const meta = m.meta
+
+  const besonders = SPECIAL_MOVES[m.name]
+  if (besonders) return { effect: besonders, chance: 100 }
 
   const wetter = WEATHER_MOVES[m.name]
   if (wetter) return { effect: { kind: 'weather', weather: wetter }, chance: 100 }

@@ -65,6 +65,21 @@ function scoreMove(
   if (move.requiresTargetStatus && foe.status !== move.requiresTargetStatus) return 0
   // Ein zweiter Regentanz bei Regen ist ein verschenkter Zug.
   if (move.effect.kind === 'weather') return move.effect.weather === weather ? 0 : 18
+  switch (move.effect.kind) {
+    // Ein Schild lohnt sich, aber nicht zweimal hintereinander — und ohne
+    // Gedaechtnis waere genau das die Folge. Deshalb bewusst niedrig.
+    case 'protect': return 12
+    case 'endure': return self.hp <= self.hpMax * 0.2 ? 20 : 2
+    // Erholung nur, wenn es etwas zu heilen gibt: der Schlaf ist ein Preis.
+    case 'rest': return self.hp <= self.hpMax * 0.4 ? 40 : 0
+    case 'cure': return self.status === 'none' ? 0 : 30
+    case 'crit_up': return (self.critStage ?? 0) > 0 && !move.effect.sure ? 0 : 16
+    // Nur wenn der Gegner mehr Zuwaechse hat als man selbst.
+    case 'haze': return summe(foe.stages) > summe(self.stages) + 1 ? 25 : 0
+    case 'copy_stages': return summe(foe.stages) > summe(self.stages) ? 22 : 0
+    case 'swap_stats': return self.stats.def > self.stats.atk ? 14 : 0
+    default: break
+  }
   if (move.category === 'status') {
     // Status moves are worth something only while they can still do their job.
     if (move.effect.kind === 'status' && foe.status !== 'none') return 5
@@ -135,3 +150,7 @@ function bestSwitchTarget(side: BattleState['sides'][0], foe: Fighter, content: 
   }
   return bestIndex >= 0 && bestScore > 0 ? bestIndex : null
 }
+
+/** Wie viel jemand insgesamt an Wertveraenderungen mitbringt. */
+const summe = (stages: Fighter['stages']): number =>
+  Object.values(stages).reduce((n, v) => n + v, 0)

@@ -29,6 +29,10 @@ export function describeEvent(event: BattleEventView, view: BattleView): string[
     }
     case 'miss': return [t('log.miss')]
     case 'weather': return [t('log.weather', { weather: t(`weather.${e.weather}`) })]
+    case 'protected': return [t('log.protected')]
+    case 'endured': return [t('log.endured')]
+    case 'stages_cleared': return [t('log.stagesCleared')]
+    case 'prepared': return [t(`log.prepared.${e.what}`)]
     case 'heal': return [t('log.heal', { name: who, n: Number(e.amount ?? 0) })]
     case 'status': return [t('log.status', { name: who, status: t(`status.${String(e.status)}`) })]
     case 'status_damage': return [t('log.status_damage', { name: who, status: t(`status.${String(e.status)}`) })]

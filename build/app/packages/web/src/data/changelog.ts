@@ -22,6 +22,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Zwölf weitere Attacken wirken: Schutzschild, Scanner, Ausdauer, Erholung, Heilung, Vitalglocke, Aromakur, Energiefokus, Konzentration, Dunkelnebel, Psycho-Plus und Krafttrick.',
       'Legendäre erscheinen jetzt mit 0,1 % je Erkundung — bei jedem Wetter und zu jeder Zeit, dafür deutlich seltener. Vorher gab es zwei Wege nebeneinander, einer davon zehnmal zu großzügig.',
       'Tanhel, Metang und Metagross galten als legendär, weil sie Fangwert 3 haben. Sie brauchen keine Sagenbeere mehr.',
       'Die Zucht sagt jetzt, wie viel die Brutstation abzieht — und dass ein bereits gelegtes Ei seine Zeit behält.',

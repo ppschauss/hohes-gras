@@ -99,6 +99,22 @@ export const MoveDefSchema = z.object({
         kind: z.literal('weather'),
         weather: z.enum(['clear', 'rain', 'storm', 'snow', 'fog', 'sandstorm', 'heat']),
       }),
+      /** Schutzschild, Scanner: diese Runde prallt alles ab. */
+      z.object({ kind: z.literal('protect') }),
+      /** Ausdauer: dieser Treffer laesst mindestens einen Kraftpunkt. */
+      z.object({ kind: z.literal('endure') }),
+      /** Erholung: voll heilen und dafuer zwei Runden schlafen. */
+      z.object({ kind: z.literal('rest') }),
+      /** Heilung, Vitalglocke: Zustandsleiden aufheben, bei sich oder im Team. */
+      z.object({ kind: z.literal('cure'), scope: z.enum(['self', 'party']) }),
+      /** Energiefokus, Konzentration: bessere oder sichere Volltreffer. */
+      z.object({ kind: z.literal('crit_up'), stages: z.number().int().min(1).max(3), sure: z.boolean().default(false) }),
+      /** Dunkelnebel: alle Wertveraenderungen auf beiden Seiten zurueck. */
+      z.object({ kind: z.literal('haze') }),
+      /** Psycho-Plus: die Wertveraenderungen des Ziels uebernehmen. */
+      z.object({ kind: z.literal('copy_stages') }),
+      /** Krafttrick: eigenen Angriff und eigene Verteidigung tauschen. */
+      z.object({ kind: z.literal('swap_stats') }),
     ])
     .default({ kind: 'none' }),
 })

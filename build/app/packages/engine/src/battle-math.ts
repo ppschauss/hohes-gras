@@ -80,7 +80,13 @@ export function computeDamage(
   }
 
   const physical = move.category === 'physical'
-  const critical = rng.next() < (CRIT_CHANCE[clamp(move.critRate, 0, 3)] ?? CRIT_CHANCE[0]!)
+  /*
+   * Volltrefferstufe: die des Zuges plus die, die sich der Angreifer erarbeitet
+   * hat. Energiefokus hebt sie fuer den ganzen Kampf, Konzentration verspricht
+   * genau einen sicheren Treffer — und wird dabei verbraucht.
+   */
+  const critical = attacker.sureCrit === true
+    || rng.next() < (CRIT_CHANCE[clamp(move.critRate + (attacker.critStage ?? 0), 0, 3)] ?? CRIT_CHANCE[0]!)
 
   // A critical hit ignores the defender's positive defense stages and the
   // attacker's negative offense stages — otherwise a crit against a boosted
