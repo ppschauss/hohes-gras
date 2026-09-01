@@ -1,4 +1,5 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import { battleParty } from './party.js'
 import {
   bossHp, computeStats, createRng, deriveSeed, distributeRewards, raidAttack, raidProgress,
@@ -226,14 +227,14 @@ function payOut(ctx: AppContext, raidId: string, viewer: Trainer): RaidAttackOut
 
   for (const r of rewards) {
     if (!raids.markParticipantRewarded(ctx.db, raid.id, r.trainerId)) continue
-    inventory.earnGold(ctx.db, r.trainerId, r.gold)
+    inventory.earnGold(ctx.db, r.trainerId, r.gold, von(ctx, 'raid.reward'))
 
     // Werkstoffe. Sie sind der eigentliche Grund, einen Raid zu beschwoeren:
     // Gold hat, wer lange spielt.
     const items = r.items.flatMap((d) => {
       const item = ctx.registry.tryItem(d.itemId)
       if (!item) return []
-      inventory.grant(ctx.db, r.trainerId, d.itemId, d.quantity)
+      inventory.grant(ctx.db, r.trainerId, d.itemId, d.quantity, von(ctx, 'raid.reward'))
       return [{
         itemId: d.itemId,
         quantity: d.quantity,
@@ -265,7 +266,7 @@ function payOut(ctx: AppContext, raidId: string, viewer: Trainer): RaidAttackOut
         moves: ctx.registry.learnableAt(raid.speciesId, level).slice(0, 4),
         caughtAreaId: null,
         teamSlot: null,
-      })
+      }, von(ctx, 'raid.creature'))
       dex.markCaught(ctx.db, r.trainerId, raid.speciesId)
       if (r.trainerId === viewer.id) {
         created = creatureView(ctx.registry, c, viewer.locale, worldClock().timeOfDay)

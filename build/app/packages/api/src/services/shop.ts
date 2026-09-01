@@ -1,4 +1,5 @@
 import { GameError, type ShopState, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import * as inventory from '../repos/inventory.js'
@@ -72,7 +73,7 @@ export function buy(ctx: AppContext, trainer: Trainer, itemId: string, quantity:
     // spendGold refuses rather than going negative, so two concurrent buys
     // cannot both succeed on the same coins.
     inventory.spendGold(ctx.db, trainer.id, cost)
-    inventory.grant(ctx.db, trainer.id, itemId, amount * perUnit)
+    inventory.grant(ctx.db, trainer.id, itemId, amount * perUnit, von(ctx, 'shop.buy'))
     logEvent(ctx.db, trainer.id, 'shop.buy', { itemId, quantity: amount * perUnit, cost })
   })
 }
@@ -85,7 +86,7 @@ export function sell(ctx: AppContext, trainer: Trainer, itemId: string, quantity
   tx(ctx.db, () => {
     inventory.consume(ctx.db, trainer.id, itemId, quantity)
     const revenue = item.sellPrice! * quantity
-    inventory.earnGold(ctx.db, trainer.id, revenue)
+    inventory.earnGold(ctx.db, trainer.id, revenue, von(ctx, 'shop.sell'))
     logEvent(ctx.db, trainer.id, 'shop.sell', { itemId, quantity, revenue })
   })
 }

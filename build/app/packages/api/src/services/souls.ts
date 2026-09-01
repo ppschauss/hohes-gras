@@ -1,4 +1,5 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import {
   createRng, produceEgg, randomIvs, SHINY_SOUL_ID, SHINY_SOUL_PER_EGG,
   SOUL_PER_EGG, SOUL_PER_SHINY_EGG,
@@ -55,7 +56,7 @@ export function salvage(ctx: AppContext, trainer: Trainer, creatureId: string): 
     const fragments = species.types.map((typeId) => {
       const item = ctx.registry.tryItem(soulItemId(typeId))
       if (!item) return null
-      inventory.grant(ctx.db, trainer.id, item.id, 1)
+      inventory.grant(ctx.db, trainer.id, item.id, 1, von(ctx, 'creature.salvage'))
       return {
         itemId: item.id,
         typeId,
@@ -142,7 +143,7 @@ export function salvageMany(
       for (const typeId of species.types) {
         const item = ctx.registry.tryItem(soulItemId(typeId))
         if (!item) continue
-        inventory.grant(ctx.db, trainer.id, item.id, 1)
+        inventory.grant(ctx.db, trainer.id, item.id, 1, von(ctx, 'creature.salvage'))
         totals.set(item.id, {
           itemId: item.id,
           typeId,

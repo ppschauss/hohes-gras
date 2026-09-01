@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import {
   claimLogin, isLoginBonusDay, LOGIN_CYCLE_DAYS, LOGIN_REWARDS, LOGIN_WEEK_DAYS,
   loginRewardFor, type LoginReward, type LoginState,
@@ -72,8 +73,8 @@ export function claim(ctx: AppContext, trainer: Trainer) {
     if (!next) throw new GameError('invalid_state', { reason: 'already_claimed' }, 409)
 
     const reward = loginRewardFor(next.day)
-    if (reward.kind === 'gold') inventory.earnGold(ctx.db, trainer.id, reward.amount)
-    else if (reward.kind === 'item') inventory.grant(ctx.db, trainer.id, reward.itemId, reward.quantity)
+    if (reward.kind === 'gold') inventory.earnGold(ctx.db, trainer.id, reward.amount, von(ctx, 'login.reward'))
+    else if (reward.kind === 'item') inventory.grant(ctx.db, trainer.id, reward.itemId, reward.quantity, von(ctx, 'login.reward'))
     else energy.grant(ctx, trainer.id, reward.amount, 'login')
 
     ctx.db.prepare(

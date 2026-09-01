@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import {
   findQuest, questsFor, QUESTS_PER_DAY, QUESTS_PER_WEEK,
   type QuestCadence, type QuestMetric, type QuestSpec,
@@ -130,10 +131,10 @@ export function claim(ctx: AppContext, trainer: Trainer, questId: string): Quest
       throw new GameError('invalid_state', { reason: 'already_claimed' }, 409)
     }
 
-    inventory.earnGold(ctx.db, trainer.id, spec.reward.gold)
+    inventory.earnGold(ctx.db, trainer.id, spec.reward.gold, von(ctx, 'quest.reward'))
     const items = spec.reward.items ?? []
     for (const i of items) {
-      if (ctx.registry.tryItem(i.itemId)) inventory.grant(ctx.db, trainer.id, i.itemId, i.quantity)
+      if (ctx.registry.tryItem(i.itemId)) inventory.grant(ctx.db, trainer.id, i.itemId, i.quantity, von(ctx, 'quest.reward'))
     }
     logEvent(ctx.db, trainer.id, 'quest.claimed', { questId, gold: spec.reward.gold })
     return { questId, gold: spec.reward.gold, items: [...items] }

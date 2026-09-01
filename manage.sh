@@ -131,8 +131,29 @@ case "$1" in
     cp ./data/game.db "./data/backups/game-manual-${ts}.db"
     echo "Sicherung: ./data/backups/game-manual-${ts}.db"
     ;;
+  rollback)
+    # Zuwendungen sichten und zuruecknehmen.
+    #
+    # Ohne --wirklich nur Vorschau; das Werkzeug besteht selbst darauf. Bei
+    # einem echten Eingriff wird vorher gesichert — ein Rollback ist der
+    # Moment, in dem man eine Sicherung am dringendsten braucht und am
+    # wenigsten daran denkt.
+    shift
+    for a in "$@"; do
+      if [ "$a" = "--wirklich" ]; then
+        ts=$(date +%Y%m%d-%H%M%S)
+        cp ./data/game.db "./data/backups/game-vor-rollback-${ts}.db"
+        echo "Sicherung: ./data/backups/game-vor-rollback-${ts}.db"
+      fi
+    done
+    docker exec "$NAME" node packages/api/dist/tools/rollback.js "$@"
+    ;;
   *)
-    echo "Nutzung: $0 {build|up|rebuild|down|restart|logs|health|shell|backup}"
+    echo "Nutzung: $0 {build|up|rebuild|down|restart|logs|health|shell|backup|rollback}"
+    echo ""
+    echo "  rollback --quellen                 zeigt, welche Quellen es gibt"
+    echo "  rollback --stand <sha> [--quelle x]  Vorschau: was kam unter diesem Stand"
+    echo "  rollback --seit <ISO> --quelle x --wirklich   nimmt es zurueck"
     exit 1
     ;;
 esac

@@ -1,4 +1,5 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import { battleParty } from './party.js'
 import type { AreaDef, TrainerDef } from '@game/content'
 import {
@@ -649,7 +650,7 @@ function applyOutcome(
   }
   if (!def || !won) {
     if (!battles.markRewarded(ctx.db, record.id)) return { ...empty, gold: 0 }
-    inventory.earnGold(ctx.db, trainer.id, showUp)
+    inventory.earnGold(ctx.db, trainer.id, showUp, von(ctx, 'battle.showUp'))
     logEvent(ctx.db, trainer.id, 'battle.end', { opponentId: def?.id, won })
     return empty
   }
@@ -697,7 +698,7 @@ function applyOutcome(
   const gold = Math.round((showUp + (!firstToday
     ? 0
     : def.rewardGold * (firstWin ? 1 : def.repeatRewardRatio))) * (1 + boni.battleGold / 100))
-  inventory.earnGold(ctx.db, trainer.id, gold)
+  inventory.earnGold(ctx.db, trainer.id, gold, von(ctx, 'battle.win'))
 
   /*
    * Energie gibt es einmal je Gegner, nicht je Kampf.
@@ -821,14 +822,14 @@ function grantEventLoot(ctx: AppContext, trainer: Trainer, areaId: string | null
     : Math.max(...creatures.teamOf(ctx.db, trainer.id).map((c) => c.level), 10)
 
   const gold = eventGold(level, rng)
-  inventory.earnGold(ctx.db, trainer.id, gold)
+  inventory.earnGold(ctx.db, trainer.id, gold, von(ctx, 'battle.eventLoot'))
 
   const pool = ctx.registry.allItems.filter((i) =>
     ['ball', 'berry', 'medicine', 'material', 'xp'].includes(i.category))
   const items: EventLoot['items'] = []
   for (const item of pool.length > 0 ? [rng.pick(pool), rng.pick(pool)] : []) {
     const quantity = eventLoot(rng)
-    inventory.grant(ctx.db, trainer.id, item.id, quantity)
+    inventory.grant(ctx.db, trainer.id, item.id, quantity, von(ctx, 'battle.eventLoot'))
     const existing = items.find((x) => x.itemId === item.id)
     if (existing) existing.quantity += quantity
     else items.push({
@@ -849,7 +850,7 @@ function grantEventLoot(ctx: AppContext, trainer: Trainer, areaId: string | null
     .map((i) => String(i.params.lureType)))) {
     const lure = ctx.registry.tryItem(`lure-${typeId}`)
     if (!lure) continue
-    inventory.grant(ctx.db, trainer.id, lure.id, 1)
+    inventory.grant(ctx.db, trainer.id, lure.id, 1, von(ctx, 'battle.eventLoot'))
     const existing = items.find((x) => x.itemId === lure.id)
     if (existing) existing.quantity += 1
     else items.push({
@@ -861,7 +862,7 @@ function grantEventLoot(ctx: AppContext, trainer: Trainer, areaId: string | null
 
   // Die Sagenbeere: der einzige Weg, an sie heranzukommen.
   if (rollBerryDrop(rng)) {
-    inventory.grant(ctx.db, trainer.id, LEGENDARY_BERRY_ID, 1)
+    inventory.grant(ctx.db, trainer.id, LEGENDARY_BERRY_ID, 1, von(ctx, 'battle.eventLoot'))
     const berry = ctx.registry.tryItem(LEGENDARY_BERRY_ID)
     items.push({
       itemId: LEGENDARY_BERRY_ID,
@@ -884,7 +885,7 @@ function grantEventLoot(ctx: AppContext, trainer: Trainer, areaId: string | null
       nature, ivs, friendship: 70, hpCurrent: stats.hp, shiny: rng.chance(2),
       moves: ctx.registry.learnableAt(species.id, spawn.maxLevel).slice(0, 4),
       caughtAreaId: area.id, teamSlot: null,
-    })
+    }, von(ctx, 'battle.eventCreature'))
     dex.markCaught(ctx.db, trainer.id, species.id)
     perfect = {
       speciesId: species.id,

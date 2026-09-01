@@ -1,4 +1,5 @@
 import { CARE_ACTIONS, GameError, type CareAction, type GardenState, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import { battleParty } from './party.js'
 import {
   applyCare, CARE_RULES, ENERGY_COSTS, ENERGY_MAX, ENERGY_REGEN_BOX_PER_HOUR,
@@ -361,7 +362,7 @@ export function chooseStarter(
       // schon vor dem ersten Wurf teilweise erfuellt.
       caughtAreaId: null,
       teamSlot: 0,
-    })
+    }, von(ctx, 'starter'))
     // XP must match the level, or the next XP gain would snap it back to 1.
     ctx.db.prepare('UPDATE creatures SET xp = ? WHERE id = ?')
       .run(xpFloorForLevel(ctx, speciesId, STARTER_LEVEL), created.id)
@@ -373,7 +374,7 @@ export function chooseStarter(
     // bevor das erste Level dazukommt.
     regionEntries.recordEntry(ctx.db, trainer.id, start.regionId, STARTER_LEVEL)
 
-    for (const kit of STARTER_KIT) inventory.grant(ctx.db, trainer.id, kit.itemId, kit.quantity)
+    for (const kit of STARTER_KIT) inventory.grant(ctx.db, trainer.id, kit.itemId, kit.quantity, von(ctx, 'starter.kit'))
     dex.markCaught(ctx.db, trainer.id, speciesId)
     teams.syncActiveFromGarden(ctx, trainer.id)
     bumpMetric(ctx, trainer.id, 'catches')

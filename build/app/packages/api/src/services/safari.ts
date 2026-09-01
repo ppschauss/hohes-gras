@@ -1,4 +1,5 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import {
   attemptCatch, BOX_BASE_LIMIT, catchProbability, catchReward, computeStats, createRng, deriveSeed, fleeChance,
   rollCatchDrop,
@@ -453,7 +454,7 @@ function grantFind(
 
   if (what === 'coins') {
     const gold = coinPurse(rng)
-    inventory.earnGold(ctx.db, trainer.id, gold)
+    inventory.earnGold(ctx.db, trainer.id, gold, von(ctx, 'safari.find'))
     return {
       what, itemId: null, name: 'coins', icon: null, quantity: 1, gold,
       detectorLeft: spend(),
@@ -469,7 +470,7 @@ function grantFind(
   const quantity = what === 'fragment'
     ? 1 + Math.floor(rng.next() * 2)
     : findQuantity(item.sellPrice ?? 1, findValueCap(ctx.registry.region(area.regionId).order - 1))
-  inventory.grant(ctx.db, trainer.id, item.id, quantity)
+  inventory.grant(ctx.db, trainer.id, item.id, quantity, von(ctx, 'safari.find'))
   return {
     what,
     itemId: item.id,
@@ -848,7 +849,7 @@ export function throwBall(
       moves: ctx.registry.learnableAt(e.speciesId, e.level).slice(0, 4),
       caughtAreaId: e.areaId,
       teamSlot: creatures.teamOf(ctx.db, trainer.id).length < 5 ? nextFreeSlot(ctx, trainer.id) : null,
-    })
+    }, von(ctx, legendary ? 'safari.catch.legendary' : 'safari.catch'))
 
     const newDexEntry = dex.markCaught(ctx.db, trainer.id, e.speciesId)
     let chain = world.recordCatch(ctx.db, trainer.id, e.speciesId)
@@ -865,7 +866,7 @@ export function throwBall(
     }
     world.bumpAreaStat(ctx.db, trainer.id, e.areaId, 'catches')
     const reward = catchReward(species, e.level, e.shiny)
-    inventory.earnGold(ctx.db, trainer.id, reward.gold)
+    inventory.earnGold(ctx.db, trainer.id, reward.gold, von(ctx, legendary ? 'safari.catch.legendary' : 'safari.catch'))
 
     /*
      * Ein Fundstueck aus dem Gras.
@@ -879,7 +880,7 @@ export function throwBall(
       researchBonuses(ctx, trainer.id).catchDrop,
     )
     const dropItem = dropId ? ctx.registry.tryItem(dropId) : null
-    if (dropItem) inventory.grant(ctx.db, trainer.id, dropItem.id, 1)
+    if (dropItem) inventory.grant(ctx.db, trainer.id, dropItem.id, 1, von(ctx, 'safari.catch'))
     encounters.clear(ctx.db, trainer.id)
 
     teams.syncActiveFromGarden(ctx, trainer.id)

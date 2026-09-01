@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import { battleParty } from './party.js'
 import {
   applyResult, chooseAction, createBattle, createRng, deriveSeed, makeSide, matchmakingRange,
@@ -186,7 +187,7 @@ export function duel(ctx: AppContext, trainer: Trainer, opponentId: string): Due
      * Niederlage bekommt: gekaempft wurde, gewonnen zaehlt nur einmal am Tag.
      */
     const gold = won && !repeat ? WIN_GOLD : LOSS_GOLD
-    inventory.earnGold(ctx.db, trainer.id, gold)
+    inventory.earnGold(ctx.db, trainer.id, gold, von(ctx, 'pvp.win'))
     if (won && !repeat) energy.reward(ctx, trainer.id, 'duelWon')
     // Das Gildenziel zaehlt Teilnahme, nicht Ertrag — es bleibt.
     contributeToGoal(ctx, trainer.id, 'battles', 1)

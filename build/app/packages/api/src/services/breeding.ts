@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import {
   canBreed, computeStats, createRng, hatchProgress, produceEgg, xpForLevel,
   BROOD_PHASES, BROOD_SHINY_BONUS, broodCare, broodIvBonus, broodMinutes, UNBREEDABLE_GROUPS,
@@ -378,7 +379,7 @@ export function hatch(ctx: AppContext, trainer: Trainer, eggId: string) {
       moves: ctx.registry.learnableAt(egg.speciesId, HATCH_LEVEL).slice(0, 4),
       caughtAreaId: null,
       teamSlot: null,
-    })
+    }, von(ctx, 'egg.hatch'))
     const newDexEntry = dex.markCaught(ctx.db, trainer.id, egg.speciesId)
     awardSeasonPoints(ctx, trainer.id, 'eggHatch')
     if (newDexEntry) awardSeasonPoints(ctx, trainer.id, 'newDexEntry')

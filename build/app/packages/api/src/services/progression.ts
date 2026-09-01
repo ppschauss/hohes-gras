@@ -1,4 +1,5 @@
 import { GameError, type OwnedCreature, type TimeOfDay, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 
 /** Zaehlt die Entwicklungen des Tages, die Energie eingebracht haben. */
 const EVOLUTION_ENERGY_COUNTER = 'evolution_energy'
@@ -378,7 +379,7 @@ export function craft(ctx: AppContext, trainer: Trainer, recipeId: string, count
     const cost = batchCost(recipe, batch)
     for (const input of cost.inputs) inventory.consume(ctx.db, trainer.id, input.itemId, input.quantity)
     inventory.spendGold(ctx.db, trainer.id, cost.goldCost)
-    inventory.grant(ctx.db, trainer.id, recipe.output.itemId, batch.count)
+    inventory.grant(ctx.db, trainer.id, recipe.output.itemId, batch.count, von(ctx, 'craft'))
 
     const output = { itemId: recipe.output.itemId, quantity: batch.count }
     logEvent(ctx.db, trainer.id, 'crafted', { recipeId, output })
@@ -463,8 +464,8 @@ export function claimSeasonTier(ctx: AppContext, trainer: Trainer, tier: number)
       throw new GameError('invalid_state', { reason: 'already_claimed', tier }, 409)
     }
     const reward = rewardForTier(tier)
-    if (reward.kind === 'gold') inventory.earnGold(ctx.db, trainer.id, reward.amount)
-    else inventory.grant(ctx.db, trainer.id, reward.itemId, reward.quantity)
+    if (reward.kind === 'gold') inventory.earnGold(ctx.db, trainer.id, reward.amount, von(ctx, 'season.reward'))
+    else inventory.grant(ctx.db, trainer.id, reward.itemId, reward.quantity, von(ctx, 'season.reward'))
 
     logEvent(ctx.db, trainer.id, 'season.claimed', { tier, reward })
     return { tier, reward, label: describeReward(ctx, trainer, reward) }
@@ -562,7 +563,7 @@ export function claimAchievement(ctx: AppContext, trainer: Trainer, achievementI
     if (!progression.claimAchievement(ctx.db, trainer.id, achievementId)) {
       throw new GameError('invalid_state', { reason: 'not_claimable' }, 409)
     }
-    inventory.earnGold(ctx.db, trainer.id, spec.reward.gold)
+    inventory.earnGold(ctx.db, trainer.id, spec.reward.gold, von(ctx, 'achievement.reward'))
     logEvent(ctx.db, trainer.id, 'achievement.claimed', { achievementId, gold: spec.reward.gold })
     return { achievementId, gold: spec.reward.gold }
   })

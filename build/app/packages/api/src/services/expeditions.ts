@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import {
   createRng, energyCost, findDuration, findKind, partyRating, resolveExpedition,
   grantXpTo, computeStats, DURATIONS, ENERGY_COSTS, EXPEDITION_ENERGY, KINDS,
@@ -314,9 +315,9 @@ export function collect(ctx: AppContext, trainer: Trainer, expeditionId: string)
       + (bonuses(ctx, trainer.id).expeditionLootBonus
         + researchBonuses(ctx, trainer.id).expeditionLoot) / 100
     for (const l of outcome.loot) {
-      inventory.grant(ctx.db, trainer.id, l.itemId, Math.max(1, Math.round(l.quantity * lootBonus)))
+      inventory.grant(ctx.db, trainer.id, l.itemId, Math.max(1, Math.round(l.quantity * lootBonus)), von(ctx, 'expedition.loot'))
     }
-    inventory.earnGold(ctx.db, trainer.id, Math.round(outcome.gold * lootBonus))
+    inventory.earnGold(ctx.db, trainer.id, Math.round(outcome.gold * lootBonus), von(ctx, 'expedition.loot'))
     awardSeasonPoints(ctx, trainer.id, 'expeditionCollect')
 
     const levelUps: CollectResult['levelUps'] = []

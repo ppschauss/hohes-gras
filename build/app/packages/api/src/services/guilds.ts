@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import * as guilds from '../repos/guilds.js'
@@ -251,7 +252,7 @@ export function claimWeeklyReward(ctx: AppContext, trainer: Trainer, kind: strin
       throw new GameError('invalid_state', { reason: 'already_claimed' }, 409)
     }
     const members = guilds.membersOf(ctx.db, guild.id)
-    for (const m of members) inventory.earnGold(ctx.db, m.trainerId, GOAL_REWARD_PER_MEMBER)
+    for (const m of members) inventory.earnGold(ctx.db, m.trainerId, GOAL_REWARD_PER_MEMBER, von(ctx, 'guild.goal'))
     logEvent(ctx.db, trainer.id, 'guild.goalClaimed', { guildId: guild.id, week, kind, members: members.length })
     return { gold: GOAL_REWARD_PER_MEMBER }
   })

@@ -1,5 +1,7 @@
 import { GameError } from '@game/shared'
 import type { Db } from '../db/index.js'
+import * as acquisitions from './acquisitions.js'
+import type { Herkunft } from './acquisitions.js'
 
 export type Bag = Record<string, number>
 
@@ -17,12 +19,24 @@ export function quantityOf(db: Db, trainerId: string, itemId: string): number {
   return row?.quantity ?? 0
 }
 
-export function grant(db: Db, trainerId: string, itemId: string, amount: number): void {
+/**
+ * Gegenstaende gutschreiben.
+ *
+ * `herkunft` ist Pflicht und wird mitgeschrieben. Das ist der Grund, warum es
+ * hier steht und nicht beim Aufrufer: eine Buchung, die man vergessen kann,
+ * fehlt spaeter genau bei dem Weg, den niemand mehr nachvollziehen will.
+ * Siehe `repos/acquisitions.ts`.
+ */
+export function grant(
+  db: Db, trainerId: string, itemId: string, amount: number, herkunft: Herkunft,
+): void {
   if (amount <= 0) return
+  const menge = Math.floor(amount)
   db.prepare(
     `INSERT INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)
      ON CONFLICT(trainer_id, item_id) DO UPDATE SET quantity = quantity + excluded.quantity`,
-  ).run(trainerId, itemId, Math.floor(amount))
+  ).run(trainerId, itemId, menge)
+  acquisitions.record(db, trainerId, herkunft, 'item', itemId, menge)
 }
 
 /**
@@ -50,9 +64,14 @@ export function spendGold(db: Db, trainerId: string, amount: number): void {
   if (changed !== 1) throw new GameError('insufficient_funds', { required: amount })
 }
 
-export function earnGold(db: Db, trainerId: string, amount: number): void {
+/** Gold gutschreiben. Herkunft wie bei `grant`. */
+export function earnGold(
+  db: Db, trainerId: string, amount: number, herkunft: Herkunft,
+): void {
   if (amount <= 0) return
-  db.prepare('UPDATE trainers SET gold = gold + ? WHERE id = ?').run(Math.floor(amount), trainerId)
+  const menge = Math.floor(amount)
+  db.prepare('UPDATE trainers SET gold = gold + ? WHERE id = ?').run(menge, trainerId)
+  acquisitions.record(db, trainerId, herkunft, 'gold', '', menge)
 }
 
 export function goldOf(db: Db, trainerId: string): number {

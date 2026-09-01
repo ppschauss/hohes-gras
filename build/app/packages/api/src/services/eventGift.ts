@@ -1,4 +1,5 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import { computeStats, createRng, PERFECT_IV, xpForLevel } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
@@ -61,7 +62,7 @@ export function grantEventSpecies(
       moves: ctx.registry.learnableAt(speciesId, EVENT_GIFT_LEVEL).slice(0, 4),
       caughtAreaId: null,
       teamSlot: null,
-    })
+    }, von(ctx, 'admin.gift'))
     dex.markCaught(ctx.db, target.id, speciesId)
     logEvent(ctx.db, target.id, 'event.gift', { speciesId, by: admin.id, creatureId: created.id })
 
@@ -106,7 +107,7 @@ export function grantItem(
   if (!target) throw new GameError('not_found', { trainerCode }, 404)
 
   return tx(ctx.db, () => {
-    inventory.grant(ctx.db, target.id, itemId, n)
+    inventory.grant(ctx.db, target.id, itemId, n, von(ctx, 'admin.gift'))
     logEvent(ctx.db, target.id, 'admin.item', { itemId, quantity: n, by: admin.id })
     return {
       itemId,

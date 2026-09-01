@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import { battleParty } from './party.js'
 import {
   chooseAction, createBattle, createRng, deriveSeed, makeSide, resolveTurn, toFighter,
@@ -131,7 +132,7 @@ export function resolve(ctx: AppContext, week: string): { resolved: boolean; pla
 
     if (entries.length < MIN_ENTRIES) {
       // Not enough players: refund rather than crown a champion by default.
-      for (const e of entries) inventory.earnGold(ctx.db, e.trainerId, ENTRY_FEE)
+      for (const e of entries) inventory.earnGold(ctx.db, e.trainerId, ENTRY_FEE, von(ctx, 'tournament.refund'))
       ctx.db.prepare('UPDATE tournaments SET state = ?, resolved_at = ? WHERE week_key = ?')
         .run('finished', Date.now(), week)
       return { resolved: true, placements: 0 }
@@ -215,7 +216,7 @@ export function resolve(ctx: AppContext, week: string): { resolved: boolean; pla
         .run(placement, week, trainerId)
       const prize = PRIZES[index]
       if (prize) {
-        inventory.earnGold(ctx.db, trainerId, prize)
+        inventory.earnGold(ctx.db, trainerId, prize, von(ctx, 'tournament.prize'))
         ctx.db.prepare('UPDATE tournament_entries SET reward_paid = 1 WHERE week_key = ? AND trainer_id = ?')
           .run(week, trainerId)
       }

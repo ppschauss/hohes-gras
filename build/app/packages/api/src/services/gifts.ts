@@ -1,4 +1,5 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import {
   createRng, GIFT_INBOX_LIMIT, produceEgg, randomIvs, rollGift, type GiftContents,
 } from '@game/engine'
@@ -122,7 +123,7 @@ export function open(ctx: AppContext, trainer: Trainer, giftId: string) {
     const contents = JSON.parse(row.payload) as GiftContents
     for (const item of contents.items) {
       if (ctx.registry.tryItem(item.itemId)) {
-        inventory.grant(ctx.db, trainer.id, item.itemId, item.quantity)
+        inventory.grant(ctx.db, trainer.id, item.itemId, item.quantity, von(ctx, 'friend.gift'))
       }
     }
 

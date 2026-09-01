@@ -1,5 +1,7 @@
 import type { OwnedCreature, StatBlock } from '@game/shared'
 import type { Db } from '../db/index.js'
+import * as acquisitions from './acquisitions.js'
+import type { Herkunft } from './acquisitions.js'
 import { newId } from '../db/ids.js'
 
 interface CreatureRow {
@@ -59,7 +61,18 @@ export interface NewCreature {
   teamSlot: number | null
 }
 
-export function insertCreature(db: Db, c: NewCreature, now = Date.now()): OwnedCreature {
+/**
+ * Ein neues Pokemon anlegen.
+ *
+ * `herkunft` ist Pflicht: sieben Wege fuehren hierher — Fang, Ei, Starter,
+ * Tausch, Raid, Ereignis, Verwertung —, und nach dem Mewtu-Vorfall stand
+ * genau die Frage im Raum, welche Zeilen in dieser Tabelle aus welchem
+ * stammen. Das Ereignisprotokoll konnte sie nicht beantworten; der Beleg,
+ * den diese Funktion schreibt, kann es.
+ */
+export function insertCreature(
+  db: Db, c: NewCreature, herkunft: Herkunft, now = Date.now(),
+): OwnedCreature {
   const id = newId()
   db.prepare(
     `INSERT INTO creatures (
@@ -73,6 +86,9 @@ export function insertCreature(db: Db, c: NewCreature, now = Date.now()): OwnedC
     c.friendship, 100, c.hpCurrent, c.shiny ? 1 : 0,
     JSON.stringify(c.moves.slice(0, 4)), now, c.caughtAreaId, c.teamSlot,
   )
+  acquisitions.record(db, c.ownerId, herkunft, 'creature', id, 1, {
+    speciesId: c.speciesId, level: c.level, shiny: c.shiny,
+  }, now)
   return byId(db, id)!
 }
 

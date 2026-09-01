@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import type { TrainerDef } from '@game/content'
 import {
   createRng, computeStats, gauntletGoldPerWin, gauntletIv, gauntletLevel,
@@ -389,7 +390,7 @@ export function next(
     ).flatMap((d) => {
       const item = ctx.registry.tryItem(d.itemId)
       if (!item) return []
-      inventory.grant(ctx.db, trainer.id, d.itemId, d.quantity)
+      inventory.grant(ctx.db, trainer.id, d.itemId, d.quantity, von(ctx, 'gauntlet.milestone'))
       return [{
         itemId: d.itemId, quantity: d.quantity,
         name: ctx.registry.localized(item.name, trainer.locale), icon: item.icon,
@@ -437,12 +438,12 @@ function recordBest(ctx: AppContext, trainerId: string, regionId: string, streak
 }
 
 function pay(ctx: AppContext, trainer: Trainer, regionId: string, stufe: typeof GAUNTLET_MILESTONES[number]): GauntletPayout {
-  inventory.earnGold(ctx.db, trainer.id, stufe.gold)
+  inventory.earnGold(ctx.db, trainer.id, stufe.gold, von(ctx, 'gauntlet.reward'))
   // Mit dem Stand der Stufe: ab fuenfzig gehoert Sternenstaub dazu.
   const items = splitDrops(regionId, stufe.materials, stufe.at).flatMap((d) => {
     const item = ctx.registry.tryItem(d.itemId)
     if (!item) return []
-    inventory.grant(ctx.db, trainer.id, d.itemId, d.quantity)
+    inventory.grant(ctx.db, trainer.id, d.itemId, d.quantity, von(ctx, 'gauntlet.reward'))
     return [{
       itemId: d.itemId,
       quantity: d.quantity,

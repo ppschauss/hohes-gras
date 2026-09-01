@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import type { ChapterDef } from '@game/content'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
@@ -181,9 +182,9 @@ export function claimChapter(ctx: AppContext, trainer: Trainer, chapterId: strin
       throw new GameError('invalid_state', { reason: 'already_claimed' }, 409)
     }
 
-    inventory.earnGold(ctx.db, trainer.id, chapter.reward.gold)
+    inventory.earnGold(ctx.db, trainer.id, chapter.reward.gold, von(ctx, 'story.reward'))
     if (chapter.reward.itemId && chapter.reward.quantity) {
-      inventory.grant(ctx.db, trainer.id, chapter.reward.itemId, chapter.reward.quantity)
+      inventory.grant(ctx.db, trainer.id, chapter.reward.itemId, chapter.reward.quantity, von(ctx, 'story.reward'))
     }
     logEvent(ctx.db, trainer.id, 'story.claimed', { chapterId, reward: chapter.reward })
     return { chapterId, reward: chapter.reward }

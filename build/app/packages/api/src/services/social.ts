@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import * as social from '../repos/social.js'
@@ -298,7 +299,7 @@ export function buyListing(ctx: AppContext, trainer: Trainer, listingId: string)
     }
 
     const payout = Math.max(1, Math.round(listing.price * (1 - MARKET_FEE)))
-    inventory.earnGold(ctx.db, listing.sellerId, payout)
+    inventory.earnGold(ctx.db, listing.sellerId, payout, von(ctx, 'market.sale'))
 
     teamsRepo.removeCreature(ctx.db, listing.creatureId)
     ctx.db.prepare('UPDATE creatures SET owner_id = ?, team_slot = NULL WHERE id = ?')

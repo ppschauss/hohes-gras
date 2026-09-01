@@ -1,4 +1,5 @@
 import { GameError, type EnergyOverview, type EnergyState, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import {
   bonusOf, clampEnergy, ENERGY_BASE_CAP, ENERGY_CAP_MAX_STEPS, ENERGY_CAP_STEP,
   ENERGY_COSTS, ENERGY_FILL_MINUTES, ENERGY_PACKS, ENERGY_REWARDS,
@@ -161,7 +162,7 @@ export function grant(
 
   if (overflow > 0) {
     const gold = overflow * ENERGY_TO_GOLD_RATE
-    inventory.earnGold(ctx.db, trainerId, gold)
+    inventory.earnGold(ctx.db, trainerId, gold, von(ctx, 'energy.overflow'))
     logEvent(ctx.db, trainerId, 'energy.toGold', { energy: overflow, gold, reason })
   }
   return next

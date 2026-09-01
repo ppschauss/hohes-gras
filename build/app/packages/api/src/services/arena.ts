@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { von } from './ledger.js'
 import type { TrainerDef } from '@game/content'
 import {
   ARENA_HEAL_PERCENT, ARENA_REPEAT_RATIO, ARENA_ROUNDS, ARENA_TIERS, arenaLevel, arenaTypeFor,
@@ -380,11 +381,11 @@ export function next(ctx: AppContext, trainer: Trainer) {
 function pay(ctx: AppContext, trainer: Trainer, tier: ArenaTier, date: string, typeId: string, wiederholung: boolean) {
   const anteil = wiederholung ? ARENA_REPEAT_RATIO : 1
   const gold = Math.round(tier.bonusGold * anteil)
-  inventory.earnGold(ctx.db, trainer.id, gold)
+  inventory.earnGold(ctx.db, trainer.id, gold, von(ctx, 'arena.reward'))
   const items = tier.bonus
     .map((item) => ({ ...item, quantity: Math.floor(item.quantity * anteil) }))
     .filter((item) => item.quantity > 0)
-  for (const item of items) inventory.grant(ctx.db, trainer.id, item.itemId, item.quantity)
+  for (const item of items) inventory.grant(ctx.db, trainer.id, item.itemId, item.quantity, von(ctx, 'arena.reward'))
   ctx.db.prepare(
     `INSERT INTO arena_clears (trainer_id, game_date, tier, type_id, cleared_at)
      VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,

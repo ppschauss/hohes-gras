@@ -16,6 +16,7 @@ import { logEvent } from '../repos/events.js'
 import * as energy from './energy.js'
 import { assertPace, recordPace } from './pacing.js'
 import { busyCreatureIds } from './busy.js'
+import { von } from './ledger.js'
 
 /**
  * Poké-Beet.
@@ -312,8 +313,8 @@ export function harvest(ctx: AppContext, trainer: Trainer, slot: number, now = D
       throw new GameError('invalid_state', { reason: 'already_collected' }, 409)
     }
 
-    if (row.stakeKind === 'gold') inventory.earnGold(ctx.db, trainer.id, view.payout)
-    else inventory.grant(ctx.db, trainer.id, row.itemId!, view.payout)
+    if (row.stakeKind === 'gold') inventory.earnGold(ctx.db, trainer.id, view.payout, von(ctx, 'plot.harvest'))
+    else inventory.grant(ctx.db, trainer.id, row.itemId!, view.payout, von(ctx, 'plot.harvest'))
 
     logEvent(ctx.db, trainer.id, 'plot.harvest', {
       slot, kind: row.stakeKind, itemId: row.itemId,

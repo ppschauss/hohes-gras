@@ -26,6 +26,7 @@ import { refreshMoves } from './garden.js'
 import { syncActiveFromGarden } from './teams.js'
 import { bumpMetric } from './progression.js'
 import { busyCreatureIds } from './busy.js'
+import { von } from './ledger.js'
 
 /**
  * Poke-Center.
@@ -119,14 +120,14 @@ function rollEvent(ctx: AppContext, trainer: Trainer, rng: Rng, now: number): Ce
   switch (rollCenterEvent(rng)) {
     case 'gold': {
       const gold = foundGold(rng, world.badgesOf(ctx.db, trainer.id).size)
-      inventory.earnGold(ctx.db, trainer.id, gold)
+      inventory.earnGold(ctx.db, trainer.id, gold, von(ctx, 'center.event'))
       logEvent(ctx.db, trainer.id, 'center.gold', { gold })
       return { kind: 'gold', gold }
     }
     case 'gift': {
       const gift = rollGift(ctx, trainer, rng)
       if (!gift) return { kind: 'none' }
-      inventory.grant(ctx.db, trainer.id, gift.itemId, gift.quantity)
+      inventory.grant(ctx.db, trainer.id, gift.itemId, gift.quantity, von(ctx, 'center.event'))
       logEvent(ctx.db, trainer.id, 'center.gift', { itemId: gift.itemId, quantity: gift.quantity })
       return { kind: 'gift', item: gift }
     }
@@ -297,7 +298,7 @@ export function acceptTrade(
       // Der Neue nimmt den Platz des Abgegebenen ein: sonst stuende das Team
       // nach einem Tausch aus dem Gartenteam heraus ploetzlich zu viert da.
       teamSlot: slot,
-    })
+    }, von(ctx, 'center.trade'))
     refreshMoves(ctx, created.id, species.id, created.level, created.moves)
     syncActiveFromGarden(ctx, trainer.id)
 
