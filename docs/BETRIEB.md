@@ -150,7 +150,11 @@ keine Anfrage geht hinaus.
 
 Zum Einschalten den Dienst ausrollen und die Instanz anmelden; beides steht
 Schritt für Schritt in [VERBUND.md](VERBUND.md) unter „Den Dienst ausrollen".
-Danach die drei Werte eintragen und `./manage.sh restart`. Der Job `hub-sync`
+Danach die drei Werte eintragen und `./manage.sh up` — **nicht** `restart`:
+`docker restart` startet den Container mit der Umgebung, mit der er angelegt
+wurde, und liest `secrets.env` nicht neu. Die drei Werte blieben leer, der
+Verbund bliebe stumm, und im Log stuende nichts, was den Grund verriete.
+Der Job `hub-sync`
 läuft alle zehn Minuten und meldet sich im Log:
 
 ```
