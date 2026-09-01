@@ -334,7 +334,9 @@ function performMove(
    * weiter — sonst koennte man sich nicht mehr heilen, waehrend man geschuetzt
    * ist.
    */
-  if (move.target === 'foe' && defender.protectedUntilTurn === state.turn) {
+  const schuetzt = defender.protectedUntilTurn === state.turn
+    || (defender.priorityGuardUntilTurn === state.turn && move.priority > 0)
+  if (move.target === 'foe' && schuetzt) {
     events.push({ type: 'protected', side: sideIndex === 0 ? 1 : 0, fighter: defender.id })
     return
   }
@@ -368,6 +370,15 @@ function performMove(
       totalDealt += vorher - defender.hp
       if (haelt && vorher - dmg.amount <= 0) {
         events.push({ type: 'endured', side: sideIndex === 0 ? 1 : 0, fighter: defender.id })
+      }
+      /*
+       * Abgangsbund reisst den Angreifer mit — aber nur, wenn er selbst noch
+       * steht. Sonst faellt jemand zweimal, und die Reihenfolge im Protokoll
+       * ergaebe keinen Sinn mehr.
+       */
+      if (defender.hp <= 0 && defender.destinyBondUntilTurn === state.turn && attacker.hp > 0) {
+        attacker.hp = 0
+        events.push({ type: 'faint', side: sideIndex, fighter: attacker.id })
       }
       events.push({
         type: 'damage', side: sideIndex === 0 ? 1 : 0, fighter: defender.id,
@@ -439,8 +450,33 @@ function applyMoveEffect(
     case 'protect': {
       // Nur fuer diese Runde. Ein Schild, das laenger haelt, waere kein Zug
       // mehr, sondern ein Zustand.
+      if (effect.against === 'priority') {
+        attacker.priorityGuardUntilTurn = state.turn
+        events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'priority_guard' })
+        return
+      }
       attacker.protectedUntilTurn = state.turn
       events.push({ type: 'protected', side: sideIndex, fighter: attacker.id })
+      return
+    }
+
+    case 'random_stat_up': {
+      // Im Vorbild trifft es ein Teammitglied; im Einzelkampf ist das der
+      // Traeger selbst.
+      const waehlbar = ['atk', 'def', 'spa', 'spd', 'spe'] as const
+      const stat = rng.pick(waehlbar)
+      const ergebnis = applyStage(attacker.stages, stat, effect.stages)
+      attacker.stages = ergebnis.stages
+      events.push({
+        type: 'stage', side: sideIndex, fighter: attacker.id,
+        stat, delta: ergebnis.applied, capped: ergebnis.capped,
+      })
+      return
+    }
+
+    case 'destiny_bond': {
+      attacker.destinyBondUntilTurn = state.turn
+      events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'destiny_bond' })
       return
     }
 

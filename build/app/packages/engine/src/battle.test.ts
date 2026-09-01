@@ -32,7 +32,9 @@ const MOVES: Record<string, MoveDef> = {
     ...mv('fake-out', 'normal', 'physical', 40, 100, 10, { kind: 'flinch' }, 100, 0, 3),
     firstTurnOnly: true,
   } as MoveDef,
-  protect: mv('protect', 'normal', 'status', 0, 100, 10, { kind: 'protect' }, 100, 0, 4),
+  protect: mv('protect', 'normal', 'status', 0, 100, 10, { kind: 'protect', against: 'all' }, 100, 0, 4),
+  'quick-guard': mv('quick-guard', 'steel', 'status', 0, 100, 15, { kind: 'protect', against: 'priority' }, 100, 0, 3),
+  'destiny-bond': mv('destiny-bond', 'ghost', 'status', 0, 100, 5, { kind: 'destiny_bond' }, 100),
   endure: mv('endure', 'normal', 'status', 0, 100, 10, { kind: 'endure' }, 100, 0, 4),
   rest: mv('rest', 'psychic', 'status', 0, 100, 5, { kind: 'rest' }, 100),
   refresh: mv('refresh', 'normal', 'status', 0, 100, 20, { kind: 'cure', scope: 'self' }, 100),
@@ -632,6 +634,44 @@ describe('Zuege, die etwas vorbereiten', () => {
 
     const runde = resolveTurn(start, useMove(), useMove(), content)
     expect(runde.state.sides[0]!.party[0]!.stages.atk).toBe(3)
+  })
+})
+
+describe('Rapidschutz und Abgangsbund', () => {
+  it('haelt nur Vorrangzuege ab', () => {
+    /*
+     * Im Vorbild schuetzt Rapidschutz das ganze Team. Im Einzelkampf ist das
+     * genau einer — der Zug bleibt also sinnvoll, und Doppelkaempfe braucht
+     * es dafuer nicht.
+     */
+    const a = fighter('wache', ['steel'], 20, ['quick-guard'])
+    const schnell = fighter('flink', ['normal'], 20, ['quick-attack'])
+    const abgeprallt = resolveTurn(battle([a], [schnell]), useMove(), useMove(), content)
+    expect(abgeprallt.events.some((e) => e.type === 'protected')).toBe(true)
+    expect(abgeprallt.events.some((e) => e.type === 'damage' && e.side === 0)).toBe(false)
+  })
+
+  it('laesst gewoehnliche Angriffe durch', () => {
+    const a = fighter('wache', ['steel'], 20, ['quick-guard'])
+    const b = fighter('gegner', ['normal'], 20, ['tackle'])
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    expect(runde.events.some((e) => e.type === 'damage' && e.side === 0)).toBe(true)
+  })
+
+  it('reisst mit dem Abgangsbund den Angreifer mit', () => {
+    const a = { ...fighter('geist', ['ghost'], 20, ['destiny-bond']), hp: 1 }
+    /*
+     * Zwei Feinheiten, die der Test erst nach zwei Fehlschlaegen gelernt hat:
+     * Normal wirkt nicht auf Geist, der Gegner braucht also einen Zug, der
+     * trifft. Und der Bund muss *vor* dem toedlichen Treffer stehen — ein
+     * schnellerer Gegner faellt ihn, bevor es ihn gibt. Deshalb ein
+     * langsamerer; ein Treffer reicht bei einem Kraftpunkt ohnehin.
+     */
+    const b = fighter('gegner', ['water'], 5, ['water-gun'])
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+
+    expect(runde.state.sides[0]!.party[0]!.hp).toBe(0)
+    expect(runde.state.sides[1]!.party[0]!.hp).toBe(0)
   })
 })
 

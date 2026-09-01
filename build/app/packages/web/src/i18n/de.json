@@ -781,6 +781,8 @@
   "log.multi_hit": "{n} Treffer!",
   "log.no_pp": "Keine AP mehr",
   "log.prepared.crit": "Die Konzentration steigt.",
+  "log.prepared.destiny_bond": "Ein Bund fürs Ende ist geschlossen.",
+  "log.prepared.priority_guard": "Gegen schnelle Angriffe abgeschirmt.",
   "log.prepared.stats_copied": "Die Werteänderungen des Gegners übernommen.",
   "log.prepared.stats_swapped": "Angriff und Verteidigung getauscht.",
   "log.prepared.sure_crit": "Der nächste Treffer sitzt.",

@@ -99,8 +99,16 @@ export const MoveDefSchema = z.object({
         kind: z.literal('weather'),
         weather: z.enum(['clear', 'rain', 'storm', 'snow', 'fog', 'sandstorm', 'heat']),
       }),
-      /** Schutzschild, Scanner: diese Runde prallt alles ab. */
-      z.object({ kind: z.literal('protect') }),
+      /*
+       * Schutzschild und Scanner fangen alles ab; Rapidschutz nur Zuege mit
+       * Vorrang. Im Vorbild schuetzt er das ganze Team — im Einzelkampf ist
+       * das genau einer, und der Zug bleibt sinnvoll.
+       */
+      z.object({ kind: z.literal('protect'), against: z.enum(['all', 'priority']).default('all') }),
+      /** Akupressur: ein eigener Wert, zufaellig gewaehlt, um zwei Stufen. */
+      z.object({ kind: z.literal('random_stat_up'), stages: z.number().int().min(1).max(3) }),
+      /** Abgangsbund: wer den Traeger in dieser Runde faellt, faellt mit. */
+      z.object({ kind: z.literal('destiny_bond') }),
       /** Ausdauer: dieser Treffer laesst mindestens einen Kraftpunkt. */
       z.object({ kind: z.literal('endure') }),
       /** Erholung: voll heilen und dafuer zwei Runden schlafen. */

@@ -33,7 +33,8 @@ type Effect =
   | { kind: 'status'; status: 'burn' | 'freeze' | 'paralysis' | 'poison' | 'toxic' | 'sleep' | 'confusion' }
   | { kind: 'stat_stage'; target: 'self' | 'foe'; stat: 'atk' | 'def' | 'spa' | 'spd' | 'spe' | 'accuracy' | 'evasion'; stages: number }
   | { kind: 'weather'; weather: 'clear' | 'rain' | 'storm' | 'snow' | 'fog' | 'sandstorm' | 'heat' }
-  | { kind: 'protect' } | { kind: 'endure' } | { kind: 'rest' } | { kind: 'haze' }
+  | { kind: 'protect'; against: 'all' | 'priority' } | { kind: 'endure' } | { kind: 'rest' } | { kind: 'haze' }
+  | { kind: 'random_stat_up'; stages: number } | { kind: 'destiny_bond' }
   | { kind: 'copy_stages' } | { kind: 'swap_stats' }
   | { kind: 'cure'; scope: 'self' | 'party' }
   | { kind: 'crit_up'; stages: number; sure: boolean }
@@ -72,8 +73,11 @@ const SELF_TARGETS = new Set(['user', 'users-field', 'user-and-allies', 'all-all
  * lieber ohne Wirkung, als eine halbe vorzutaeuschen.
  */
 const SPECIAL_MOVES: Record<string, Effect> = {
-  protect: { kind: 'protect' },
-  detect: { kind: 'protect' },
+  protect: { kind: 'protect', against: 'all' },
+  detect: { kind: 'protect', against: 'all' },
+  'quick-guard': { kind: 'protect', against: 'priority' },
+  acupressure: { kind: 'random_stat_up', stages: 2 },
+  'destiny-bond': { kind: 'destiny_bond' },
   endure: { kind: 'endure' },
   rest: { kind: 'rest' },
   refresh: { kind: 'cure', scope: 'self' },
@@ -165,7 +169,22 @@ export interface MoveOut {
 
 /** Moves the engine cannot represent are dropped rather than imported as
  *  no-ops: a move that visibly does nothing is worse than one that is absent. */
+/**
+ * Zuege, die ohne Doppelkaempfe nichts bedeuten koennen.
+ *
+ * Doppelkaempfe wird es in diesem Spiel nicht geben — das ist entschieden.
+ * Wer einen Verbuendeten staerkt, schuetzt oder mit ihm den Platz tauscht,
+ * haette hier also fuer immer einen leeren Zug. Sie kommen deshalb gar nicht
+ * erst herein, statt wirkungslos im Pack zu stehen.
+ *
+ * Bewusst kurz: Rapidschutz gehoert *nicht* dazu. Er zielt auf die eigene
+ * Seite, und die ist im Einzelkampf man selbst — ein Schild gegen
+ * Vorrangattacken bleibt sinnvoll.
+ */
+const DOUBLES_ONLY = new Set(['wide-guard', 'helping-hand', 'ally-switch'])
+
 function isUsable(m: ApiMove, knownTypes: Set<string>): boolean {
+  if (DOUBLES_ONLY.has(m.name)) return false
   if (!knownTypes.has(m.type.name)) return false
   if (m.pp === null || m.pp < 1) return false
   if (m.damage_class.name !== 'status' && (m.power ?? 0) <= 0) return false

@@ -53,6 +53,10 @@ export interface Fighter {
   critStage?: number
   /** Der naechste Angriff ist ein sicherer Volltreffer (Konzentration). */
   sureCrit?: boolean
+  /** Bis einschliesslich dieser Runde prallen nur Vorrangzuege ab (Rapidschutz). */
+  priorityGuardUntilTurn?: number
+  /** Bis einschliesslich dieser Runde reisst ein Abgang den Gegner mit. */
+  destinyBondUntilTurn?: number
   moves: Array<{ id: string; pp: number; ppMax: number }>
   sprite: string
   shiny: boolean
@@ -116,7 +120,7 @@ export type BattleEvent =
   /** Alle Wertveraenderungen sind zurueckgesetzt (Dunkelnebel). */
   | { type: 'stages_cleared'; side: 0 | 1; fighter: string }
   /** Ein Zug bereitet etwas vor: Volltrefferchance, sicherer Treffer. */
-  | { type: 'prepared'; side: 0 | 1; fighter: string; what: 'crit' | 'sure_crit' | 'stats_copied' | 'stats_swapped' }
+  | { type: 'prepared'; side: 0 | 1; fighter: string; what: 'crit' | 'sure_crit' | 'stats_copied' | 'stats_swapped' | 'destiny_bond' | 'priority_guard' }
   | { type: 'end'; outcome: BattleOutcome }
 
 export type PlayerAction =
