@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { battleParty } from './party.js'
 import {
   chooseAction, createBattle, createRng, deriveSeed, makeSide, resolveTurn, toFighter,
   type BattleState, type CreatureLike,
@@ -147,7 +148,8 @@ export function resolve(ctx: AppContext, week: string): { resolved: boolean; pla
     const buildSide = (trainerId: string) => {
       const t = findById(ctx.db, trainerId)
       const snapshot = teamOf.get(trainerId) ?? []
-      const fighters = snapshot.map((c) => {
+      // Auch im Turnier: ein Legendaeres tritt an, der Rest sieht zu.
+      const fighters = battleParty(ctx, snapshot).antreten.map((c) => {
         const species = ctx.registry.species(c.speciesId)
         return toFighter(
           { ...c, hpCurrent: Number.MAX_SAFE_INTEGER },

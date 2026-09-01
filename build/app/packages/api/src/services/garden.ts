@@ -1,4 +1,5 @@
 import { CARE_ACTIONS, GameError, type CareAction, type GardenState, type Trainer } from '@game/shared'
+import { battleParty } from './party.js'
 import {
   applyCare, CARE_RULES, ENERGY_COSTS, ENERGY_MAX, ENERGY_REGEN_BOX_PER_HOUR,
   TEAM_CAPACITY as CAPACITY, randomIvs, energyTick, ENERGY_REGEN_PER_HOUR,
@@ -73,8 +74,21 @@ export function gardenState(ctx: AppContext, trainer: Trainer): GardenState {
   // Wer gebunden ist, steht weiter im Team — er kaempft nur nicht mit. Das
   // muss man sehen koennen; siehe `busy.ts`.
   const reasons = busyReasons(ctx, trainer.id)
+  /*
+   * Ein Legendaeres kaempft, die uebrigen sehen zu.
+   *
+   * Derselbe Platz wie fuer eine Expedition, und aus demselben Grund: das
+   * Feld sagt, *warum* etwas nicht mitkaempft. Eine echte Bindung sticht —
+   * sie ist die genauere Auskunft, und sie gilt auch ausserhalb des Kampfes.
+   * Auf der Bank zu sitzen hindert dagegen an nichts sonst: tauschen,
+   * zuechten und auf Expedition schicken bleibt moeglich.
+   */
+  const bank = new Set(battleParty(ctx, team).bank.map((c) => c.id))
   const views = team.map(
-    (c) => creatureView(ctx.registry, c, trainer.locale, clock.timeOfDay, cap, reasons.get(c.id) ?? null),
+    (c) => creatureView(
+      ctx.registry, c, trainer.locale, clock.timeOfDay, cap,
+      reasons.get(c.id) ?? (bank.has(c.id) ? 'legendary' : null),
+    ),
   )
 
   return {

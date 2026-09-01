@@ -1,4 +1,5 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
+import { battleParty } from './party.js'
 import {
   bossHp, computeStats, createRng, deriveSeed, distributeRewards, raidAttack, raidProgress,
   randomIvs, toFighter, xpForLevel,
@@ -157,8 +158,9 @@ export function attack(ctx: AppContext, trainer: Trainer, raidId: string): RaidA
 
     energy.spendFor(ctx, trainer.id, 'raid')
 
+    // Auch gegen einen Raid-Boss tritt nur ein Legendaeres an.
     const ppOf = (id: string) => ctx.registry.tryMove(id)?.pp ?? 10
-    const fighters = team.map((c) => {
+    const fighters = battleParty(ctx, team).antreten.map((c) => {
       const species = ctx.registry.species(c.speciesId)
       return toFighter(c, species, ctx.registry.localized(species.name, trainer.locale), ppOf)
     })

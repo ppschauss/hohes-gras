@@ -234,6 +234,8 @@
   "busy.egg.hint": "Kümmert sich um ein Ei — kämpft solange nicht mit.",
   "busy.expedition": "auf Expedition",
   "busy.expedition.hint": "Unterwegs — kämpft solange nicht mit.",
+  "busy.legendary": "sieht zu",
+  "busy.legendary.hint": "Nur ein Legendäres kämpft mit. Sind mehrere im Team, tritt das schwächste an — die Gegner richten sich trotzdem nach dem Durchschnitt des ganzen Teams.",
   "busy.research": "im Labor",
   "busy.research.hint": "Forscht gerade — kämpft solange nicht mit.",
   "card.badges": "Orden",

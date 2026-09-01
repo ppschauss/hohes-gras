@@ -1,4 +1,5 @@
 import { GameError, type Trainer } from '@game/shared'
+import { battleParty } from './party.js'
 import {
   applyResult, chooseAction, createBattle, createRng, deriveSeed, makeSide, matchmakingRange,
   resolveTurn, tierOf, toFighter, type BattleEvent, type BattleState,
@@ -112,8 +113,11 @@ export function duel(ctx: AppContext, trainer: Trainer, opponentId: string): Due
     const cap = duelCap(ctx, trainer, opponent)
 
     const ppOf = (id: string) => ctx.registry.tryMove(id)?.pp ?? 10
+    // Die Regel gilt fuer beide Seiten. Ein Abbild mit drei Legendaeren waere
+    // sonst genau die Aufstellung, gegen die sie sich richtet — nur eben auf
+    // der Seite, gegen die man nichts machen kann.
     const build = (list: typeof myTeam, locale: string) =>
-      list.map((c) => {
+      battleParty(ctx, list).antreten.map((c) => {
         const species = ctx.registry.species(c.speciesId)
         // Snapshots always start at full health: a duel must not be decided by
         // whether the defender happened to be hurt when they logged off.

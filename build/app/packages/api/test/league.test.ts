@@ -165,6 +165,49 @@ describe('Überfall', () => {
   })
 })
 
+describe('Nur ein Legendäres kämpft', () => {
+  /**
+   * Ein Legendäres ins Team setzen. `staerke` steuert die Werte über die
+   * Anlagen — so lässt sich "das schwächste" gezielt herstellen, ohne am
+   * Level zu drehen, an dem die Gegnerskalierung hängt.
+   */
+  const legendaeresInsTeam = (slot: number, iv: number) =>
+    h.ctx.db.prepare(
+      `INSERT INTO creatures (
+         id, owner_id, species_id, xp, level, nature,
+         iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe,
+         friendship, energy, hp_current, shiny, moves, caught_at, caught_area_id, team_slot
+       ) VALUES (?, ?, 'sagenmon', 0, 90, 'hardy', ?, ?, ?, ?, ?, ?, 100, 100, 9999, 0, ?, ?, 'test-route', ?)`,
+    ).run(
+      `leg-${slot}`, trainerId, iv, iv, iv, iv, iv, iv,
+      JSON.stringify(['tackle']), Date.now(), slot,
+    )
+
+  it('schickt bei zwei Legendären nur das schwächere ins Feld', async () => {
+    legendaeresInsTeam(1, 31)   // das starke
+    legendaeresInsTeam(2, 0)    // das schwache
+    h.resetRateLimits(); h.resetPacing()
+
+    const r = await h.post('/api/battle/start', { opponentId: 'test-rival' }, token)
+    expect(r.status).toBe(200)
+
+    const eigene = r.body.player.party.map((f: { id: string }) => f.id)
+    expect(eigene).toContain('leg-2')
+    expect(eigene).not.toContain('leg-1')
+  })
+
+  it('nennt das zusehende Legendäre im Garten beim Namen', async () => {
+    // Ohne Ansage sieht ein Team, das im Kampf schrumpft, wie ein Fehler aus.
+    legendaeresInsTeam(1, 31)
+    legendaeresInsTeam(2, 0)
+    const g = await h.get('/api/garden', token)
+
+    const zuschauer = g.body.team.filter((c: { busyReason: string | null }) => c.busyReason === 'legendary')
+    expect(zuschauer.map((c: { id: string }) => c.id)).toEqual(['leg-1'])
+  })
+
+})
+
 describe('Legendäre fangen', () => {
   /** Eine legendäre Begegnung direkt setzen — der 0,1-Prozent-Wurf ist im
    *  Engine-Test abgedeckt, hier geht es um die Fangregeln. */

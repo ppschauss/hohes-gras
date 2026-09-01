@@ -1,4 +1,5 @@
 import { GameError, NATURES, type Trainer } from '@game/shared'
+import { battleParty } from './party.js'
 import type { AreaDef, TrainerDef } from '@game/content'
 import {
   activeFighter, battleXpYield, chooseAction, computeStats, createBattle, createRng,
@@ -394,8 +395,18 @@ export function beginBattle(
     // kostet nichts.
     if (!opts.freeEnergy) energy.spendFor(ctx, trainer.id, 'battle')
 
+    /*
+     * Ein Legendaeres kaempft, die uebrigen sehen zu.
+     *
+     * Die Bezugsgroesse fuer die Gegner bleibt bewusst `usable`, also das
+     * ganze aufgestellte Team — die Zuschauer heben die Gegnerstufe mit.
+     * Genau das ist die Regel: Stapeln macht den Kampf schwerer und die
+     * eigene Mannschaft kleiner.
+     */
+    const { antreten } = battleParty(ctx, usable)
+
     const ppOf = (id: string) => ctx.registry.tryMove(id)?.pp ?? 10
-    const playerParty = usable.map((c) => {
+    const playerParty = antreten.map((c) => {
       const species = ctx.registry.species(c.speciesId)
       return toFighter(c, species, ctx.registry.localized(species.name, trainer.locale), ppOf)
     })
@@ -421,7 +432,9 @@ export function beginBattle(
      * Der Bezug kommt deshalb direkt aus dem antretenden Team und nicht aus
      * `referenceOf`, das bei abgeschalteter Skalierung null liefert.
      */
-    const reference = referenceLevel(playerParty.map((f) => f.level))
+    // Ueber das ganze Team, nicht ueber die Antretenden: wer drei Legendaere
+    // aufstellt, bekommt auch Gegner fuer drei.
+    const reference = referenceLevel(usable.map((c) => c.level))
     /*
      * Auch der Streuner tritt auf Augenhoehe an.
      *

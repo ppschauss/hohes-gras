@@ -27,7 +27,7 @@ export const CreatureViewSchema = OwnedCreatureSchema.extend({
    * `null` heißt: es ist da. Alles andere stand vorher nirgends, und ein Team,
    * das im Kampf ohne Ansage schrumpft, sieht aus wie ein Fehler.
    */
-  busyReason: z.enum(['expedition', 'research', 'boarding', 'egg']).nullable().default(null),
+  busyReason: z.enum(['expedition', 'research', 'boarding', 'egg', 'legendary']).nullable().default(null),
   /** Present when the creature meets an evolution condition right now. */
   canEvolveTo: z.array(z.object({ speciesId: z.string(), name: z.string(), how: z.string() })),
 })
