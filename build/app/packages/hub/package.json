@@ -14,7 +14,7 @@
   "scripts": {
     "hub:dev": "wrangler dev -c worker/wrangler.toml --local",
     "hub:build": "wrangler deploy --dry-run --outdir dist-worker -c worker/wrangler.toml",
-    "hub:schema": "wrangler d1 execute hohes-gras-verbund --file worker/schema.sql -c worker/wrangler.toml",
+    "hub:schema": "wrangler d1 execute hohes-gras-verbund --remote --file worker/schema.sql -c worker/wrangler.toml",
     "hub:deploy": "wrangler deploy -c worker/wrangler.toml",
     "hub:e2e": "node worker/e2e.mjs",
     "hub:setup": "bash worker/deploy.sh"
