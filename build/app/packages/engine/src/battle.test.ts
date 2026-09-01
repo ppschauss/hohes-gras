@@ -63,6 +63,22 @@ const MOVES: Record<string, MoveDef> = {
   'lucky-chant': ziel(mv('lucky-chant', 'normal', 'status', 0, 100, 30, { kind: 'side_condition', condition: 'lucky_chant', turns: 5 }, 100)),
   'lock-on': ziel(mv('lock-on', 'normal', 'status', 0, 100, 5, { kind: 'lingering', effect: 'sure_hit', turns: 2 }, 100)),
   foresight: mv('foresight', 'normal', 'status', 0, 100, 40, { kind: 'lingering', effect: 'vulnerable' }, 100),
+  spikes: ziel(mv('spikes', 'ground', 'status', 0, 100, 20, { kind: 'hazard', hazard: 'spikes' }, 100), 'field'),
+  'toxic-spikes': ziel(mv('toxic-spikes', 'poison', 'status', 0, 100, 20, { kind: 'hazard', hazard: 'toxic_spikes' }, 100), 'field'),
+  'sticky-web': ziel(mv('sticky-web', 'bug', 'status', 0, 100, 20, { kind: 'hazard', hazard: 'sticky_web' }, 100), 'field'),
+  'mean-look': mv('mean-look', 'normal', 'status', 0, 100, 5, { kind: 'lingering', effect: 'trapped' }, 100),
+  taunt: mv('taunt', 'dark', 'status', 0, 100, 20, { kind: 'lingering', effect: 'taunt', turns: 3 }, 100),
+  'heal-block': mv('heal-block', 'psychic', 'status', 0, 100, 15, { kind: 'lingering', effect: 'heal_block', turns: 5 }, 100),
+  'perish-song': mv('perish-song', 'normal', 'status', 0, 100, 5, { kind: 'lingering', effect: 'perish', turns: 3 }, 100),
+  wish: ziel(mv('wish', 'normal', 'status', 0, 100, 10, { kind: 'lingering', effect: 'wish', turns: 2 }, 100)),
+  'pain-split': mv('pain-split', 'normal', 'status', 0, 100, 20, { kind: 'share', what: 'hp' }, 100),
+  'guard-swap': mv('guard-swap', 'psychic', 'status', 0, 100, 10, { kind: 'share', what: 'guard_stages' }, 100),
+  spite: mv('spite', 'ghost', 'status', 0, 100, 10, { kind: 'pp_drain', amount: 4 }, 100),
+  'belly-drum': ziel(mv('belly-drum', 'normal', 'status', 0, 100, 10, { kind: 'belly_drum' }, 100)),
+  'baton-pass': ziel(mv('baton-pass', 'normal', 'status', 0, 100, 40, { kind: 'baton_pass' }, 100)),
+  'mud-sport': ziel(mv('mud-sport', 'ground', 'status', 0, 100, 15, { kind: 'side_condition', condition: 'mud_sport', turns: 5 }, 100)),
+  'thunder-shock': mv('thunder-shock', 'electric', 'special', 60, 100, 30),
+  harden: ziel(mv('harden', 'normal', 'status', 0, 100, 30, { kind: 'stat_stage', target: 'self', stat: 'def', stages: 2 }, 100)),
   // Traumfresser: hohe Staerke, halbes Aussaugen — und nur gegen Schlafende.
   'dream-eater': {
     ...mv('dream-eater', 'normal', 'special', 100, 100, 15, { kind: 'drain', ratio: 0.5 }, 100),
@@ -1057,5 +1073,179 @@ describe('Magnetflug, Beschwoerung, sichere Treffer', () => {
 
     const gewechselt = resolveTurn(gesaet.state, { kind: 'switch', partyIndex: 1 }, useMove(), content)
     expect(gewechselt.state.sides[0]!.party[0]!.lingering).toEqual([])
+  })
+})
+
+describe('Fallen, Fesseln und geteilte Werte', () => {
+  it('erwischt jeden, der nach den Stachlern hereinkommt', () => {
+    const a = fighter('streuer', ['ground'], 20, ['spikes'], 80)
+    const vorne = fighter('vorne', ['normal'], 20, ['splash'], 60)
+    const bank = fighter('bank', ['normal'], 20, ['splash'], 60)
+    const gelegt = resolveTurn(battle([vorne, bank], [a]), useMove(), useMove(), content)
+    expect(gelegt.state.sides[0]!.conditions?.[0]).toMatchObject({ kind: 'spikes', turns: null, layers: 1 })
+
+    const gewechselt = resolveTurn(gelegt.state, { kind: 'switch', partyIndex: 1 }, useMove(), content)
+    expect(gewechselt.events.some((e) => e.type === 'hazard' && e.kind === 'spikes')).toBe(true)
+    expect(gewechselt.state.sides[0]!.party[1]!.hp).toBeLessThan(gewechselt.state.sides[0]!.party[1]!.hpMax)
+  })
+
+  it('laesst Fliegende ueber die Stachler hinweg', () => {
+    const a = fighter('streuer', ['ground'], 20, ['spikes'], 80)
+    const vorne = fighter('vorne', ['normal'], 20, ['splash'], 60)
+    const flieger = fighter('flieger', ['flying'], 20, ['splash'], 60)
+    const gelegt = resolveTurn(battle([vorne, flieger], [a]), useMove(), useMove(), content)
+    const gewechselt = resolveTurn(gelegt.state, { kind: 'switch', partyIndex: 1 }, useMove(), content)
+
+    expect(gewechselt.events.some((e) => e.type === 'hazard')).toBe(false)
+    expect(gewechselt.state.sides[0]!.party[1]!.hp).toBe(gewechselt.state.sides[0]!.party[1]!.hpMax)
+  })
+
+  it('laesst ein Giftpokemon die Giftspitzen aufraeumen', () => {
+    /*
+     * Der einzige Weg, sie wieder loszuwerden — ohne ihn waere die Falle
+     * eine Einbahnstrasse. Geprueft wird beides: kein Gift und kein Rest.
+     */
+    const a = fighter('streuer', ['poison'], 20, ['toxic-spikes', 'splash'], 80)
+    const vorne = fighter('vorne', ['normal'], 20, ['splash'], 60)
+    const giftig = fighter('giftig', ['poison'], 20, ['splash'], 60)
+    const gelegt = resolveTurn(battle([vorne, giftig], [a]), useMove(), useMove(0), content)
+    // In Runde zwei platschert der Streuer, sonst legt er sie sofort neu —
+    // Wechsel gehen den Zuegen voraus, und der Test saehe nur den Neuwurf.
+    const gewechselt = resolveTurn(gelegt.state, { kind: 'switch', partyIndex: 1 }, useMove(1), content)
+
+    expect(gewechselt.state.sides[0]!.party[1]!.status).toBe('none')
+    expect(gewechselt.state.sides[0]!.conditions).toEqual([])
+  })
+
+  it('haelt fest, wer festgehalten wird', () => {
+    const a = fighter('opfer', ['normal'], 20, ['splash'], 60)
+    const bank = fighter('bank', ['normal'], 20, ['splash'], 60)
+    const b = fighter('blick', ['ghost'], 20, ['mean-look'], 80)
+    const gefesselt = resolveTurn(battle([a, bank], [b]), useMove(), useMove(), content)
+    const versucht = resolveTurn(gefesselt.state, { kind: 'switch', partyIndex: 1 }, useMove(), content)
+
+    expect(versucht.state.sides[0]!.activeIndex).toBe(0)
+    expect(versucht.events.some((e) => e.type === 'trapped')).toBe(true)
+  })
+
+  it('nimmt dem Verhoehnten seine Statuszuege', () => {
+    const a = fighter('opfer', ['normal'], 20, ['harden', 'tackle'], 60)
+    const b = fighter('spott', ['dark'], 20, ['taunt'], 80)
+    const verhoehnt = resolveTurn(battle([a], [b]), useMove(0), useMove(), content)
+    expect(verhoehnt.events.some((e) => e.type === 'move_failed')).toBe(true)
+    expect(verhoehnt.state.sides[0]!.party[0]!.stages.def).toBe(0)
+
+    // Der Angriff geht weiter — sonst waere es keine Verhoehnung, sondern eine Sperre.
+    const geschlagen = resolveTurn(verhoehnt.state, useMove(1), useMove(), content)
+    expect(geschlagen.events.some((e) => e.type === 'damage' && e.amount > 0)).toBe(true)
+  })
+
+  it('nimmt der Heilblockade jede Form der Erholung', () => {
+    const a = fighter('heiler', ['normal'], 20, ['recover'], 60)
+    const b = fighter('blocker', ['psychic'], 20, ['heal-block'], 80)
+    const start = battle([a], [b])
+    start.sides[0]!.party[0]!.hp = 10
+    const blockiert = resolveTurn(start, useMove(), useMove(), content)
+    const versucht = resolveTurn(blockiert.state, useMove(), useMove(), content)
+
+    expect(versucht.events.some((e) => e.type === 'blocked' && e.by === 'heal_block')).toBe(true)
+    expect(versucht.events.some((e) => e.type === 'heal')).toBe(false)
+  })
+
+  it('faellt nach drei Runden Abgesang — auf beiden Seiten', () => {
+    const a = fighter('saenger', ['normal'], 30, ['perish-song'], 80)
+    const b = fighter('hoerer', ['normal'], 30, ['splash'], 60)
+    let lauf = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    expect(lauf.state.sides[0]!.party[0]!.lingering).toHaveLength(1)
+    expect(lauf.state.sides[1]!.party[0]!.lingering).toHaveLength(1)
+
+    for (let i = 0; i < 2; i++) lauf = resolveTurn(lauf.state, useMove(), useMove(), content)
+    expect(lauf.state.sides[0]!.party[0]!.hp).toBe(0)
+    expect(lauf.state.sides[1]!.party[0]!.hp).toBe(0)
+  })
+
+  it('erfuellt den Wunsch erst eine Runde spaeter', () => {
+    const a = fighter('wuenscher', ['normal'], 20, ['wish', 'splash'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const start = battle([a], [b])
+    start.sides[0]!.party[0]!.hp = 10
+
+    const gewuenscht = resolveTurn(start, useMove(0), useMove(), content)
+    expect(gewuenscht.state.sides[0]!.party[0]!.hp).toBe(10)
+
+    const erfuellt = resolveTurn(gewuenscht.state, useMove(1), useMove(), content)
+    expect(erfuellt.state.sides[0]!.party[0]!.hp).toBeGreaterThan(10)
+  })
+
+  it('mittelt beim Leidteiler die Kraftpunkte', () => {
+    const a = fighter('teiler', ['normal'], 20, ['pain-split'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const start = battle([a], [b])
+    start.sides[0]!.party[0]!.hp = 10
+    start.sides[1]!.party[0]!.hp = 50
+    const geteilt = resolveTurn(start, useMove(), useMove(), content)
+
+    expect(geteilt.state.sides[0]!.party[0]!.hp).toBe(30)
+    expect(geteilt.state.sides[1]!.party[0]!.hp).toBe(30)
+  })
+
+  it('tauscht beim Schutztausch die Veraenderungen, nicht die Werte', () => {
+    const a = fighter('tauscher', ['psychic'], 20, ['guard-swap'], 80)
+    const b = fighter('gebufft', ['normal'], 20, ['harden'], 60)
+    const start = battle([a], [b])
+    start.sides[1]!.party[0]!.stages.def = 4
+    const getauscht = resolveTurn(start, useMove(), useMove(), content)
+
+    expect(getauscht.state.sides[0]!.party[0]!.stages.def).toBe(4)
+    // Der Gegner hat in derselben Runde noch gehaertet — daher nicht 0.
+    expect(getauscht.state.sides[1]!.party[0]!.stages.def).toBe(2)
+  })
+
+  it('nimmt mit Groll die Kraftpunkte des zuletzt benutzten Zuges', () => {
+    const a = fighter('grollend', ['ghost'], 20, ['splash', 'spite'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['tackle'], 60)
+    const geschlagen = resolveTurn(battle([a], [b]), useMove(0), useMove(), content)
+    const gegrollt = resolveTurn(geschlagen.state, useMove(1), useMove(), content)
+
+    const rest = gegrollt.state.sides[1]!.party[0]!.moves[0]!
+    // 35 minus zwei eigene Einsaetze minus vier durch Groll.
+    expect(rest.pp).toBe(29)
+    expect(gegrollt.events.some((e) => e.type === 'pp_drain' && e.amount === 4)).toBe(true)
+  })
+
+  it('zahlt bei der Bauchtrommel die Haelfte fuer den vollen Angriff', () => {
+    const a = fighter('trommler', ['normal'], 20, ['belly-drum'], 60)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const start = battle([a], [b])
+    const voll = start.sides[0]!.party[0]!.hpMax
+    const getrommelt = resolveTurn(start, useMove(), useMove(), content)
+
+    expect(getrommelt.state.sides[0]!.party[0]!.stages.atk).toBe(6)
+    expect(getrommelt.state.sides[0]!.party[0]!.hp).toBe(voll - Math.floor(voll / 2))
+  })
+
+  it('reicht mit der Stafette weiter, was aufgebaut wurde', () => {
+    const a = fighter('gebufft', ['normal'], 20, ['baton-pass'], 80)
+    const erbe = fighter('erbe', ['normal'], 20, ['splash'], 60)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const start = battle([a, erbe], [b])
+    start.sides[0]!.party[0]!.stages.atk = 3
+    const gereicht = resolveTurn(start, useMove(), useMove(), content)
+
+    expect(gereicht.state.sides[0]!.activeIndex).toBe(1)
+    expect(gereicht.state.sides[0]!.party[1]!.stages.atk).toBe(3)
+    expect(gereicht.state.sides[0]!.party[0]!.stages.atk).toBe(0)
+  })
+
+  it('daempft mit Lehmsuhler den Strom auf der eigenen Seite', () => {
+    const schaden = (zug: number) => {
+      const a = fighter('suhler', ['ground'], 20, ['mud-sport', 'splash'], 80)
+      const b = fighter('blitz', ['electric'], 20, ['thunder-shock'], 60)
+      const runde = resolveTurn(battle([a], [b]), useMove(zug), useMove(), content)
+      const treffer = runde.events.find((e) => e.type === 'damage')
+      return treffer && treffer.type === 'damage' ? treffer.amount : 0
+    }
+    // Derselbe Zug, derselbe Seed — nur die Suhle unterscheidet die beiden.
+    expect(schaden(0)).toBeLessThan(schaden(1))
   })
 })

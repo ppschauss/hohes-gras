@@ -141,6 +141,48 @@ const SPECIAL_MOVES: Record<string, Effect> = {
 
   // Platscher tut nichts. Das ist keine Luecke, das ist der Zug.
   splash: { kind: 'nothing' },
+
+  // Einstiegsfallen: sie laufen nicht ab, sie liegen.
+  spikes: { kind: 'hazard', hazard: 'spikes' },
+  'toxic-spikes': { kind: 'hazard', hazard: 'toxic_spikes' },
+  'stealth-rock': { kind: 'hazard', hazard: 'stealth_rock' },
+  'sticky-web': { kind: 'hazard', hazard: 'sticky_web' },
+
+  // Wer festhaelt, und wer sich selbst festhaelt.
+  'mean-look': { kind: 'lingering', effect: 'trapped' },
+  block: { kind: 'lingering', effect: 'trapped' },
+  'spider-web': { kind: 'lingering', effect: 'trapped' },
+  ingrain: { kind: 'lingering', effect: 'ingrain' },
+
+  // Was die Zugwahl einengt.
+  taunt: { kind: 'lingering', effect: 'taunt', turns: 3 },
+  torment: { kind: 'lingering', effect: 'torment' },
+  imprison: { kind: 'lingering', effect: 'imprison' },
+  'heal-block': { kind: 'lingering', effect: 'heal_block', turns: 5 },
+
+  // Fristen und Versprechen.
+  'perish-song': { kind: 'lingering', effect: 'perish', turns: 3 },
+  wish: { kind: 'lingering', effect: 'wish', turns: 2 },
+  grudge: { kind: 'lingering', effect: 'grudge', turns: 1 },
+
+  // Werte teilen, tauschen, mitteln.
+  'guard-swap': { kind: 'share', what: 'guard_stages' },
+  'power-swap': { kind: 'share', what: 'power_stages' },
+  'guard-split': { kind: 'share', what: 'guard' },
+  'power-split': { kind: 'share', what: 'power' },
+  'pain-split': { kind: 'share', what: 'hp' },
+
+  // Der Rest der Welle: je ein eigener Fall.
+  spite: { kind: 'pp_drain', amount: 4 },
+  'belly-drum': { kind: 'belly_drum' },
+  'healing-wish': { kind: 'healing_wish' },
+  'lunar-dance': { kind: 'healing_wish' },
+  'baton-pass': { kind: 'baton_pass' },
+  'psycho-shift': { kind: 'psycho_shift' },
+  'mud-sport': { kind: 'side_condition', condition: 'mud_sport', turns: 5 },
+  'water-sport': { kind: 'side_condition', condition: 'water_sport', turns: 5 },
+  // Schutzstacheln ohne den Rueckstoss: Beruehrungszuege kennt die Engine nicht.
+  'spiky-shield': { kind: 'protect', against: 'all' },
 }
 
 const WEATHER_MOVES: Record<string, Extract<Effect, { kind: 'weather' }>['weather']> = {
@@ -148,6 +190,7 @@ const WEATHER_MOVES: Record<string, Extract<Effect, { kind: 'weather' }>['weathe
   'sunny-day': 'heat',
   sandstorm: 'sandstorm',
   hail: 'snow',
+  snowscape: 'snow',
 }
 
 /**

@@ -87,6 +87,14 @@ export interface Side {
    * die zweite Liste.
    */
   conditions?: SideCondition[]
+  /**
+   * Ein Heilopfer wartet auf den Naechsten.
+   *
+   * Der Zug wirkt nicht auf den Anwender, sondern auf den, der nach ihm
+   * kommt — und wer das ist, steht erst fest, wenn er gefallen ist. Also ein
+   * Merker an der Seite statt einer Wirkung am Kaempfer.
+   */
+  healingWish?: boolean
 }
 
 /**
@@ -104,6 +112,24 @@ export const LINGERING_KINDS = [
   'sure_hit',
   /** Scharfblick, Telekinese: auf dieses Ziel trifft jeder. */
   'vulnerable',
+  /** Horrorblick, Rueckentzug, Spinnennetz: das Feld bleibt, wo es ist. */
+  'trapped',
+  /** Verwurzler: schlaegt Wurzeln — heilt und haelt zugleich fest. */
+  'ingrain',
+  /** Verhoehner: nur noch Zuege, die Schaden machen. */
+  'taunt',
+  /** Folterknecht: nicht zweimal derselbe Zug. */
+  'torment',
+  /** Begrenzer: nichts, was der Anwender auch kann. */
+  'imprison',
+  /** Heilblockade: keine Heilung mehr. */
+  'heal_block',
+  /** Abgesang: drei Runden, dann faellt der Traeger. */
+  'perish',
+  /** Wunschtraum: naechste Runde die halben Kraftpunkte zurueck. */
+  'wish',
+  /** Nachspiel: wer den Traeger faellt, verliert dafuer seinen Zug. */
+  'grudge',
 ] as const
 export type LingeringKind = (typeof LINGERING_KINDS)[number]
 
@@ -112,6 +138,8 @@ export interface Lingering {
   turns: number | null
   /** Bei Zugabe und Aussetzer: welcher Zug gemeint ist. */
   moveId?: string
+  /** Bei Begrenzer: welche Zuege gesperrt sind — die des Anwenders. */
+  moveIds?: string[]
   /** Wer ihn gesetzt hat — Egelsamen speist den Setzer. */
   from?: 0 | 1
 }
@@ -120,12 +148,30 @@ export const SIDE_CONDITIONS = [
   'reflect', 'light_screen', 'safeguard', 'mist', 'tailwind',
   /** Beschwoerung: fuenf Runden ohne Volltreffer gegen diese Seite. */
   'lucky_chant',
+  /*
+   * Einstiegsfallen. Sie laufen nicht ab, sie liegen — bis der Kampf endet.
+   * Deshalb `turns: null` und ein Zaehler `layers`: Stachler und Giftspitzen
+   * werden staerker, wenn man sie mehrfach streut.
+   */
+  'spikes', 'toxic_spikes', 'stealth_rock', 'sticky_web',
+  /*
+   * Lehmsuhler und Nassmacher.
+   *
+   * Im Vorbild daempfen sie einen Typ auf dem ganzen Feld. Hier schuetzen sie
+   * die Seite, die sie gestellt hat — genau wie Reflektor und Lichtschild,
+   * nur nach Typ statt nach Kategorie. Ein zweites Feldsystem fuer zwei Zuege
+   * waere mehr Maschine als Wirkung.
+   */
+  'mud_sport', 'water_sport',
 ] as const
 export type SideConditionKind = (typeof SIDE_CONDITIONS)[number]
 
 export interface SideCondition {
   kind: SideConditionKind
-  turns: number
+  /** `null` heisst: liegt, bis der Kampf endet. Das gilt fuer die Fallen. */
+  turns: number | null
+  /** Wie oft gestreut. Nur die Fallen zaehlen mit. */
+  layers?: number
 }
 
 export type BattleKind = 'wild' | 'trainer' | 'gym' | 'pvp' | 'raid'
@@ -205,13 +251,21 @@ export type BattleEvent =
   /** Ein Schirm liegt ueber einer Seite. */
   | { type: 'side_condition'; side: 0 | 1; kind: SideCondition['kind']; started: boolean }
   /** Ein Schirm hat etwas abgewehrt. */
-  | { type: 'blocked'; side: 0 | 1; fighter: string; by: SideConditionKind | 'terrain' }
+  | { type: 'blocked'; side: 0 | 1; fighter: string; by: SideConditionKind | 'terrain' | 'heal_block' }
   /** Jemand hat den Boden umgestellt — oder er ist verflogen. */
   | { type: 'terrain'; side: 0 | 1; fighter: string; terrain: TerrainKind | null }
   /** Jemand wurde aus dem Kampf gedraengt. */
   | { type: 'forced_out'; side: 0 | 1; fighter: string }
   /** Der Zug tut, was er soll: nichts. */
   | { type: 'nothing'; side: 0 | 1; fighter: string }
+  /** Der Rueckzug ist versperrt. */
+  | { type: 'trapped'; side: 0 | 1; fighter: string }
+  /** Eine Einstiegsfalle hat den Nachrueckenden erwischt. */
+  | { type: 'hazard'; side: 0 | 1; fighter: string; kind: SideConditionKind }
+  /** Werte wurden geteilt oder getauscht. */
+  | { type: 'shared'; side: 0 | 1; fighter: string; what: 'guard' | 'power' | 'hp' | 'guard_stages' | 'power_stages' }
+  /** Kraftpunkte eines Zuges sind verloren. */
+  | { type: 'pp_drain'; side: 0 | 1; fighter: string; moveId: string; amount: number }
   | { type: 'end'; outcome: BattleOutcome }
 
 export type PlayerAction =

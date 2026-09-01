@@ -96,7 +96,7 @@ export function resolveTurn(
    */
   for (const [index, action] of ([[0, playerAction], [1, foeAction]] as const)) {
     if (action.kind === 'item') useItem(next, index, action, content, events)
-    if (action.kind === 'switch') doSwitch(next, index, action.partyIndex, events)
+    if (action.kind === 'switch') doSwitch(next, index, action.partyIndex, events, content)
   }
 
   const orders = buildOrder(next, playerAction, foeAction, content, rng)
@@ -114,11 +114,11 @@ export function resolveTurn(
      */
     if (attacker.id !== entry.fighterId) continue
     performMove(next, entry.side, entry.moveIndex, content, rng, events)
-    checkFaints(next, events)
+    checkFaints(next, events, content)
   }
 
   if (!next.outcome) endOfTurn(next, rng, events)
-  if (!next.outcome) checkFaints(next, events)
+  if (!next.outcome) checkFaints(next, events, content)
 
   if (!next.outcome && next.turn >= MAX_TURNS) {
     return finish(next, events, { winner: null, reason: 'turn_limit' })
@@ -219,10 +219,26 @@ function safeMove(content: BattleContent, id: string): MoveDef | null {
   try { return content.move(id) } catch { return null }
 }
 
-function doSwitch(state: BattleState, sideIndex: 0 | 1, partyIndex: number, events: BattleEvent[]): void {
+function doSwitch(
+  state: BattleState, sideIndex: 0 | 1, partyIndex: number, events: BattleEvent[],
+  content: BattleContent, erzwungen = false,
+): void {
   const side = state.sides[sideIndex]!
   const target = side.party[partyIndex]
   if (!target || target.hp <= 0 || partyIndex === side.activeIndex) return
+
+  /*
+   * Wer festgehalten wird, geht nicht.
+   *
+   * Nur der freiwillige Rueckzug ist gemeint: ein Wirbelwind draengt auch
+   * einen Gefesselten hinaus, und der Nachrueckende nach einem Abgang hat
+   * ohnehin keine Wahl. Sonst waere Horrorblick eine Sperre gegen das Spiel
+   * statt gegen den Gegner.
+   */
+  if (!erzwungen && (hatEffekt(active(side), 'trapped') || hatEffekt(active(side), 'ingrain'))) {
+    events.push({ type: 'trapped', side: sideIndex, fighter: active(side).id })
+    return
+  }
 
   // Stat stages and confusion are properties of being on the field, not of the
   // creature, so they reset. Status does not — that is the point of status.
@@ -245,6 +261,83 @@ function doSwitch(state: BattleState, sideIndex: 0 | 1, partyIndex: number, even
   // Frisch im Feld: seine erste eigene Handlung steht noch aus.
   target.turnsOnField = 0
   events.push({ type: 'switch', side: sideIndex, fighter: target.id, name: target.name })
+  betreteFeld(state, sideIndex, target, events, content)
+}
+
+/**
+ * Was den empfaengt, der neu hereinkommt.
+ *
+ * Fallen liegen auf der Seite, die sie abbekommen hat, und warten. Beide
+ * Wege ins Feld — freiwilliger Wechsel und Nachruecken nach einem Abgang —
+ * fuehren hier durch, sonst waere eine Falle davon abhaengig, *wie* jemand
+ * hereinkommt.
+ */
+function betreteFeld(
+  state: BattleState, sideIndex: 0 | 1, ankommend: Fighter,
+  events: BattleEvent[], content: BattleContent,
+): void {
+  const seite = state.sides[sideIndex]!
+
+  // Ein Heilopfer wartet: der Naechste kommt frisch herein, einmalig.
+  if (seite.healingWish) {
+    seite.healingWish = false
+    ankommend.hp = ankommend.hpMax
+    ankommend.status = 'none'
+    ankommend.statusCounter = 0
+    events.push({ type: 'heal', side: sideIndex, fighter: ankommend.id, amount: ankommend.hpMax, hpLeft: ankommend.hp })
+  }
+
+  // Wer fliegt, tritt nicht hinein. Tarnsteine treffen trotzdem — sie
+  // schweben, und genau darin liegt ihr Sinn.
+  const amBoden = !ankommend.types.includes('flying')
+
+  for (const c of seite.conditions ?? []) {
+    if (ankommend.hp <= 0) break
+    const lagen = c.layers ?? 1
+
+    if (c.kind === 'stealth_rock') {
+      const anteil = content.effectiveness('rock', ankommend.types)
+      const abzug = Math.max(1, Math.floor((ankommend.hpMax / 8) * anteil))
+      ankommend.hp = Math.max(0, ankommend.hp - abzug)
+      events.push({ type: 'hazard', side: sideIndex, fighter: ankommend.id, kind: c.kind })
+      events.push({ type: 'damage', side: sideIndex, fighter: ankommend.id,
+        amount: abzug, hpLeft: ankommend.hp, effectiveness: anteil, critical: false })
+      continue
+    }
+    if (!amBoden) continue
+
+    if (c.kind === 'spikes') {
+      const abzug = Math.max(1, Math.floor(ankommend.hpMax / [8, 8, 6, 4][Math.min(lagen, 3)]!))
+      ankommend.hp = Math.max(0, ankommend.hp - abzug)
+      events.push({ type: 'hazard', side: sideIndex, fighter: ankommend.id, kind: c.kind })
+      events.push({ type: 'damage', side: sideIndex, fighter: ankommend.id,
+        amount: abzug, hpLeft: ankommend.hp, effectiveness: 1, critical: false })
+    } else if (c.kind === 'toxic_spikes') {
+      /*
+       * Ein Giftpokemon raeumt sie beim Hereinkommen auf.
+       *
+       * Das steht so im Vorbild und ist die einzige Art, Giftspitzen wieder
+       * loszuwerden — ohne sie waere die Falle eine Einbahnstrasse.
+       */
+      if (ankommend.types.includes('poison')) {
+        seite.conditions = (seite.conditions ?? []).filter((x) => x !== c)
+        events.push({ type: 'side_condition', side: sideIndex, kind: c.kind, started: false })
+        continue
+      }
+      const gift = canApplyStatus(ankommend, lagen >= 2 ? 'toxic' : 'poison')
+      if (!gift.applied) continue
+      ankommend.status = lagen >= 2 ? 'toxic' : 'poison'
+      ankommend.statusCounter = 1
+      events.push({ type: 'hazard', side: sideIndex, fighter: ankommend.id, kind: c.kind })
+      events.push({ type: 'status', side: sideIndex, fighter: ankommend.id, status: ankommend.status })
+    } else if (c.kind === 'sticky_web') {
+      const res = applyStage(ankommend.stages, 'spe', -1)
+      ankommend.stages = res.stages
+      events.push({ type: 'hazard', side: sideIndex, fighter: ankommend.id, kind: c.kind })
+      events.push({ type: 'stage', side: sideIndex, fighter: ankommend.id,
+        stat: 'spe', delta: res.applied, capped: res.capped })
+    }
+  }
 }
 
 function performMove(
@@ -347,7 +440,19 @@ function performMove(
    */
   const gesperrt = (attacker.lingering ?? []).find((l) => l.kind === 'disable' && l.moveId === move.id)
   const zugabe = (attacker.lingering ?? []).find((l) => l.kind === 'encore' && l.moveId)
-  if (gesperrt || (zugabe && zugabe.moveId !== move.id)) {
+  /*
+   * Drei weitere Sperren, dieselbe Stelle, derselbe Ausgang.
+   *
+   * Verhoehner nimmt die Statuszuege, Folterknecht die Wiederholung,
+   * Begrenzer alles, was der Anwender selbst kann. Alle drei kosten den PP:
+   * ein Fehlversuch, der nichts kostet, waere keiner — und der Spieler
+   * bekommt eine Ansage statt einer stumm geaenderten Eingabe.
+   */
+  const verhoehnt = move.category === 'status' && hatEffekt(attacker, 'taunt')
+  const wiederholt = attacker.lastMoveId === move.id && hatEffekt(attacker, 'torment')
+  const begrenzt = (attacker.lingering ?? [])
+    .some((l) => l.kind === 'imprison' && (l.moveIds ?? []).includes(move.id))
+  if (gesperrt || verhoehnt || wiederholt || begrenzt || (zugabe && zugabe.moveId !== move.id)) {
     slot.pp = Math.max(0, slot.pp - 1)
     attacker.turnsOnField = (attacker.turnsOnField ?? 0) + 1
     events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
@@ -432,10 +537,18 @@ function performMove(
      * ueber dem, der gerade vorne steht.
      */
     const schirm = move.category === 'physical' ? 'reflect' : 'light_screen'
+    // Lehmsuhler und Nassmacher: dieselbe Halbierung, nur nach Typ statt
+    // nach Kategorie. Beides kann gleichzeitig greifen.
+    const suhle = move.type === 'electric' ? 'mud_sport' : move.type === 'fire' ? 'water_sport' : null
+    const gedaempft = suhle !== null && hatSchirm(state, gegenseite, suhle)
     const gemildert = move.category !== 'status' && hatSchirm(state, gegenseite, schirm)
-    const dmg = gemildert
-      ? { ...roh, amount: Math.max(1, Math.floor(roh.amount / 2)) }
+    const teiler = (gemildert ? 2 : 1) * (gedaempft ? 2 : 1)
+    const dmg = teiler > 1
+      ? { ...roh, amount: Math.max(1, Math.floor(roh.amount / teiler)) }
       : roh
+    if (gedaempft && roh.amount > 0) {
+      events.push({ type: 'blocked', side: gegenseite, fighter: defender.id, by: suhle! })
+    }
     if (gemildert && roh.amount > 0) {
       events.push({ type: 'blocked', side: gegenseite, fighter: defender.id, by: schirm })
     }
@@ -463,6 +576,18 @@ function performMove(
        * steht. Sonst faellt jemand zweimal, und die Reihenfolge im Protokoll
        * ergaebe keinen Sinn mehr.
        */
+      /*
+       * Nachspiel kostet den Zug, der den Traeger gefaellt hat.
+       *
+       * Nicht den Angreifer, wie beim Abgangsbund, sondern seinen Zug: der
+       * bleibt fuer den Rest des Kampfes leer. Das trifft haerter, wenn es
+       * der einzige gute war — und genau darauf zielt der Zug.
+       */
+      if (defender.hp <= 0 && hatEffekt(defender, 'grudge')) {
+        const verloren = slot.pp
+        slot.pp = 0
+        events.push({ type: 'pp_drain', side: sideIndex, fighter: attacker.id, moveId: move.id, amount: verloren })
+      }
       if (defender.hp <= 0 && defender.destinyBondUntilTurn === state.turn && attacker.hp > 0) {
         attacker.hp = 0
         events.push({ type: 'faint', side: sideIndex, fighter: attacker.id })
@@ -479,7 +604,7 @@ function performMove(
   // hier und nicht in der Schadensformel: die soll rechnen, nicht aufraeumen.
   if (totalDealt > 0) attacker.sureCrit = false
 
-  applyMoveEffect(state, sideIndex, move, attacker, defender, totalDealt, rng, events)
+  applyMoveEffect(state, sideIndex, move, attacker, defender, totalDealt, content, rng, events)
 }
 
 function applyMoveEffect(
@@ -489,6 +614,7 @@ function applyMoveEffect(
   attacker: Fighter,
   defender: Fighter,
   damageDealt: number,
+  content: BattleContent,
   rng: Rng,
   events: BattleEvent[],
 ): void {
@@ -613,7 +739,9 @@ function applyMoveEffect(
        * dem Gegenueber auf — das ist der Normalfall, und die Ausnahmen stehen
        * deshalb als Liste da statt als Kette von Wenns.
        */
-      const beimAnwender = new Set(['aqua_ring', 'magnet_rise', 'sure_hit'])
+      const beimAnwender = new Set([
+        'aqua_ring', 'magnet_rise', 'sure_hit', 'ingrain', 'wish', 'grudge',
+      ])
       const traeger = beimAnwender.has(effect.effect) ? attacker : defender
       const seiteDesTraegers = (traeger === attacker ? sideIndex : foeIndex) as 0 | 1
       if (traeger.hp <= 0) return
@@ -637,8 +765,23 @@ function applyMoveEffect(
           ? { moveId: traeger.lastMoveId }
           : {}),
         ...(effect.effect === 'leech_seed' ? { from: sideIndex } : {}),
+        // Begrenzer sperrt, was der Anwender selbst beherrscht — die Liste
+        // muss jetzt festgehalten werden, sie kann sich noch aendern.
+        ...(effect.effect === 'imprison' ? { moveIds: attacker.moves.map((m) => m.id) } : {}),
       }]
       events.push({ type: 'lingering', side: seiteDesTraegers, fighter: traeger.id, kind: effect.effect, started: true })
+
+      /*
+       * Abgesang singt fuer alle.
+       *
+       * Der einzige anhaltende Effekt, der beide Seiten gleichzeitig trifft —
+       * das ist sein ganzer Sinn: er ist kein Angriff, sondern eine Frist,
+       * und sie laeuft fuer den Anwender genauso.
+       */
+      if (effect.effect === 'perish' && attacker.hp > 0 && !hatEffekt(attacker, 'perish')) {
+        attacker.lingering = [...(attacker.lingering ?? []), { kind: 'perish', turns: effect.turns ?? 3 }]
+        events.push({ type: 'lingering', side: sideIndex, fighter: attacker.id, kind: 'perish', started: true })
+      }
       return
     }
 
@@ -657,6 +800,11 @@ function applyMoveEffect(
     }
 
     case 'rest': {
+      // Eine Heilblockade nimmt jede Form der Erholung, nicht nur die eine.
+      if (hatEffekt(attacker, 'heal_block')) {
+        events.push({ type: 'blocked', side: sideIndex, fighter: attacker.id, by: 'heal_block' })
+        return
+      }
       /*
        * Voll heilen, dafuer zwei Runden schlafen.
        *
@@ -749,7 +897,169 @@ function applyMoveEffect(
         return
       }
       events.push({ type: 'forced_out', side: zielSeite, fighter: raus.id })
-      doSwitch(state, zielSeite, bank[rng.int(0, bank.length - 1)]!.i, events)
+      doSwitch(state, zielSeite, bank[rng.int(0, bank.length - 1)]!.i, events, content, true)
+      return
+    }
+
+    case 'hazard': {
+      /*
+       * Fallen liegen bei der Gegenseite und laufen nicht ab.
+       *
+       * Ein zweiter Wurf verstaerkt statt die Uhr neu zu stellen; Tarnsteine
+       * und Klebenetz kennen nur eine Lage, Stachler drei, Giftspitzen zwei.
+       */
+      const grenze = effect.hazard === 'spikes' ? 3 : effect.hazard === 'toxic_spikes' ? 2 : 1
+      const seite = state.sides[foeIndex]!
+      const liegt = (seite.conditions ?? []).find((c) => c.kind === effect.hazard)
+      if (liegt && (liegt.layers ?? 1) >= grenze) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      if (liegt) liegt.layers = (liegt.layers ?? 1) + 1
+      else seite.conditions = [...(seite.conditions ?? []), { kind: effect.hazard, turns: null, layers: 1 }]
+      events.push({ type: 'side_condition', side: foeIndex, kind: effect.hazard, started: true })
+      return
+    }
+
+    /*
+     * Werte teilen oder tauschen.
+     *
+     * Die beiden Tauscher nehmen die *Veraenderungen* mit — ein Schutztausch
+     * gegen einen ungebufften Gegner schenkt ihm die eigenen Zuwaechse. Die
+     * beiden Teiler mitteln die Werte selbst; das hilft dem Schwaecheren und
+     * schadet dem Staerkeren, und darum setzt man sie ein.
+     */
+    case 'share': {
+      if (defender.hp <= 0) return
+      const mitteln = (a: number, b: number) => Math.floor((a + b) / 2)
+      switch (effect.what) {
+        case 'guard_stages':
+        case 'power_stages': {
+          const paar = effect.what === 'guard_stages' ? (['def', 'spd'] as const) : (['atk', 'spa'] as const)
+          for (const k of paar) {
+            const merk = attacker.stages[k]
+            attacker.stages[k] = defender.stages[k]
+            defender.stages[k] = merk
+          }
+          break
+        }
+        case 'guard':
+        case 'power': {
+          const paar = effect.what === 'guard' ? (['def', 'spd'] as const) : (['atk', 'spa'] as const)
+          for (const k of paar) {
+            const wert = mitteln(attacker.stats[k], defender.stats[k])
+            attacker.stats[k] = wert
+            defender.stats[k] = wert
+          }
+          break
+        }
+        case 'hp': {
+          const wert = mitteln(attacker.hp, defender.hp)
+          for (const [f, seite] of [[attacker, sideIndex], [defender, foeIndex]] as const) {
+            const vorher = f.hp
+            f.hp = Math.min(f.hpMax, Math.max(1, wert))
+            if (f.hp === vorher) continue
+            const art = f.hp > vorher ? 'heal' : 'damage'
+            events.push(art === 'heal'
+              ? { type: 'heal', side: seite, fighter: f.id, amount: f.hp - vorher, hpLeft: f.hp }
+              : { type: 'damage', side: seite, fighter: f.id, amount: vorher - f.hp, hpLeft: f.hp, effectiveness: 1, critical: false })
+          }
+          break
+        }
+      }
+      events.push({ type: 'shared', side: sideIndex, fighter: attacker.id, what: effect.what })
+      return
+    }
+
+    case 'pp_drain': {
+      const ziel = defender.lastMoveId
+      const slot = ziel ? defender.moves.find((m) => m.id === ziel) : undefined
+      if (!slot || slot.pp <= 0) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      const weg = Math.min(slot.pp, effect.amount)
+      slot.pp -= weg
+      events.push({ type: 'pp_drain', side: foeIndex, fighter: defender.id, moveId: slot.id, amount: weg })
+      return
+    }
+
+    case 'belly_drum': {
+      /*
+       * Die Haelfte der Kraftpunkte fuer den vollen Angriff.
+       *
+       * Der Preis ist die Wirkung: wer ihn zahlt und dann nicht durchkommt,
+       * hat den Kampf verloren. Unter der Haelfte geht er deshalb gar nicht
+       * erst — sonst waere er ein Selbstmord mit Zusatzschritt.
+       */
+      const preis = Math.floor(attacker.hpMax / 2)
+      if (attacker.hp <= preis || attacker.stages.atk >= 6) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      attacker.hp -= preis
+      events.push({ type: 'damage', side: sideIndex, fighter: attacker.id,
+        amount: preis, hpLeft: attacker.hp, effectiveness: 1, critical: false })
+      const res = applyStage(attacker.stages, 'atk', 6)
+      attacker.stages = res.stages
+      events.push({ type: 'stage', side: sideIndex, fighter: attacker.id, stat: 'atk', delta: res.applied, capped: res.capped })
+      return
+    }
+
+    case 'healing_wish': {
+      // Ohne jemanden auf der Bank waere es ein Abgang ohne Gegenwert.
+      const bank = state.sides[sideIndex]!.party.some((f, i) => f.hp > 0 && i !== state.sides[sideIndex]!.activeIndex)
+      if (!bank) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      attacker.hp = 0
+      state.sides[sideIndex]!.healingWish = true
+      return
+    }
+
+    case 'baton_pass': {
+      /*
+       * Hinausgehen und alles Aufgebaute weiterreichen.
+       *
+       * Der einzige Wechsel, der die Wertveraenderungen mitnimmt — deshalb
+       * nicht ueber `doSwitch`, der sie ja gerade loeschen soll. Wer der
+       * Naechste ist, entscheidet hier das Spiel und nicht der Spieler: eine
+       * Wahl mitten in der Runde braeuchte einen zweiten Weg zum Server.
+       */
+      const seite = state.sides[sideIndex]!
+      const naechster = seite.party.findIndex((f, i) => f.hp > 0 && i !== seite.activeIndex)
+      if (naechster === -1) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      const erbe = seite.party[naechster]!
+      erbe.stages = { ...attacker.stages }
+      erbe.lingering = (attacker.lingering ?? []).filter((l) => l.kind !== 'trapped' && l.kind !== 'ingrain')
+      attacker.stages = emptyStages()
+      attacker.lingering = []
+      seite.activeIndex = naechster
+      erbe.turnsOnField = 0
+      events.push({ type: 'switch', side: sideIndex, fighter: erbe.id, name: erbe.name })
+      betreteFeld(state, sideIndex, erbe, events, content)
+      return
+    }
+
+    case 'psycho_shift': {
+      if (attacker.status === 'none' || defender.status !== 'none' || defender.hp <= 0) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      if (!canApplyStatus(defender, attacker.status).applied) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      defender.status = attacker.status
+      defender.statusCounter = attacker.statusCounter
+      events.push({ type: 'status', side: foeIndex, fighter: defender.id, status: defender.status })
+      events.push({ type: 'status_cured', side: sideIndex, fighter: attacker.id, status: attacker.status })
+      attacker.status = 'none'
+      attacker.statusCounter = 0
       return
     }
 
@@ -774,6 +1084,11 @@ function applyMoveEffect(
     }
 
     case 'drain': {
+      // Eine Heilblockade nimmt jede Form der Erholung, nicht nur die eine.
+      if (hatEffekt(attacker, 'heal_block')) {
+        events.push({ type: 'blocked', side: sideIndex, fighter: attacker.id, by: 'heal_block' })
+        return
+      }
       if (damageDealt <= 0) return
       const healed = Math.max(1, Math.floor(damageDealt * effect.ratio))
       attacker.hp = clamp(attacker.hp + healed, 0, attacker.hpMax)
@@ -793,6 +1108,11 @@ function applyMoveEffect(
     }
 
     case 'heal': {
+      // Eine Heilblockade nimmt jede Form der Erholung, nicht nur die eine.
+      if (hatEffekt(attacker, 'heal_block')) {
+        events.push({ type: 'blocked', side: sideIndex, fighter: attacker.id, by: 'heal_block' })
+        return
+      }
       const healed = Math.max(1, Math.floor(attacker.hpMax * effect.ratio))
       const before = attacker.hp
       attacker.hp = clamp(attacker.hp + healed, 0, attacker.hpMax)
@@ -842,7 +1162,8 @@ function endOfTurn(state: BattleState, rng: Rng, events: BattleEvent[]): void {
      * Differenz. Wer voll ist, bekommt keine Zeile — sonst stuende in jeder
      * Runde eine Heilung um null.
      */
-    if (state.terrain?.kind === 'grassy' && fighter.hp > 0 && fighter.hp < fighter.hpMax) {
+    if (state.terrain?.kind === 'grassy' && fighter.hp > 0 && fighter.hp < fighter.hpMax
+      && !hatEffekt(fighter, 'heal_block')) {
       const zuwachs = Math.min(fighter.hpMax - fighter.hp, Math.max(1, Math.floor(fighter.hpMax / 16)))
       fighter.hp += zuwachs
       events.push({ type: 'heal', side: sideIndex, fighter: fighter.id, amount: zuwachs, hpLeft: fighter.hp })
@@ -932,11 +1253,56 @@ function tickLingering(
        * Typenrechnung, Zielschuss und Scharfblick in die Treffprobe. Der
        * gemeinsame Zaehler unten ist alles, was sie hier brauchen.
        */
+      /*
+       * Verwurzler heilt und haelt zugleich; das Festhalten steht beim
+       * Wechsel, das Heilen hier.
+       */
+      case 'ingrain': {
+        if (fighter.hp >= fighter.hpMax || hatEffekt(fighter, 'heal_block')) break
+        const zuwachs = Math.min(fighter.hpMax - fighter.hp, Math.max(1, Math.floor(fighter.hpMax / 16)))
+        fighter.hp += zuwachs
+        events.push({ type: 'lingering_tick', side: sideIndex, fighter: fighter.id, kind: 'ingrain', amount: zuwachs, hpLeft: fighter.hp })
+        break
+      }
+
+      /*
+       * Wunschtraum wirkt beim Ablaufen, nicht waehrend er laeuft.
+       *
+       * Genau das ist der Zug: man bezahlt eine Runde im Voraus und bekommt
+       * die Heilung erst, wenn sie vielleicht zu spaet ist.
+       */
+      case 'wish': {
+        if (l.turns !== null && l.turns > 1) break
+        if (fighter.hp >= fighter.hpMax || hatEffekt(fighter, 'heal_block')) break
+        const zuwachs = Math.min(fighter.hpMax - fighter.hp, Math.max(1, Math.floor(fighter.hpMax / 2)))
+        fighter.hp += zuwachs
+        events.push({ type: 'lingering_tick', side: sideIndex, fighter: fighter.id, kind: 'wish', amount: zuwachs, hpLeft: fighter.hp })
+        break
+      }
+
+      /*
+       * Abgesang: die Frist laeuft ab, und dann faellt der Traeger.
+       *
+       * Kein Schadensereignis — es ist kein Treffer. Dass jemand gefallen
+       * ist, meldet ohnehin die Pruefung nach dem Rundenende.
+       */
+      case 'perish': {
+        if (l.turns !== null && l.turns > 1) break
+        fighter.hp = 0
+        break
+      }
+
       case 'encore':
       case 'disable':
       case 'magnet_rise':
       case 'sure_hit':
       case 'vulnerable':
+      case 'trapped':
+      case 'taunt':
+      case 'torment':
+      case 'imprison':
+      case 'heal_block':
+      case 'grudge':
         break
     }
 
@@ -962,6 +1328,8 @@ function tickSideConditions(state: BattleState, events: BattleEvent[]): void {
     if (!seite.conditions?.length) continue
     const bleibt = []
     for (const c of seite.conditions) {
+      // Fallen liegen, bis der Kampf endet — sie zaehlen nicht mit.
+      if (c.turns === null) { bleibt.push(c); continue }
       const rest = c.turns - 1
       if (rest <= 0) {
         events.push({ type: 'side_condition', side: sideIndex, kind: c.kind, started: false })
@@ -985,7 +1353,7 @@ function tickTerrain(state: BattleState, events: BattleEvent[]): void {
   events.push({ type: 'terrain', side: 0, fighter: '', terrain: null })
 }
 
-function checkFaints(state: BattleState, events: BattleEvent[]): void {
+function checkFaints(state: BattleState, events: BattleEvent[], content: BattleContent): void {
   for (const sideIndex of [0, 1] as const) {
     const side = state.sides[sideIndex]!
     const fighter = active(side)
@@ -1009,6 +1377,7 @@ function checkFaints(state: BattleState, events: BattleEvent[]): void {
     // Auch der Nachrueckende faengt seine Zaehlung von vorn an.
     incoming.turnsOnField = 0
     events.push({ type: 'switch', side: sideIndex, fighter: incoming.id, name: incoming.name })
+    betreteFeld(state, sideIndex, incoming, events, content)
   }
 }
 

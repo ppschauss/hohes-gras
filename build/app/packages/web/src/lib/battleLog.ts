@@ -41,6 +41,11 @@ export function describeEvent(event: BattleEventView, view: BattleView): string[
       return [e.terrain ? t(`log.terrain.${e.terrain}`) : t('log.terrain.off')]
     case 'forced_out': return [t('log.forced_out', { name: who })]
     case 'nothing': return [t('log.nothing')]
+    case 'trapped': return [t('log.trapped', { name: who })]
+    case 'hazard': return [t(`log.hazard.${e.kind}`, { name: who })]
+    case 'shared': return [t(`log.shared.${e.what}`)]
+    case 'pp_drain':
+      return [t('log.pp_drain', { name: who, n: Number(e.amount ?? 0), move: String(e.moveId ?? '') })]
     case 'heal': return [t('log.heal', { name: who, n: Number(e.amount ?? 0) })]
     case 'status': return [t('log.status', { name: who, status: t(`status.${String(e.status)}`) })]
     case 'status_damage': return [t('log.status_damage', { name: who, status: t(`status.${String(e.status)}`) })]

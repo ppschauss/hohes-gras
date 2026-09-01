@@ -121,6 +121,8 @@ export const MoveDefSchema = z.object({
         effect: z.enum([
           'leech_seed', 'aqua_ring', 'nightmare', 'curse', 'yawn', 'encore', 'disable',
           'magnet_rise', 'sure_hit', 'vulnerable',
+          'trapped', 'ingrain', 'taunt', 'torment', 'imprison', 'heal_block',
+          'perish', 'wish', 'grudge',
         ]),
         /** Wie viele Runden. Fehlt es, gilt der Effekt bis zum Einwechseln. */
         turns: z.number().int().min(1).max(10).optional(),
@@ -128,7 +130,10 @@ export const MoveDefSchema = z.object({
       /** Reflektor, Lichtschild, Bodyguard, Weissnebel, Rueckenwind. */
       z.object({
         kind: z.literal('side_condition'),
-        condition: z.enum(['reflect', 'light_screen', 'safeguard', 'mist', 'tailwind', 'lucky_chant']),
+        condition: z.enum([
+          'reflect', 'light_screen', 'safeguard', 'mist', 'tailwind', 'lucky_chant',
+          'mud_sport', 'water_sport',
+        ]),
         turns: z.number().int().min(1).max(10),
       }),
       /** Ausdauer: dieser Treffer laesst mindestens einen Kraftpunkt. */
@@ -167,6 +172,39 @@ export const MoveDefSchema = z.object({
        * keine zu haben. Nur so bleibt die Liste der offenen Zuege ehrlich.
        */
       z.object({ kind: z.literal('nothing') }),
+      /*
+       * Einstiegsfallen.
+       *
+       * Eigene Bauart und kein `side_condition`, weil sie sich anders
+       * verhalten: sie laufen nicht ab, und ein zweiter Wurf verstaerkt sie,
+       * statt die Uhr neu zu stellen.
+       */
+      z.object({
+        kind: z.literal('hazard'),
+        hazard: z.enum(['spikes', 'toxic_spikes', 'stealth_rock', 'sticky_web']),
+      }),
+      /*
+       * Werte teilen oder tauschen.
+       *
+       * Fuenf Zuege, ein Muster: Schutztausch und Krafttausch tauschen die
+       * *Veraenderungen*, Schutzteiler und Kraftteiler mitteln die Werte
+       * selbst, Leidteiler mittelt die Kraftpunkte. Ein Feld statt fuenf
+       * Bauarten, weil sich nur das Was unterscheidet.
+       */
+      z.object({
+        kind: z.literal('share'),
+        what: z.enum(['guard_stages', 'power_stages', 'guard', 'power', 'hp']),
+      }),
+      /** Groll: Kraftpunkte des zuletzt benutzten gegnerischen Zuges. */
+      z.object({ kind: z.literal('pp_drain'), amount: z.number().int().min(1).max(8) }),
+      /** Bauchtrommel: die Haelfte der Kraftpunkte fuer vollen Angriff. */
+      z.object({ kind: z.literal('belly_drum') }),
+      /** Heilopfer: der Anwender faellt, der Naechste kommt geheilt. */
+      z.object({ kind: z.literal('healing_wish') }),
+      /** Stafette: hinausgehen und alles Aufgebaute weiterreichen. */
+      z.object({ kind: z.literal('baton_pass') }),
+      /** Psybann: das eigene Leiden an den Gegenueber weitergeben. */
+      z.object({ kind: z.literal('psycho_shift') }),
     ])
     .default({ kind: 'none' }),
 })
