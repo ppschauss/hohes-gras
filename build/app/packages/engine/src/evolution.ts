@@ -23,8 +23,6 @@ export const LINK_CABLE_ITEM_ID = 'link-cable'
  *  kein Content-Paket kennen muss. */
 export interface TradeEvolution {
   to: string
-  /** Was zusätzlich getragen werden muss; fehlt bei den vier Klassikern. */
-  heldItemId?: string
 }
 
 /**
@@ -40,5 +38,13 @@ export function tradeEvolutionFor(
   via: 'trade' | 'cable',
 ): TradeEvolution | null {
   if (via === 'cable' && !bag.has(LINK_CABLE_ITEM_ID)) return null
-  return evolutions.find((e) => !e.heldItemId || bag.has(e.heldItemId)) ?? null
+  /*
+   * Kein Tragegegenstand mehr.
+   *
+   * Im Vorbild brauchen acht dieser Entwicklungen zusaetzlich etwas Getragenes.
+   * Ein Pokemon kann hier aber nichts tragen — die Bedingung waere nie
+   * erfuellbar, und die acht gaebe es nur auf dem Papier. Das Kabel ist die
+   * ganze Bedingung.
+   */
+  return evolutions[0] ?? null
 }

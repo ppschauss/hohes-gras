@@ -104,7 +104,6 @@ export function crossValidate(pack: ContentPack): string[] {
     for (const e of s.evolutions) {
       if (!has(pack.species, e.to)) issues.push(`species/${s.id}: Entwicklung zu unbekannter Art "${e.to}"`)
       if (e.trigger === 'stone' && !has(pack.items, e.itemId)) issues.push(`species/${s.id}: Entwicklungsstein "${e.itemId}" fehlt`)
-      if (e.trigger === 'trade' && e.heldItemId && !has(pack.items, e.heldItemId)) issues.push(`species/${s.id}: Tausch-Item "${e.heldItemId}" fehlt`)
     }
     if (s.learnset.filter((l) => l.level <= 1).length === 0) {
       issues.push(`species/${s.id}: keine Attacke ab Level 1 lernbar`)

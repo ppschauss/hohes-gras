@@ -1543,7 +1543,6 @@ export interface TradeStationView {
     targetSpeciesId: string
     targetName: string
     targetSprite: string
-    heldItem: { id: string; name: string; owned: number } | null
     ready: boolean
   }>
 }

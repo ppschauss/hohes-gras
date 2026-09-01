@@ -157,7 +157,17 @@ function collectEvolutions(node: EvoNode, out: Map<string, unknown[]>): void {
           if (detail.item) list.push({ trigger: 'stone', to, itemId: detail.item.name })
           break
         case 'trade':
-          list.push({ trigger: 'trade', to, ...(detail.held_item ? { heldItemId: detail.held_item.name } : {}) })
+          /*
+           * Der Tragegegenstand faellt weg.
+           *
+           * Im Vorbild entwickeln sich acht dieser zwoelf nur, wenn sie beim
+           * Tausch etwas tragen — Drachenschuppe, Metallmantel, Up-Grade. Ein
+           * Pokemon kann hier aber gar nichts tragen: `held_item` ist eine
+           * Spalte, die nie beschrieben wird. Die Bedingung waere damit nicht
+           * erfuellbar, und wir haetten acht Entwicklungen, die es nur auf dem
+           * Papier gibt. Das Verbindungskabel allein genuegt.
+           */
+          list.push({ trigger: 'trade', to })
           break
         default:
           list.push({ trigger: 'level', to, level: detail.min_level ?? 35 })

@@ -65,9 +65,7 @@ export function TradeStationPanel() {
                     <span>{row.targetName}</span>
                     {/* Was fehlt, steht am Ziel — nicht in einer Fußnote. */}
                     <span className="evoTarget__need">
-                      {row.heldItem
-                        ? t('station.needBoth', { item: row.heldItem.name, owned: row.heldItem.owned })
-                        : t('station.needCable')}
+                      {t('station.needCable')}
                     </span>
                   </button>
                 </span>

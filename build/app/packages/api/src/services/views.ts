@@ -105,7 +105,7 @@ export function evolutionOptions(
          * einen Tragegegenstand, muss auch der im Beutel liegen — beides wird
          * beim Entwickeln verbraucht.
          */
-        if (heldItems.has(LINK_CABLE_ITEM_ID) && (!evo.heldItemId || heldItems.has(evo.heldItemId))) {
+        if (heldItems.has(LINK_CABLE_ITEM_ID)) {
           out.push({ speciesId: evo.to, name, how: 'trade' })
         }
         break

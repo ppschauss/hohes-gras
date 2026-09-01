@@ -22,6 +22,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Tausch-Entwicklungen brauchen nur noch ein Verbindungskabel. Acht davon verlangten zusätzlich einen Tragegegenstand — den kann hier aber niemand tragen.',
       'Effekte über Runden: Egelsamen, Wasserring, Nachtmahr, Fluch, Gähner, Zugabe und Aussetzer wirken jetzt — dazu die Schirme Reflektor, Lichtschild, Bodyguard, Weißnebel und Rückenwind.',
       'Zwölf Züge, die Fähigkeiten oder Tragegegenstände brauchen, sind aus dem Spiel — beides gibt es hier nicht.',
       'Rapidschutz, Akupressur und Abgangsbund wirken jetzt auch. Drei reine Doppelkampf-Züge sind dafür ganz aus dem Spiel — Doppelkämpfe wird es nicht geben.',

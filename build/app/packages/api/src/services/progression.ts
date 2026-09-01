@@ -58,15 +58,16 @@ export function evolve(ctx: AppContext, trainer: Trainer, creatureId: string, ta
       if (evo && evo.trigger === 'stone') inventory.consume(ctx.db, trainer.id, evo.itemId, 1)
     }
 
-    // Dasselbe fuer den Kabel-Weg: das Kabel geht drauf, und der
-    // Tragegegenstand ebenfalls — er ist im Vorbild Teil des Tauschs.
+    /*
+     * Der Kabel-Weg kostet genau ein Kabel.
+     *
+     * Im Vorbild tragen acht dieser Pokemon beim Tausch zusaetzlich etwas —
+     * Drachenschuppe, Metallmantel, Up-Grade. Tragegegenstaende gibt es hier
+     * aber nicht, also waere das eine Bedingung, die niemand erfuellen kann.
+     * Das Kabel ist die ganze Bedingung.
+     */
     if (chosen.how === 'trade') {
-      const species = ctx.registry.species(creature.speciesId)
-      const evo = species.evolutions.find((e) => e.trigger === 'trade' && e.to === targetSpeciesId)
       inventory.consume(ctx.db, trainer.id, LINK_CABLE_ITEM_ID, 1)
-      if (evo && evo.trigger === 'trade' && evo.heldItemId) {
-        inventory.consume(ctx.db, trainer.id, evo.heldItemId, 1)
-      }
     }
 
     return applyEvolution(ctx, trainer, creature, targetSpeciesId, chosen.how, clock)
@@ -152,7 +153,7 @@ export function evolveByTrade(ctx: AppContext, trainerId: string, creatureId: st
   const species = ctx.registry.species(creature.speciesId)
   const options = species.evolutions
     .filter((e) => e.trigger === 'trade')
-    .map((e) => ({ to: e.to, heldItemId: e.trigger === 'trade' ? e.heldItemId : undefined }))
+    .map((e) => ({ to: e.to }))
   if (options.length === 0) return null
 
   const bag = inventory.bagOf(ctx.db, trainer.id)
@@ -160,7 +161,6 @@ export function evolveByTrade(ctx: AppContext, trainerId: string, creatureId: st
   const chosen = tradeEvolutionFor(options, held, 'trade')
   if (!chosen) return null
 
-  if (chosen.heldItemId) inventory.consume(ctx.db, trainer.id, chosen.heldItemId, 1)
   const result = applyEvolution(ctx, trainer, creature, chosen.to, 'trade', worldClock())
   return result.creature.speciesName
 }
@@ -182,9 +182,7 @@ export function tradeStation(ctx: AppContext, trainer: Trainer) {
   const rows = all.flatMap((c) => {
     const species = ctx.registry.species(c.speciesId)
     return species.evolutions.filter((e) => e.trigger === 'trade').map((evo) => {
-      const heldItemId = evo.trigger === 'trade' ? evo.heldItemId : undefined
-      const item = heldItemId ? ctx.registry.tryItem(heldItemId) : null
-      const owned = heldItemId ? (bag[heldItemId] ?? 0) : 0
+
       const target = ctx.registry.species(evo.to)
       return {
         creatureId: c.id,
@@ -203,11 +201,7 @@ export function tradeStation(ctx: AppContext, trainer: Trainer) {
         targetName: ctx.registry.localized(target.name, trainer.locale),
         targetSprite: c.shiny ? target.spriteShiny : target.sprite,
         shiny: c.shiny,
-        /** Der Tragegegenstand, falls einer noetig ist — mit Bestand. */
-        heldItem: item
-          ? { id: item.id, name: ctx.registry.localized(item.name, trainer.locale), owned }
-          : null,
-        ready: cables > 0 && (!heldItemId || owned > 0),
+        ready: cables > 0,
       }
     })
   })

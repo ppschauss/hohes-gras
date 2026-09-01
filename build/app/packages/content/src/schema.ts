@@ -151,7 +151,9 @@ export const EvolutionSchema = z.discriminatedUnion('trigger', [
   z.object({ trigger: z.literal('level'), to: Id, level: z.number().int().min(2).max(MAX_CONTENT_LEVEL) }),
   z.object({ trigger: z.literal('stone'), to: Id, itemId: Id }),
   z.object({ trigger: z.literal('friendship'), to: Id, minFriendship: z.number().int().min(1).max(255), timeOfDay: z.enum(TIMES_OF_DAY).optional() }),
-  z.object({ trigger: z.literal('trade'), to: Id, heldItemId: Id.optional() }),
+  /* Kein Tragegegenstand: den gibt es im Spiel nicht, also kann er auch
+     keine Bedingung sein. Das Verbindungskabel ist die ganze Bedingung. */
+  z.object({ trigger: z.literal('trade'), to: Id }),
 ])
 export type Evolution = z.infer<typeof EvolutionSchema>
 

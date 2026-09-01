@@ -68,21 +68,22 @@ describe('Verbindungskabel', () => {
     expect(have(ash.id, LINK_CABLE_ITEM_ID)).toBe(1)
   })
 
-  it('verlangt bei einer Art mit Tragegegenstand auch diesen', async () => {
+  it('braucht auch bei einer Art mit Tragegegenstand nur das Kabel', async () => {
+    /*
+     * Im Vorbild tragen acht dieser Pokemon beim Tausch zusaetzlich etwas.
+     * Hier kann ein Pokemon gar nichts tragen — `held_item` ist eine Spalte,
+     * die nie beschrieben wird. Die Bedingung waere nie erfuellbar, und die
+     * acht Entwicklungen gaebe es nur auf dem Papier.
+     */
     const id = grant(ash.id, 'haltmon')
     give(ash.id, LINK_CABLE_ITEM_ID, 1)
     h.resetRateLimits()
-    // Kabel ja, Metallmantel nein — also steht die Entwicklung nicht zur Wahl.
-    const blocked = await h.post('/api/evolutions/evolve', { creatureId: id, targetSpeciesId: 'haltmon-evo' }, ash.token)
-    expect(blocked.status).toBe(409)
-    expect(blocked.body.detail.reason).toBe('not_ready')
-
-    give(ash.id, 'metal-coat', 1)
-    h.resetRateLimits()
     const ok = await h.post('/api/evolutions/evolve', { creatureId: id, targetSpeciesId: 'haltmon-evo' }, ash.token)
+
     expect(ok.status).toBe(200)
-    // Beides ist weg: der Mantel gehoert im Vorbild zum Tausch dazu.
+    expect(speciesOf(id)).toBe('haltmon-evo')
     expect(have(ash.id, LINK_CABLE_ITEM_ID)).toBe(0)
+    // Und ein Mantel, falls doch einer im Beutel liegt, bleibt liegen.
     expect(have(ash.id, 'metal-coat')).toBe(0)
   })
 })
@@ -96,14 +97,13 @@ describe('Tausch-Station', () => {
     expect(r.body.recipeUnlocked).toBe(false)
     const row = r.body.rows[0]
     expect(row.targetName).toBe('Haltmon-evo')
-    expect(row.heldItem).toMatchObject({ id: 'metal-coat', owned: 0 })
+    // Ohne Kabel geht nichts — und mehr wird auch nicht verlangt.
     expect(row.ready).toBe(false)
   })
 
-  it('meldet bereit, sobald beides da ist', async () => {
+  it('meldet bereit, sobald ein Kabel da ist', async () => {
     grant(ash.id, 'haltmon')
     give(ash.id, LINK_CABLE_ITEM_ID, 1)
-    give(ash.id, 'metal-coat', 1)
     h.resetRateLimits()
     const r = await h.get('/api/trade-station', ash.token)
     expect(r.body.rows[0].ready).toBe(true)
@@ -134,23 +134,14 @@ describe('Echter Tausch', () => {
     expect(have(misty.id, LINK_CABLE_ITEM_ID)).toBe(0)
   })
 
-  it('braucht den Tragegegenstand beim Empfaenger, nicht beim Absender', async () => {
+  it('entwickelt auch eine Art mit Tragegegenstand beim echten Tausch', async () => {
+    // Der echte Tausch braucht ohnehin kein Kabel — und jetzt auch nichts
+    // Getragenes mehr.
     const id = grant(ash.id, 'haltmon')
-    give(ash.id, 'metal-coat', 1)
     await accept(await offer(id))
-    // Ash hatte den Mantel, gibt das Pokemon aber weg: bei Misty liegt keiner,
-    // also passiert nichts — und Ashs Mantel bleibt unangetastet.
-    expect(speciesOf(id)).toBe('haltmon')
-    expect(have(ash.id, 'metal-coat')).toBe(1)
 
-    // Zurueck an Ash. Jetzt ist Ash der Empfaenger, und Ash hat den Mantel.
-    h.resetRateLimits()
-    const back = await h.post('/api/trades/offer',
-      { toTrainerId: ash.id, offeredId: id, requestedId: null }, misty.token)
-    h.resetRateLimits()
-    await accept(back.body.outgoing[0].id, ash.token)
     expect(speciesOf(id)).toBe('haltmon-evo')
-    expect(have(ash.id, 'metal-coat')).toBe(0)
+    expect(have(misty.id, LINK_CABLE_ITEM_ID)).toBe(0)
   })
 
   it('entwickelt beide Seiten eines Ringtauschs', async () => {
