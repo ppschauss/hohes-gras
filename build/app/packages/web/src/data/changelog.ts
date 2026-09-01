@@ -22,6 +22,10 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Keine einzige Attacke ohne Wirkung mehr. Von 296 Statuszügen taten anfangs 117 nichts — jetzt keiner. Was blieb, hat entweder eine Wirkung bekommen oder das Spiel verlassen, weil es Fähigkeiten, Tragegegenstände oder Doppelkämpfe bräuchte.',
+      'Zuletzt dazugekommen: Delegator, Wandler, Metronom, Spiegeltrick, Egotrip, Imitator, Schlafrede, Natur-Kraft, Mimikry, Nachahmer, Überflutung, Umwandlung, Typenspiegel, Tarnung, Magiemantel, Erdanziehung, Wunderraum und Plasmaschauer.',
+      'Einstiegsfallen: Stachler, Giftspitzen, Tarnsteine und Klebenetz erwarten jeden, der neu ins Feld kommt. Fliegende gehen über die meisten hinweg, ein Giftpokémon räumt die Giftspitzen auf.',
+      'Horrorblick und Verwandte halten fest; Verhöhner, Folterknecht, Begrenzer und Heilblockade engen die Zugwahl ein. Dazu Abgesang, Wunschtraum, Bauchtrommel, Heilopfer, Stafette, Leidteiler und die vier Werte-Tauscher.',
       'Fünfzehn weitere Attacken wirken: Grasfeld, Elektrofeld und Nebelfeld verändern den Boden, Wirbelwind und Brüller drängen den Gegner hinaus, dazu Magnetflug, Beschwörung, Zielschuss, Willensleser, Scharfblick, Telekinese, Schnüffler, Wunderauge und Teleport. Platscher tut jetzt ausdrücklich nichts.',
       'Acht Attacken sind raus: Gegenstände tauschen und Umlenkung im Doppelkampf gibt es hier nicht.',
       'Wer sich zurückzieht, lässt Egelsamen, Zugabe und alles andere Anhaltende auf dem Feld zurück — das blieb vorher am Pokémon hängen.',

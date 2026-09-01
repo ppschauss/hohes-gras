@@ -79,6 +79,16 @@ const MOVES: Record<string, MoveDef> = {
   'mud-sport': ziel(mv('mud-sport', 'ground', 'status', 0, 100, 15, { kind: 'side_condition', condition: 'mud_sport', turns: 5 }, 100)),
   'thunder-shock': mv('thunder-shock', 'electric', 'special', 60, 100, 30),
   harden: ziel(mv('harden', 'normal', 'status', 0, 100, 30, { kind: 'stat_stage', target: 'self', stat: 'def', stages: 2 }, 100)),
+  'mirror-move': mv('mirror-move', 'flying', 'status', 0, 100, 20, { kind: 'call_move', source: 'foe_last' }, 100),
+  metronome: ziel(mv('metronome', 'normal', 'status', 0, 100, 10, { kind: 'call_move', source: 'any_random' }, 100)),
+  mimic: mv('mimic', 'normal', 'status', 0, 100, 10, { kind: 'copy_move' }, 100),
+  soak: mv('soak', 'water', 'status', 0, 100, 20, { kind: 'type_change', to: 'water' }, 100),
+  'reflect-type': ziel(mv('reflect-type', 'normal', 'status', 0, 100, 15, { kind: 'type_change', to: 'target' }, 100)),
+  substitute: ziel(mv('substitute', 'normal', 'status', 0, 100, 10, { kind: 'substitute' }, 100)),
+  transform: mv('transform', 'normal', 'status', 0, 100, 10, { kind: 'transform' }, 100),
+  'magic-coat': ziel(mv('magic-coat', 'psychic', 'status', 0, 100, 15, { kind: 'magic_coat' }, 100, 0, 4)),
+  gravity: ziel(mv('gravity', 'psychic', 'status', 0, 100, 5, { kind: 'field', field: 'gravity', turns: 5 }, 100), 'field'),
+  'ion-deluge': ziel(mv('ion-deluge', 'electric', 'status', 0, 100, 25, { kind: 'field', field: 'ion_deluge', turns: 2 }, 100), 'field'),
   // Traumfresser: hohe Staerke, halbes Aussaugen — und nur gegen Schlafende.
   'dream-eater': {
     ...mv('dream-eater', 'normal', 'special', 100, 100, 15, { kind: 'drain', ratio: 0.5 }, 100),
@@ -1247,5 +1257,129 @@ describe('Fallen, Fesseln und geteilte Werte', () => {
     }
     // Derselbe Zug, derselbe Seed — nur die Suhle unterscheidet die beiden.
     expect(schaden(0)).toBeLessThan(schaden(1))
+  })
+})
+
+describe('Zuege, die andere Zuege benutzen', () => {
+  it('spiegelt den letzten Zug des Gegenuebers', () => {
+    const a = fighter('spiegel', ['flying'], 20, ['splash', 'mirror-move'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['growl'], 60)
+    const erste = resolveTurn(battle([a], [b]), useMove(0), useMove(), content)
+    const gespiegelt = resolveTurn(erste.state, useMove(1), useMove(), content)
+
+    expect(gespiegelt.events.some((e) => e.type === 'called' && e.moveId === 'growl')).toBe(true)
+    // Der gespiegelte Knurrer senkt den Angriff des Gegenuebers — die Wirkung
+    // kommt also durch, nicht nur die Meldung.
+    expect(gespiegelt.state.sides[1]!.party[0]!.stages.atk).toBeLessThan(0)
+  })
+
+  it('scheitert, wenn das Gegenueber noch nichts getan hat', () => {
+    const a = fighter('spiegel', ['flying'], 20, ['mirror-move'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    expect(runde.events.some((e) => e.type === 'move_failed')).toBe(true)
+  })
+
+  it('wuerfelt beim Metronom aus dem Paket — aber nie einen Kopierer', () => {
+    const a = fighter('takt', ['normal'], 20, ['metronome'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const alle = { ...content, moveIds: () => Object.keys(MOVES) }
+
+    for (const seed of ['a', 'b', 'c', 'd', 'e', 'f']) {
+      const runde = resolveTurn(battle([a], [b], seed), useMove(), useMove(), alle)
+      const ruf = runde.events.find((e) => e.type === 'called')
+      expect(ruf).toBeDefined()
+      if (ruf?.type !== 'called') continue
+      expect(MOVES[ruf.moveId]?.effect.kind).not.toBe('call_move')
+    }
+  })
+
+  it('ersetzt bei Mimikry den Platz, aus dem der Zug kam', () => {
+    const a = fighter('nachahmer', ['normal'], 20, ['splash', 'mimic'], 80)
+    const b = fighter('vorbild', ['normal'], 20, ['ember'], 60)
+    const erste = resolveTurn(battle([a], [b]), useMove(0), useMove(), content)
+    const kopiert = resolveTurn(erste.state, useMove(1), useMove(), content)
+
+    expect(kopiert.state.sides[0]!.party[0]!.moves[1]!.id).toBe('ember')
+    expect(kopiert.state.sides[0]!.party[0]!.moves[1]!.pp).toBe(5)
+  })
+})
+
+describe('Typwechsel, Puppe und was ueber dem Feld liegt', () => {
+  it('macht mit Ueberflutung ein Wasserpokemon aus dem Gegenueber', () => {
+    const a = fighter('flut', ['water'], 20, ['soak'], 80)
+    const b = fighter('ziel', ['fire'], 20, ['splash'], 60)
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    expect(runde.state.sides[1]!.party[0]!.types).toEqual(['water'])
+  })
+
+  it('nimmt beim Typenspiegel die Typen des Gegenuebers an', () => {
+    const a = fighter('spiegel', ['normal'], 20, ['reflect-type'], 80)
+    const b = fighter('ziel', ['fire'], 20, ['splash'], 60)
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    expect(runde.state.sides[0]!.party[0]!.types).toEqual(['fire'])
+  })
+
+  it('laesst die Puppe den Treffer und den Zustand schlucken', () => {
+    const a = fighter('puppe', ['normal'], 20, ['substitute'], 80)
+    const b = fighter('brenner', ['fire'], 20, ['ember'], 60)
+    const gestellt = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    const traeger = gestellt.state.sides[0]!.party[0]!
+
+    expect(traeger.substitute).toBeGreaterThan(0)
+    // Der Glut-Treffer ging an die Puppe: die Verbrennung kam nicht durch.
+    expect(traeger.status).toBe('none')
+    expect(gestellt.events.some((e) => e.type === 'substitute' && e.what === 'hit')).toBe(true)
+  })
+
+  it('wird beim Wandler zur Kopie des Gegenuebers', () => {
+    const a = fighter('wandler', ['normal'], 20, ['transform'], 80)
+    const b = fighter('vorbild', ['fire'], 20, ['ember'], 60)
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    const kopie = runde.state.sides[0]!.party[0]!
+
+    expect(kopie.types).toEqual(['fire'])
+    expect(kopie.moves.map((m) => m.id)).toEqual(['ember'])
+    // Die Kraftpunkte bleiben die eigenen — sonst waere der Zug je nach
+    // Gegner eine Heilung oder ein Selbstmord.
+    expect(kopie.hpMax).toBe(fighter('wandler', ['normal'], 20, ['transform'], 80).hpMax)
+  })
+
+  it('schickt mit dem Magiemantel den Statuszug zurueck', () => {
+    const a = fighter('mantel', ['psychic'], 20, ['magic-coat'], 60)
+    const b = fighter('knurrer', ['normal'], 20, ['growl'], 80)
+    const runde = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+
+    expect(runde.events.some((e) => e.type === 'reflected')).toBe(true)
+    expect(runde.state.sides[1]!.party[0]!.stages.atk).toBe(-1)
+    expect(runde.state.sides[0]!.party[0]!.stages.atk).toBe(0)
+  })
+
+  it('holt mit Erdanziehung den Flieger herunter', () => {
+    const a = fighter('schwer', ['psychic'], 20, ['gravity', 'earthquake'], 80)
+    const b = fighter('flieger', ['flying'], 20, ['splash'], 60)
+    const erste = resolveTurn(battle([a], [b]), useMove(0), useMove(), content)
+    expect(erste.state.fields).toEqual([{ kind: 'gravity', turns: 4 }])
+
+    const getroffen = resolveTurn(erste.state, useMove(1), useMove(), content)
+    expect(getroffen.events.some((e) => e.type === 'damage' && e.amount > 0)).toBe(true)
+  })
+
+  it('faerbt im Plasmaschauer alles Normale elektrisch', () => {
+    /*
+     * Geprueft am Typenvorteil und nicht am Schaden: Boden ist gegen Strom
+     * immun, ein Tackle waere also wirkungslos. Ohne Schauer trifft er.
+     */
+    const a = fighter('schauer', ['electric'], 20, ['ion-deluge', 'tackle'], 80)
+    const b = fighter('erde', ['ground'], 20, ['splash'], 60)
+    const CHART_GROUND = { ...CHART, electric: { ground: 0 } }
+    const strom: BattleContent = {
+      ...content,
+      effectiveness: (atk, defs) => defs.reduce((m, d) => m * (CHART_GROUND[atk]?.[d] ?? 1), 1),
+    }
+    const erste = resolveTurn(battle([a], [b]), useMove(0), useMove(), strom)
+    const versucht = resolveTurn(erste.state, useMove(1), useMove(), strom)
+
+    expect(versucht.events.some((e) => e.type === 'damage' && e.effectiveness === 0)).toBe(true)
   })
 })

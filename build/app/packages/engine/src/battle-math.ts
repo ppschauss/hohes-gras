@@ -78,7 +78,7 @@ export function computeDamage(
    * gueltig bleibt: die Formel rechnet mit zwei Pokemon, und alles, was das
    * Feld beisteuert, ist ein Zuschlag darauf — kein neuer Rechenweg.
    */
-  feld: { noCrit?: boolean; terrain?: TerrainKind | null } = {},
+  feld: { noCrit?: boolean; terrain?: TerrainKind | null; swapDefenses?: boolean } = {},
 ): DamageResult {
   if (move.category === 'status' || move.power <= 0) {
     return { amount: 0, effectiveness: 1, critical: false, immune: false }
@@ -105,7 +105,15 @@ export function computeDamage(
 
   const atkRaw = attacker.stats[physical ? 'atk' : 'spa'] * stageMultiplier(atkStage, 'stat')
   const atk = Math.max(1, Math.floor(physical && attacker.status === 'burn' ? atkRaw * 0.5 : atkRaw))
-  const def = Math.max(1, Math.floor(defender.stats[physical ? 'def' : 'spd'] * stageMultiplier(defStage, 'stat')))
+  /*
+   * Wunderraum vertauscht die beiden Verteidigungen.
+   *
+   * Nur fuer diese Rechnung: die Werte des Pokemon bleiben, wie sie sind —
+   * ein Raum, der sie dauerhaft aendern wuerde, waere kein Raum, sondern ein
+   * Schaden. Die Stufen bleiben absichtlich bei ihrem eigenen Wert.
+   */
+  const defKey = feld.swapDefenses ? (physical ? 'spd' : 'def') : (physical ? 'def' : 'spd')
+  const def = Math.max(1, Math.floor(defender.stats[defKey] * stageMultiplier(defStage, 'stat')))
 
   const base = Math.floor(Math.floor((2 * attacker.level) / 5 + 2) * move.power * atk / def / 50) + 2
 

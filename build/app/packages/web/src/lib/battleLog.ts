@@ -44,6 +44,13 @@ export function describeEvent(event: BattleEventView, view: BattleView): string[
     case 'trapped': return [t('log.trapped', { name: who })]
     case 'hazard': return [t(`log.hazard.${e.kind}`, { name: who })]
     case 'shared': return [t(`log.shared.${e.what}`)]
+    case 'called': return [t('log.called', { name: who, move: String(e.moveId ?? '') })]
+    case 'substitute': return [t(`log.substitute.${e.what}`, { name: who })]
+    case 'type_changed':
+      return [t('log.type_changed', { name: who, types: (e.types as string[] ?? []).join('/') })]
+    case 'transformed': return [t('log.transformed', { name: who, into: String(e.into ?? '') })]
+    case 'reflected': return [t('log.reflected')]
+    case 'field': return [t(`log.field.${e.kind}.${e.started ? 'on' : 'off'}`)]
     case 'pp_drain':
       return [t('log.pp_drain', { name: who, n: Number(e.amount ?? 0), move: String(e.moveId ?? '') })]
     case 'heal': return [t('log.heal', { name: who, n: Number(e.amount ?? 0) })]

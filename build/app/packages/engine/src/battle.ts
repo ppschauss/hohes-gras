@@ -8,7 +8,7 @@ import {
 import {
   MAX_TURNS, emptyStages,
   type BattleEvent, type BattleOutcome, type BattleState, type Fighter, type Lingering,
-  type PlayerAction, type Side, type SideCondition, type Status,
+  type FieldEffectKind, type PlayerAction, type Side, type SideCondition, type Status,
 } from './battle-types.js'
 import { clamp } from './stats.js'
 
@@ -36,6 +36,16 @@ export interface BattleContent {
   /** Wirkung eines Gegenstands; null heißt: im Kampf nutzlos. */
   item?: (id: string) => BattleItemEffect | null
   effectiveness: (attackingType: string, defenderTypes: readonly string[]) => number
+  /*
+   * Zwei Nachschlagewerke, die nur zwei Zuege brauchen.
+   *
+   * Metronom wuerfelt aus allen Attacken, Umwandlung2 sucht einen Typ, der
+   * gegen den letzten Treffer haelt. Beide wahlfrei: fehlt das Verzeichnis,
+   * scheitert der Zug sichtbar, statt den Kampf mitzureissen — und jeder
+   * bestehende Aufrufer bleibt gueltig.
+   */
+  moveIds?: () => readonly string[]
+  types?: () => readonly string[]
 }
 
 export interface TurnResult {
@@ -256,6 +266,8 @@ function doSwitch(
    * man sich zurueckzieht.
    */
   leaving.lingering = []
+  // Die Puppe steht auf dem Feld, nicht am Pokemon — sie bleibt zurueck.
+  leaving.substitute = undefined
 
   side.activeIndex = partyIndex
   // Frisch im Feld: seine erste eigene Handlung steht noch aus.
@@ -460,6 +472,48 @@ function performMove(
   }
 
   slot.pp--
+  fuehreZugAus(state, sideIndex, move, content, rng, events, slot)
+}
+
+/**
+ * Was ein Zug tut, nachdem feststeht, dass er ueberhaupt stattfindet.
+ *
+ * Herausgeloest aus `performMove`, damit ein kopierter Zug denselben Weg
+ * nimmt: Egotrip, Spiegeltrick und Metronom sollen nicht *aehnlich* wirken
+ * wie das Original, sondern gleich. Alles davor — Kraftpunkte, Sperren,
+ * Zurueckschrecken, Verwirrung — gehoert zur Zugwahl und bleibt drueben.
+ *
+ * `slot` ist der Platz, aus dem der Zug kam; bei einem kopierten Zug gibt es
+ * keinen, und dann kann ein Nachspiel ihn auch nicht leeren. `tiefe` bricht
+ * die Kette: ein Metronom, das ein Metronom wuerfelt, waere sonst ein Kampf,
+ * der nie endet.
+ */
+function fuehreZugAus(
+  state: BattleState,
+  sideIndex: 0 | 1,
+  move: MoveDef,
+  content: BattleContent,
+  rng: Rng,
+  events: BattleEvent[],
+  slot: { id: string; pp: number; ppMax: number } | null,
+  tiefe = 0,
+): void {
+  const side = state.sides[sideIndex]!
+  const foeSide = state.sides[sideIndex === 0 ? 1 : 0]!
+  const attacker = active(side)
+  const defender = active(foeSide)
+
+  /*
+   * Ein Plasmaschauer faerbt alles Normale elektrisch — fuer eine Runde.
+   *
+   * Umgesetzt als Kopie des Zuges und nicht als Sonderfall in jeder Rechnung:
+   * Typenvorteil, Angriffsbonus, Wetter, Boden und Suhle fragen alle nach dem
+   * Typ, und keiner von ihnen soll wissen muessen, dass es einen Schauer gibt.
+   */
+  if (move.type === 'normal' && hatFeld(state, 'ion_deluge')) {
+    move = { ...move, type: 'electric' }
+  }
+
   attacker.lastMoveId = move.id
   events.push({ type: 'move', side: sideIndex, fighter: attacker.id, moveId: move.id, moveName: move.id })
 
@@ -473,6 +527,8 @@ function performMove(
    * nicht nur dem, der ihn eingesetzt hat.
    */
   const sichererTreffer = hatEffekt(attacker, 'sure_hit') || hatEffekt(defender, 'vulnerable')
+    // Wer am Boden klebt, weicht nicht mehr aus.
+    || hatFeld(state, 'gravity')
   if (hatEffekt(attacker, 'sure_hit')) {
     attacker.lingering = (attacker.lingering ?? []).filter((l) => l.kind !== 'sure_hit')
   }
@@ -489,6 +545,20 @@ function performMove(
    * weiter — sonst koennte man sich nicht mehr heilen, waehrend man geschuetzt
    * ist.
    */
+  /*
+   * Ein Magiemantel schickt den Statuszug zurueck.
+   *
+   * Dieselbe Wirkung, nur mit vertauschten Rollen: der Absender wird zum
+   * Ziel. Deshalb ein zweiter Aufruf mit getauschten Seiten und nicht ein
+   * Sonderweg — sonst muesste jede Wirkung zweimal geschrieben werden.
+   */
+  if (move.category === 'status' && move.target === 'foe'
+    && defender.magicCoatUntilTurn === state.turn && tiefe === 0) {
+    events.push({ type: 'reflected', side: sideIndex, fighter: attacker.id, moveId: move.id })
+    applyMoveEffect(state, (sideIndex === 0 ? 1 : 0) as 0 | 1, move, defender, attacker, 0, content, rng, events, 1, null)
+    return
+  }
+
   const schuetzt = defender.protectedUntilTurn === state.turn
     || (defender.priorityGuardUntilTurn === state.turn && move.priority > 0)
   if (move.target === 'foe' && schuetzt) {
@@ -513,9 +583,19 @@ function performMove(
     return
   }
 
+  /*
+   * Erdanziehung holt herunter, was fliegt.
+   *
+   * Nur fuer Bodenzuege und nur fuer diese eine Rechnung: der Typ des Ziels
+   * aendert sich nicht, es steht nur waehrenddessen auf dem Boden.
+   */
+  const amBoden = hatFeld(state, 'gravity') && move.type === 'ground'
+    ? defender.types.filter((t) => t !== 'flying')
+    : defender.types
+
   const effectiveness = move.category === 'status'
     ? 1
-    : content.effectiveness(move.type, defender.types)
+    : content.effectiveness(move.type, amBoden.length ? amBoden : ['normal'])
 
   const hits = move.effect.kind === 'multi_hit' ? rng.int(move.effect.min, move.effect.max) : 1
   if (hits > 1) events.push({ type: 'multi_hit', side: sideIndex, fighter: attacker.id, hits })
@@ -528,6 +608,7 @@ function performMove(
       // Schaden. Beides gehoert zum Feld und nicht zu den beiden Kaempfern.
       noCrit: hatSchirm(state, gegenseite, 'lucky_chant'),
       terrain: state.terrain?.kind ?? null,
+      swapDefenses: hatFeld(state, 'wonder_room'),
     })
     /*
      * Reflektor gegen physische, Lichtschild gegen spezielle Angriffe.
@@ -559,6 +640,23 @@ function performMove(
       })
       return
     }
+    /*
+     * Vor dem Traeger steht die Puppe.
+     *
+     * Sie hat nur Ausdauer: kein Wert, kein Typ, keine Erholung. Was auf sie
+     * einschlaegt, kommt nicht durch — und wenn sie faellt, faellt nur sie.
+     * Der Rest des Zuges bricht ab, damit ein Nebeneffekt nicht doch noch am
+     * Traeger landet.
+     */
+    if (dmg.amount > 0 && (defender.substitute ?? 0) > 0 && move.target === 'foe') {
+      const rest = defender.substitute! - dmg.amount
+      defender.substitute = Math.max(0, rest)
+      events.push({ type: 'substitute', side: gegenseite, fighter: defender.id,
+        what: rest <= 0 ? 'broken' : 'hit' })
+      if (rest <= 0) defender.substitute = undefined
+      continue
+    }
+
     if (dmg.amount > 0) {
       // Ausdauer laesst genau einen Kraftpunkt stehen — und nur, wenn vorher
       // ueberhaupt noch etwas da war.
@@ -583,7 +681,7 @@ function performMove(
        * bleibt fuer den Rest des Kampfes leer. Das trifft haerter, wenn es
        * der einzige gute war — und genau darauf zielt der Zug.
        */
-      if (defender.hp <= 0 && hatEffekt(defender, 'grudge')) {
+      if (defender.hp <= 0 && hatEffekt(defender, 'grudge') && slot) {
         const verloren = slot.pp
         slot.pp = 0
         events.push({ type: 'pp_drain', side: sideIndex, fighter: attacker.id, moveId: move.id, amount: verloren })
@@ -604,7 +702,7 @@ function performMove(
   // hier und nicht in der Schadensformel: die soll rechnen, nicht aufraeumen.
   if (totalDealt > 0) attacker.sureCrit = false
 
-  applyMoveEffect(state, sideIndex, move, attacker, defender, totalDealt, content, rng, events)
+  applyMoveEffect(state, sideIndex, move, attacker, defender, totalDealt, content, rng, events, tiefe, slot)
 }
 
 function applyMoveEffect(
@@ -617,10 +715,32 @@ function applyMoveEffect(
   content: BattleContent,
   rng: Rng,
   events: BattleEvent[],
+  tiefe: number,
+  /** Der Platz, aus dem der Zug kam — Mimikry ersetzt genau diesen. */
+  slot: { id: string; pp: number; ppMax: number } | null = null,
 ): void {
   const foeIndex = (sideIndex === 0 ? 1 : 0) as 0 | 1
   const effect = move.effect
   const triggers = move.effectChance <= 0 ? effect.kind !== 'none' : rng.chance(move.effectChance)
+
+  /*
+   * Was auf den Gegenueber zielt, erreicht ihn hinter einer Puppe nicht.
+   *
+   * Der Schaden wird schon vorher abgefangen; hier geht es um alles andere —
+   * Zustand, Wertesenkung, Egelsamen, Zwangswechsel. Genau dafuer stellt man
+   * sie auf, und ohne diese Liste waere sie nur ein Kraftpunkte-Puffer.
+   */
+  const AUF_DEN_GEGNER = new Set([
+    'status', 'flinch', 'lingering', 'share', 'pp_drain', 'psycho_shift',
+    'force_switch', 'type_change', 'copy_move',
+  ])
+  const hinterPuppe = (defender.substitute ?? 0) > 0
+    && (AUF_DEN_GEGNER.has(effect.kind)
+      || (effect.kind === 'stat_stage' && effect.target === 'foe'))
+  if (hinterPuppe) {
+    events.push({ type: 'substitute', side: foeIndex, fighter: defender.id, what: 'hit' })
+    return
+  }
 
   switch (effect.kind) {
     case 'none':
@@ -1063,6 +1183,121 @@ function applyMoveEffect(
       return
     }
 
+    /*
+     * Einen anderen Zug aufrufen.
+     *
+     * Der aufgerufene nimmt denselben Weg wie ein echter — Treffprobe,
+     * Schaden, Wirkung. Nur die Zugwahl davor faellt weg: seine Kraftpunkte
+     * gehoeren einem anderen Platz, und einen zweiten Aufruf darf er nicht
+     * mehr ausloesen.
+     */
+    case 'call_move': {
+      if (tiefe > 0) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      const gewaehlt = waehleZug(state, sideIndex, effect.source, attacker, defender, content, rng)
+      const kopie = gewaehlt ? safeMove(content, gewaehlt) : null
+      if (!kopie) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      events.push({ type: 'called', side: sideIndex, fighter: attacker.id, moveId: kopie.id })
+      fuehreZugAus(state, sideIndex, kopie, content, rng, events, null, 1)
+      return
+    }
+
+    case 'copy_move': {
+      const vorbild = defender.lastMoveId
+      if (!slot || !vorbild || attacker.moves.some((m) => m.id === vorbild)) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      const gelernt = safeMove(content, vorbild)
+      if (!gelernt) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      slot.id = gelernt.id
+      slot.pp = Math.min(gelernt.pp, 5)
+      slot.ppMax = slot.pp
+      events.push({ type: 'called', side: sideIndex, fighter: attacker.id, moveId: gelernt.id })
+      return
+    }
+
+    case 'type_change': {
+      /*
+       * Wen es faerbt, sagt das Ziel des Zuges.
+       *
+       * Ueberflutung macht den *Gegner* zu Wasser, Umwandlung und Typenspiegel
+       * aendern den Anwender. Derselbe Effekt, zwei Richtungen — und ohne
+       * diese Zeile faerbte Ueberflutung den Falschen.
+       */
+      const wer = move.target === 'foe' ? defender : attacker
+      const werSeite = wer === attacker ? sideIndex : foeIndex
+      if (wer.hp <= 0) return
+      const neu = waehleTyp(state, effect.to, attacker, defender, content, rng)
+      if (!neu.length || (neu.length === wer.types.length && neu.every((t, i) => t === wer.types[i]))) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      wer.types = neu
+      events.push({ type: 'type_changed', side: werSeite, fighter: wer.id, types: neu })
+      return
+    }
+
+    case 'substitute': {
+      const preis = Math.floor(attacker.hpMax / 4)
+      if (attacker.hp <= preis || (attacker.substitute ?? 0) > 0) {
+        events.push({ type: 'substitute', side: sideIndex, fighter: attacker.id, what: 'failed' })
+        return
+      }
+      attacker.hp -= preis
+      attacker.substitute = preis
+      events.push({ type: 'damage', side: sideIndex, fighter: attacker.id,
+        amount: preis, hpLeft: attacker.hp, effectiveness: 1, critical: false })
+      events.push({ type: 'substitute', side: sideIndex, fighter: attacker.id, what: 'up' })
+      return
+    }
+
+    /*
+     * Die Kopie des Gegenuebers.
+     *
+     * Alles ausser den Kraftpunkten: die bleiben, sonst waere der Zug je nach
+     * Gegner eine Heilung oder ein Selbstmord. Die uebernommenen Attacken
+     * bekommen fuenf Kraftpunkte — geliehen, nicht besessen.
+     */
+    case 'transform': {
+      if (defender.hp <= 0) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      attacker.speciesId = defender.speciesId
+      attacker.types = [...defender.types]
+      attacker.stats = { ...defender.stats, hp: attacker.stats.hp }
+      attacker.stages = { ...defender.stages }
+      attacker.moves = defender.moves.map((m) => ({ id: m.id, pp: 5, ppMax: 5 }))
+      attacker.sprite = defender.sprite
+      events.push({ type: 'transformed', side: sideIndex, fighter: attacker.id, into: defender.name })
+      return
+    }
+
+    case 'magic_coat': {
+      attacker.magicCoatUntilTurn = state.turn
+      events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'priority_guard' })
+      return
+    }
+
+    case 'field': {
+      if (hatFeld(state, effect.field)) {
+        events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
+        return
+      }
+      state.fields = [...(state.fields ?? []), { kind: effect.field, turns: effect.turns }]
+      events.push({ type: 'field', kind: effect.field, started: true })
+      return
+    }
+
     case 'nothing': {
       events.push({ type: 'nothing', side: sideIndex, fighter: attacker.id })
       return
@@ -1135,6 +1370,10 @@ function applyMoveEffect(
 const hatSchirm = (state: BattleState, side: 0 | 1, kind: SideCondition['kind']): boolean =>
   (state.sides[side]!.conditions ?? []).some((c) => c.kind === kind)
 
+/** Ob ein Feldeffekt gerade ueber dem Kampf liegt. */
+const hatFeld = (state: BattleState, kind: FieldEffectKind): boolean =>
+  (state.fields ?? []).some((f) => f.kind === kind)
+
 /** Ob an einem Kaempfer ein bestimmter anhaltender Effekt haengt. */
 const hatEffekt = (f: Fighter, kind: Lingering['kind']): boolean =>
   (f.lingering ?? []).some((l) => l.kind === kind)
@@ -1172,6 +1411,7 @@ function endOfTurn(state: BattleState, rng: Rng, events: BattleEvent[]): void {
   }
   tickSideConditions(state, events)
   tickTerrain(state, events)
+  tickFields(state, events)
   void rng
 }
 
@@ -1339,6 +1579,85 @@ function tickSideConditions(state: BattleState, events: BattleEvent[]): void {
     }
     seite.conditions = bleibt
   }
+}
+
+/**
+ * Welchen Zug ein Zugkopierer aufruft.
+ *
+ * `null` heisst: es gibt keinen — dann scheitert der Kopierer sichtbar,
+ * statt still nichts zu tun.
+ */
+function waehleZug(
+  state: BattleState, sideIndex: 0 | 1, quelle: 'foe_last' | 'own_random' | 'any_random' | 'terrain',
+  attacker: Fighter, defender: Fighter, content: BattleContent, rng: Rng,
+): string | null {
+  if (quelle === 'foe_last') return defender.lastMoveId ?? null
+
+  if (quelle === 'own_random') {
+    // Schlafrede: nur im Schlaf, und nie den Zug, der gerade laeuft.
+    if (attacker.status !== 'sleep') return null
+    const andere = attacker.moves.filter((m) => m.id !== attacker.lastMoveId)
+    return andere.length ? andere[rng.int(0, andere.length - 1)]!.id : null
+  }
+
+  if (quelle === 'terrain') {
+    const zumBoden: Record<string, string> = {
+      grassy: 'energy-ball', electric: 'thunderbolt', misty: 'moonblast',
+    }
+    return zumBoden[state.terrain?.kind ?? ''] ?? 'tri-attack'
+  }
+
+  /*
+   * Metronom.
+   *
+   * Aus allem, was das Paket kennt — ausser aus Zuegen, die selbst aufrufen.
+   * Zehn Versuche und dann Schluss: eine Schleife, die auf einen brauchbaren
+   * Wurf wartet, waere ein Kampf, der haengen kann.
+   */
+  const alle = content.moveIds?.()
+  if (!alle?.length) return null
+  for (let i = 0; i < 10; i++) {
+    const id = alle[rng.int(0, alle.length - 1)]!
+    const m = safeMove(content, id)
+    if (m && m.effect.kind !== 'call_move' && m.effect.kind !== 'copy_move') return id
+  }
+  return null
+}
+
+/** Auf welchen Typ ein Typwechsel fuehrt. Leer heisst: er fuehrt auf keinen. */
+function waehleTyp(
+  state: BattleState, ziel: 'water' | 'own_move' | 'resist_last' | 'target' | 'terrain',
+  attacker: Fighter, defender: Fighter, content: BattleContent, rng: Rng,
+): string[] {
+  if (ziel === 'water') return ['water']
+  if (ziel === 'target') return [...defender.types]
+  if (ziel === 'terrain') {
+    const zumBoden: Record<string, string> = { grassy: 'grass', electric: 'electric', misty: 'fairy' }
+    return [zumBoden[state.terrain?.kind ?? ''] ?? 'normal']
+  }
+  if (ziel === 'own_move') {
+    const eigene = attacker.moves.map((m) => safeMove(content, m.id)?.type).filter((t): t is string => !!t)
+    return eigene.length ? [eigene[rng.int(0, eigene.length - 1)]!] : []
+  }
+
+  // Umwandlung2: irgendein Typ, der gegen den letzten Treffer haelt.
+  const letzter = defender.lastMoveId ? safeMove(content, defender.lastMoveId) : null
+  const alle = content.types?.()
+  if (!letzter || !alle?.length) return []
+  const haltend = alle.filter((t) => content.effectiveness(letzter.type, [t]) < 1)
+  return haltend.length ? [haltend[rng.int(0, haltend.length - 1)]!] : []
+}
+
+/** Feldeffekte werden aelter wie alles andere. */
+function tickFields(state: BattleState, events: BattleEvent[]): void {
+  if (!state.fields?.length) return
+  const bleibt: typeof state.fields = []
+  for (const f of state.fields) {
+    const rest = f.turns - 1
+    if (rest <= 0) { events.push({ type: 'field', kind: f.kind, started: false }); continue }
+    bleibt.push({ ...f, turns: rest })
+  }
+  state.fields = bleibt
 }
 
 /** Der Boden haelt fuenf Runden. Danach ist er wieder nur Boden. */

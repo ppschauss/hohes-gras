@@ -68,6 +68,16 @@ export interface Fighter {
   lingering?: Lingering[]
   /** Der zuletzt eingesetzte Zug — Zugabe und Aussetzer haengen daran. */
   lastMoveId?: string
+  /**
+   * Die Puppe.
+   *
+   * Ein Viertel der Kraftpunkte, das die Treffer schluckt und alles abhaelt,
+   * was auf den Traeger zielt. Eine Zahl und kein eigener Kaempfer: sie hat
+   * keine Werte, keinen Typ und keinen Zug — sie hat nur Ausdauer.
+   */
+  substitute?: number
+  /** Bis einschliesslich dieser Runde faellt ein Statuszug auf den Absender zurueck. */
+  magicCoatUntilTurn?: number
   moves: Array<{ id: string; pp: number; ppMax: number }>
   sprite: string
   shiny: boolean
@@ -192,6 +202,22 @@ export interface Terrain {
   turns: number
 }
 
+/**
+ * Was ueber dem ganzen Kampf liegt, ohne Boden zu sein.
+ *
+ * Getrennt vom Boden, weil beides zugleich gelten kann: Erdanziehung zieht
+ * herunter, was fliegt, Wunderraum vertauscht die beiden Verteidigungen,
+ * Plasmaschauer faerbt eine Runde lang alles Normale elektrisch. Eine Liste
+ * statt dreier Merker, damit ein vierter nichts kostet.
+ */
+export const FIELD_EFFECTS = ['gravity', 'wonder_room', 'ion_deluge'] as const
+export type FieldEffectKind = (typeof FIELD_EFFECTS)[number]
+
+export interface FieldEffect {
+  kind: FieldEffectKind
+  turns: number
+}
+
 export interface BattleState {
   id: string
   kind: BattleKind
@@ -202,6 +228,8 @@ export interface BattleState {
   /** Was gerade auf dem Boden liegt. Wahlfrei: ein Kampf, der vor dieser
    *  Aenderung begann, liegt als JSON in der Datenbank und kennt es nicht. */
   terrain?: Terrain | null
+  /** Was sonst noch ueber dem Kampf liegt. Wahlfrei wie der Boden. */
+  fields?: FieldEffect[]
   /** Set once the battle ends. */
   outcome: BattleOutcome | null
 }
@@ -266,6 +294,18 @@ export type BattleEvent =
   | { type: 'shared'; side: 0 | 1; fighter: string; what: 'guard' | 'power' | 'hp' | 'guard_stages' | 'power_stages' }
   /** Kraftpunkte eines Zuges sind verloren. */
   | { type: 'pp_drain'; side: 0 | 1; fighter: string; moveId: string; amount: number }
+  /** Ein Zug hat einen anderen aufgerufen. */
+  | { type: 'called'; side: 0 | 1; fighter: string; moveId: string }
+  /** Die Puppe steht, schluckt oder zerbricht. */
+  | { type: 'substitute'; side: 0 | 1; fighter: string; what: 'up' | 'hit' | 'broken' | 'failed' }
+  /** Jemand hat seinen Typ gewechselt. */
+  | { type: 'type_changed'; side: 0 | 1; fighter: string; types: string[] }
+  /** Jemand ist zur Kopie seines Gegenuebers geworden. */
+  | { type: 'transformed'; side: 0 | 1; fighter: string; into: string }
+  /** Ein Statuszug ist auf den Absender zurueckgefallen. */
+  | { type: 'reflected'; side: 0 | 1; fighter: string; moveId: string }
+  /** Ein Feldeffekt beginnt oder endet. */
+  | { type: 'field'; kind: FieldEffectKind; started: boolean }
   | { type: 'end'; outcome: BattleOutcome }
 
 export type PlayerAction =

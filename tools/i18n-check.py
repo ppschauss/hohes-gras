@@ -132,6 +132,8 @@ AUFZAEHLUNGEN = [
     ('log.side.', 'build/app/packages/engine/src/battle-types.ts', None, '.off'),
     ('log.terrain.', 'build/app/packages/engine/src/battle-types.ts', None, ''),
     ('terrain.', 'build/app/packages/engine/src/battle-types.ts', None, ''),
+    ('log.field.', 'build/app/packages/engine/src/battle-types.ts', None, '.on'),
+    ('log.field.', 'build/app/packages/engine/src/battle-types.ts', None, '.off'),
 ]
 
 luecken = []
@@ -149,6 +151,7 @@ for praefix, quelle, muster, suffix in AUFZAEHLUNGEN:
             'nature.': 'NATURES', 'status.': 'STATUSES', 'weather.': 'WEATHERS',
             'log.lingering.': 'LINGERING_KINDS', 'log.side.': 'SIDE_CONDITIONS',
             'log.terrain.': 'TERRAINS', 'terrain.': 'TERRAINS',
+            'log.field.': 'FIELD_EFFECTS',
         }[praefix]
         block = re.search(rf'export const {name} = \[(.*?)\] as const', text, re.S)
         werte = re.findall(r"'([\w-]+)'", block.group(1)) if block else []

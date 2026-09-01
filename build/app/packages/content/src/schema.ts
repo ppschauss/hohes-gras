@@ -205,6 +205,48 @@ export const MoveDefSchema = z.object({
       z.object({ kind: z.literal('baton_pass') }),
       /** Psybann: das eigene Leiden an den Gegenueber weitergeben. */
       z.object({ kind: z.literal('psycho_shift') }),
+      /*
+       * Zuege, die andere Zuege aufrufen.
+       *
+       * `foe_last` nimmt den letzten des Gegenuebers (Egotrip, Spiegeltrick,
+       * Imitator), `own_random` einen eigenen (Schlafrede), `any_random`
+       * irgendeinen (Metronom), `terrain` den, der zum Boden passt
+       * (Natur-Kraft). Ein aufgerufener Zug darf selbst keinen aufrufen.
+       */
+      z.object({
+        kind: z.literal('call_move'),
+        source: z.enum(['foe_last', 'own_random', 'any_random', 'terrain']),
+      }),
+      /*
+       * Mimikry und Nachahmer.
+       *
+       * Beide ersetzen den Platz, aus dem sie kamen. Nachahmer tut das im
+       * Vorbild fuer immer — hier nur fuer diesen Kampf: die Attacken eines
+       * Pokemon stehen in der Datenbank, und ein Kampf schreibt nicht hinein.
+       */
+      z.object({ kind: z.literal('copy_move') }),
+      /*
+       * Typwechsel.
+       *
+       * `water` ist Ueberflutung, `own_move` Umwandlung, `resist_last`
+       * Umwandlung2, `target` Typenspiegel, `terrain` Tarnung.
+       */
+      z.object({
+        kind: z.literal('type_change'),
+        to: z.enum(['water', 'own_move', 'resist_last', 'target', 'terrain']),
+      }),
+      /** Delegator: ein Viertel der Kraftpunkte wird zur Puppe. */
+      z.object({ kind: z.literal('substitute') }),
+      /** Wandler: die Kopie des Gegenuebers, bis man das Feld verlaesst. */
+      z.object({ kind: z.literal('transform') }),
+      /** Magiemantel: der naechste Statuszug faellt auf den Absender zurueck. */
+      z.object({ kind: z.literal('magic_coat') }),
+      /** Erdanziehung, Wunderraum, Plasmaschauer. */
+      z.object({
+        kind: z.literal('field'),
+        field: z.enum(['gravity', 'wonder_room', 'ion_deluge']),
+        turns: z.number().int().min(1).max(10),
+      }),
     ])
     .default({ kind: 'none' }),
 })

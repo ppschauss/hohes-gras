@@ -47,6 +47,10 @@ export function battleContent(ctx: AppContext): BattleContent {
     move: (id) => ctx.registry.move(id),
     effectiveness: (attackingType, defTypes) => ctx.registry.effectiveness(attackingType, defTypes),
     item: (id) => battleItemEffect(ctx, id),
+    // Metronom und Umwandlung2 schlagen im Paket nach. Jedes Mal frisch
+    // gelesen: das Paket wechselt beim Neustart, nicht mitten im Kampf.
+    moveIds: () => ctx.registry.allMoves.map((m) => m.id),
+    types: () => ctx.registry.allTypes.map((t) => t.id),
   }
 }
 

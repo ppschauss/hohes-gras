@@ -183,6 +183,43 @@ const SPECIAL_MOVES: Record<string, Effect> = {
   'water-sport': { kind: 'side_condition', condition: 'water_sport', turns: 5 },
   // Schutzstacheln ohne den Rueckstoss: Beruehrungszuege kennt die Engine nicht.
   'spiky-shield': { kind: 'protect', against: 'all' },
+
+  /*
+   * Zugkopierer.
+   *
+   * Egotrip nimmt im Vorbild den Zug, den der Gegner *gerade* waehlt, und
+   * schlaegt damit zuerst zu. Die Wahl liegt hier aber schon fest, wenn der
+   * Zug ausgefuehrt wird — also nimmt er den letzten. Dieselbe Idee, eine
+   * Runde versetzt, und ohne die Zugreihenfolge auf den Kopf zu stellen.
+   */
+  'me-first': { kind: 'call_move', source: 'foe_last' },
+  'mirror-move': { kind: 'call_move', source: 'foe_last' },
+  copycat: { kind: 'call_move', source: 'foe_last' },
+  'sleep-talk': { kind: 'call_move', source: 'own_random' },
+  metronome: { kind: 'call_move', source: 'any_random' },
+  'nature-power': { kind: 'call_move', source: 'terrain' },
+  mimic: { kind: 'copy_move' },
+  sketch: { kind: 'copy_move' },
+
+  // Typwechsel.
+  soak: { kind: 'type_change', to: 'water' },
+  conversion: { kind: 'type_change', to: 'own_move' },
+  'conversion-2': { kind: 'type_change', to: 'resist_last' },
+  'reflect-type': { kind: 'type_change', to: 'target' },
+  camouflage: { kind: 'type_change', to: 'terrain' },
+
+  // Der Rest.
+  substitute: { kind: 'substitute' },
+  transform: { kind: 'transform' },
+  'magic-coat': { kind: 'magic_coat' },
+  gravity: { kind: 'field', field: 'gravity', turns: 5 },
+  'wonder-room': { kind: 'field', field: 'wonder_room', turns: 5 },
+  /*
+   * Im Vorbild gilt der Schauer fuer den Rest der laufenden Runde. Hier waere
+   * er damit wirkungslos: der Anwender gibt genau diese Runde dafuer aus. Also
+   * die naechste — dieselbe Idee, eine Runde versetzt.
+   */
+  'ion-deluge': { kind: 'field', field: 'ion_deluge', turns: 2 },
 }
 
 const WEATHER_MOVES: Record<string, Extract<Effect, { kind: 'weather' }>['weather']> = {
