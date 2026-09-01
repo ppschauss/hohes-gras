@@ -2,7 +2,7 @@ import { GameError, NATURES, type Trainer } from '@game/shared'
 import {
   bossHp, computeStats, createRng, deriveSeed, distributeRewards, raidAttack, raidProgress,
   randomIvs, toFighter, xpForLevel,
-  ATTACKS_PER_TRAINER_PER_RAID, RAID_TIERS, TIER_SPECS, type RaidTier,
+  ATTACKS_PER_TRAINER_PER_RAID, RAID_TIERS, TIER_SPECS, type RaidTier, isLegendarySpecies,
 } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
@@ -69,6 +69,18 @@ export function overview(ctx: AppContext, trainer: Trainer) {
  * Species is picked from the pack by rarity so a tier-5 raid never turns out to
  * be a Rattata. The seed is stored so the whole raid — including the reward
  * roll at the end — can be replayed and audited.
+ *
+ * Legendaere sind ausgenommen — wie in Arena und Kampfzone, wo dieselbe
+ * Ausnahme laengst steht. Ohne sie war der Raid mit Abstand der leichteste
+ * Weg zu einem Legendaeren: auf Stufe 5 war fast jeder vierte Boss eines,
+ * und wer ihn faellte, fing ihn mit 35 bis 90 Prozent. Der vorgesehene Weg
+ * liegt bei einem Promille je Erkundung, in der richtigen Region, mit drei
+ * Sagenbeeren. Ein Weg, der tausendmal ergiebiger ist als der gedachte, ist
+ * kein zweiter Weg, sondern der einzige.
+ *
+ * Die Seltenheit bleibt eine Unter- und keine Obergrenze: ein Raid der ersten
+ * Stufe darf einen seltenen Boss hervorbringen. Das ist Glueck, kein Bruch —
+ * nach oben offen war die Absicht, nur reichte "oben" bis zu den Legendaeren.
  */
 export function summon(ctx: AppContext, trainer: Trainer, tier: RaidTier): ReturnType<typeof raidView> {
   if (!RAID_TIERS.includes(tier)) throw new GameError('validation_failed', { field: 'tier' })
@@ -86,7 +98,9 @@ export function summon(ctx: AppContext, trainer: Trainer, tier: RaidTier): Retur
 
     const rarityOrder = ['common', 'uncommon', 'rare', 'legendary']
     const minIndex = rarityOrder.indexOf(spec.minRarity)
-    const pool = ctx.registry.obtainableSpecies.filter((s) => rarityOrder.indexOf(s.rarity) >= minIndex)
+    const pool = ctx.registry.obtainableSpecies.filter(
+      (s) => rarityOrder.indexOf(s.rarity) >= minIndex && !isLegendarySpecies(s),
+    )
     if (pool.length === 0) throw new GameError('content_unavailable', { reason: 'no_species_for_tier' }, 409)
 
     const species = rng.pick(pool)

@@ -148,6 +148,28 @@ describe('Raids', () => {
     expect(raid.attacksLeft).toBe(5)
   })
 
+  it('setzt nie ein Legendaeres als Boss ein', async () => {
+    /*
+     * Der Raid war der leichteste Weg zu einem Legendaeren: auf Stufe 5 war
+     * fast jeder vierte Boss eines, und wer ihn faellte, fing ihn mit 35 bis
+     * 90 Prozent — gegen ein Promille je Erkundung auf dem vorgesehenen Weg.
+     * Arena und Kampfzone schliessen Legendaere laengst aus; die Raids waren
+     * uebersehen worden.
+     *
+     * Zwanzig Beschwoerungen ueber alle Stufen. Bei einem Anteil von 23 % auf
+     * Stufe 5 waere ein Rueckfall damit kaum zu uebersehen.
+     */
+    for (let i = 0; i < 20; i++) {
+      const tier = [1, 3, 5][i % 3]!
+      const r = await h.post('/api/raids/summon', { tier }, ash.token)
+      if (r.status !== 200) continue
+      for (const raid of r.body.open) expect(raid.speciesId).not.toBe('sagenmon')
+      // Hoechstens zwei duerfen offen sein; wegraeumen, damit weiter beschworen
+      // werden kann, ohne den Fehlerpfad zu pruefen.
+      h.ctx.db.prepare('DELETE FROM raids').run()
+    }
+  })
+
   it('braucht eine Gilde', async () => {
     const lone = await h.addTrainer(333, 'Brock')
     await h.post('/api/starter', { speciesId: 'testmon' }, lone.token)

@@ -22,6 +22,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Raid-Bosse sind nie mehr legendär. Auf Stufe 5 war fast jeder vierte einer, und wer ihn fällte, fing ihn mit 35–90 % — gegen 0,1 % je Erkundung auf dem vorgesehenen Weg. Arena und Kampfzone schlossen Legendäre längst aus; die Raids waren übersehen worden.',
       'Legendäre gehören wieder in ihre Heimatregion: Kanto hat Arktos, Zapdos, Lavados, Mewtu und Mew; Johto die Hundetrios, Lugia, Ho-Oh und Celebi; Hoenn die restlichen zehn. Die Bedingung bleibt für alle gleich — 0,1 % je Erkundung, jedes Wetter, jede Tageszeit, Sagenbeeren zum Fangen und der Ball egal.',
       'Welche Legendären wo vorkommen, stand nirgends — es wurde aus Dex-Nummern geraten. Das konnte nie funktionieren: Legendäre tragen die höchsten Nummern ihrer Generation und lagen damit immer außerhalb. Jetzt steht die Liste im Pack, und ein Legendäres ohne Fundort lässt das Spiel gar nicht erst starten.',
       'Der Pokédex sagte bei Legendären „kommt in freier Wildbahn nirgends vor“. Er nennt jetzt die Region und die Bedingung.',
