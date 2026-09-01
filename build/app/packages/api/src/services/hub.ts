@@ -53,7 +53,7 @@ export interface HubListing {
   createdAt: number
 }
 
-const enabled = (ctx: AppContext): boolean => ctx.config.hubEnabled
+export const enabled = (ctx: AppContext): boolean => ctx.config.hubEnabled
 
 /**
  * Ein GET darf nichts zu sagen haben.
@@ -73,7 +73,7 @@ export function assertGetHasNoBody(method: string, path: string, raw: string): v
 }
 
 /** Eine signierte Anfrage an den Verbund. Wirft nie — der Aufrufer bekommt null. */
-async function call(
+export async function call(
   ctx: AppContext, method: 'GET' | 'POST' | 'PUT', path: string, body: unknown = {},
 ): Promise<unknown | null> {
   if (!enabled(ctx)) return null
@@ -124,7 +124,7 @@ async function call(
  *
  * Diese Fassung reicht den Grund des Verbunds durch.
  */
-async function callOrThrow(
+export async function callOrThrow(
   ctx: AppContext, method: 'GET' | 'POST' | 'PUT', path: string, body: unknown = {},
 ): Promise<Record<string, unknown>> {
   if (!enabled(ctx)) throw new GameError('invalid_state', { reason: 'no_hub' }, 409)

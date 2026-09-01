@@ -16,6 +16,7 @@ export function MarketPanel() {
   const [price, setPrice] = useState(500)
   const [note, setNote] = useState('')
   const [bought, setBought] = useState<number | null>(null)
+  const [unterwegs, setUnterwegs] = useState<string | null>(null)
 
   const d = market.data
 
@@ -31,6 +32,23 @@ export function MarketPanel() {
     haptic.tap()
     void action.run(() => api.buyListing(listing.id), (res) => {
       market.set(res.market); setBought(res.paid); haptic.success()
+    })
+  }
+
+  /*
+   * Kaufen im Verbund.
+   *
+   * Getrennt vom oertlichen Kauf, weil es ein anderes Versprechen ist: das
+   * Gold ist sofort weg, das Pokemon kommt spaeter. Wer das nicht liest,
+   * sucht danach in seiner Box und findet nichts — deshalb sagt es die
+   * Rueckmeldung ausdruecklich.
+   */
+  const kaufeFern = (l: { id: string; speciesName: string }) => {
+    haptic.tap()
+    void action.run(() => api.buyRemote(l.id), (res) => {
+      market.set(res.market)
+      setUnterwegs(t('market.remoteOrdered', { name: l.speciesName }))
+      haptic.success()
     })
   }
 
@@ -122,6 +140,7 @@ export function MarketPanel() {
         <section className="section">
           <h2>{t('market.global')}</h2>
           <p className="explain">{t('market.globalHint')}</p>
+          {unterwegs && <p className="notice" role="status">{unterwegs}</p>}
           <div className="stack">
             {d.global.map((l) => (
               <div key={`${l.instanceId}:${l.id}`} className="listing listing--far">
@@ -143,6 +162,13 @@ export function MarketPanel() {
                     <span className="listing__seller">{t('market.by', { name: l.sellerName })}</span>
                     {l.note && <span className="listing__note">„{l.note}"</span>}
                   </span>
+                  <button
+                    type="button" className="btn btn--sm"
+                    disabled={action.busy || (d?.gold ?? 0) < l.price}
+                    onClick={() => kaufeFern(l)}
+                  >
+                    {t('market.buy')}
+                  </button>
                 </div>
               </div>
             ))}

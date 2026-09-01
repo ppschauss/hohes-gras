@@ -22,6 +22,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Verbund: fremde Angebote lassen sich jetzt kaufen. Das Gold geht sofort weg, das Pokémon kommt in den nächsten Minuten — es muss erst von seiner Heimatinstanz herübergegeben werden. Klappt etwas nicht, kommt das Gold von selbst zurück.',
       'Für Betreiber: jede Zuwendung — Pokémon, Gegenstand, Gold — wird jetzt mit Kennung, Quelle und Git-Stand belegt. Damit lässt sich ein Fehler zurücknehmen, statt ihn nur zu bedauern.',
       'Nur noch ein Legendäres kämpft mit. Sind mehrere im Team, tritt das schwächste an — die übrigen sehen zu und stehen im Garten mit „sieht zu“ da. Die Gegner richten sich weiter nach dem Durchschnitt des ganzen Teams: Stapeln macht den Kampf schwerer und die eigene Mannschaft kleiner.',
       'Raid-Bosse sind nie mehr legendär. Auf Stufe 5 war fast jeder vierte einer, und wer ihn fällte, fing ihn mit 35–90 % — gegen 0,1 % je Erkundung auf dem vorgesehenen Weg. Arena und Kampfzone schlossen Legendäre längst aus; die Raids waren übersehen worden.',

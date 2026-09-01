@@ -128,6 +128,56 @@ export interface MarketRow {
   createdAt: number
 }
 
+/**
+ * Eine Bestellung ueber Instanzgrenzen.
+ *
+ * Das Gegenstueck zum Aushang: dort steht, *was* jemand anbietet, hier steht,
+ * *dass* jemand es gekauft hat. Bewusst zwei getrennte Dinge — eine Instanz
+ * ersetzt ihren Aushang bei jedem Abgleich vollstaendig, und eine Bestellung
+ * darf davon nicht mitgerissen werden. Ein Kaufvertrag ueberlebt es, wenn das
+ * Schaufenster umgeraeumt wird.
+ *
+ * Der Weg hat drei Schritte, weil er ueber zwei Datenbanken laeuft, die
+ * einander nicht sehen:
+ *
+ *   `reserved`  Der Kaeufer hat bezahlt. Sein Gold liegt bei ihm zu Hause
+ *               fest; hier steht nur, dass es fest liegt.
+ *   `delivered` Die Heimatinstanz hat das Pokemon herausgegeben. Es liegt
+ *               jetzt hier — das ist die Treuhand, und sie dauert genau so
+ *               lange, bis der Kaeufer es abholt.
+ *   `collected` Abgeholt. Fertig.
+ *   `aborted`   Etwas ging nicht. Der Kaeufer bekommt sein Gold zurueck.
+ *
+ * Ein Schritt zurueck gibt es nicht. Jeder Uebergang ist eine Bedingung auf
+ * den vorigen Zustand, damit ein zweimal geschickter Aufruf nichts doppelt
+ * tut — bei zwei Instanzen, die unabhaengig voneinander nachfragen, ist das
+ * kein Sonderfall, sondern der Normalfall.
+ */
+export type OrderStatus = 'reserved' | 'delivered' | 'collected' | 'aborted'
+
+export interface OrderRow {
+  id: string
+  listingId: string
+  sellerInstanceId: string
+  sellerTrainerId: string
+  buyerInstanceId: string
+  buyerTrainerId: string
+  price: number
+  status: OrderStatus
+  /**
+   * Das Pokemon, ab `delivered`.
+   *
+   * Als Text und nicht als Felder: der Verbund kennt keine Kreaturen und soll
+   * keine kennen. Er verwahrt, was die eine Instanz geschickt hat, und gibt
+   * genau das an die andere weiter — was darin steht, geht ihn nichts an.
+   */
+  creature: string | null
+  /** Warum es scheiterte. Nur bei `aborted`. */
+  reason: string | null
+  createdAt: number
+  updatedAt: number
+}
+
 export interface Store {
   /** Wer diesen Trainer-Code trägt. Null, wenn niemand. */
   trainerByCode(code: string): Promise<TrainerRow | null>
@@ -173,6 +223,32 @@ export interface Store {
   replaceMarket(instanceId: string, rows: readonly MarketRow[]): Promise<void>
   /** Die neuesten Angebote aller Instanzen. */
   openMarket(limit: number): Promise<MarketRow[]>
+
+  /**
+   * Eine Bestellung anlegen — aber nur, wenn zu diesem Angebot keine offene
+   * existiert. Gibt `null` zurueck, wenn schon jemand schneller war.
+   *
+   * Die Pruefung gehoert in den Speicher und nicht in den Dienst: zwei
+   * Kaeufer, die im selben Augenblick zugreifen, duerfen nicht beide ein Ja
+   * bekommen, und nur der Speicher kann das ausschliessen.
+   */
+  createOrder(row: OrderRow): Promise<OrderRow | null>
+  /** Alles, was diese Instanz angeht — als Verkaeuferin oder als Kaeuferin. */
+  ordersFor(instanceId: string): Promise<OrderRow[]>
+  getOrder(id: string): Promise<OrderRow | null>
+  /**
+   * Zustand weiterschalten, aber nur aus einem erwarteten heraus.
+   *
+   * `false` heisst: der Vorgang war nicht mehr in dem Zustand, in dem der
+   * Aufrufer ihn glaubte. Das ist keine Stoerung, sondern die Antwort auf
+   * eine zweite Zustellung derselben Nachricht.
+   */
+  advanceOrder(
+    id: string, von: OrderStatus, nach: OrderStatus,
+    felder: { creature?: string; reason?: string }, now: number,
+  ): Promise<boolean>
+  /** Bestellungen, die zu lange in einem Zustand haengen. */
+  staleOrders(status: OrderStatus, older: number): Promise<OrderRow[]>
 
   putProfile(row: ProfileRow): Promise<void>
   /** Rangliste über alle Instanzen, absteigend. */

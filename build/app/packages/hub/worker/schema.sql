@@ -109,3 +109,30 @@ CREATE TABLE IF NOT EXISTS market (
   PRIMARY KEY (instance_id, id)
 );
 CREATE INDEX IF NOT EXISTS idx_market_time ON market(created_at);
+
+-- Bestellungen ueber Instanzgrenzen.
+--
+-- Getrennt vom Aushang, weil eine Instanz ihren Aushang bei jedem Abgleich
+-- vollstaendig ersetzt. Ein Kaufvertrag darf davon nicht mitgerissen werden:
+-- er ueberlebt es, wenn das Schaufenster umgeraeumt wird.
+CREATE TABLE IF NOT EXISTS market_orders (
+  id                  TEXT PRIMARY KEY,
+  listing_id          TEXT NOT NULL,
+  seller_instance_id  TEXT NOT NULL,
+  seller_trainer_id   TEXT NOT NULL,
+  buyer_instance_id   TEXT NOT NULL,
+  buyer_trainer_id    TEXT NOT NULL,
+  price               INTEGER NOT NULL,
+  -- reserved -> delivered -> collected, oder aborted.
+  status              TEXT NOT NULL,
+  -- Das Pokemon, ab 'delivered'. Text: der Verbund kennt keine Kreaturen.
+  creature            TEXT,
+  reason              TEXT,
+  created_at          INTEGER NOT NULL,
+  updated_at          INTEGER NOT NULL
+);
+-- Beide Seiten fragen nach dem, was sie angeht.
+CREATE INDEX IF NOT EXISTS idx_orders_seller ON market_orders(seller_instance_id, status);
+CREATE INDEX IF NOT EXISTS idx_orders_buyer ON market_orders(buyer_instance_id, status);
+-- Fuer die Pruefung "gibt es zu diesem Angebot schon eine offene Bestellung".
+CREATE INDEX IF NOT EXISTS idx_orders_listing ON market_orders(listing_id, status);

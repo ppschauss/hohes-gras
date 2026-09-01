@@ -1,4 +1,5 @@
-import type { InstanceRow, MarketRow, ProfileRow, Store, TrainerRow, ReleaseRow, ChatRow, FriendRow, FriendRequestRow } from './store.js'
+import type {
+  OrderRow, InstanceRow, MarketRow, ProfileRow, Store, TrainerRow, ReleaseRow, ChatRow, FriendRow, FriendRequestRow } from './store.js'
 
 /**
  * Ein Speicher im Arbeitsspeicher.
@@ -22,6 +23,7 @@ export function memoryStore(): Store {
   const chat: ChatRow[] = []
   const friends: FriendRow[] = []
   const requests: FriendRequestRow[] = []
+  const orders: OrderRow[] = []
   let market: MarketRow[] = []
   return {
     async trainerByCode(code) {
@@ -89,6 +91,39 @@ export function memoryStore(): Store {
     async openMarket(limit) {
       return [...market].sort((a, b) => b.createdAt - a.createdAt).slice(0, limit)
     },
+    async createOrder(row) {
+      // Nur eine offene Bestellung je Angebot. Wer zweiter ist, geht leer aus —
+      // und erfaehrt es, statt sein Gold in einen Vorgang zu legen, den es
+      // schon gibt.
+      const offen = orders.find(
+        (o) => o.listingId === row.listingId && (o.status === 'reserved' || o.status === 'delivered'),
+      )
+      if (offen) return null
+      orders.push({ ...row })
+      return { ...row }
+    },
+    async ordersFor(instanceId) {
+      return orders
+        .filter((o) => o.sellerInstanceId === instanceId || o.buyerInstanceId === instanceId)
+        .map((o) => ({ ...o }))
+    },
+    async getOrder(id) {
+      const o = orders.find((x) => x.id === id)
+      return o ? { ...o } : null
+    },
+    async advanceOrder(id, von, nach, felder, now) {
+      const o = orders.find((x) => x.id === id)
+      if (!o || o.status !== von) return false
+      o.status = nach
+      o.updatedAt = now
+      if (felder.creature !== undefined) o.creature = felder.creature
+      if (felder.reason !== undefined) o.reason = felder.reason
+      return true
+    },
+    async staleOrders(status, older) {
+      return orders.filter((o) => o.status === status && o.updatedAt < older).map((o) => ({ ...o }))
+    },
+
     async putProfile(row) { profiles.set(row.trainerId, row) },
     async topProfiles(limit) {
       return ranked().slice(0, limit).map((p) => {

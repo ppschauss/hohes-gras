@@ -1,4 +1,5 @@
-import type { InstanceRow, ChatRow, MarketRow, ProfileRow, ReleaseRow, Store, TrainerRow } from './store.js'
+import type {
+  OrderRow, InstanceRow, ChatRow, MarketRow, ProfileRow, ReleaseRow, Store, TrainerRow } from './store.js'
 
 /**
  * Der Speicher auf Cloudflare D1.
@@ -15,7 +16,9 @@ export interface D1Like {
     bind(...values: unknown[]): {
       first<T>(): Promise<T | null>
       all<T>(): Promise<{ results: T[] }>
-      run(): Promise<unknown>
+      /** D1 meldet die Zahl der getroffenen Zeilen. Ein bedingtes UPDATE
+       *  braucht sie: sie ist die Antwort auf "war er noch in dem Zustand?". */
+      run(): Promise<{ meta?: { changes?: number } }>
     }
   }
 }
@@ -218,6 +221,63 @@ export function d1Store(db: D1Like): Store {
       ).bind(limit).all<Omit<MarketRow, 'shiny'> & { shiny: number }>()
       return res.results.map((r) => ({ ...r, shiny: r.shiny === 1 }))
     },
+    async createOrder(row) {
+      /*
+       * Erst schauen, dann schreiben.
+       *
+       * D1 kennt keine Transaktion ueber mehrere Anweisungen, also ist das
+       * Fenster zwischen Pruefung und Einfuegung theoretisch offen. Es bleibt
+       * folgenlos: der Vorgang traegt eine eigene Kennung, und die zweite
+       * Bestellung faende beim naechsten Abgleich eine bereits belegte
+       * Zustellung vor und braeche mit `aborted` ab — das Gold kommt zurueck.
+       */
+      const offen = await db.prepare(
+        `SELECT id FROM market_orders WHERE listing_id = ? AND status IN ('reserved','delivered')`,
+      ).bind(row.listingId).first()
+      if (offen) return null
+      await db.prepare(
+        `INSERT INTO market_orders (id, listing_id, seller_instance_id, seller_trainer_id,
+                                    buyer_instance_id, buyer_trainer_id, price, status,
+                                    creature, reason, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(
+        row.id, row.listingId, row.sellerInstanceId, row.sellerTrainerId,
+        row.buyerInstanceId, row.buyerTrainerId, row.price, row.status,
+        row.creature, row.reason, row.createdAt, row.updatedAt,
+      ).run()
+      return row
+    },
+    async ordersFor(instanceId) {
+      const res = await db.prepare(
+        `SELECT * FROM market_orders WHERE seller_instance_id = ? OR buyer_instance_id = ?
+          ORDER BY created_at ASC`,
+      ).bind(instanceId, instanceId).all<Record<string, unknown>>()
+      return (res.results ?? []).map(orderAus)
+    },
+    async getOrder(id) {
+      const row = await db.prepare('SELECT * FROM market_orders WHERE id = ?')
+        .bind(id).first<Record<string, unknown>>()
+      return row ? orderAus(row) : null
+    },
+    async advanceOrder(id, von, nach, felder, now) {
+      // Die Bedingung auf den alten Zustand ist die ganze Sicherung: eine
+      // zweite Zustellung derselben Nachricht trifft ihn nicht mehr an.
+      const res = await db.prepare(
+        `UPDATE market_orders
+            SET status = ?, updated_at = ?,
+                creature = COALESCE(?, creature),
+                reason = COALESCE(?, reason)
+          WHERE id = ? AND status = ?`,
+      ).bind(nach, now, felder.creature ?? null, felder.reason ?? null, id, von).run()
+      return (res.meta?.changes ?? 0) > 0
+    },
+    async staleOrders(status, older) {
+      const res = await db.prepare(
+        'SELECT * FROM market_orders WHERE status = ? AND updated_at < ?',
+      ).bind(status, older).all<Record<string, unknown>>()
+      return (res.results ?? []).map(orderAus)
+    },
+
 
     async putProfile(row) {
       await db.prepare(
@@ -256,5 +316,23 @@ export function d1Store(db: D1Like): Store {
       ).bind(me.score).first<{ rank: number }>()
       return row?.rank ?? null
     },
+  }
+}
+
+/** Eine Zeile aus `market_orders` in die Form, die der Dienst kennt. */
+function orderAus(r: Record<string, unknown>): OrderRow {
+  return {
+    id: String(r.id),
+    listingId: String(r.listing_id),
+    sellerInstanceId: String(r.seller_instance_id),
+    sellerTrainerId: String(r.seller_trainer_id),
+    buyerInstanceId: String(r.buyer_instance_id),
+    buyerTrainerId: String(r.buyer_trainer_id),
+    price: Number(r.price),
+    status: String(r.status) as OrderRow['status'],
+    creature: r.creature === null || r.creature === undefined ? null : String(r.creature),
+    reason: r.reason === null || r.reason === undefined ? null : String(r.reason),
+    createdAt: Number(r.created_at),
+    updatedAt: Number(r.updated_at),
   }
 }

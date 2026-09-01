@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createHub, memoryStore } from '@game/hub'
-import { assertGetHasNoBody, cachedLeaderboard, linkNew, linkedId, pending, pushProfiles, refreshLeaderboard }
-  from '../src/services/hub.js'
+import { createHub, memoryStore, sign } from '@game/hub'
+import {
+  assertGetHasNoBody, cachedLeaderboard, linkNew, linkedId, pending, pushMarket,
+  pushProfiles, refreshLeaderboard, refreshMarket,
+} from '../src/services/hub.js'
+import { buyRemote, settle } from '../src/services/hubMarket.js'
+import * as acquisitions from '../src/repos/acquisitions.js'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 /**
@@ -72,6 +76,131 @@ const setStats = (trainerId: string, stats: Record<string, number>) => {
      ON CONFLICT(trainer_id) DO UPDATE SET ${cols.map((c) => `${c} = excluded.${c}`).join(', ')}`,
   ).run(trainerId, ...cols.map((c) => stats[c]), Date.now())
 }
+
+describe('Treuhand: kaufen und verkaufen ueber Instanzgrenzen', () => {
+  /**
+   * Der Wert dieses Tests liegt in den zwei Seiten.
+   *
+   * Der Verbund fuer sich ist geprueft, die Instanz fuer sich auch. Hier
+   * laufen beide gegeneinander — durch dieselbe Signatur, dieselben Namen,
+   * denselben Weg. Ein echter zweiter Server fehlt weiterhin; was ihn
+   * ersetzt, ist eine zweite angemeldete Instanz, die ihre Aufrufe selbst
+   * signiert.
+   */
+  let fremdSecret: string
+  const alsFremd = async (method: string, path: string, body: unknown = {}) => {
+    const raw = JSON.stringify(body)
+    const ts = Date.now()
+    return hub({
+      method, path, body,
+      auth: { instanceId: 'fremd', timestamp: ts, signature: await sign(fremdSecret, method, path, ts, raw) },
+    })
+  }
+
+  const gold = () => (h.ctx.db.prepare('SELECT gold AS g FROM trainers WHERE id = ?')
+    .get(ash.id) as { g: number }).g
+  const boxCount = () => (h.ctx.db.prepare('SELECT COUNT(*) AS n FROM creatures WHERE owner_id = ?')
+    .get(ash.id) as { n: number }).n
+
+  const fremdesAngebot = async (id = 'fremd-1', price = 500) => {
+    await alsFremd('PUT', '/market', { listings: [{
+      id, trainerId: 'g-fremd', sellerName: 'Misty', price, note: '',
+      speciesName: 'Testmon', level: 12, shiny: false, ivPercent: 60,
+      sprite: '/media/x.png', createdAt: Date.now(),
+    }] })
+    await refreshMarket(h.ctx)
+    return id
+  }
+
+  beforeEach(async () => {
+    const r = await hub({ method: 'POST', path: '/instances', body: { id: 'fremd' }, adminSecret: 'admin' })
+    fremdSecret = (r.body as { secret: string }).secret
+    await h.post('/api/starter', { speciesId: 'testmon' }, ash.token)
+    h.ctx.db.prepare('UPDATE trainers SET gold = 5000 WHERE id = ?').run(ash.id)
+    await linkNew(h.ctx)
+  })
+
+  it('nimmt das Gold sofort und liefert das Pokemon nach', async () => {
+    const id = await fremdesAngebot()
+    const vorher = gold()
+
+    const bestellt = await buyRemote(h.ctx, h.ctx.db.prepare('SELECT * FROM trainers WHERE id = ?')
+      .get(ash.id) as never, id)
+    expect(gold()).toBe(vorher - 500)
+
+    // Die Gegenseite gibt das Pokemon heraus.
+    const geliefert = await alsFremd('POST', '/market/deliver', {
+      orderId: bestellt.orderId,
+      creature: JSON.stringify({
+        speciesId: 'testmon', level: 12, xp: 100, nature: 'hardy',
+        ivs: { hp: 5, atk: 5, def: 5, spa: 5, spd: 5, spe: 5 },
+        friendship: 70, shiny: false, moves: ['tackle'], nickname: null,
+      }),
+    })
+    expect(geliefert.status).toBe(200)
+
+    const vorherBox = boxCount()
+    expect(await settle(h.ctx)).toBeGreaterThan(0)
+    expect(boxCount()).toBe(vorherBox + 1)
+    // Und es ist belegt — mit eigener Quelle, wie jede andere Zuwendung.
+    expect(acquisitions.find(h.ctx.db, { source: 'hub.market.buy' })).toHaveLength(1)
+  })
+
+  it('gibt das Gold zurueck, wenn die Gegenseite nicht liefern kann', async () => {
+    const id = await fremdesAngebot('fremd-2', 700)
+    const vorher = gold()
+    const bestellt = await buyRemote(h.ctx, h.ctx.db.prepare('SELECT * FROM trainers WHERE id = ?')
+      .get(ash.id) as never, id)
+    expect(gold()).toBe(vorher - 700)
+
+    await alsFremd('POST', '/market/abort', { orderId: bestellt.orderId, reason: 'pokemon_weg' })
+    await settle(h.ctx)
+
+    expect(gold()).toBe(vorher)
+    expect(boxCount()).toBe(1)
+  })
+
+  it('erstattet, wenn der Verbund die Bestellung gar nicht annimmt', async () => {
+    // Kein Angebot mit dieser Kennung im Verbund — der Aufruf schlaegt fehl,
+    // und das Gold darf nicht dabei bleiben.
+    await fremdesAngebot('fremd-3', 300)
+    h.ctx.db.prepare("UPDATE hub_cache SET payload = ? WHERE key = 'market'").run(JSON.stringify([
+      { id: 'gibt-es-nicht', trainerId: 'g-fremd', price: 300 },
+    ]))
+    const vorher = gold()
+    await expect(buyRemote(h.ctx, h.ctx.db.prepare('SELECT * FROM trainers WHERE id = ?')
+      .get(ash.id) as never, 'gibt-es-nicht')).rejects.toThrow()
+    expect(gold()).toBe(vorher)
+  })
+
+  it('liefert als Verkaeuferin aus und zahlt den Verkaeufer aus', async () => {
+    // Ein eigenes Angebot, das die fremde Instanz kauft.
+    const garden = await h.get('/api/garden', ash.token)
+    const creatureId = garden.body.team[0].id as string
+    // Angeboten wird aus der Box, nicht aus dem Team.
+    h.ctx.db.prepare('UPDATE creatures SET team_slot = NULL WHERE id = ?').run(creatureId)
+    const liste = await h.post('/api/market/list', { creatureId, price: 1000 }, ash.token)
+    expect(liste.status).toBe(200)
+    const listingId = liste.body.ownListings[0].id as string
+    await pushMarket(h.ctx)
+
+    const gekauft = await alsFremd('POST', '/market/buy', { listingId, buyerTrainerId: 'g-fremdkaeufer' })
+    expect(gekauft.status).toBe(200)
+
+    const vorher = gold()
+    expect(await settle(h.ctx)).toBeGreaterThan(0)
+
+    // Das Pokemon ist hier weg, das Gold da — abzueglich der Gebuehr.
+    expect(h.ctx.db.prepare('SELECT id FROM creatures WHERE id = ?').get(creatureId)).toBeUndefined()
+    expect(gold()).toBeGreaterThan(vorher)
+
+    // Und der Verbund verwahrt es fuer den Kaeufer.
+    const beiFremd = await alsFremd('GET', '/market/orders')
+    const o = (beiFremd.body as { orders: Array<{ status: string; creature: string | null }> }).orders[0]!
+    expect(o.status).toBe('delivered')
+    expect(o.creature).toContain('testmon')
+  })
+})
 
 describe('Verbund von der Instanz aus', () => {
   it('meldet Trainer an und behaelt die Id', async () => {

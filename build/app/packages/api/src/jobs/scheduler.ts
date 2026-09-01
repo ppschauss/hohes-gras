@@ -13,6 +13,7 @@ import {
   linkNew, pushCodes, pushMarket, pushProfiles, refreshLeaderboard, refreshMarket,
   refreshRelease, releaseInfo,
 } from '../services/hub.js'
+import { settle as settleHubMarket } from '../services/hubMarket.js'
 
 export interface Job {
   name: string
@@ -105,6 +106,26 @@ export const JOBS: Job[] = [
       }
       // Die laufende Woche anlegen, damit es immer eine offene Anmeldung gibt.
       void currentWeek()
+    },
+  },
+  {
+    /*
+     * Die Treuhand.
+     *
+     * Eigener Lauf und ein viel kuerzerer Takt als der uebrige Abgleich: ein
+     * Kauf ist eine Sache zwischen zwei Menschen, die beide warten. Zehn
+     * Minuten waeren fuer einen Aushang richtig und fuer einen bezahlten
+     * Vorgang unertraeglich.
+     *
+     * Er kostet wenig: eine Anfrage, und nur wenn wirklich etwas offen ist,
+     * folgen weitere.
+     */
+    name: 'hub-escrow',
+    everyMs: 60_000,
+    run: async (ctx) => {
+      if (!ctx.config.hubEnabled) return
+      const getan = await settleHubMarket(ctx)
+      if (getan) console.log(`[job] Treuhand: ${getan} Schritte`)
     },
   },
   {

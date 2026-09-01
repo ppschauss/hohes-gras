@@ -129,6 +129,21 @@ export function markSold(db: Db, id: string, buyerId: string, now = Date.now()):
     .run(now, buyerId, id).changes === 1
 }
 
+/**
+ * Verkauft an jemanden, den es hier nicht gibt.
+ *
+ * `buyer_id` zeigt auf `trainers` — und ein Kaeufer aus einer anderen Instanz
+ * steht dort nicht. Ihn dennoch einzutragen bricht den Fremdschluessel; genau
+ * daran ist der erste Versuch gescheitert. Also bleibt das Feld leer: wer
+ * gekauft hat, steht im Vorgang unter `hub_orders`, und dort gehoert es auch
+ * hin — es ist eine Tatsache ueber den Verbund, nicht ueber diese Instanz.
+ */
+export function markSoldRemote(db: Db, id: string, now = Date.now()): boolean {
+  return db
+    .prepare('UPDATE market_listings SET sold_at = ? WHERE id = ? AND sold_at IS NULL AND cancelled_at IS NULL')
+    .run(now, id).changes === 1
+}
+
 export function cancelListing(db: Db, id: string, sellerId: string, now = Date.now()): boolean {
   return db
     .prepare('UPDATE market_listings SET cancelled_at = ? WHERE id = ? AND seller_id = ? AND sold_at IS NULL AND cancelled_at IS NULL')

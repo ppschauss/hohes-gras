@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { CHAT_MAX_LENGTH, CHAT_PER_INSTANCE_PER_WINDOW, createHub, type HubRequest } from './service.js'
+import { CHAT_MAX_LENGTH, CHAT_PER_INSTANCE_PER_WINDOW, createHub, ORDER_TIMEOUT_MS, type HubRequest } from './service.js'
 import { memoryStore } from './memory.js'
 import { sign, SIGNATURE_MAX_AGE_MS } from './auth.js'
 import type { Store } from './store.js'
@@ -340,6 +340,149 @@ describe('Aushang des Verbunds', () => {
   it('laesst niemanden ohne Signatur lesen', async () => {
     const r = await hub({ method: 'GET', path: '/market' })
     expect(r.status).toBe(401)
+  })
+})
+
+describe('Treuhand: kaufen ueber Instanzgrenzen', () => {
+  /**
+   * Eine zweite Instanz anmelden und deren Aufrufe signieren.
+   *
+   * Ein Kauf im Verbund braucht zwei Seiten, und nur mit zweien laesst sich
+   * pruefen, was der Dienst eigentlich leistet: dass die eine Seite nicht
+   * liefern muss, bevor die andere bezahlt hat, und umgekehrt.
+   */
+  let fremdSecret: string
+  const alsFremd = async (req: Omit<HubRequest, 'auth'>) => {
+    const body = JSON.stringify(req.body ?? {})
+    return hub({
+      ...req,
+      auth: {
+        instanceId: 'fremd',
+        timestamp: NOW,
+        signature: await sign(fremdSecret, req.method, req.path, NOW, body),
+      },
+    })
+  }
+
+  const angebot = {
+    id: 'angebot-1', trainerId: 'g-verkaeufer', sellerName: 'Ash', price: 5000,
+    note: '', speciesName: 'Bisasam', level: 30, shiny: false, ivPercent: 70,
+    sprite: '/media/x.png', createdAt: NOW,
+  }
+
+  beforeEach(async () => {
+    const r = await hub({ method: 'POST', path: '/instances', body: { id: 'fremd', name: 'Woanders' }, adminSecret: ADMIN })
+    fremdSecret = (r.body as { secret: string }).secret
+    // 'heim' bietet an, 'fremd' kauft.
+    await call({ method: 'PUT', path: '/market', body: { listings: [angebot] } })
+  })
+
+  const bestellen = async () => {
+    const r = await alsFremd({
+      method: 'POST', path: '/market/buy',
+      body: { listingId: 'angebot-1', buyerTrainerId: 'g-kaeufer' },
+    })
+    return { status: r.status, order: (r.body as { order?: { id: string } }).order }
+  }
+
+  it('fuehrt den ganzen Weg von der Bestellung bis zur Abholung', async () => {
+    const { status, order } = await bestellen()
+    expect(status).toBe(200)
+    expect(order).toMatchObject({ status: 'reserved', price: 5000, sellerInstanceId: 'heim', buyerInstanceId: 'fremd' })
+
+    // Die Verkaeuferseite sieht, dass sie liefern soll.
+    const beiHeim = await call({ method: 'GET', path: '/market/orders' })
+    const offen = (beiHeim.body as { orders: Array<{ id: string; status: string }> }).orders
+    expect(offen).toHaveLength(1)
+    expect(offen[0]!.status).toBe('reserved')
+
+    const geliefert = await call({
+      method: 'POST', path: '/market/deliver',
+      body: { orderId: order!.id, creature: '{"speciesId":"bulbasaur","level":30}' },
+    })
+    expect(geliefert.status).toBe(200)
+
+    // Erst jetzt kann der Kaeufer abholen — und bekommt genau das Verwahrte.
+    const geholt = await alsFremd({ method: 'POST', path: '/market/collect', body: { orderId: order!.id } })
+    expect(geholt.status).toBe(200)
+    expect((geholt.body as { creature: string }).creature).toContain('bulbasaur')
+    expect((await store.getOrder(order!.id))!.status).toBe('collected')
+  })
+
+  it('gibt dasselbe Pokemon kein zweites Mal heraus', async () => {
+    const { order } = await bestellen()
+    await call({ method: 'POST', path: '/market/deliver', body: { orderId: order!.id, creature: '{"x":1}' } })
+    await alsFremd({ method: 'POST', path: '/market/collect', body: { orderId: order!.id } })
+
+    const nochmal = await alsFremd({ method: 'POST', path: '/market/collect', body: { orderId: order!.id } })
+    expect(nochmal.status).toBe(409)
+  })
+
+  it('laesst zu einem Angebot nur eine offene Bestellung zu', async () => {
+    // Der Wettlauf zweier Kaeufer. Wer verliert, erfaehrt es sofort — statt
+    // sein Gold in einen Vorgang zu legen, den es schon gibt.
+    const erste = await bestellen()
+    expect(erste.status).toBe(200)
+    const zweite = await bestellen()
+    expect(zweite.status).toBe(409)
+  })
+
+  it('laesst nur die Heimatinstanz liefern', async () => {
+    const { order } = await bestellen()
+    // Der Kaeufer selbst behauptet, geliefert zu haben.
+    const r = await alsFremd({ method: 'POST', path: '/market/deliver', body: { orderId: order!.id, creature: '{"x":1}' } })
+    expect(r.status).toBe(403)
+  })
+
+  it('laesst nur den Kaeufer abholen', async () => {
+    const { order } = await bestellen()
+    await call({ method: 'POST', path: '/market/deliver', body: { orderId: order!.id, creature: '{"x":1}' } })
+    const r = await call({ method: 'POST', path: '/market/collect', body: { orderId: order!.id } })
+    expect(r.status).toBe(403)
+  })
+
+  it('laesst nicht abholen, was noch nicht geliefert ist', async () => {
+    const { order } = await bestellen()
+    const r = await alsFremd({ method: 'POST', path: '/market/collect', body: { orderId: order!.id } })
+    expect(r.status).toBe(409)
+    expect((await store.getOrder(order!.id))!.status).toBe('reserved')
+  })
+
+  it('bricht ab, wenn die Verkaeuferseite nicht liefern kann', async () => {
+    const { order } = await bestellen()
+    const r = await call({ method: 'POST', path: '/market/abort', body: { orderId: order!.id, reason: 'pokemon_weg' } })
+    expect(r.status).toBe(200)
+
+    const o = (await store.getOrder(order!.id))!
+    expect(o.status).toBe('aborted')
+    expect(o.reason).toBe('pokemon_weg')
+    // Nach dem Abbruch ist das Angebot wieder frei.
+    expect((await bestellen()).status).toBe(200)
+  })
+
+  it('kauft nicht bei sich selbst', async () => {
+    const r = await call({ method: 'POST', path: '/market/buy', body: { listingId: 'angebot-1', buyerTrainerId: 'g-1' } })
+    expect(r.status).toBe(400)
+  })
+
+  it('laesst eine liegengebliebene Bestellung verfallen', async () => {
+    /*
+     * Bezahlt ist bezahlt. Gold, das unbegrenzt in einem Vorgang liegt, den
+     * niemand mehr anfasst, waere verloren — eine Instanz, die zwei Stunden
+     * nicht geliefert hat, ist entweder aus oder kaputt.
+     */
+    const { order } = await bestellen()
+    const spaeter = createHub({ store, idSalt: 'salz', adminSecret: ADMIN, now: () => NOW + ORDER_TIMEOUT_MS + 1 })
+    await spaeter({
+      method: 'GET', path: '/market/orders', body: {},
+      auth: {
+        instanceId: 'heim', timestamp: NOW + ORDER_TIMEOUT_MS + 1,
+        signature: await sign(secret, 'GET', '/market/orders', NOW + ORDER_TIMEOUT_MS + 1, '{}'),
+      },
+    })
+    const o = (await store.getOrder(order!.id))!
+    expect(o.status).toBe('aborted')
+    expect(o.reason).toBe('zeit_abgelaufen')
   })
 })
 

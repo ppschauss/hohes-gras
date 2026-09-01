@@ -4,6 +4,7 @@ import type { AppContext } from '../context.js'
 import { rateLimit, requireTrainer } from './plugin.js'
 import { findById } from '../repos/trainers.js'
 import * as social from '../services/social.js'
+import * as hubMarket from '../services/hubMarket.js'
 import * as hub from '../services/hub.js'
 import * as gifts from '../services/gifts.js'
 
@@ -88,6 +89,20 @@ export function registerSocialRoutes(app: FastifyInstance, ctx: AppContext): voi
   app.post('/api/market/buy', write, async (req) => {
     const { listingId } = z.object({ listingId: z.string().uuid() }).parse(req.body)
     const result = social.buyListing(ctx, req.trainer!, listingId)
+    return { ...result, market: social.marketOverview(ctx, findById(ctx.db, req.trainer!.id)!) }
+  })
+
+  /*
+   * Kaufen im Verbund.
+   *
+   * Eigene Route und nicht dieselbe wie oben: der oertliche Kauf ist in einem
+   * Zug erledigt, dieser dauert. Er nimmt das Gold sofort und meldet einen
+   * Vorgang zurueck, dessen Ausgang erst der Abgleich bringt — das ist ein
+   * anderes Versprechen an den Aufrufer, und es soll auch anders heissen.
+   */
+  app.post('/api/market/buy-remote', write, async (req) => {
+    const { listingId } = z.object({ listingId: z.string() }).parse(req.body)
+    const result = await hubMarket.buyRemote(ctx, req.trainer!, listingId)
     return { ...result, market: social.marketOverview(ctx, findById(ctx.db, req.trainer!.id)!) }
   })
 

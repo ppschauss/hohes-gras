@@ -428,6 +428,12 @@ export const api = {
   buyListing: (listingId: string) =>
     request<{ paid: number; market: MarketOverview }>('/api/market/buy', { method: 'POST', body: JSON.stringify({ listingId }) }),
 
+  /** Kaufen im Verbund: nimmt das Gold sofort, liefert im Hintergrund. */
+  buyRemote: (listingId: string) =>
+    request<{ orderId: string; price: number; market: MarketOverview }>(
+      '/api/market/buy-remote', { method: 'POST', body: JSON.stringify({ listingId }) },
+    ),
+
   trades: () => request<TradeOverview>('/api/trades'),
   offerTrade: (toTrainerId: string, offeredId: string, requestedId: string | null, message: string) =>
     request<TradeOverview>('/api/trades/offer', {

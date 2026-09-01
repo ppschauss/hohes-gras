@@ -58,6 +58,24 @@ export const CHAT_MAX_LENGTH = 400
 /** Wie viele Nachrichten eine Instanz je Fenster schicken darf. */
 export const CHAT_PER_INSTANCE_PER_WINDOW = 60
 export const CHAT_WINDOW_MS = 60_000
+
+/**
+ * Wie gross ein verwahrtes Pokemon sein darf.
+ *
+ * Grosszuegig gegenueber allem, was die Engine erzeugt, und eng genug, dass
+ * niemand den Verbund als Ablage benutzt. Er verwahrt Pokemon, nicht Dateien.
+ */
+export const CREATURE_MAX = 8_000
+
+/**
+ * Wie lange eine Bestellung liegenbleiben darf, bevor sie verfaellt.
+ *
+ * Bezahlt ist bezahlt, und Gold, das unbegrenzt in einem Vorgang liegt, den
+ * niemand mehr anfasst, ist verloren. Eine Instanz, die zwei Stunden nicht
+ * geliefert hat, ist entweder aus oder kaputt — in beiden Faellen soll der
+ * Kaeufer sein Gold wiedersehen.
+ */
+export const ORDER_TIMEOUT_MS = 2 * 60 * 60_000
 /** Wie viele auf einmal ausgeliefert werden. */
 export const CHAT_PAGE = 50
 
@@ -385,6 +403,123 @@ export function createHub(config: HubConfig) {
     if (req.method === 'GET' && req.path === '/market') {
       const rows = await store.openMarket(MARKET_PAGE)
       return { status: 200, body: { rows } }
+    }
+
+    /* ---------------------------------------------------------- Treuhand */
+    /*
+     * Kaufen ueber Instanzgrenzen.
+     *
+     * Das Gold liegt in der einen Datenbank, das Pokemon in der anderen, und
+     * keine sieht die andere. Ein Kauf in einem Zug ist damit unmoeglich —
+     * also wird er in drei zerlegt, und der Verbund haelt dazwischen fest,
+     * wie weit er ist. Er verwahrt das Pokemon genau so lange, wie es weder
+     * hier noch dort ist; das ist die Treuhand.
+     *
+     * Der Verbund entscheidet nichts. Er sagt nur, in welchem Zustand ein
+     * Vorgang ist, und laesst jeden Uebergang genau einmal zu. Wer schummeln
+     * will, muesste die eigene Instanz belogen haben — und die gehoert ihm
+     * ohnehin. Was der Verbund verhindert, ist etwas anderes: dass eine Seite
+     * zahlt und die andere nicht liefert.
+     */
+    if (req.method === 'POST' && req.path === '/market/buy') {
+      const { listingId, buyerTrainerId } = body as { listingId?: unknown; buyerTrainerId?: unknown }
+      if (typeof listingId !== 'string' || !listingId) return bad(400, 'validation_failed', { field: 'listingId' })
+      if (typeof buyerTrainerId !== 'string' || !buyerTrainerId) return bad(400, 'validation_failed', { field: 'buyerTrainerId' })
+
+      const angebot = (await store.openMarket(MARKET_PAGE)).find((m) => m.id === listingId)
+      if (!angebot) return bad(404, 'not_found', { listingId })
+      // Die eigene Ware zu kaufen ergaebe nur Gebuehren.
+      if (angebot.instanceId === instance.id) return bad(400, 'validation_failed', { reason: 'own_instance' })
+
+      const vorgang = await store.createOrder({
+        id: `${listingId}-${now()}`,
+        listingId,
+        sellerInstanceId: angebot.instanceId,
+        sellerTrainerId: angebot.trainerId,
+        buyerInstanceId: instance.id,
+        buyerTrainerId,
+        price: angebot.price,
+        status: 'reserved',
+        creature: null,
+        reason: null,
+        createdAt: now(),
+        updatedAt: now(),
+      })
+      // Kein Fehler des Kaeufers, sondern ein Wettlauf, den er verloren hat.
+      if (!vorgang) return bad(409, 'already_reserved', { listingId })
+      return { status: 200, body: { order: vorgang } }
+    }
+
+    /* Alles, was diese Instanz angeht — beide Rollen in einer Antwort. */
+    if (req.method === 'GET' && req.path === '/market/orders') {
+      /*
+       * Beim Nachfragen aufraeumen.
+       *
+       * Der Verbund hat keine Uhr, die von selbst laeuft — er ist ein Worker
+       * und wacht nur auf, wenn jemand klopft. Also verfaellt hier, was zu
+       * lange liegt: jede Instanz fragt regelmaessig nach, und damit laeuft
+       * der Kehrbesen oft genug. Der Kaeufer bekommt sein Gold zurueck, wenn
+       * er das naechste Mal hinsieht.
+       */
+      for (const alt of await store.staleOrders('reserved', now() - ORDER_TIMEOUT_MS)) {
+        await store.advanceOrder(alt.id, 'reserved', 'aborted', { reason: 'zeit_abgelaufen' }, now())
+      }
+      return { status: 200, body: { orders: await store.ordersFor(instance.id) } }
+    }
+
+    if (req.method === 'POST' && req.path === '/market/deliver') {
+      const { orderId, creature } = body as { orderId?: unknown; creature?: unknown }
+      if (typeof orderId !== 'string') return bad(400, 'validation_failed', { field: 'orderId' })
+      if (typeof creature !== 'string' || !creature) return bad(400, 'validation_failed', { field: 'creature' })
+      if (creature.length > CREATURE_MAX) return bad(400, 'validation_failed', { field: 'creature', max: CREATURE_MAX })
+
+      const o = await store.getOrder(orderId)
+      if (!o) return bad(404, 'not_found', { orderId })
+      // Nur die Heimatinstanz kann liefern — sonst koennte jede Instanz
+      // behaupten, ein fremdes Pokemon herausgegeben zu haben.
+      if (o.sellerInstanceId !== instance.id) return bad(403, 'forbidden', { orderId })
+
+      const ok = await store.advanceOrder(orderId, 'reserved', 'delivered', { creature }, now())
+      return ok
+        ? { status: 200, body: { ok: true } }
+        : bad(409, 'wrong_state', { orderId, status: (await store.getOrder(orderId))?.status })
+    }
+
+    if (req.method === 'POST' && req.path === '/market/collect') {
+      const { orderId } = body as { orderId?: unknown }
+      if (typeof orderId !== 'string') return bad(400, 'validation_failed', { field: 'orderId' })
+
+      const o = await store.getOrder(orderId)
+      if (!o) return bad(404, 'not_found', { orderId })
+      if (o.buyerInstanceId !== instance.id) return bad(403, 'forbidden', { orderId })
+      /*
+       * Erst herausgeben, dann abhaken.
+       *
+       * Umgekehrt waere der schlimmere Ausgang: bricht die Leitung nach dem
+       * Abhaken, waere das Pokemon fort und niemand haette es. So kann es im
+       * schlechtesten Fall zweimal geholt werden — und das faellt beim
+       * Kaeufer auf, der den Vorgang bereits als erledigt fuehrt.
+       */
+      if (o.status === 'delivered') {
+        const ok = await store.advanceOrder(orderId, 'delivered', 'collected', {}, now())
+        if (!ok) return bad(409, 'wrong_state', { orderId })
+        return { status: 200, body: { creature: o.creature } }
+      }
+      return bad(409, 'wrong_state', { orderId, status: o.status })
+    }
+
+    if (req.method === 'POST' && req.path === '/market/abort') {
+      const { orderId, reason } = body as { orderId?: unknown; reason?: unknown }
+      if (typeof orderId !== 'string') return bad(400, 'validation_failed', { field: 'orderId' })
+
+      const o = await store.getOrder(orderId)
+      if (!o) return bad(404, 'not_found', { orderId })
+      // Abbrechen darf die Verkaeuferseite — sie ist die einzige, die merken
+      // kann, dass sie nicht liefern kann.
+      if (o.sellerInstanceId !== instance.id) return bad(403, 'forbidden', { orderId })
+      const grund = typeof reason === 'string' ? reason.slice(0, 120) : 'unbekannt'
+      const ok = await store.advanceOrder(orderId, 'reserved', 'aborted', { reason: grund }, now())
+      return ok ? { status: 200, body: { ok: true } } : bad(409, 'wrong_state', { orderId })
     }
 
     if (req.method === 'GET' && req.path === '/leaderboard') {
