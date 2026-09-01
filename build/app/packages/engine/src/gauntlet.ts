@@ -179,10 +179,20 @@ export function gauntletIv(streak: number): number {
  * Was eine Serie an Gold einbringt, ohne die Stufen.
  *
  * Je Sieg und mit der Serie wachsend, damit auch die Kämpfe zwischen zwei
- * Stufen etwas wert sind.
+ * Stufen etwas wert sind — aber nur bis zur letzten Stufe.
+ *
+ * Ohne die Deckelung wuchs der Wert je Sieg unbegrenzt: bei einer gemessenen
+ * Serie von 267 waren das 1.098 Gold je Kampf und rund 150.000 in einem
+ * einzigen Lauf. Die Kampfzone war damit die einzige Goldquelle ohne jede
+ * Bremse — die Tagesgrenze je Gegner greift hier nicht, weil jeder Kampf
+ * einen neuen Kunstgegner stellt und deshalb als Erstsieg zaehlt.
+ *
+ * Gedeckelt wird dort, wo auch die Stufenpraemien enden. Hundert ist die
+ * Zahl, die zaehlt; alles darueber ist Ausdauer, und die zahlt das Spiel in
+ * Ruhm und Werkstoffen, nicht in immer mehr Gold.
  */
 export function gauntletGoldPerWin(streak: number): number {
-  return 30 + streak * 4
+  return 30 + Math.min(Math.max(0, streak), GAUNTLET_MAX_MILESTONE) * 4
 }
 
 

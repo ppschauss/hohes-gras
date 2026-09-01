@@ -46,6 +46,16 @@ describe('Kampfzone', () => {
 
   it('zahlt je Sieg mehr, je laenger die Serie', () => {
     expect(gauntletGoldPerWin(0)).toBeLessThan(gauntletGoldPerWin(50))
+    /*
+     * Und ab der letzten Stufe nicht weiter.
+     *
+     * Ohne Deckel wuchs der Wert je Sieg unbegrenzt: bei einer gemessenen
+     * Serie von 267 waren das 1.098 Gold je Kampf. Die Tagesgrenze je Gegner
+     * greift hier nicht — jeder Kampf stellt einen neuen Kunstgegner —, also
+     * war die Kampfzone die einzige Goldquelle ohne jede Bremse.
+     */
+    expect(gauntletGoldPerWin(100)).toBe(gauntletGoldPerWin(267))
+    expect(gauntletGoldPerWin(267)).toBe(430)
   })
 
   describe('Stufen', () => {

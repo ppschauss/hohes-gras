@@ -22,6 +22,7 @@ export const CHANGELOG: ChangeEntry[] = [
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [
+      'Kampfzone: das Gold je Sieg wächst nur noch bis Serie 100. Darüber war es unbegrenzt — bei Serie 267 waren das 1.098 Gold pro Kampf und 150.000 in einem Lauf, ohne jede Tagesgrenze. Unter Serie 100 ändert sich nichts.',
       'Verbund: fremde Angebote lassen sich jetzt kaufen. Das Gold geht sofort weg, das Pokémon kommt in den nächsten Minuten — es muss erst von seiner Heimatinstanz herübergegeben werden. Klappt etwas nicht, kommt das Gold von selbst zurück.',
       'Für Betreiber: jede Zuwendung — Pokémon, Gegenstand, Gold — wird jetzt mit Kennung, Quelle und Git-Stand belegt. Damit lässt sich ein Fehler zurücknehmen, statt ihn nur zu bedauern.',
       'Nur noch ein Legendäres kämpft mit. Sind mehrere im Team, tritt das schwächste an — die übrigen sehen zu und stehen im Garten mit „sieht zu“ da. Die Gegner richten sich weiter nach dem Durchschnitt des ganzen Teams: Stapeln macht den Kampf schwerer und die eigene Mannschaft kleiner.',
