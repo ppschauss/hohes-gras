@@ -49,6 +49,14 @@ export interface Recipe {
    * gesperrt wird nur, was ohnehin ein Labor verlangte, und was neu dazukommt.
    */
   research?: string
+  /**
+   * Welche Stufe des Projekts noetig ist. Ohne Eintrag genuegt Stufe 1.
+   *
+   * Duenger wird in drei Stufen erforscht, und jede Stufe soll genau einen
+   * Duenger freischalten. Ohne dieses Feld haette die erste Stufe alle drei
+   * geoeffnet, und die beiden weiteren waeren reine Goldsenken gewesen.
+   */
+  researchTier?: number
 }
 
 export const RECIPES: Recipe[] = [
@@ -129,6 +137,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: 'craft-fertiliser-2', research: 'res-fertiliser',
+    researchTier: 2,
     output: { itemId: 'fertiliser-2', quantity: 2 },
     inputs: [
       { itemId: 'razz-berry', quantity: 12 },
@@ -140,6 +149,7 @@ export const RECIPES: Recipe[] = [
   },
   {
     id: 'craft-fertiliser-3', research: 'res-fertiliser',
+    researchTier: 3,
     output: { itemId: 'fertiliser-3', quantity: 1 },
     inputs: [
       { itemId: 'golden-razz', quantity: 6 },
@@ -434,7 +444,8 @@ export const findRecipe = (id: string): Recipe | undefined => RECIPES.find((r) =
 export type CraftCheck =
   | { ok: true }
   | { ok: false; reason: 'unknown_recipe' }
-  | { ok: false; reason: 'missing_research'; projectId: string }
+  | { ok: false; reason: 'missing_research'; projectId: string; tier: number }
+  | { ok: false; reason: 'research_tier'; projectId: string; tier: number; have: number }
   | { ok: false; reason: 'missing_building'; buildingId: string; level: number }
   | { ok: false; reason: 'missing_items'; itemId: string; need: number; have: number }
   | { ok: false; reason: 'insufficient_gold'; need: number }
@@ -470,15 +481,25 @@ export function canCraft(
   bag: Record<string, number>,
   gold: number,
   buildings: Array<{ buildingId: string; level: number }>,
-  /** Abgeschlossene Forschungsprojekte. Leer heisst: nichts erforscht. */
-  researched: ReadonlySet<string> = new Set(),
+  /** Abgeschlossene Forschung als Projekt -> hoechste erreichte Stufe. Leer heisst: nichts erforscht. */
+  researched: ReadonlyMap<string, number> = new Map(),
   /** Welche Menge geprüft wird; ohne Angabe die kleinste. */
   batch: RecipeBatch = batchesOf(recipe)[0]!,
 ): CraftCheck {
   // Die Forschung steht vor dem Gebaeude: wer das Labor hat, aber die
   // Erkenntnis nicht, soll das auch als Grund genannt bekommen.
-  if (recipe.research && !researched.has(recipe.research)) {
-    return { ok: false, reason: 'missing_research', projectId: recipe.research }
+  if (recipe.research) {
+    const noetig = recipe.researchTier ?? 1
+    const haben = researched.get(recipe.research) ?? 0
+    // Zwei verschiedene Lagen, zwei verschiedene Saetze: wer nichts erforscht
+    // hat, muss ins Labor; wer Stufe 1 hat und Stufe 2 braucht, wuerde sich
+    // ueber "Erst erforschen" wundern, weil das Projekt dort abgehakt ist.
+    if (haben === 0) {
+      return { ok: false, reason: 'missing_research', projectId: recipe.research, tier: noetig }
+    }
+    if (haben < noetig) {
+      return { ok: false, reason: 'research_tier', projectId: recipe.research, tier: noetig, have: haben }
+    }
   }
   if (recipe.requiresBuilding) {
     const have = buildings.find((b) => b.buildingId === recipe.requiresBuilding!.buildingId)

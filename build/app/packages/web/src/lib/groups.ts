@@ -54,12 +54,15 @@ const ZUORDNUNG: Record<string, ResearchCenter> = {
   'res-bait': 'catching',
 
   'res-find': 'field',
+  'res-fertiliser': 'field',
   'res-detector': 'field',
   'res-expedition': 'field',
 
   'res-battle-xp': 'battle',
   'res-battle-gold': 'battle',
   'res-training': 'battle',
+  'res-vitamins': 'battle',
+  'res-bottle-cap': 'battle',
   'res-rare-candy': 'battle',
   'res-exp-candy': 'battle',
 

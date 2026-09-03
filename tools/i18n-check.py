@@ -134,6 +134,9 @@ AUFZAEHLUNGEN = [
     ('terrain.', 'build/app/packages/engine/src/battle-types.ts', None, ''),
     ('log.field.', 'build/app/packages/engine/src/battle-types.ts', None, '.on'),
     ('log.field.', 'build/app/packages/engine/src/battle-types.ts', None, '.off'),
+    # Warum ein Rezept nicht geht, steht auf dem Knopf. Fehlt der Text, steht
+    # dort der rohe Schluessel — genau so gemeldet, zweimal.
+    ('craft.blocked.', 'build/app/packages/engine/src/crafting.ts', r"reason: '(\w+)'", ''),
 ]
 
 luecken = []

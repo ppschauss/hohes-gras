@@ -39,9 +39,14 @@ export function doneOf(ctx: AppContext, trainerId: string): Map<string, number> 
   return researchRepo.doneOf(ctx.db, trainerId)
 }
 
-/** Welche Rezepte freigeschaltet sind — die Menge, die `canCraft` erwartet. */
-export function unlockedRecipes(ctx: AppContext, trainerId: string): Set<string> {
-  return new Set(doneOf(ctx, trainerId).keys())
+/**
+ * Welche Rezepte freigeschaltet sind — die Tabelle, die `canCraft` erwartet.
+ *
+ * Projekt-Id auf hoechste erreichte Stufe, nicht nur die blosse Menge: der
+ * Duenger wird in drei Stufen erforscht und jede oeffnet genau ein Rezept.
+ */
+export function unlockedRecipes(ctx: AppContext, trainerId: string): Map<string, number> {
+  return doneOf(ctx, trainerId)
 }
 
 /**

@@ -38,7 +38,20 @@ export function CraftingPanel() {
   const [made, setMade] = useState<string | null>(null)
   /** Je Rezept die gewählte Menge. Ohne Eintrag gilt die kleinste. */
   const [picked, setPicked] = useState<Record<string, number>>({})
-  const [filter, setFilter] = useState<Filter>('ready')
+  /*
+   * Die Werkstatt oeffnet mit allem, nicht nur mit dem, was gerade geht.
+   *
+   * "Jetzt moeglich" war die Vorgabe, und damit war jedes gesperrte Rezept
+   * unsichtbar — auch die, die man erst *erforschen* muss. Wer nicht weiss,
+   * dass es einen Duenger gibt, forscht ihn auch nicht. Gemeldet als "ich
+   * sehe keinen Duenger bei der Herstellung": er stand da, nur hinter einem
+   * Filter, den niemand angefasst hat.
+   *
+   * Ein gesperrtes Rezept ist ein Ziel. Ziele zu verstecken ist das Gegenteil
+   * dessen, wofuer es eine Werkstatt gibt. Der Filter bleibt fuer den, der
+   * sich auf das Machbare beschraenken will.
+   */
+  const [filter, setFilter] = useState<Filter>('all')
 
   const batchOf = (r: Recipe) =>
     r.batches.find((b) => b.count === picked[r.id]) ?? r.batches[0]!

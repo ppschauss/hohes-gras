@@ -51,6 +51,11 @@ export const SVG_ICONS = new Set([
   // die im Spiel wirklich zu sehen waren: im Laden trugen alle sechs
   // dasselbe Ersatzsymbol und sahen damit identisch aus.
   'bg-classic', 'bg-beach', 'bg-forest', 'bg-dojo', 'bg-moonlight', 'bg-space',
+  // Die sechs Vitamine, der Kronkorken und die drei Duenger. Ohne Eintrag hier
+  // schriebe der Generator `.png` und das Pack zeigte fuer alle zehn das
+  // Ersatzsymbol — die gezeichneten Bilder liegen als SVG vor.
+  'hp-up', 'protein', 'iron', 'calcium', 'zinc', 'carbos',
+  'bottle-cap', 'fertiliser-1', 'fertiliser-2', 'fertiliser-3',
 ])
 
 export const AUTHORED: Authored[] = [
