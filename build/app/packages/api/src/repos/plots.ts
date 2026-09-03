@@ -12,13 +12,15 @@ export interface PlotRow {
   readyAt: number
   phasesDone: number
   tenderId: string | null
+  /** Der beim Pflanzen eingesetzte Duenger; null, wenn ohne. */
+  fertiliserId: string | null
   harvestedAt: number | null
 }
 
 interface Raw {
   id: string; trainer_id: string; slot: number; stake_kind: string; item_id: string | null
   amount: number; planted_at: number; ready_at: number; phases_done: number
-  tender_id: string | null; harvested_at: number | null
+  tender_id: string | null; fertiliser_id: string | null; harvested_at: number | null
 }
 
 const toPlot = (r: Raw): PlotRow => ({
@@ -26,7 +28,7 @@ const toPlot = (r: Raw): PlotRow => ({
   stakeKind: r.stake_kind === 'gold' ? 'gold' : 'item',
   itemId: r.item_id, amount: r.amount,
   plantedAt: r.planted_at, readyAt: r.ready_at, phasesDone: r.phases_done,
-  tenderId: r.tender_id, harvestedAt: r.harvested_at,
+  tenderId: r.tender_id, fertiliserId: r.fertiliser_id, harvestedAt: r.harvested_at,
 })
 
 export function openOf(db: Db, trainerId: string): PlotRow[] {
@@ -47,10 +49,10 @@ export function create(db: Db, input: Omit<PlotRow, 'id' | 'harvestedAt' | 'phas
   const id = newId()
   db.prepare(
     `INSERT INTO garden_plots (id, trainer_id, slot, stake_kind, item_id, amount,
-                               planted_at, ready_at, tender_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                               planted_at, ready_at, tender_id, fertiliser_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(id, input.trainerId, input.slot, input.stakeKind, input.itemId, input.amount,
-    input.plantedAt, input.readyAt, input.tenderId)
+    input.plantedAt, input.readyAt, input.tenderId, input.fertiliserId)
   return atSlot(db, input.trainerId, input.slot)!
 }
 

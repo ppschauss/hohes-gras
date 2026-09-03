@@ -35,6 +35,8 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
   /** Welche Art gerade offen ist. Der erste vorhandene Reiter ist die Vorgabe. */
   const [tab, setTab] = useState<string>('ball')
   const [target, setTarget] = useState<BagItem | null>(null)
+  /** Zweiter Schritt bei Fleissbeere und Serum: welcher Wert. */
+  const [statFor, setStatFor] = useState<{ item: BagItem; creatureId: string } | null>(null)
   const [used, setUsed] = useState<string | null>(null)
   const box = useAsync(() => api.box(), [])
   /*
@@ -56,14 +58,30 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
     })
   }
 
-  const useOn = (item: BagItem, creatureId: string) => {
+  /*
+   * Zwei Gegenstaende wirken auf *einen* Wert, nicht auf das Pokemon als
+   * Ganzes: die Fleissbeere und das Erbgut-Serum. Bei ihnen kommt nach der
+   * Wahl des Pokemon eine zweite Frage — welcher Wert. Ein Mittel dieses
+   * Preises, das selbst waehlt, waere eine Zumutung.
+   */
+  // Nur der Kronkorken fragt noch. Die sechs Vitamine bringen ihren Wert
+  // selbst mit — ein Protein *ist* Angriff.
+  const brauchtWert = (item: BagItem) => item.id === 'bottle-cap'
+
+  const useOn = (item: BagItem, creatureId: string, stat?: string) => {
     haptic.tap()
-    void action.run(() => api.useItem(item.id, creatureId), (res) => {
+    if (brauchtWert(item) && !stat) { setStatFor({ item, creatureId }); return }
+    void action.run(() => api.useItem(item.id, creatureId, stat), (res) => {
       const r = res.result
-      setTarget(null)
-      setUsed(r.kind === 'xp'
-        ? t('bag.used.xp', { name: r.creatureName ?? '', n: r.xpGained ?? 0 })
-        : t('bag.used.heal', { name: r.creatureName ?? '', item: r.itemName }))
+      setTarget(null); setStatFor(null)
+      setUsed(
+        r.kind === 'xp' ? t('bag.used.xp', { name: r.creatureName ?? '', n: r.xpGained ?? 0 })
+        : r.kind === 'ev' ? t('item.ev.done', {
+            name: r.creatureName ?? '', stat: t(`stat.${r.stat}`), n: r.statValue ?? 0 })
+        : r.kind === 'iv' ? t('item.iv.done', {
+            name: r.creatureName ?? '', stat: t(`stat.${r.stat}`) })
+        : t('bag.used.heal', { name: r.creatureName ?? '', item: r.itemName }),
+      )
       bag.reload(); box.reload(); garden.reload(); haptic.success()
     })
   }
@@ -122,6 +140,35 @@ export function BagScreen({ onBack }: { onBack: () => void }) {
           * ueberdeckt die Seite, liegt am unteren Rand beim Daumen und bringt
           * seinen eigenen Bildlauf mit.
           */}
+        {/*
+          * Zweiter Schritt: welcher Wert.
+          *
+          * Ein eigenes Blatt statt einer Liste im ersten — sonst muesste man
+          * beim Aussuchen des Pokemon schon wissen, welchen Wert man meint,
+          * und ein Fehlgriff kostet den teuersten Gegenstand im Spiel.
+          */}
+        {statFor && (
+          <div className="sheet" role="dialog" aria-modal="true" aria-label={t('item.stat.pick')}>
+            <button type="button" className="sheet__scrim" aria-label={t('app.back')}
+              onClick={() => setStatFor(null)} />
+            <section className="sheet__panel">
+              <h2 className="sheet__title">{t('item.stat.pick')}</h2>
+              <div className="sheet__body">
+                <div className="switchList">
+                  {(['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const).map((w) => (
+                    <button key={w} type="button" className="switchRow" disabled={action.busy}
+                      onClick={() => useOn(statFor.item, statFor.creatureId, w)}>
+                      <span className="switchRow__text">
+                        <span className="switchRow__name">{t(`stat.${w}`)}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
         {target && (
           <div className="sheet" role="dialog" aria-modal="true" aria-label={t('bag.target', { item: target.name })}>
             <button type="button" className="sheet__scrim" aria-label={t('app.back')}

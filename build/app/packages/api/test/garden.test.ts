@@ -248,6 +248,31 @@ describe('Shop', () => {
     expect(balls.items[0].owned).toBe(10)
   })
 
+  it('fuehrt den Duenger der ersten Stufe als Packung', async () => {
+    /*
+     * Die einzige Ausnahme von "Werkstoffe werden gefunden, nicht gekauft":
+     * der Duenger ist kein Fundstueck, sondern ein Verbrauchsgut fuer die
+     * Beete — und er gibt Gold ein laufendes Ziel. Die beiden hoeheren Stufen
+     * bleiben ohne Preis und tauchen deshalb gar nicht auf.
+     */
+    const r = await h.get('/api/shop', token)
+    const werkstoffe = r.body.sections.find((s: any) => s.category === 'material')
+    expect(werkstoffe.items.map((i: any) => i.id)).toEqual(['fertiliser-1'])
+    expect(werkstoffe.items[0].price).toBe(50000)
+  })
+
+  it('legt beim Kauf zehn Duenger in den Beutel, nicht einen', async () => {
+    const trainerId = (h.ctx.db.prepare('SELECT id FROM trainers LIMIT 1').get() as { id: string }).id
+    h.ctx.db.prepare('UPDATE trainers SET gold = 120000 WHERE id = ?').run(trainerId)
+    h.resetRateLimits()
+    const r = await h.post('/api/shop/buy', { itemId: 'fertiliser-1', quantity: 1 }, token)
+
+    expect(r.status).toBe(200)
+    expect(r.body.gold).toBe(120000 - 50000)
+    expect((h.ctx.db.prepare('SELECT quantity AS q FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, 'fertiliser-1') as { q: number }).q).toBe(10)
+  })
+
   it('kauft und zieht Gold ab', async () => {
     const r = await h.post('/api/shop/buy', { itemId: 'poke-ball', quantity: 3 }, token)
     expect(r.status).toBe(200)

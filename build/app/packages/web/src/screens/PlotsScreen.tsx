@@ -94,7 +94,10 @@ interface CardProps {
   plot: PlotView
   data: PlotsState
   busy: boolean
-  onPlant: (body: { slot: number; kind: 'item' | 'gold'; itemId?: string; amount: number; tenderId?: string | null }) => void
+  onPlant: (body: {
+    slot: number; kind: 'item' | 'gold'; itemId?: string; amount: number
+    tenderId?: string | null; fertiliserId?: string | null
+  }) => void
   onTend: () => void
   onHarvest: () => void
   onTender: (tenderId: string | null) => void
@@ -118,6 +121,13 @@ function PlotCard({ plot, data, busy, onPlant, onTend, onHarvest, onTender }: Ca
           <span className="plot__name">{format(plot.stake.amount)}× {plot.stake.name}</span>
         </span>
         <span className="tag tag--count">+{plot.bonusPercent} %</span>
+        {/* Warum der Aufschlag so hoch ist, soll man sehen — sonst wirkt die
+            Zahl willkuerlich. */}
+        {plot.fertiliser && (
+          <span className="tag" title={t('plots.fertiliser.hint', { n: plot.fertiliser.percent })}>
+            {plot.fertiliser.name}
+          </span>
+        )}
       </header>
 
       <div className="plot__bar" aria-hidden="true">
@@ -179,6 +189,9 @@ function EmptyPlot({ plot, data, busy, onPlant }: Omit<CardProps, 'onTend' | 'on
   const [open, setOpen] = useState(false)
   const [kind, setKind] = useState<'item' | 'gold'>('item')
   const [itemId, setItemId] = useState(data.plantable[0]?.itemId ?? '')
+  const [duenger, setDuenger] = useState('')
+  // Nur zeigen, was man wirklich hat — eine Stufe ohne Bestand ist keine Wahl.
+  const vorrat = data.fertilisers.filter((f) => f.owned > 0)
 
   const chosen = data.plantable.find((p) => p.itemId === itemId)
   const max = kind === 'gold' ? Math.min(data.maxGold, data.gold) : Math.min(data.maxItems, chosen?.have ?? 0)
@@ -266,12 +279,29 @@ function EmptyPlot({ plot, data, busy, onPlant }: Omit<CardProps, 'onTend' | 'on
         />
       </label>
 
+      {vorrat.length > 0 && (
+        <label className="field field--text">
+          <span className="field__label">{t('plots.fertiliser')}</span>
+          <select value={duenger} onChange={(e) => setDuenger(e.target.value)}>
+            <option value="">{t('plots.fertiliser.none')}</option>
+            {vorrat.map((f) => (
+              <option key={f.itemId} value={f.itemId}>
+                {f.name} · +{f.percent} % ({f.owned})
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <button
         type="button"
         className="btn btn--primary btn--block"
         disabled={busy || !valid || max < 1}
         onClick={() => {
-          onPlant({ slot: plot.slot, kind, itemId: kind === 'item' ? itemId : undefined, amount })
+          onPlant({
+            slot: plot.slot, kind, itemId: kind === 'item' ? itemId : undefined, amount,
+            fertiliserId: duenger || null,
+          })
           setOpen(false)
         }}
       >

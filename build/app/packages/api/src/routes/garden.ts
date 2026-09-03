@@ -105,11 +105,14 @@ export function registerGardenRoutes(app: FastifyInstance, ctx: AppContext): voi
   })
 
   app.post('/api/items/use', write, async (req) => {
-    const { itemId, creatureId } = z.object({
+    const { itemId, creatureId, stat } = z.object({
       itemId: z.string().min(1).max(64),
       creatureId: z.string().uuid().optional(),
+      // Fleissbeere und Erbgut-Serum wirken auf genau einen Wert; welchen,
+      // sagt der Spieler.
+      stat: z.string().min(2).max(4).optional(),
     }).parse(req.body)
-    const result = useItem(ctx, req.trainer!, itemId, creatureId)
+    const result = useItem(ctx, req.trainer!, itemId, creatureId, stat)
     return withEnergy(ctx, req.trainer!.id, { result })
   })
 

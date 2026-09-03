@@ -75,3 +75,87 @@ describe('Gegenstände aus dem Beutel', () => {
     expect(r.body.detail.reason).toBe('battle_in_progress')
   })
 })
+
+describe('Vitamine, Kronkorken und Sonderbonbon', () => {
+  const gib = (itemId: string, n: number) =>
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)')
+      .run(trainerId, itemId, n)
+  const feld = (spalte: string) => (h.ctx.db.prepare(`SELECT ${spalte} AS v FROM creatures WHERE id = ?`)
+    .get(starterId) as { v: number }).v
+
+  it('bringt sein Vitamin den eigenen Wert mit — ohne Nachfrage', async () => {
+    /*
+     * Ein Protein *ist* Angriff. Hier stand zuerst eine erfundene Beere mit
+     * einer Wertwahl; die Vorlage kennt dafuer sechs eigene Gegenstaende, und
+     * damit entfaellt die Frage.
+     */
+    gib('protein', 1)
+    h.resetRateLimits()
+    const r = await h.post('/api/items/use', { itemId: 'protein', creatureId: starterId }, token)
+
+    expect(r.status).toBe(200)
+    expect(r.body.result).toMatchObject({ kind: 'ev', stat: 'atk', statValue: 32 })
+    expect(feld('ev_atk')).toBe(32)
+    expect(feld('ev_spe')).toBe(0)
+  })
+
+  it('trifft jedes Vitamin seinen eigenen Wert', async () => {
+    gib('carbos', 1)
+    h.resetRateLimits()
+    await h.post('/api/items/use', { itemId: 'carbos', creatureId: starterId }, token)
+    expect(feld('ev_spe')).toBe(32)
+    expect(feld('ev_atk')).toBe(0)
+  })
+
+  it('laesst den Kronkorken den Wert waehlen', async () => {
+    h.ctx.db.prepare('UPDATE creatures SET iv_def = 4 WHERE id = ?').run(starterId)
+    gib('bottle-cap', 1)
+    h.resetRateLimits()
+    const r = await h.post('/api/items/use',
+      { itemId: 'bottle-cap', creatureId: starterId, stat: 'def' }, token)
+
+    expect(r.status).toBe(200)
+    expect(r.body.result).toMatchObject({ kind: 'iv', stat: 'def', statValue: 31 })
+    expect(feld('iv_def')).toBe(31)
+  })
+
+  it('verweigert einen Wert, der schon vollkommen ist', async () => {
+    // Sonst waere der teuerste Gegenstand im Spiel mit einem Fehlgriff weg.
+    h.ctx.db.prepare('UPDATE creatures SET iv_def = 31 WHERE id = ?').run(starterId)
+    gib('bottle-cap', 1)
+    h.resetRateLimits()
+    const r = await h.post('/api/items/use',
+      { itemId: 'bottle-cap', creatureId: starterId, stat: 'def' }, token)
+
+    expect(r.status).toBe(409)
+    expect(r.body.detail.reason).toBe('already_perfect')
+    expect((h.ctx.db.prepare('SELECT quantity AS q FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, 'bottle-cap') as { q: number }).q).toBe(1)
+  })
+
+  it('hebt das Sonderbonbon um genau ein Level', async () => {
+    /*
+     * Es gab fuenfzig Erfahrungspunkte. Bei Level 39 kostet ein Aufstieg
+     * 4.681, bei Level 100 gut 30.000 — der Gegenstand tat also ein
+     * Achtzigstel dessen, was sein Name verspricht.
+     */
+    h.ctx.db.prepare('UPDATE creatures SET level = 20, xp = 8000 WHERE id = ?').run(starterId)
+    gib('rare-candy', 1)
+    h.resetRateLimits()
+    const r = await h.post('/api/items/use', { itemId: 'rare-candy', creatureId: starterId }, token)
+
+    expect(r.status).toBe(200)
+    expect(r.body.result.leveledUp).toBe(true)
+    expect(feld('level')).toBe(21)
+  })
+
+  it('wirkt das Bonbon auf jeder Stufe gleich', async () => {
+    // Der eigentliche Punkt: "ein Level" muss auf Stufe 60 dasselbe heissen
+    // wie auf Stufe 20, und dafuer wird die Luecke gerechnet, kein Betrag.
+    h.ctx.db.prepare('UPDATE creatures SET level = 60, xp = 216000 WHERE id = ?').run(starterId)
+    gib('rare-candy', 1)
+    h.resetRateLimits()
+    await h.post('/api/items/use', { itemId: 'rare-candy', creatureId: starterId }, token)
+    expect(feld('level')).toBe(61)
+  })
+})

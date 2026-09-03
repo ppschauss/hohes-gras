@@ -198,6 +198,61 @@ export const AUTHORED: Authored[] = [
    */
   { id: 'legendary-berry', category: 'berry', price: null, sellPrice: null, params: { legendaryBonus: 0.25 },
     name: 'Sagenbeere', description: 'Uralt und bitter. Nur sie beeindruckt ein Legendäres — höchstens drei auf einmal.' },
+  /*
+   * Pharmazie: Duenger, Fleissbeere, IV-Mittel.
+   *
+   * Nicht kaeuflich — sie sind der Ertrag einer Kette aus Forschung, Beet und
+   * Werkstatt. Waeren sie im Laden, waere die Kette Zierde und Gold der
+   * einzige Weg. Verkaufen laesst sich nur der Duenger, und auch der schlecht:
+   * er soll auf dem Beet landen, nicht im Handel.
+   */
+  /*
+   * Die Grundstufe gibt es auch zu kaufen — zehn Stueck fuer 50.000 Gold.
+   *
+   * `packSize`: der Preis gilt fuer die Packung, im Beutel liegen zehn. Damit
+   * hat Gold endlich ein laufendes Ziel, und der Einstieg ins Duengen haengt
+   * nicht am Sternenstaub. Die beiden hoeheren Stufen bleiben ausserhalb des
+   * Ladens: sie sollen die Kette belohnen, nicht den Kontostand.
+   */
+  { id: 'fertiliser-1', category: 'material', price: 50000, sellPrice: 120, params: { fertiliser: 50, packSize: 10 },
+    name: 'Dünger I', description: 'Beschleunigt das Wachstum um die Hälfte und hebt die Ernte ebenso.' },
+  { id: 'fertiliser-2', category: 'material', price: null, sellPrice: 400, params: { fertiliser: 100 },
+    name: 'Dünger II', description: 'Halbiert die Wachszeit und verdoppelt den Aufschlag auf die Ernte.' },
+  { id: 'fertiliser-3', category: 'material', price: null, sellPrice: 1200, params: { fertiliser: 200 },
+    name: 'Dünger III', description: 'Ein Drittel der Wachszeit, dreifacher Aufschlag. Selten und teuer.' },
+  /*
+   * Die sechs Vitamine — je eines fuer einen Wert.
+   *
+   * Hier stand zuerst eine erfundene "Fleissbeere" mit einer Wertwahl. Die
+   * Vorlage kennt dafuer sechs eigene Gegenstaende, und die sind die bessere
+   * Loesung: ein Protein *ist* Angriff, man muss nichts aussuchen und nichts
+   * erklaeren. Der Bildschirm braucht damit auch keine zweite Abfrage mehr.
+   *
+   * 32 Fleisspunkte je Flasche — genau ein Trainingslauf. Das Vitamin ist
+   * damit "ein Training in der Flasche": teurer, aber sofort und ohne das
+   * Pokemon drei Stunden zu binden. Acht Flaschen fuellen einen Wert.
+   */
+  { id: 'hp-up',   category: 'medicine', price: null, sellPrice: null, params: { evPoints: 32, evStat: 'hp' },
+    name: 'KP-Plus', description: 'Hebt die Kraftpunkte eines Pokémon dauerhaft.' },
+  { id: 'protein', category: 'medicine', price: null, sellPrice: null, params: { evPoints: 32, evStat: 'atk' },
+    name: 'Protein', description: 'Hebt den Angriff eines Pokémon dauerhaft.' },
+  { id: 'iron',    category: 'medicine', price: null, sellPrice: null, params: { evPoints: 32, evStat: 'def' },
+    name: 'Eisen', description: 'Hebt die Verteidigung eines Pokémon dauerhaft.' },
+  { id: 'calcium', category: 'medicine', price: null, sellPrice: null, params: { evPoints: 32, evStat: 'spa' },
+    name: 'Kalzium', description: 'Hebt den Spezial-Angriff eines Pokémon dauerhaft.' },
+  { id: 'zinc',    category: 'medicine', price: null, sellPrice: null, params: { evPoints: 32, evStat: 'spd' },
+    name: 'Zink', description: 'Hebt die Spezial-Verteidigung eines Pokémon dauerhaft.' },
+  { id: 'carbos',  category: 'medicine', price: null, sellPrice: null, params: { evPoints: 32, evStat: 'spe' },
+    name: 'Carbon', description: 'Hebt die Initiative eines Pokémon dauerhaft.' },
+  /*
+   * Der Kronkorken.
+   *
+   * Auch er hat eine Vorlage — und anders als bei den Vitaminen waehlt man
+   * dort tatsaechlich den Wert aus. Die Abfrage bleibt deshalb, aber nur noch
+   * fuer diesen einen Gegenstand.
+   */
+  { id: 'bottle-cap', category: 'medicine', price: null, sellPrice: null, params: { ivPerfect: true },
+    name: 'Kronkorken', description: 'Bringt eine Veranlagung auf den Höchstwert. Du wählst, welche.' },
   { id: 'oran-berry',  category: 'berry', price: 50,  sellPrice: 25,  params: { careValue: 1, friendship: 3 },
     description: 'Lieblingssnack im Garten. Gibt Freundschaft und etwas Energie.' },
 
@@ -218,8 +273,17 @@ export const AUTHORED: Authored[] = [
     name: 'Energydrink', description: 'Füllt die Energie eines Gartenpokémon wieder auf.' },
 
   // --- Erfahrung -----------------------------------------------------------
-  { id: 'rare-candy',  category: 'xp', price: 800,  sellPrice: 0,   params: { xp: 50, targetSingle: true },
-    description: 'Gibt einem einzelnen Pokémon sofort 50 EP.' },
+  /*
+   * Das Sonderbonbon hebt um ein Level, nicht um fuenfzig Erfahrungspunkte.
+   *
+   * Fuenfzig standen hier, und das war der ganze Gegenstand: bei Level 39
+   * kostet ein Aufstieg 4.681 Punkte, bei Level 100 gut 30.000. Das Bonbon
+   * war damit ein Achtzigstel dessen, was sein Name verspricht — teurer als
+   * ein EP-Bonbon S und ein Bruchteil so wirksam. Jetzt tut es, wofuer es
+   * benannt ist, und kostet entsprechend.
+   */
+  { id: 'rare-candy',  category: 'xp', price: 3000, sellPrice: 0,   params: { levelUp: true, targetSingle: true },
+    name: 'Sonderbonbon', description: 'Hebt ein Pokémon um genau ein Level. Süß, selten, sofort.' },
   { id: 'exp-candy-s', category: 'xp', price: 300,  sellPrice: 100, params: { xp: 800 },
     name: 'EP-Bonbon S', description: 'Ein kleiner Erfahrungsschub.' },
   { id: 'exp-candy-l', category: 'xp', price: 1400, sellPrice: 500, params: { xp: 5000 },

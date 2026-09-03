@@ -81,6 +81,15 @@ export interface EggResult {
  *  and a rare one a few hours. */
 export const MINUTES_PER_CYCLE = 6
 
+/**
+ * Wie viele Werte ein Ei mindestens und hoechstens von den Eltern erbt.
+ *
+ * Die Spanne ist der eigentliche Hebel: bei einer festen Zahl hat die Zucht
+ * eine Obergrenze, die kein noch so gutes Elternpaar ueberschreitet.
+ */
+export const INHERIT_MIN = 3
+export const INHERIT_MAX = 5
+
 export function produceEgg(
   parentA: { speciesId: string; ivs: StatBlock; nature: Nature; shiny: boolean },
   parentB: { speciesId: string; ivs: StatBlock; nature: Nature; shiny: boolean },
@@ -88,7 +97,24 @@ export function produceEgg(
   rng: Rng,
   options: { inheritSlots?: number; shinyBoost?: number } = {},
 ): EggResult {
-  const inheritSlots = clamp(options.inheritSlots ?? 3, 0, STATS.length)
+  /*
+   * Wie viele Werte das Ei von den Eltern uebernimmt.
+   *
+   * Drei feste Plaetze machten ein makelloses Pokemon praktisch unmoeglich:
+   * die drei uebrigen wuerfeln neu, und dass alle drei die 31 treffen, ist
+   * einmal in gut dreissigtausend Faellen. Die Zucht konvergierte damit gegen
+   * "drei gute Werte" und blieb dort stehen — egal, wie gut die Eltern waren.
+   *
+   * Jetzt drei bis fuenf, gewuerfelt. Zwei sehr gute Eltern koennen damit ein
+   * Ei mit fuenf uebernommenen Werten bringen; der sechste bleibt Glueck oder
+   * Arbeit fuers IV-Mittel. Das Ziel ist erreichbar, ohne dass ein einzelner
+   * Wurf es schenkt — und jeder Wurf ist eine eigene Nachricht statt einer
+   * Rechenaufgabe mit immer demselben Ergebnis.
+   */
+  const inheritSlots = clamp(
+    options.inheritSlots ?? INHERIT_MIN + rng.int(0, INHERIT_MAX - INHERIT_MIN),
+    0, STATS.length,
+  )
 
   // Pick which stats are inherited, then take the better parent's value for
   // each. Taking the better value rather than a random one is what makes

@@ -36,6 +36,12 @@ export const PlotViewSchema = z.object({
     sprite: z.string(),
     level: z.number().int(),
   }).nullable(),
+  /** Der eingesetzte Duenger; null, wenn ohne. */
+  fertiliser: z.object({
+    itemId: z.string(),
+    name: z.string(),
+    percent: z.number().int(),
+  }).nullable(),
   /** Aufschlag in Prozent, den das Beet gerade erreicht. */
   bonusPercent: z.number().int(),
   /** Was bei sofortiger Ernte herauskäme. */
@@ -75,6 +81,13 @@ export const PlotsStateSchema = z.object({
     bonusPercent: z.number().int(),
     busy: z.boolean(),
   })),
+  /** Duenger im Beutel, je Stufe. */
+  fertilisers: z.array(z.object({
+    itemId: z.string(),
+    name: z.string(),
+    percent: z.number().int(),
+    owned: z.number().int().min(0),
+  })),
 })
 export type PlotsState = z.infer<typeof PlotsStateSchema>
 
@@ -84,6 +97,8 @@ export const PlantRequestSchema = z.object({
   itemId: z.string().optional(),
   amount: z.number().int().min(1),
   tenderId: z.string().uuid().nullable().optional(),
+  /** Duenger, der beim Pflanzen eingesetzt wird. */
+  fertiliserId: z.string().nullable().optional(),
 })
 export type PlantRequest = z.infer<typeof PlantRequestSchema>
 

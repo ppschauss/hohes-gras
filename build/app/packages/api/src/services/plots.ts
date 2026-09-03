@@ -3,6 +3,7 @@ import {
 } from '@game/shared'
 import {
   ENERGY_COSTS, GOLD_PLANT_COOLDOWN_MS, PLANTABLE_CATEGORIES, PLOT_COUNT, PLOT_GROWTH_MS,
+  UNPLANTABLE_ITEMS, FERTILISER_LEVELS, fertiliserOf, fertilisedGrowthMs,
   PLOT_MAX_GOLD, PLOT_MAX_ITEMS, PLOT_PHASES, goldPlantReady, goldPlantReadyAt,
   harvestAmount, nextPhaseAt, phaseKind, phasesDue, plotBonus, plotReady, tenderBonus,
 } from '@game/engine'
@@ -37,18 +38,30 @@ function plotView(ctx: AppContext, trainer: Trainer, row: plots.PlotRow | null, 
     return {
       slot, id: null, stake: null, plantedAt: null, readyAt: null, ready: false,
       phasesDone: 0, phasesTotal: PLOT_PHASES, phasesPending: 0,
-      nextPhaseKind: null, nextPhaseAt: null, tender: null,
+      nextPhaseKind: null, nextPhaseAt: null, tender: null, fertiliser: null,
       bonusPercent: 0, payout: 0,
     }
   }
 
   const tenderRow = row.tenderId ? creatures.byId(ctx.db, row.tenderId) : null
   const tenderSpecies = tenderRow ? ctx.registry.trySpecies(tenderRow.speciesId) : null
-  const due = phasesDue(row.plantedAt, now, PLOT_GROWTH_MS, PLOT_PHASES)
+  /*
+   * Die Pflegeschritte richten sich nach der *tatsaechlichen* Laufzeit.
+   *
+   * Ein geduengtes Beet ist frueher fertig, also ruecken auch seine vier
+   * Schritte zusammen. Rechnete man weiter mit der Grundzeit, waeren bei
+   * Duenger III drei der vier Schritte erst faellig, wenn die Ernte laengst
+   * bereitsteht — die Handpflege waere damit ausgerechnet auf dem besten Beet
+   * unmoeglich.
+   */
+  const duenger = fertiliserOf(row.fertiliserId)
+  const laufzeit = wachszeit(row)
+  const due = phasesDue(row.plantedAt, now, laufzeit, PLOT_PHASES)
   const bonus = plotBonus({
     phasesDone: row.phasesDone,
     phases: PLOT_PHASES,
     tenderLevel: tenderRow ? tenderRow.level : null,
+    fertiliserPercent: duenger?.percent ?? 0,
   })
 
   const item = row.itemId ? ctx.registry.tryItem(row.itemId) : null
@@ -66,20 +79,29 @@ function plotView(ctx: AppContext, trainer: Trainer, row: plots.PlotRow | null, 
     },
     plantedAt: row.plantedAt,
     readyAt: row.readyAt,
-    ready: plotReady(row.plantedAt, now, PLOT_GROWTH_MS),
+    ready: plotReady(row.plantedAt, now, laufzeit),
     phasesDone: row.phasesDone,
     phasesTotal: PLOT_PHASES,
     // Ein abgestelltes Pokemon erledigt die Schritte selbst; dann steht nichts
     // offen, was der Spieler tun muesste.
     phasesPending: tenderRow ? 0 : Math.max(0, due - row.phasesDone),
     nextPhaseKind: row.phasesDone >= PLOT_PHASES ? null : phaseKind(row.phasesDone),
-    nextPhaseAt: nextPhaseAt(row.plantedAt, row.phasesDone, PLOT_GROWTH_MS, PLOT_PHASES),
+    nextPhaseAt: nextPhaseAt(row.plantedAt, row.phasesDone, laufzeit, PLOT_PHASES),
     tender: tenderRow && tenderSpecies
       ? {
           id: tenderRow.id,
           displayName: tenderRow.nickname ?? ctx.registry.localized(tenderSpecies.name, trainer.locale),
           sprite: tenderRow.shiny ? tenderSpecies.spriteShiny : tenderSpecies.sprite,
           level: tenderRow.level,
+        }
+      : null,
+    fertiliser: duenger
+      ? {
+          itemId: duenger.itemId,
+          name: ctx.registry.localized(
+            ctx.registry.tryItem(duenger.itemId)?.name ?? { de: duenger.itemId }, trainer.locale,
+          ),
+          percent: duenger.percent,
         }
       : null,
     bonusPercent: bonus,
@@ -136,8 +158,34 @@ export function state(ctx: AppContext, trainer: Trainer, now = Date.now()): Plot
     goldCooldownHours: Math.round(GOLD_PLANT_COOLDOWN_MS / 3_600_000),
     tendCost: ENERGY_COSTS.care,
     plantable,
+    /*
+     * Was an Duenger im Beutel liegt.
+     *
+     * Mit Bestand, damit die Auswahl beim Pflanzen zeigt, was zur Wahl steht —
+     * eine Stufe, die man nicht hat, ist keine Entscheidung.
+     */
+    fertilisers: FERTILISER_LEVELS.flatMap((f) => {
+      // `tryItem`, nicht `item`: ein Paket ohne Duenger ist ein Paket ohne
+      // Duenger und darf nicht die ganze Beet-Ansicht umwerfen. Die Engine
+      // kennt keine Inhalte, und diese Liste ist eine Behauptung ueber das
+      // Paket, keine ueber das Spiel.
+      const eintrag = ctx.registry.tryItem(f.itemId)
+      if (!eintrag) return []
+      return [{
+        itemId: f.itemId,
+        name: ctx.registry.localized(eintrag.name, trainer.locale),
+        percent: f.percent,
+        owned: inventory.quantityOf(ctx.db, trainer.id, f.itemId),
+      }]
+    }),
     tenders,
   }
+}
+
+/** Wie lange dieses Beet wirklich braucht — mit Duenger kuerzer. */
+const wachszeit = (row: { fertiliserId: string | null }): number => {
+  const d = fertiliserOf(row.fertiliserId)
+  return d ? fertilisedGrowthMs(d.percent) : PLOT_GROWTH_MS
 }
 
 export interface PlantInput {
@@ -146,6 +194,8 @@ export interface PlantInput {
   itemId?: string
   amount: number
   tenderId?: string | null
+  /** Duenger, der beim Pflanzen eingesetzt wird. Null oder fehlend: ohne. */
+  fertiliserId?: string | null
 }
 
 export function plant(ctx: AppContext, trainer: Trainer, input: PlantInput, now = Date.now()): PlotsState {
@@ -173,7 +223,7 @@ export function plant(ctx: AppContext, trainer: Trainer, input: PlantInput, now 
     } else {
       const item = input.itemId ? ctx.registry.tryItem(input.itemId) : null
       if (!item) throw new GameError('not_found', { itemId: input.itemId }, 404)
-      if (!PLANTABLE.has(item.category)) {
+      if (!PLANTABLE.has(item.category) || UNPLANTABLE_ITEMS.has(item.id)) {
         throw new GameError('invalid_state', { reason: 'not_plantable', itemId: item.id }, 409)
       }
       if (input.amount > PLOT_MAX_ITEMS) {
@@ -181,6 +231,20 @@ export function plant(ctx: AppContext, trainer: Trainer, input: PlantInput, now 
       }
       inventory.consume(ctx.db, trainer.id, item.id, input.amount)
     }
+
+    /*
+     * Duenger wird beim Pflanzen eingesetzt, nicht spaeter.
+     *
+     * Er verkuerzt die Wachszeit, und die steht als fester Zeitpunkt in der
+     * Zeile. Spaeter aufgestreut muesste er eine Frist verkuerzen, die schon
+     * halb abgelaufen ist — das ist entweder wirkungslos oder ein Weg, die
+     * letzte Minute zu ueberspringen. Beim Pflanzen ist es eine Entscheidung.
+     */
+    const duenger = fertiliserOf(input.fertiliserId ?? null)
+    if (input.fertiliserId && !duenger) {
+      throw new GameError('validation_failed', { field: 'fertiliserId' })
+    }
+    if (duenger) inventory.consume(ctx.db, trainer.id, duenger.itemId, 1)
 
     const tenderId = resolveTender(ctx, trainer, input.tenderId ?? null, null)
     const created = plots.create(ctx.db, {
@@ -190,8 +254,9 @@ export function plant(ctx: AppContext, trainer: Trainer, input: PlantInput, now 
       itemId: input.kind === 'gold' ? null : (input.itemId ?? null),
       amount: input.amount,
       plantedAt: now,
-      readyAt: now + PLOT_GROWTH_MS,
+      readyAt: now + (duenger ? fertilisedGrowthMs(duenger.percent) : PLOT_GROWTH_MS),
       tenderId,
+      fertiliserId: duenger?.itemId ?? null,
     })
     logEvent(ctx.db, trainer.id, 'plot.plant', {
       slot: input.slot, kind: input.kind, itemId: created.itemId, amount: created.amount,
@@ -263,11 +328,14 @@ export function tend(ctx: AppContext, trainer: Trainer, slot: number, now = Date
       throw new GameError('invalid_state', { reason: 'fully_tended' }, 409)
     }
 
-    const due = phasesDue(row.plantedAt, now, PLOT_GROWTH_MS, PLOT_PHASES)
+    // Dieselbe Laufzeit wie in der Ansicht: ein geduengtes Beet ist frueher
+    // fertig, also ruecken auch seine Pflegeschritte zusammen.
+    const laufzeit = wachszeit(row)
+    const due = phasesDue(row.plantedAt, now, laufzeit, PLOT_PHASES)
     if (due <= row.phasesDone) {
       throw new GameError('invalid_state', {
         reason: 'not_due',
-        nextPhaseAt: nextPhaseAt(row.plantedAt, row.phasesDone, PLOT_GROWTH_MS, PLOT_PHASES),
+        nextPhaseAt: nextPhaseAt(row.plantedAt, row.phasesDone, laufzeit, PLOT_PHASES),
       }, 409)
     }
 
@@ -304,7 +372,7 @@ export function harvest(ctx: AppContext, trainer: Trainer, slot: number, now = D
   return tx(ctx.db, () => {
     const row = plots.atSlot(ctx.db, trainer.id, slot)
     if (!row) throw new GameError('not_found', { slot }, 404)
-    if (!plotReady(row.plantedAt, now, PLOT_GROWTH_MS)) {
+    if (!plotReady(row.plantedAt, now, wachszeit(row))) {
       throw new GameError('invalid_state', { reason: 'not_ready', readyAt: row.readyAt }, 409)
     }
 

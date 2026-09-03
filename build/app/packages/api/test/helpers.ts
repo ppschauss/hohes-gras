@@ -97,8 +97,20 @@ function writeMinimalPack(dataDir: string): void {
     // ungeprueft, und genau der ist der, der schiefgehen kann.
     species('tauschmon', 10, { evolutions: [{ trigger: 'trade', to: 'tauschmon-evo' }] }),
     species('tauschmon-evo', 11),
-    species('haltmon', 12, { evolutions: [{ trigger: 'trade', to: 'haltmon-evo', heldItemId: 'metal-coat' }] }),
+    // `heldItemId` gibt es im Schema nicht mehr — Tragegegenstaende konnte hier
+    // nie jemand tragen. Das Feld stand nur noch als Altlast in der Fixture.
+    species('haltmon', 12, { evolutions: [{ trigger: 'trade', to: 'haltmon-evo' }] }),
     species('haltmon-evo', 13),
+    /*
+     * Zwei Tauschziele, wie Perlu. Der einzige Fall, in dem der Tausch allein
+     * nicht sagen kann, was der Spieler will.
+     */
+    species('zwiemon', 14, { evolutions: [
+      { trigger: 'trade', to: 'zwiemon-links' },
+      { trigger: 'trade', to: 'zwiemon-rechts' },
+    ] }),
+    species('zwiemon-links', 15),
+    species('zwiemon-rechts', 16),
   ])
   // Dieselben Ids wie im echten Pack: Startausruestung und Pflegelogik nennen
   // sie fest, eine abweichende Fixture wuerde am eigentlichen Verhalten
@@ -109,6 +121,16 @@ function writeMinimalPack(dataDir: string): void {
     { id: 'oran-berry', name: { de: 'Oranbeere' }, description: { de: 'Snack.' }, category: 'berry', price: 50, sellPrice: 25, icon: '/media/berry.png' },
     // Nicht kaeuflich: sie faellt nur bei Ueberfaellen.
     { id: 'legendary-berry', name: { de: 'Sagenbeere' }, description: { de: 'Gegen Legendäre.' }, category: 'berry', price: null, sellPrice: null, icon: '/media/lberry.png', params: { legendaryBonus: 0.25 } },
+    // Duenger, drei Stufen — damit die Beet-Tests ihn wirklich pruefen koennen.
+    { id: 'fertiliser-1', name: { de: 'Dünger I' }, description: { de: 'Hilft.' }, category: 'material', price: 50000, sellPrice: 120, icon: '/media/f1.png', params: { fertiliser: 50, packSize: 10 } },
+    { id: 'fertiliser-2', name: { de: 'Dünger II' }, description: { de: 'Hilft mehr.' }, category: 'material', price: null, sellPrice: 400, icon: '/media/f2.png', params: { fertiliser: 100 } },
+    { id: 'fertiliser-3', name: { de: 'Dünger III' }, description: { de: 'Hilft sehr.' }, category: 'material', price: null, sellPrice: 1200, icon: '/media/f3.png', params: { fertiliser: 200 } },
+    // Zwei der sechs Vitamine reichen fuer die Tests: eines fuer den festen
+    // Wert, und der Kronkorken fuer die Wahl.
+    { id: 'protein', name: { de: 'Protein' }, description: { de: 'Angriff.' }, category: 'medicine', price: null, sellPrice: null, icon: '/media/p.png', params: { evPoints: 32, evStat: 'atk' } },
+    { id: 'carbos', name: { de: 'Carbon' }, description: { de: 'Initiative.' }, category: 'medicine', price: null, sellPrice: null, icon: '/media/c.png', params: { evPoints: 32, evStat: 'spe' } },
+    { id: 'bottle-cap', name: { de: 'Kronkorken' }, description: { de: 'Anlage.' }, category: 'medicine', price: null, sellPrice: null, icon: '/media/bc.png', params: { ivPerfect: true } },
+    { id: 'rare-candy', name: { de: 'Sonderbonbon' }, description: { de: 'Ein Level.' }, category: 'xp', price: 3000, sellPrice: 0, icon: '/media/rc.png', params: { levelUp: true, targetSingle: true } },
     { id: 'razz-berry', name: { de: 'Himmihbeere' }, description: { de: 'Lenkt ab.' }, category: 'berry', price: 40, sellPrice: 20, icon: '/media/berry2.png', params: { catchBonus: 1.5 } },
     { id: 'potion', name: { de: 'Trank' }, description: { de: 'Heilt.' }, category: 'medicine', price: 100, sellPrice: 50, icon: '/media/potion.png', params: { heal: 20 } },
     { id: 'bg-classic', name: { de: 'Klassisch' }, description: { de: 'Wiese.' }, category: 'background', price: 0, sellPrice: null, stackable: false, icon: '/media/bg.png' },

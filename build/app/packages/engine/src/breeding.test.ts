@@ -86,7 +86,37 @@ describe('produceEgg', () => {
     for (let i = 0; i < 1000; i++) {
       if (produceEgg(a as never, b as never, child, rng).nature === 'adamant') fromParent++
     }
-    expect(fromParent / 1000).toBeGreaterThan(0.7)
+    /*
+     * Ein Band, keine Kante.
+     *
+     * Hier stand `> 0.7`. Der wahre Wert liegt bei 71,2 % — siebzig Prozent
+     * vom Elternteil, dazu die 1,2 %, mit denen der Neuwurf dasselbe Wesen
+     * trifft. Bei tausend Wuerfen streut das um 1,4 Prozentpunkte, die
+     * Zusicherung lag also *auf* dem Erwartungswert und ging nur mit dem
+     * richtigen Seed durch. Sie fiel um, als eine Aenderung an anderer Stelle
+     * den Zufallsstrom verschob — nicht, weil sich das Verhalten geaendert
+     * haette.
+     */
+    expect(fromParent / 1000).toBeGreaterThan(0.65)
+    expect(fromParent / 1000).toBeLessThan(0.78)
+  })
+
+  it('erbt drei bis fuenf Werte, nicht immer drei', () => {
+    /*
+     * Der Grund fuer die Aenderung: mit drei festen Plaetzen wuerfeln die
+     * uebrigen drei neu, und dass alle drei die 31 treffen, ist einmal in gut
+     * dreissigtausend Faellen. Ein makelloses Pokemon war damit keine
+     * Zuchtaufgabe, sondern ein Lotteriegewinn — egal, wie gut die Eltern
+     * waren.
+     */
+    const a = parent({ nature: 'adamant' })
+    const b = parent({ nature: 'adamant' })
+    const rng = createRng('erbe')
+    const gesehen = new Set<number>()
+    for (let i = 0; i < 300; i++) {
+      gesehen.add(produceEgg(a as never, b as never, child, rng).inheritedCount)
+    }
+    expect([...gesehen].sort()).toEqual([3, 4, 5])
   })
 
   it('erhoeht die Shiny-Chance bei unterschiedlichen Eltern', () => {

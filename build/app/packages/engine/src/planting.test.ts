@@ -4,6 +4,7 @@ import {
   PLOT_MAX_GOLD, PLOT_MAX_ITEMS, PLOT_PHASES, goldPlantReady, goldPlantReadyAt,
   harvestAmount, manualBonus, nextPhaseAt, phaseKind, phasesDue,
   plotBonus, plotReady, tenderBonus,
+  FERTILISER_LEVELS, PLANTABLE_CATEGORIES, UNPLANTABLE_ITEMS, fertiliserOf, fertilisedGrowthMs,
 } from './planting.js'
 
 const T0 = 1_700_000_000_000
@@ -124,8 +125,20 @@ describe('Obergrenzen', () => {
     expect(GOLD_PLANT_COOLDOWN_MS).toBe(24 * 3_600_000)
   })
 
-  it('haelt die Gegenstandsmenge im Rahmen', () => {
-    expect(PLOT_MAX_ITEMS).toBeLessThanOrEqual(30)
+  it('haelt die Gegenstandsmenge an dem, was die Rezepte fordern', () => {
+    /*
+     * Hier stand eine runde Obergrenze von dreissig — aus der Zeit, als nur
+     * Fangbeeren in der Erde lagen. Seit die Pharmazie daran haengt, ist die
+     * Zahl kein Gefuehl mehr, sondern eine Ableitung: die groesste einzelne
+     * Beerenforderung ist ein Duenger II mit zwoelf Sprenkelbeeren, die ganze
+     * Kette zu einem Erbgut-Serum verlangt rund hundert. Vierzig heisst: ein
+     * Beet deckt jedes Rezept, vier Beete tragen eine Serum-Runde.
+     *
+     * Nach oben bleibt sie begrenzt — ein Beet soll ein Beet sein und kein
+     * Lager.
+     */
+    expect(PLOT_MAX_ITEMS).toBe(40)
+    expect(PLOT_MAX_ITEMS * 4).toBeGreaterThanOrEqual(100)
   })
 })
 
@@ -150,5 +163,55 @@ describe('plotReady', () => {
   it('ist erst nach der vollen Wachstumszeit reif', () => {
     expect(plotReady(T0, T0 + PLOT_GROWTH_MS - 1)).toBe(false)
     expect(plotReady(T0, T0 + PLOT_GROWTH_MS)).toBe(true)
+  })
+})
+
+describe('Duenger', () => {
+  it('verkuerzt die Zeit und hebt den Ertrag um denselben Anteil', () => {
+    /*
+     * Beides zusammen ist die Absicht. Eine Stufe, die nur schneller macht,
+     * ist bei vier Stunden Laufzeit kaum spuerbar; eine, die nur mehr bringt,
+     * laedt zum Liegenlassen ein.
+     */
+    const vier = 4 * 3_600_000
+    expect(fertilisedGrowthMs(50, vier)).toBe(Math.round(vier / 1.5))
+    expect(fertilisedGrowthMs(100, vier)).toBe(vier / 2)
+    expect(fertilisedGrowthMs(200, vier)).toBe(Math.round(vier / 3))
+  })
+
+  it('teilt die Zeit, statt sie abzuziehen', () => {
+    // Bei 200 % waere ein Abzug eine Ernte in null Sekunden.
+    expect(fertilisedGrowthMs(200)).toBeGreaterThan(0)
+    expect(fertilisedGrowthMs(1000)).toBeGreaterThanOrEqual(60_000)
+  })
+
+  it('legt sich auf die Pflege, statt sie zu ersetzen', () => {
+    const ohne = plotBonus({ phasesDone: 4, tenderLevel: null })
+    const mit = plotBonus({ phasesDone: 4, tenderLevel: null, fertiliserPercent: 200 })
+    expect(mit).toBe(ohne + 200)
+    // Und ohne Pflege bringt er trotzdem etwas.
+    expect(plotBonus({ phasesDone: 0, tenderLevel: null, fertiliserPercent: 50 }))
+      .toBeGreaterThan(plotBonus({ phasesDone: 0, tenderLevel: null }))
+  })
+
+  it('kennt drei Stufen mit 50, 100 und 200 Prozent', () => {
+    expect(FERTILISER_LEVELS.map((f) => f.percent)).toEqual([50, 100, 200])
+    expect(fertiliserOf('fertiliser-2')?.percent).toBe(100)
+    expect(fertiliserOf('gibt-es-nicht')).toBeNull()
+    expect(fertiliserOf(null)).toBeNull()
+  })
+})
+
+describe('Was sich vergraben laesst', () => {
+  it('nur noch Beeren', () => {
+    expect([...PLANTABLE_CATEGORIES]).toEqual(['berry'])
+  })
+
+  it('aber keine Sagenbeere', () => {
+    /*
+     * Sie ist der einzige Hebel gegen ein Legendaeres und faellt nur bei
+     * Ueberfaellen. Anbaubar waere der Hebel eine Frage der Geduld.
+     */
+    expect(UNPLANTABLE_ITEMS.has('legendary-berry')).toBe(true)
   })
 })

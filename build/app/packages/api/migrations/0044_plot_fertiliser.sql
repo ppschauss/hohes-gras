@@ -1,0 +1,11 @@
+-- Der Duenger, mit dem ein Beet bestellt wurde.
+--
+-- Er wird beim Pflanzen eingesetzt und bleibt fuer die ganze Laufzeit an dem
+-- Beet haengen — sonst koennte man nach der Ernte nicht mehr sagen, warum sie
+-- so gross ausfiel, und ein spaeter aufgestreuter Duenger wuerde eine Zeit
+-- verkuerzen, die schon halb abgelaufen ist.
+--
+-- `ready_at` steht bereits in der Zeile: die verkuerzte Zeit wird beim
+-- Pflanzen ausgerechnet und dort hineingeschrieben, nicht bei jeder Abfrage
+-- neu. Diese Spalte sagt nur, wie es dazu kam.
+ALTER TABLE garden_plots ADD COLUMN fertiliser_id TEXT;

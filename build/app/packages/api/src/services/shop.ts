@@ -18,6 +18,20 @@ const SECTIONS: Array<{ category: string; title: string }> = [
   // ist der erste, und ohne diesen Abschnitt stuende er im Laden nicht.
   { category: 'key', title: 'shop.section.key' },
   { category: 'background', title: 'shop.section.backgrounds' },
+  /*
+   * Werkstoffe stehen hier als Ausnahme, nicht als Regel.
+   *
+   * Der Satz oben gilt weiter: was auf einer Expedition zu finden ist, soll
+   * man nicht kaufen koennen, sonst verliert die Expedition ihren Sinn. Der
+   * Laden zeigt aber nur, was einen Preis hat — und den hat in dieser
+   * Kategorie genau ein Gegenstand: der Duenger der ersten Stufe. Er ist
+   * kein Fundstueck, sondern ein Verbrauchsgut fuer die Beete, und er gibt
+   * Gold ein laufendes Ziel.
+   *
+   * Die beiden hoeheren Stufen bleiben ohne Preis: sie sollen die Kette aus
+   * Forschung, Ernte und Sternenstaub belohnen, nicht den Kontostand.
+   */
+  { category: 'material', title: 'shop.section.materials' },
 ]
 
 const ONE_TIME_CATEGORIES = new Set(['background'])

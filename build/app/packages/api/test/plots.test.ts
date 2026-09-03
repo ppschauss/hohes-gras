@@ -280,3 +280,84 @@ describe('Poké-Beet', () => {
     expect(r.status).toBe(403)
   })
 })
+
+describe('Dünger', () => {
+  const gib = (itemId: string, n: number) =>
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, ?)')
+      .run(trainerId, itemId, n)
+
+  it('verkuerzt die Wachszeit und verbraucht eine Einheit', async () => {
+    gib('oran-berry', 20); gib('fertiliser-2', 2)
+    h.resetRateLimits()
+    const r = await h.post('/api/plots/plant',
+      { slot: 0, kind: 'item', itemId: 'oran-berry', amount: 5, fertiliserId: 'fertiliser-2' }, token)
+    expect(r.status).toBe(200)
+
+    const beet = r.body.plots[0]
+    // Dünger II halbiert: aus vier Stunden werden zwei.
+    expect(beet.readyAt - beet.plantedAt).toBe(2 * 3_600_000)
+    expect(beet.fertiliser).toMatchObject({ itemId: 'fertiliser-2', percent: 100 })
+    expect((h.ctx.db.prepare('SELECT quantity AS q FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, 'fertiliser-2') as { q: number }).q).toBe(1)
+  })
+
+  it('legt seinen Aufschlag auf die Pflege', async () => {
+    gib('oran-berry', 20); gib('fertiliser-3', 1)
+    h.resetRateLimits()
+    const ohne = await h.post('/api/plots/plant', { slot: 1, kind: 'item', itemId: 'oran-berry', amount: 5 }, token)
+    h.resetRateLimits()
+    const mit = await h.post('/api/plots/plant',
+      { slot: 2, kind: 'item', itemId: 'oran-berry', amount: 5, fertiliserId: 'fertiliser-3' }, token)
+
+    expect(mit.body.plots[2].bonusPercent).toBe(ohne.body.plots[1].bonusPercent + 200)
+    expect(mit.body.plots[2].payout).toBeGreaterThan(ohne.body.plots[1].payout)
+  })
+
+  it('weist einen Duenger ab, den man nicht hat', async () => {
+    gib('oran-berry', 20)
+    h.resetRateLimits()
+    const r = await h.post('/api/plots/plant',
+      { slot: 3, kind: 'item', itemId: 'oran-berry', amount: 5, fertiliserId: 'fertiliser-1' }, token)
+    // `insufficient_items` — dieselbe Absage wie bei jedem fehlenden Gegenstand.
+    expect(r.status).toBe(400)
+    expect(r.body.error).toBe('insufficient_items')
+    // Und wichtiger: das Beet ist leer geblieben, die Beeren sind noch da.
+    const state = await h.get('/api/plots', token)
+    expect(state.body.plots[3].stake).toBeNull()
+    expect((h.ctx.db.prepare('SELECT quantity AS q FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, 'oran-berry') as { q: number }).q).toBe(20)
+  })
+
+  it('nennt den Bestand, damit die Auswahl echt ist', async () => {
+    gib('fertiliser-1', 7)
+    const r = await h.get('/api/plots', token)
+    const stufen = r.body.fertilisers as Array<{ itemId: string; percent: number; owned: number }>
+    expect(stufen.map((f) => f.percent)).toEqual([50, 100, 200])
+    expect(stufen.find((f) => f.itemId === 'fertiliser-1')?.owned).toBe(7)
+  })
+})
+
+describe('Was sich nicht mehr eingraben laesst', () => {
+  it('keine Sagenbeere', async () => {
+    /*
+     * Sie faellt nur bei Ueberfaellen und ist der einzige Hebel gegen ein
+     * Legendaeres. Anbaubar waere der Hebel eine Frage der Geduld.
+     */
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, 9)')
+      .run(trainerId, 'legendary-berry')
+    h.resetRateLimits()
+    const r = await h.post('/api/plots/plant',
+      { slot: 0, kind: 'item', itemId: 'legendary-berry', amount: 3 }, token)
+    expect(r.status).toBe(409)
+    expect(r.body.detail.reason).toBe('not_plantable')
+  })
+
+  it('auch keine Werkstoffe mehr', async () => {
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, 9)')
+      .run(trainerId, 'soul-normal')
+    h.resetRateLimits()
+    const r = await h.post('/api/plots/plant',
+      { slot: 0, kind: 'item', itemId: 'soul-normal', amount: 3 }, token)
+    expect(r.status).toBe(409)
+  })
+})

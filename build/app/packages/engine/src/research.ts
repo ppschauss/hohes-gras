@@ -116,6 +116,35 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
     inputs: [{ itemId: 'iron-shard', quantity: 16 }, { itemId: 'silk-thread', quantity: 8 }],
     xpPerHour: 200,
   },
+  /*
+   * Die Pharmazie: drei Projekte, eine Kette.
+   *
+   * Duenger zuerst, weil er die Beete erst lohnend macht und alles Weitere
+   * aus Beeren besteht. Dann die Fleissbeere, die aus dem Beet kommt. Und
+   * zuletzt das Mittel, das aus Fleissbeeren gemacht wird — Endgame, teuer,
+   * mit Wartezeit.
+   *
+   * Alle drei verlangen ein Labor der Stufe 3 oder hoeher: sie sind kein
+   * frueher Weg, sondern das, was man mit einer laufenden Wirtschaft anfaengt.
+   */
+  {
+    id: 'res-fertiliser', kind: 'recipe', tiers: 3, lab: 3, unlocks: null,
+    step: 0, hours: 6, gold: 4000,
+    inputs: [{ itemId: 'razz-berry', quantity: 12 }, { itemId: 'star-piece', quantity: 2 }],
+    xpPerHour: 220,
+  },
+  {
+    id: 'res-vitamins', kind: 'recipe', tiers: 1, lab: 3, unlocks: null,
+    step: 0, hours: 10, gold: 9000,
+    inputs: [{ itemId: 'golden-razz', quantity: 4 }, { itemId: 'star-piece', quantity: 6 }],
+    xpPerHour: 260,
+  },
+  {
+    id: 'res-bottle-cap', kind: 'recipe', tiers: 1, lab: 4, unlocks: null,
+    step: 0, hours: 24, gold: 40000,
+    inputs: [{ itemId: 'protein', quantity: 2 }, { itemId: 'star-piece', quantity: 20 }],
+    xpPerHour: 300,
+  },
   {
     id: 'res-rare-candy', kind: 'recipe', tiers: 1, lab: 3, unlocks: null,
     step: 0, hours: 12, gold: 6000,

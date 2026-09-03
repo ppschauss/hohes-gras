@@ -24,7 +24,20 @@ export const PLOT_GROWTH_MS = 4 * 3_600_000
 export const PLOT_PHASES = 4
 
 /** Obergrenze für Gegenstände je Beet. */
-export const PLOT_MAX_ITEMS = 30
+/*
+ * Wie viel in ein Beet passt — bemessen an dem, was die Baeume darueber
+ * brauchen.
+ *
+ * Die groesste Beerenforderung der Pharmazie-Rezepte ist ein Duenger II mit
+ * zwoelf Sprenkelbeeren; die Kette zu einem Erbgut-Serum verlangt ueber alle
+ * Stufen rund hundert. Vierzig je Beet heisst: **ein** Beet deckt jedes
+ * einzelne Rezept in einem Durchgang, und **vier** Beete tragen in einer
+ * Runde die Beerenseite eines Serums. Das ist die Absicht — die Kette soll
+ * an Sternenstaub und Zeit haengen, nicht daran, dass der Acker zu klein ist.
+ *
+ * Dreissig stand hier, als es nur um Fangbeeren ging.
+ */
+export const PLOT_MAX_ITEMS = 40
 
 /**
  * Gold ist streng gedeckelt — und zwar zweifach.
@@ -54,8 +67,51 @@ export const PLOT_MANUAL_BONUS = 50
 /** Prozentpunkte je Level des abgestellten Pflanzen-Pokémon. */
 export const TENDER_LEVEL_FACTOR = 0.5
 
-/** Kategorien, die sich vergraben lassen. Ein Pokéball keimt nicht. */
-export const PLANTABLE_CATEGORIES = ['berry', 'xp', 'material'] as const
+/**
+ * Was sich vergraben laesst. Ein Pokeball keimt nicht.
+ *
+ * Nur noch Beeren — und Gold, das einen eigenen Weg hat. Erfahrungsbonbons
+ * und Werkstoffe standen hier, weil "alles, was klein ist" die bequeme Regel
+ * war; ein Beet, aus dem Eisensplitter wachsen, erklaert sich aber niemandem.
+ * Beeren wachsen, alles andere wird gefunden oder gebaut.
+ */
+export const PLANTABLE_CATEGORIES = ['berry'] as const
+
+/**
+ * Die eine Beere, die nicht waechst.
+ *
+ * Sagenbeeren fallen bei Ueberfaellen und sind der einzige Hebel gegen ein
+ * Legendaeres. Waeren sie anbaubar, waere der Hebel eine Frage der Geduld.
+ */
+export const UNPLANTABLE_ITEMS = new Set(['legendary-berry'])
+
+/**
+ * Duenger: drei Stufen, zwei Wirkungen.
+ *
+ * Er verkuerzt die Wachszeit **und** hebt den Ertrag, jeweils um denselben
+ * Anteil. Das ist Absicht: eine Stufe, die nur schneller macht, ist bei einem
+ * Beet mit vier Stunden Laufzeit kaum spuerbar, und eine, die nur mehr bringt,
+ * laedt zum Liegenlassen ein. Zusammen belohnen sie das Bewirtschaften.
+ *
+ * Die Zeit wird geteilt, nicht abgezogen: 100 % heisst halb so lang, 200 %
+ * heisst ein Drittel. Sonst waere Stufe III bei 200 % eine Ernte in null
+ * Sekunden.
+ */
+export const FERTILISER_LEVELS = [
+  { itemId: 'fertiliser-1', level: 1, percent: 50 },
+  { itemId: 'fertiliser-2', level: 2, percent: 100 },
+  { itemId: 'fertiliser-3', level: 3, percent: 200 },
+] as const
+
+export type FertiliserLevel = (typeof FERTILISER_LEVELS)[number]
+
+export const fertiliserOf = (itemId: string | null): FertiliserLevel | null =>
+  FERTILISER_LEVELS.find((f) => f.itemId === itemId) ?? null
+
+/** Wie lange ein geduengtes Beet braucht. */
+export function fertilisedGrowthMs(percent: number, base = PLOT_GROWTH_MS): number {
+  return Math.max(60_000, Math.round(base / (1 + Math.max(0, percent) / 100)))
+}
 
 /** Wie viele Pflegeschritte bis jetzt fällig geworden sind. */
 export function phasesDue(plantedAt: number, now: number, growthMs = PLOT_GROWTH_MS, phases = PLOT_PHASES): number {
@@ -85,15 +141,21 @@ export function tenderBonus(level: number): number {
   return clamp(Math.round(PLOT_BASE_BONUS + level * TENDER_LEVEL_FACTOR), PLOT_BASE_BONUS, 100)
 }
 
-/** Der Aufschlag in Prozent, den ein Beet gerade erreicht. */
+/**
+ * Der Aufschlag in Prozent, den ein Beet gerade erreicht.
+ *
+ * Pflege und Pfleger schliessen einander aus — es gilt der bessere von beiden.
+ * Der Duenger kommt obendrauf: er ersetzt keine Pflege, er lohnt sie.
+ */
 export function plotBonus(input: {
   phasesDone: number
   phases?: number
   tenderLevel: number | null
+  fertiliserPercent?: number
 }): number {
   const manual = manualBonus(input.phasesDone, input.phases ?? PLOT_PHASES)
   const tended = input.tenderLevel === null ? 0 : tenderBonus(input.tenderLevel)
-  return Math.max(manual, tended)
+  return Math.max(manual, tended) + Math.max(0, input.fertiliserPercent ?? 0)
 }
 
 /** Was am Ende herauskommt. Immer mindestens der Einsatz. */

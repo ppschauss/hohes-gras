@@ -224,9 +224,10 @@ export const api = {
       method: 'POST', body: JSON.stringify({ code }),
     }),
 
-  useItem: (itemId: string, creatureId?: string) =>
+  /** `stat` nur fuer Fleissbeere und Erbgut-Serum — sie wirken auf einen Wert. */
+  useItem: (itemId: string, creatureId?: string, stat?: string) =>
     request<{ result: UseItemResult }>('/api/items/use', {
-      method: 'POST', body: JSON.stringify({ itemId, creatureId }),
+      method: 'POST', body: JSON.stringify({ itemId, creatureId, stat }),
     }),
 
   sendGift: (trainerId: string) =>
@@ -1425,13 +1426,16 @@ export interface AdminDashboard {
 
 
 export interface UseItemResult {
-  kind: 'heal' | 'revive' | 'cure' | 'xp' | 'jammer'
+  kind: 'heal' | 'revive' | 'cure' | 'xp' | 'jammer' | 'ev' | 'iv'
   itemName: string
   creatureName?: string
   healed?: number
   xpGained?: number
   leveledUp?: boolean
   charges?: number
+  /** Bei Fleissbeere und Erbgut-Serum: welcher Wert, und wie er jetzt steht. */
+  stat?: string
+  statValue?: number
 }
 
 export interface SoulView {

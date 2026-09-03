@@ -1,5 +1,5 @@
-import { GameError, type Trainer } from '@game/shared'
-import { computeStats, grantXpTo } from '@game/engine'
+import { GameError, STATS, type Trainer } from '@game/shared'
+import { addEvs, computeStats, grantXpTo, IV_MAX, xpForLevel } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import * as creatures from '../repos/creatures.js'
@@ -20,7 +20,7 @@ import { useJammer } from './safari.js'
  * Absage — ein Lockduft etwa gehört in die Safari, nicht in den Beutel.
  */
 
-export type UseKind = 'heal' | 'revive' | 'cure' | 'xp' | 'jammer'
+export type UseKind = 'heal' | 'revive' | 'cure' | 'xp' | 'jammer' | 'ev' | 'iv'
 
 export interface UseResult {
   kind: UseKind
@@ -30,10 +30,13 @@ export interface UseResult {
   xpGained?: number
   leveledUp?: boolean
   charges?: number
+  /** Bei Fleissbeere und Erbgut-Serum: welcher Wert, und wie er jetzt steht. */
+  stat?: string
+  statValue?: number
 }
 
 export function useItem(
-  ctx: AppContext, trainer: Trainer, itemId: string, creatureId?: string,
+  ctx: AppContext, trainer: Trainer, itemId: string, creatureId?: string, stat?: string,
 ): UseResult {
   const item = ctx.registry.tryItem(itemId)
   if (!item) throw new GameError('not_found', { itemId }, 404)
@@ -71,6 +74,78 @@ export function useItem(
     const stats = computeStats(species, c.level, c.ivs, c.evs, c.nature)
     const creatureName = c.nickname ?? ctx.registry.localized(species.name, trainer.locale)
     const p = item.params
+
+    /*
+     * Fleissbeere und Erbgut-Serum: beide brauchen einen Wert.
+     *
+     * Sie stehen hier und nicht bei den Traenken, weil sie das Pokemon
+     * dauerhaft aendern statt es zu versorgen. Und beide verlangen, dass der
+     * Spieler sagt, *welchen* Wert — ein Mittel, das selbst waehlt, waere bei
+     * einem Gegenstand dieses Preises eine Zumutung.
+     */
+    if (p.evPoints !== undefined || p.ivPerfect === true) {
+      /*
+       * Ein Vitamin bringt seinen Wert selbst mit.
+       *
+       * KP-Plus ist Kraftpunkte, Protein ist Angriff — da gibt es nichts zu
+       * waehlen, und die Vorlage macht es genauso. Nur der Kronkorken laesst
+       * die Wahl, weil er sie auch dort laesst.
+       */
+      const fest = typeof p.evStat === 'string' ? p.evStat : null
+      const gewaehlt = fest ?? stat
+      if (!gewaehlt || !STATS.includes(gewaehlt as (typeof STATS)[number])) {
+        throw new GameError('validation_failed', { field: 'stat' })
+      }
+      const wert = gewaehlt as (typeof STATS)[number]
+
+      if (p.ivPerfect === true) {
+        if (c.ivs[wert] >= IV_MAX) {
+          throw new GameError('invalid_state', { reason: 'already_perfect', stat: wert }, 409)
+        }
+        creatures.setIvs(ctx.db, c.id, { ...c.ivs, [wert]: IV_MAX })
+        inventory.consume(ctx.db, trainer.id, itemId, 1)
+        logEvent(ctx.db, trainer.id, 'item.used', { itemId, creatureId, kind: 'iv', stat: wert })
+        return { kind: 'iv' as const, itemName: name, creatureName, stat: wert, statValue: IV_MAX }
+      }
+
+      const punkte = Math.max(1, Math.floor(Number(p.evPoints ?? 0)))
+      const neu = addEvs(c.evs, { [wert]: punkte })
+      if (neu[wert] === c.evs[wert]) {
+        throw new GameError('invalid_state', { reason: 'ev_full', stat: wert }, 409)
+      }
+      creatures.setEvs(ctx.db, c.id, neu)
+      inventory.consume(ctx.db, trainer.id, itemId, 1)
+      logEvent(ctx.db, trainer.id, 'item.used', { itemId, creatureId, kind: 'ev', stat: wert })
+      return { kind: 'ev' as const, itemName: name, creatureName, stat: wert, statValue: neu[wert] }
+    }
+
+    /*
+     * Das Sonderbonbon hebt um genau ein Level.
+     *
+     * Vorher gab es fuenfzig Erfahrungspunkte — bei Level 39 kostet ein
+     * Aufstieg 4.681, bei Level 100 gut 30.000. Der Gegenstand tat damit ein
+     * Achtzigstel dessen, was sein Name verspricht.
+     *
+     * Gerechnet wird die Luecke bis zur naechsten Stufe, nicht ein fester
+     * Betrag: nur so heisst "ein Level" auf jeder Stufe dasselbe. Die
+     * Reisegrenze gilt weiter — sie ist der Grund, warum ein Team nicht an
+     * seinen Trainer vorbeiwaechst.
+     */
+    if (p.levelUp === true) {
+      const cap = capOf(ctx, trainer)
+      if (c.level >= cap) {
+        throw new GameError('invalid_state', { reason: 'level_cap', level: c.level, cap }, 409)
+      }
+      const luecke = Math.max(1, xpForLevel(species.growthRate, c.level + 1) - c.xp)
+      const result = grantXpTo(species.growthRate, c.xp, c.level, luecke, cap)
+      creatures.setXp(ctx.db, c.id, result.totalXp, result.levelAfter)
+      inventory.consume(ctx.db, trainer.id, itemId, 1)
+      logEvent(ctx.db, trainer.id, 'item.used', { itemId, creatureId, kind: 'xp', levelUp: true })
+      return {
+        kind: 'xp' as const, itemName: name, creatureName,
+        xpGained: result.totalXp - c.xp, leveledUp: result.levelsGained > 0,
+      }
+    }
 
     if (item.category === 'xp') {
       const amount = Math.max(1, Math.floor(Number(p.xp ?? 0)))

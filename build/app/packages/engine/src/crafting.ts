@@ -108,6 +108,146 @@ export const RECIPES: Recipe[] = [
     goldCost: 800,
     requiresBuilding: { buildingId: 'lab', level: 2 },
   },
+  /*
+   * Duenger, drei Stufen.
+   *
+   * Jede Stufe nimmt die Beere der vorigen und legt eine bessere dazu — so
+   * haengt Stufe III an einem Beet, das schon mit Stufe II bewirtschaftet
+   * wurde. Der Sternenstaub ist die Bremse: er faellt in der Kampfzone erst
+   * ab Serie 50 und macht den Duenger damit zu etwas, das man sich verdient.
+   */
+  {
+    id: 'craft-fertiliser-1', research: 'res-fertiliser',
+    output: { itemId: 'fertiliser-1', quantity: 3 },
+    inputs: [
+      { itemId: 'oran-berry', quantity: 10 },
+      { itemId: 'iron-shard', quantity: 4 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 1200,
+    requiresBuilding: { buildingId: 'lab', level: 3 },
+  },
+  {
+    id: 'craft-fertiliser-2', research: 'res-fertiliser',
+    output: { itemId: 'fertiliser-2', quantity: 2 },
+    inputs: [
+      { itemId: 'razz-berry', quantity: 12 },
+      { itemId: 'fertiliser-1', quantity: 3 },
+      { itemId: 'star-piece', quantity: 3 },
+    ],
+    goldCost: 4000,
+    requiresBuilding: { buildingId: 'lab', level: 3 },
+  },
+  {
+    id: 'craft-fertiliser-3', research: 'res-fertiliser',
+    output: { itemId: 'fertiliser-3', quantity: 1 },
+    inputs: [
+      { itemId: 'golden-razz', quantity: 6 },
+      { itemId: 'fertiliser-2', quantity: 2 },
+      { itemId: 'star-piece', quantity: 8 },
+    ],
+    goldCost: 15000,
+    requiresBuilding: { buildingId: 'lab', level: 4 },
+  },
+  /*
+   * Die sechs Vitamine — je eines fuer einen Wert, je eines mit eigenem
+   * Rezept.
+   *
+   * Alle sechs teilen sich eine Forschung und dieselbe Grundform: eine Beere
+   * aus dem eigenen Beet, ein Werkstoff, der zum Wert passt, und ein
+   * Sternenstaub. Nur die Zutat in der Mitte unterscheidet sie — so bleibt
+   * die Kette lesbar, und trotzdem baut man jedes einzeln.
+   *
+   * 32 Fleisspunkte je Flasche, genau ein Trainingslauf: das Vitamin ist ein
+   * Training in der Flasche. Teurer, aber sofort und ohne das Pokemon drei
+   * Stunden zu binden.
+   */
+  {
+    id: 'craft-hp-up', research: 'res-vitamins',
+    output: { itemId: 'hp-up', quantity: 1 },
+    inputs: [
+      { itemId: 'oran-berry', quantity: 14 },
+      { itemId: 'soul-normal', quantity: 3 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 4000,
+    requiresBuilding: { buildingId: 'lab', level: 3 },
+  },
+  {
+    id: 'craft-protein', research: 'res-vitamins',
+    output: { itemId: 'protein', quantity: 1 },
+    inputs: [
+      { itemId: 'razz-berry', quantity: 14 },
+      { itemId: 'soul-fighting', quantity: 3 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 4000,
+    requiresBuilding: { buildingId: 'lab', level: 3 },
+  },
+  {
+    id: 'craft-iron', research: 'res-vitamins',
+    output: { itemId: 'iron', quantity: 1 },
+    inputs: [
+      { itemId: 'nanab-berry', quantity: 14 },
+      { itemId: 'iron-shard', quantity: 3 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 4000,
+    requiresBuilding: { buildingId: 'lab', level: 3 },
+  },
+  {
+    id: 'craft-calcium', research: 'res-vitamins',
+    output: { itemId: 'calcium', quantity: 1 },
+    inputs: [
+      { itemId: 'pinap-berry', quantity: 14 },
+      { itemId: 'soul-psychic', quantity: 3 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 4000,
+    requiresBuilding: { buildingId: 'lab', level: 3 },
+  },
+  {
+    id: 'craft-zinc', research: 'res-vitamins',
+    output: { itemId: 'zinc', quantity: 1 },
+    inputs: [
+      { itemId: 'nanab-berry', quantity: 14 },
+      { itemId: 'soul-water', quantity: 3 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 4000,
+    requiresBuilding: { buildingId: 'lab', level: 3 },
+  },
+  {
+    id: 'craft-carbos', research: 'res-vitamins',
+    output: { itemId: 'carbos', quantity: 1 },
+    inputs: [
+      { itemId: 'pinap-berry', quantity: 14 },
+      { itemId: 'silk-thread', quantity: 3 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 4000,
+    requiresBuilding: { buildingId: 'lab', level: 3 },
+  },
+  /*
+   * Der Kronkorken.
+   *
+   * Der teuerste Gegenstand im Spiel, und das mit Absicht: er hebt eine
+   * Veranlagung auf den Hoechstwert und ist damit der letzte Schritt zu einem
+   * makellosen Pokemon, den die Zucht allein nicht mehr schafft. Sechs
+   * Vitamine stecken darin — eines je Wert, also die ganze Reihe.
+   */
+  {
+    id: 'craft-bottle-cap', research: 'res-bottle-cap',
+    output: { itemId: 'bottle-cap', quantity: 1 },
+    inputs: [
+      { itemId: 'protein', quantity: 2 },
+      { itemId: 'carbos', quantity: 2 },
+      { itemId: 'fertiliser-3', quantity: 1 },
+      { itemId: 'star-piece', quantity: 12 },
+    ],
+    goldCost: 45000,
+    requiresBuilding: { buildingId: 'lab', level: 4 },
+  },
   {
     id: 'craft-golden-razz',
     output: { itemId: 'golden-razz', quantity: 1 },

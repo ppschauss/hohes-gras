@@ -205,6 +205,19 @@ export function ownedSpeciesIds(db: Db, ownerId: string): Set<string> {
  *  Erfahrung gibt. */
 /** Fleisspunkte setzen. Es gab dafuer nie einen Weg — sie standen bei jedem
  *  Pokemon auf null, obwohl die Werteformel sie laengst liest. */
+/**
+ * Anlagen setzen.
+ *
+ * Der einzige Weg, an ihnen zu drehen, nachdem ein Pokemon entstanden ist —
+ * das Erbgut-Serum. Sonst stehen sie vom ersten Augenblick an fest, und genau
+ * das macht sie zu dem, was man an einem Pokemon sammelt.
+ */
+export function setIvs(db: Db, creatureId: string, ivs: StatBlock): void {
+  db.prepare(
+    'UPDATE creatures SET iv_hp = ?, iv_atk = ?, iv_def = ?, iv_spa = ?, iv_spd = ?, iv_spe = ? WHERE id = ?',
+  ).run(ivs.hp, ivs.atk, ivs.def, ivs.spa, ivs.spd, ivs.spe, creatureId)
+}
+
 export function setEvs(db: Db, creatureId: string, evs: StatBlock): void {
   db.prepare(
     'UPDATE creatures SET ev_hp = ?, ev_atk = ?, ev_def = ?, ev_spa = ?, ev_spd = ?, ev_spe = ? WHERE id = ?',
