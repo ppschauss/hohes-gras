@@ -59,7 +59,7 @@ export function researchBonuses(ctx: AppContext, trainerId: string): Record<Rese
   const done = doneOf(ctx, trainerId)
   const out = {
     findChance: 0, catchDrop: 0, expeditionLoot: 0,
-    battleXp: 0, battleGold: 0, catchRate: 0, shinyOdds: 0,
+    battleXp: 0, battleGold: 0, catchRate: 0, shinyOdds: 0, plotSlots: 0,
   } as Record<ResearchBonus, number>
   for (const p of RESEARCH_PROJECTS) {
     if (p.kind !== 'bonus' || !p.unlocks) continue

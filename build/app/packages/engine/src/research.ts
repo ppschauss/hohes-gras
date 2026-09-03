@@ -30,6 +30,7 @@ export type ResearchBonus =
   | 'battleGold'        // Gold aus Kämpfen, in Prozent
   | 'catchRate'         // Fangchance, in Prozent
   | 'shinyOdds'         // Shiny-Grundchance, in Prozentpunkten (×100)
+  | 'plotSlots'         // Zusaetzliche Beete, in Stueck
 
 export interface ResearchProject {
   id: string
@@ -142,6 +143,24 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
      * beiden vorbei, und genau darum ist das hier die erste Stufe der Kette
      * und nicht eine Abzweigung daneben.
      */
+    /*
+     * Zwei weitere Beete, eines je Stufe.
+     *
+     * Vier Beete und sechs Fleissbeeren gingen nicht zusammen: der Bauplan
+     * des Kronkorkens verlangt alle sechs Sorten, das Feld bot Platz fuer
+     * vier. Wer alles wollte, baute in zwei Runden nacheinander an, was
+     * nebeneinander gemeint war.
+     *
+     * Deshalb genau zwei Stufen und keine dritte. Sechs Beete zu sechs
+     * Sorten ist die Zahl, die der Bauplan vorgibt; alles darueber waere
+     * nicht mehr Ordnung, sondern Ertrag — und den regelt der Duenger.
+     */
+    id: 'res-plots', kind: 'bonus', tiers: 2, lab: 2, unlocks: 'plotSlots',
+    step: 1, hours: 8, gold: 6000,
+    inputs: [{ itemId: 'soft-sand', quantity: 16 }, { itemId: 'star-piece', quantity: 4 }],
+    xpPerHour: 210,
+  },
+  {
     id: 'res-ev-berries', kind: 'recipe', tiers: 1, lab: 2, unlocks: null,
     step: 0, hours: 4, gold: 2500,
     inputs: [{ itemId: 'oran-berry', quantity: 20 }, { itemId: 'star-piece', quantity: 3 }],

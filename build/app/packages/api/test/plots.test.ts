@@ -19,6 +19,15 @@ afterEach(async () => { await h.close() })
 const plots = async () => (await h.get('/api/plots', token)).body
 const slot0 = async () => (await plots()).plots[0]
 
+/** Ein Forschungsprojekt als abgeschlossen eintragen, ohne es zu durchlaufen. */
+function forschungFertig(projectId: string, tier: number): void {
+  const jetzt = Date.now()
+  h.ctx.db.prepare(
+    'INSERT INTO research (id, trainer_id, project_id, tier, started_at, ready_at, claimed_at)'
+    + ' VALUES (?, ?, ?, ?, ?, ?, ?)',
+  ).run(crypto.randomUUID(), trainerId, projectId, tier, jetzt, jetzt, jetzt)
+}
+
 /** Die Pflanzung in die Vergangenheit ruecken, statt vier Stunden zu warten. */
 function ageplot(slot: number, ms: number): void {
   h.ctx.db.prepare(
@@ -372,5 +381,39 @@ describe('Was sich nicht mehr eingraben laesst', () => {
     const r = await h.post('/api/plots/plant',
       { slot: 0, kind: 'item', itemId: 'soul-normal', amount: 3 }, token)
     expect(r.status).toBe(409)
+  })
+})
+
+describe('Beetweiterung', () => {
+  it('gibt ohne Forschung genau vier Beete', async () => {
+    expect((await plots()).plots).toHaveLength(4)
+  })
+
+  it('legt je Forschungsstufe ein Beet dazu', async () => {
+    forschungFertig('res-plots', 1)
+    expect((await plots()).plots).toHaveLength(5)
+    forschungFertig('res-plots', 2)
+    expect((await plots()).plots).toHaveLength(6)
+  })
+
+  /*
+   * Der Fehler, der ohne diesen Test durchgegangen waere: die Ansicht zaehlt
+   * die Beete aus der Forschung, die Pruefung beim Pflanzen aber aus der
+   * Konstante. Dann sieht man sechs Beete und darf nur auf vieren pflanzen.
+   */
+  it('erlaubt das Pflanzen auf den neuen Beeten', async () => {
+    const zu = await h.post('/api/plots/plant', { slot: 4, kind: 'gold', amount: 500 }, token)
+    expect(zu.status).toBe(400)
+
+    forschungFertig('res-plots', 2)
+    const auf = await h.post('/api/plots/plant', { slot: 4, kind: 'gold', amount: 500 }, token)
+    expect(auf.status).toBe(200)
+  })
+
+  it('weist weiterhin ab, was ueber die erforschte Zahl hinausgeht', async () => {
+    forschungFertig('res-plots', 2)
+    const r = await h.post('/api/plots/plant', { slot: 6, kind: 'gold', amount: 500 }, token)
+    expect(r.status).toBe(400)
+    expect(r.body.detail?.max).toBe(5)
   })
 })

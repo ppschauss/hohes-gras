@@ -17,6 +17,7 @@ import { logEvent } from '../repos/events.js'
 import * as energy from './energy.js'
 import { assertPace, recordPace } from './pacing.js'
 import { busyCreatureIds } from './busy.js'
+import { researchBonuses } from './research.js'
 import { von } from './ledger.js'
 
 /**
@@ -155,7 +156,7 @@ export function state(ctx: AppContext, trainer: Trainer, now = Date.now()): Plot
 
   const lastGold = plots.lastGoldPlantAt(ctx.db, trainer.id)
   return {
-    plots: Array.from({ length: PLOT_COUNT }, (_, slot) =>
+    plots: Array.from({ length: plotCount(ctx, trainer.id) }, (_, slot) =>
       plotView(ctx, trainer, open.get(slot) ?? null, slot, now)),
     gold: inventory.goldOf(ctx.db, trainer.id),
     growthMinutes: Math.round(PLOT_GROWTH_MS / 60_000),
@@ -206,10 +207,22 @@ export interface PlantInput {
   fertiliserId?: string | null
 }
 
+/**
+ * Wie viele Beete dieser Trainer hat.
+ *
+ * Die vier Grundbeete plus, was die Forschung dazugelegt hat. Die Zahl steht
+ * bewusst nicht mehr als Konstante in der Ansicht: sonst haette die Ansicht
+ * sechs Beete gezeigt und das Pflanzen auf Platz 5 mit "ungueltig"
+ * abgewiesen.
+ */
+export const plotCount = (ctx: AppContext, trainerId: string): number =>
+  PLOT_COUNT + Math.floor(researchBonuses(ctx, trainerId).plotSlots)
+
 export function plant(ctx: AppContext, trainer: Trainer, input: PlantInput, now = Date.now()): PlotsState {
   return tx(ctx.db, () => {
-    if (input.slot < 0 || input.slot >= PLOT_COUNT) {
-      throw new GameError('validation_failed', { field: 'slot', max: PLOT_COUNT - 1 })
+    const beete = plotCount(ctx, trainer.id)
+    if (input.slot < 0 || input.slot >= beete) {
+      throw new GameError('validation_failed', { field: 'slot', max: beete - 1 })
     }
     if (plots.atSlot(ctx.db, trainer.id, input.slot)) {
       throw new GameError('invalid_state', { reason: 'plot_busy', slot: input.slot }, 409)
