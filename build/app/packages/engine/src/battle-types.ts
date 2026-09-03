@@ -78,6 +78,16 @@ export interface Fighter {
   substitute?: number
   /** Bis einschliesslich dieser Runde faellt ein Statuszug auf den Absender zurueck. */
   magicCoatUntilTurn?: number
+  /**
+   * Wie es war, bevor etwas im Kampf daran gedreht hat.
+   *
+   * Krafttrick tauscht Werte, Umwandlung faerbt Typen, Wandler macht eine
+   * Kopie — alles drei gilt "bis man das Feld verlaesst", so steht es auch am
+   * Schema. Ohne einen Urzustand liesse sich das nicht zuruecknehmen, und ein
+   * verwandeltes Ditto blieb Kopie, nachdem es laengst wieder auf der Bank
+   * sass. Wird beim ersten Eingriff gesetzt und beim Abgang eingeloest.
+   */
+  urform?: { types: string[]; stats: StatBlock; speciesId: string; sprite: string; moves: Fighter['moves'] }
   moves: Array<{ id: string; pp: number; ppMax: number }>
   sprite: string
   shiny: boolean
@@ -271,7 +281,7 @@ export type BattleEvent =
   /** Alle Wertveraenderungen sind zurueckgesetzt (Dunkelnebel). */
   | { type: 'stages_cleared'; side: 0 | 1; fighter: string }
   /** Ein Zug bereitet etwas vor: Volltrefferchance, sicherer Treffer. */
-  | { type: 'prepared'; side: 0 | 1; fighter: string; what: 'crit' | 'sure_crit' | 'stats_copied' | 'stats_swapped' | 'destiny_bond' | 'priority_guard' }
+  | { type: 'prepared'; side: 0 | 1; fighter: string; what: 'crit' | 'sure_crit' | 'stats_copied' | 'stats_swapped' | 'destiny_bond' | 'priority_guard' | 'endure' | 'magic_coat' }
   /** Ein anhaltender Effekt beginnt oder endet. */
   | { type: 'lingering'; side: 0 | 1; fighter: string; kind: Lingering['kind']; started: boolean }
   /** Ein anhaltender Effekt hat gewirkt: Abzug oder Zuwachs. */

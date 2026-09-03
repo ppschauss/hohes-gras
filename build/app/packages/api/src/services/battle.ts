@@ -159,9 +159,23 @@ export function view(
    * wo die Regeln stehen.
    */
   const named = lastEvents.map((e) => {
-    if (e.type !== 'move') return e
-    const move = ctx.registry.tryMove(e.moveId)
-    return { ...e, moveName: move ? ctx.registry.localized(move.name, trainer.locale) : e.moveId }
+    /*
+     * Nicht nur `move` traegt eine Attackenkennung.
+     *
+     * `called` (Metronom, Spiegeltrick), `pp_drain` (Groll, Nachspiel) und
+     * `reflected` (Magiemantel) ebenso — und ihre Saetze setzen sie direkt
+     * ein. Ohne diese Zeilen stand im Protokoll "Pikachu setzt thunder-shock
+     * ein!" mitten im deutschen Text.
+     */
+    if (e.type === 'move') {
+      const move = ctx.registry.tryMove(e.moveId)
+      return { ...e, moveName: move ? ctx.registry.localized(move.name, trainer.locale) : e.moveId }
+    }
+    if (e.type === 'called' || e.type === 'pp_drain' || e.type === 'reflected') {
+      const move = ctx.registry.tryMove(e.moveId)
+      return { ...e, moveId: move ? ctx.registry.localized(move.name, trainer.locale) : e.moveId }
+    }
+    return e
   })
 
   return {

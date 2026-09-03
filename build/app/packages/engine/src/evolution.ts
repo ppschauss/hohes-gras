@@ -46,5 +46,22 @@ export function tradeEvolutionFor(
    * erfuellbar, und die acht gaebe es nur auf dem Papier. Das Kabel ist die
    * ganze Bedingung.
    */
+
+  /*
+   * Bei zwei moeglichen Zielen entscheidet niemand automatisch.
+   *
+   * Perlu ist der einzige Fall: es kann zu Aalabyss *oder* zu Saganabyss
+   * werden. Im Vorbild entscheidet der getragene Gegenstand — und weil der
+   * hier weggefallen ist, blieb `evolutions[0]`, also immer Aalabyss.
+   * Saganabyss war damit unerreichbar, obwohl beide Wege im Paket stehen.
+   *
+   * Ein Tausch ist keine Wahl: die beiden Spieler haben ein Pokemon getauscht,
+   * nicht eine Entwicklung ausgesucht. Also entwickelt sich hier gar nichts,
+   * und die Tausch-Station uebernimmt — dort stehen beide Ziele als eigene
+   * Zeilen, und der Spieler zeigt auf eines. Lieber eine Entwicklung, die
+   * einen zweiten Schritt braucht, als eine, die dem Spieler das falsche
+   * Pokemon gibt.
+   */
+  if (evolutions.length > 1) return null
   return evolutions[0] ?? null
 }

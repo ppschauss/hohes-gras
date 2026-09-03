@@ -89,6 +89,8 @@ const MOVES: Record<string, MoveDef> = {
   'magic-coat': ziel(mv('magic-coat', 'psychic', 'status', 0, 100, 15, { kind: 'magic_coat' }, 100, 0, 4)),
   gravity: ziel(mv('gravity', 'psychic', 'status', 0, 100, 5, { kind: 'field', field: 'gravity', turns: 5 }, 100), 'field'),
   'ion-deluge': ziel(mv('ion-deluge', 'electric', 'status', 0, 100, 25, { kind: 'field', field: 'ion_deluge', turns: 2 }, 100), 'field'),
+  'sleep-talk': ziel(mv('sleep-talk', 'normal', 'status', 0, 100, 10, { kind: 'call_move', source: 'own_random' }, 100)),
+  'aqua-ring2': ziel(mv('aqua-ring2', 'water', 'status', 0, 100, 20, { kind: 'lingering', effect: 'aqua_ring' }, 100)),
   // Traumfresser: hohe Staerke, halbes Aussaugen — und nur gegen Schlafende.
   'dream-eater': {
     ...mv('dream-eater', 'normal', 'special', 100, 100, 15, { kind: 'drain', ratio: 0.5 }, 100),
@@ -1381,5 +1383,87 @@ describe('Typwechsel, Puppe und was ueber dem Feld liegt', () => {
     const versucht = resolveTurn(erste.state, useMove(1), useMove(), strom)
 
     expect(versucht.events.some((e) => e.type === 'damage' && e.effectiveness === 0)).toBe(true)
+  })
+})
+
+describe('Was das Feld nicht verlaesst — und was doch', () => {
+  it('laesst eigene Zuege an der Puppe des Gegners vorbei', () => {
+    /*
+     * Die Puppe faengt ab, was auf ihren Traeger zielt. Ein Wasserring zielt
+     * auf den Anwender — er hat mit ihr nichts zu tun. Die Pruefung ging
+     * vorher nach der *Art* der Wirkung statt nach ihrer Richtung, und
+     * blockierte damit sieben eigene Zuege: Wasserring, Magnetflug,
+     * Verwurzler, Wunschtraum, Zielschuss, Umwandlung, Teleport.
+     */
+    const a = fighter('ich', ['water'], 20, ['aqua-ring2'], 60)
+    const b = fighter('puppe', ['normal'], 20, ['substitute'], 80)
+    const gestellt = resolveTurn(battle([a], [b]), useMove(), useMove(), content)
+    expect(gestellt.state.sides[1]!.party[0]!.substitute).toBeGreaterThan(0)
+
+    const geringt = resolveTurn(gestellt.state, useMove(), useMove(), content)
+    expect(geringt.state.sides[0]!.party[0]!.lingering?.map((l) => l.kind)).toContain('aqua_ring')
+  })
+
+  it('laesst die Schlafrede im Schlaf wirken', () => {
+    /*
+     * Der einzige Zug, der den Schlaf braucht statt ihn zu fuerchten. Der
+     * Zustand wurde vor der Zugwahl geprueft — wer schlief, kam nie zum Zug,
+     * wer wach war, bekam von der Auswahl nichts. Damit war er in jeder Lage
+     * tot, und zwar von Anfang an.
+     */
+    const a = fighter('schlaefer', ['normal'], 20, ['sleep-talk', 'tackle'], 80)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const start = battle([a], [b])
+    start.sides[0]!.party[0]!.status = 'sleep'
+    start.sides[0]!.party[0]!.statusCounter = 3
+
+    const runde = resolveTurn(start, useMove(0), useMove(), content)
+    expect(runde.events.some((e) => e.type === 'called')).toBe(true)
+    // Der Schlaf laeuft trotzdem weiter.
+    expect(runde.state.sides[0]!.party[0]!.status).toBe('sleep')
+  })
+
+  it('nimmt die Puppe beim Wechsel mit — und laesst sie nicht auf der Bank', () => {
+    const a = fighter('puppe', ['normal'], 20, ['substitute'], 60)
+    const ersatz = fighter('ersatz', ['normal'], 20, ['splash'], 60)
+    const b = fighter('ziel', ['normal'], 20, ['splash'], 60)
+    const gestellt = resolveTurn(battle([a, ersatz], [b]), useMove(), useMove(), content)
+    expect(gestellt.state.sides[0]!.party[0]!.substitute).toBeGreaterThan(0)
+
+    const gewechselt = resolveTurn(gestellt.state, { kind: 'switch', partyIndex: 1 }, useMove(), content)
+    expect(gewechselt.state.sides[0]!.party[0]!.substitute).toBeUndefined()
+  })
+
+  it('raeumt auch bei einem Abgang auf', () => {
+    /*
+     * Sonst holt ein Beleber den alten Kampfzustand zurueck: gesaet, verwirrt,
+     * mit stehender Puppe. Die Bereinigung stand nur im freiwilligen Wechsel —
+     * und den nimmt ein Gefallener gerade nicht.
+     */
+    const a = fighter('opfer', ['normal'], 5, ['splash'], 20)
+    const ersatz = fighter('ersatz', ['normal'], 20, ['splash'], 60)
+    const b = fighter('saeer', ['grass'], 40, ['leech-seed', 'tackle'], 90)
+    const gesaet = resolveTurn(battle([a, ersatz], [b]), useMove(), useMove(0), content)
+    expect(gesaet.state.sides[0]!.party[0]!.lingering).toHaveLength(1)
+
+    let lauf = gesaet
+    for (let i = 0; i < 8 && lauf.state.sides[0]!.party[0]!.hp > 0; i++) {
+      lauf = resolveTurn(lauf.state, useMove(), useMove(1), content)
+    }
+    expect(lauf.state.sides[0]!.party[0]!.hp).toBe(0)
+    expect(lauf.state.sides[0]!.party[0]!.lingering).toEqual([])
+  })
+
+  it('gibt einem Wandler beim Wechsel seine eigene Gestalt zurueck', () => {
+    // Am Schema steht "bis man das Feld verlaesst" — vorher blieb die Kopie.
+    const a = fighter('wandler', ['normal'], 20, ['transform'], 80)
+    const ersatz = fighter('ersatz', ['normal'], 20, ['splash'], 60)
+    const b = fighter('vorbild', ['fire'], 20, ['ember'], 60)
+    const kopiert = resolveTurn(battle([a, ersatz], [b]), useMove(), useMove(), content)
+    expect(kopiert.state.sides[0]!.party[0]!.types).toEqual(['fire'])
+
+    const zurueck = resolveTurn(kopiert.state, { kind: 'switch', partyIndex: 1 }, useMove(), content)
+    expect(zurueck.state.sides[0]!.party[0]!.types).toEqual(['normal'])
+    expect(zurueck.state.sides[0]!.party[0]!.moves.map((m) => m.id)).toEqual(['transform'])
   })
 })

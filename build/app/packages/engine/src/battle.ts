@@ -252,22 +252,7 @@ function doSwitch(
 
   // Stat stages and confusion are properties of being on the field, not of the
   // creature, so they reset. Status does not — that is the point of status.
-  const leaving = active(side)
-  leaving.stages = emptyStages()
-  leaving.confused = false
-  leaving.confusionTurns = 0
-  leaving.flinched = false
-  /*
-   * Auch was ueber Runden hing, bleibt auf dem Feld zurueck.
-   *
-   * Egelsamen, Zugabe, Magnetflug: alles davon beschreibt eine Lage im Kampf,
-   * nicht einen Schaden am Pokemon — anders als der Zustand, der genau darum
-   * bleibt. Wer sich zurueckzieht, schuettelt es ab; das ist der Grund, warum
-   * man sich zurueckzieht.
-   */
-  leaving.lingering = []
-  // Die Puppe steht auf dem Feld, nicht am Pokemon — sie bleibt zurueck.
-  leaving.substitute = undefined
+  verlaesstDasFeld(active(side))
 
   side.activeIndex = partyIndex
   // Frisch im Feld: seine erste eigene Handlung steht noch aus.
@@ -371,15 +356,34 @@ function performMove(
     return
   }
 
+  /*
+   * Der gewaehlte Zug muss schon hier bekannt sein.
+   *
+   * Genau ein Zug braucht den Schlaf, statt ihn zu fuerchten: die Schlafrede.
+   * Der Zustand wurde aber vor der Zugwahl geprueft — wer schlief, kam nie
+   * zum Zug, und wer wach war, bekam von der Auswahl ein `null`. Damit war
+   * der Zug in *jeder* Lage tot, und zwar seit dem Tag, an dem er eingebaut
+   * wurde. Kraftpunkte werden hier noch keine verbraucht; das passiert wie
+   * bisher erst weiter unten.
+   */
+  const gewaehlt = attacker.moves[moveIndex]
+  const imSchlaf = gewaehlt
+    ? safeMove(content, gewaehlt.id)?.effect.kind === 'call_move'
+      && (safeMove(content, gewaehlt.id)?.effect as { source?: string } | undefined)?.source === 'own_random'
+    : false
+
   const blockage = statusPreventsAction(attacker, rng)
   if (blockage.cured) {
     events.push({ type: 'status_cured', side: sideIndex, fighter: attacker.id, status: attacker.status })
     attacker.status = 'none'
     attacker.statusCounter = 0
-  } else if (blockage.blocked) {
+  } else if (blockage.blocked && !(imSchlaf && attacker.status === 'sleep')) {
     if (attacker.status === 'sleep') attacker.statusCounter--
     events.push({ type: 'status_blocked', side: sideIndex, fighter: attacker.id, status: attacker.status })
     return
+  } else if (blockage.blocked) {
+    // Schlafrede: der Schlaf laeuft weiter, der Zug geht trotzdem.
+    attacker.statusCounter--
   }
 
   if (attacker.confused) {
@@ -728,15 +732,16 @@ function applyMoveEffect(
    *
    * Der Schaden wird schon vorher abgefangen; hier geht es um alles andere —
    * Zustand, Wertesenkung, Egelsamen, Zwangswechsel. Genau dafuer stellt man
-   * sie auf, und ohne diese Liste waere sie nur ein Kraftpunkte-Puffer.
+   * sie auf, und ohne diese Pruefung waere sie nur ein Kraftpunkte-Puffer.
+   *
+   * Entscheidend ist *wen* die Wirkung trifft, nicht welcher Art sie ist. Hier
+   * stand eine Liste von Arten — und drei davon koennen auch auf den Anwender
+   * zielen: Wasserring, Magnetflug, Verwurzler, Wunschtraum und Zielschuss
+   * sind `lingering`, Umwandlung und Tarnung sind `type_change`, Teleport ist
+   * `force_switch`. Alle sieben prallten an der Puppe des *Gegners* ab, obwohl
+   * sie ihn nie beruehrt haetten.
    */
-  const AUF_DEN_GEGNER = new Set([
-    'status', 'flinch', 'lingering', 'share', 'pp_drain', 'psycho_shift',
-    'force_switch', 'type_change', 'copy_move',
-  ])
-  const hinterPuppe = (defender.substitute ?? 0) > 0
-    && (AUF_DEN_GEGNER.has(effect.kind)
-      || (effect.kind === 'stat_stage' && effect.target === 'foe'))
+  const hinterPuppe = (defender.substitute ?? 0) > 0 && zieltAufGegner(move, effect)
   if (hinterPuppe) {
     events.push({ type: 'substitute', side: foeIndex, fighter: defender.id, what: 'hit' })
     return
@@ -859,10 +864,7 @@ function applyMoveEffect(
        * dem Gegenueber auf — das ist der Normalfall, und die Ausnahmen stehen
        * deshalb als Liste da statt als Kette von Wenns.
        */
-      const beimAnwender = new Set([
-        'aqua_ring', 'magnet_rise', 'sure_hit', 'ingrain', 'wish', 'grudge',
-      ])
-      const traeger = beimAnwender.has(effect.effect) ? attacker : defender
+      const traeger = BEIM_ANWENDER.has(effect.effect) ? attacker : defender
       const seiteDesTraegers = (traeger === attacker ? sideIndex : foeIndex) as 0 | 1
       if (traeger.hp <= 0) return
       // Zweimal dasselbe waere kein zweiter Effekt, sondern ein verschenkter Zug.
@@ -915,7 +917,9 @@ function applyMoveEffect(
 
     case 'endure': {
       attacker.enduringUntilTurn = state.turn
-      events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'crit' })
+      // Eigene Meldung: hier stand die des Energiefokus, und im Protokoll las
+      // man nach einer Ausdauer "Die Konzentration steigt."
+      events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'endure' })
       return
     }
 
@@ -985,6 +989,7 @@ function applyMoveEffect(
     }
 
     case 'swap_stats': {
+      merkeUrform(attacker)
       const { atk, def } = attacker.stats
       attacker.stats = { ...attacker.stats, atk: def, def: atk }
       events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'stats_swapped' })
@@ -1065,6 +1070,7 @@ function applyMoveEffect(
         }
         case 'guard':
         case 'power': {
+          merkeUrform(attacker); merkeUrform(defender)
           const paar = effect.what === 'guard' ? (['def', 'spd'] as const) : (['atk', 'spa'] as const)
           for (const k of paar) {
             const wert = mitteln(attacker.stats[k], defender.stats[k])
@@ -1154,10 +1160,12 @@ function applyMoveEffect(
         return
       }
       const erbe = seite.party[naechster]!
+      // Erst weiterreichen, dann raeumen: die Puppe und die Verwirrung blieben
+      // sonst am Abgehenden haengen und liessen sich beim Zurueckwechseln
+      // gratis wieder mitbringen.
       erbe.stages = { ...attacker.stages }
       erbe.lingering = (attacker.lingering ?? []).filter((l) => l.kind !== 'trapped' && l.kind !== 'ingrain')
-      attacker.stages = emptyStages()
-      attacker.lingering = []
+      verlaesstDasFeld(attacker)
       seite.activeIndex = naechster
       erbe.turnsOnField = 0
       events.push({ type: 'switch', side: sideIndex, fighter: erbe.id, name: erbe.name })
@@ -1218,6 +1226,7 @@ function applyMoveEffect(
         events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
         return
       }
+      merkeUrform(attacker)
       slot.id = gelernt.id
       slot.pp = Math.min(gelernt.pp, 5)
       slot.ppMax = slot.pp
@@ -1241,6 +1250,7 @@ function applyMoveEffect(
         events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
         return
       }
+      merkeUrform(wer)
       wer.types = neu
       events.push({ type: 'type_changed', side: werSeite, fighter: wer.id, types: neu })
       return
@@ -1272,6 +1282,7 @@ function applyMoveEffect(
         events.push({ type: 'move_failed', side: sideIndex, fighter: attacker.id, move: move.id })
         return
       }
+      merkeUrform(attacker)
       attacker.speciesId = defender.speciesId
       attacker.types = [...defender.types]
       attacker.stats = { ...defender.stats, hp: attacker.stats.hp }
@@ -1284,7 +1295,7 @@ function applyMoveEffect(
 
     case 'magic_coat': {
       attacker.magicCoatUntilTurn = state.turn
-      events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'priority_guard' })
+      events.push({ type: 'prepared', side: sideIndex, fighter: attacker.id, what: 'magic_coat' })
       return
     }
 
@@ -1373,6 +1384,93 @@ const hatSchirm = (state: BattleState, side: 0 | 1, kind: SideCondition['kind'])
 /** Ob ein Feldeffekt gerade ueber dem Kampf liegt. */
 const hatFeld = (state: BattleState, kind: FieldEffectKind): boolean =>
   (state.fields ?? []).some((f) => f.kind === kind)
+
+/**
+ * Anhaltende Effekte, die beim Anwender bleiben statt beim Gegenueber.
+ *
+ * Steht hier oben, weil zwei Stellen dieselbe Antwort brauchen: das Auflegen
+ * selbst und die Frage, ob eine Puppe dazwischensteht.
+ */
+const BEIM_ANWENDER = new Set([
+  'aqua_ring', 'magnet_rise', 'sure_hit', 'ingrain', 'wish', 'grudge',
+])
+
+/** Trifft diese Wirkung den Gegenueber? Nur dann kann eine Puppe sie abfangen. */
+function zieltAufGegner(move: MoveDef, effect: MoveDef['effect']): boolean {
+  switch (effect.kind) {
+    case 'status':
+    case 'flinch':
+    case 'share':
+    case 'pp_drain':
+    case 'psycho_shift':
+    case 'copy_move':
+      return true
+    case 'stat_stage':
+      return effect.target === 'foe'
+    case 'lingering':
+      return !BEIM_ANWENDER.has(effect.effect)
+    case 'type_change':
+    case 'force_switch':
+      // Beide richten sich nach dem Ziel des Zuges: Ueberflutung faerbt den
+      // Gegner, Umwandlung den Anwender; Wirbelwind draengt den Gegner
+      // hinaus, Teleport bringt den Anwender weg.
+      return move.target === 'foe'
+    default:
+      return false
+  }
+}
+
+/**
+ * Den Urzustand festhalten, bevor zum ersten Mal daran gedreht wird.
+ *
+ * Ein zweiter Aufruf tut nichts — sonst waere der "Ur"-Zustand der von eben.
+ */
+function merkeUrform(f: Fighter): void {
+  if (f.urform) return
+  f.urform = {
+    types: [...f.types], stats: { ...f.stats },
+    speciesId: f.speciesId, sprite: f.sprite,
+    moves: f.moves.map((m) => ({ ...m })),
+  }
+}
+
+/**
+ * Was ein Kaempfer auf dem Feld zuruecklaesst.
+ *
+ * Eine Stelle fuer alle Wege hinaus: freiwilliger Wechsel, Stafette und
+ * Abgang. Vorher stand das Aufraeumen nur im freiwilligen Wechsel — wer fiel
+ * und mit einem Beleber zurueckkam, war weiterhin gesaet, verwirrt und hatte
+ * seine Puppe noch; wer per Stafette ging, liess sie auf der Bank stehen und
+ * konnte sie beim Zurueckwechseln gratis wieder aufstellen.
+ *
+ * Was bleibt, ist der Zustand — Gift, Schlaf, Brand. Das ist der Unterschied:
+ * er beschreibt ein Leiden am Pokemon, alles hier beschreibt eine Lage auf
+ * dem Feld.
+ */
+function verlaesstDasFeld(f: Fighter): void {
+  f.stages = emptyStages()
+  f.confused = false
+  f.confusionTurns = 0
+  f.flinched = false
+  f.lingering = []
+  f.substitute = undefined
+  f.sureCrit = false
+  f.critStage = 0
+  f.protectedUntilTurn = undefined
+  f.enduringUntilTurn = undefined
+  f.priorityGuardUntilTurn = undefined
+  f.destinyBondUntilTurn = undefined
+  f.magicCoatUntilTurn = undefined
+  f.lastMoveId = undefined
+  if (f.urform) {
+    f.types = f.urform.types
+    f.stats = f.urform.stats
+    f.speciesId = f.urform.speciesId
+    f.sprite = f.urform.sprite
+    f.moves = f.urform.moves
+    f.urform = undefined
+  }
+}
 
 /** Ob an einem Kaempfer ein bestimmter anhaltender Effekt haengt. */
 const hatEffekt = (f: Fighter, kind: Lingering['kind']): boolean =>
@@ -1679,6 +1777,15 @@ function checkFaints(state: BattleState, events: BattleEvent[], content: BattleC
     if (fighter.hp > 0) continue
 
     events.push({ type: 'faint', side: sideIndex, fighter: fighter.id })
+    /*
+     * Auch ein Abgang raeumt das Feld.
+     *
+     * Sonst holt ein Beleber den alten Kampfzustand mit zurueck: gesaet,
+     * verwirrt, mit stehender Puppe. Die Bereinigung stand nur im
+     * freiwilligen Wechsel, und der ist genau der Weg, den ein Gefallener
+     * nicht nimmt.
+     */
+    verlaesstDasFeld(fighter)
 
     const replacement = side.party.findIndex((f) => f.hp > 0)
     if (replacement === -1) {

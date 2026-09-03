@@ -144,6 +144,35 @@ describe('Echter Tausch', () => {
     expect(have(misty.id, LINK_CABLE_ITEM_ID)).toBe(0)
   })
 
+  it('entwickelt bei zwei moeglichen Zielen gar nicht', async () => {
+    /*
+     * Perlu ist der Fall: es kann zu Aalabyss *oder* zu Saganabyss werden.
+     * Im Vorbild entscheidet der getragene Gegenstand — den gibt es hier
+     * nicht, und der Code nahm daraufhin stillschweigend immer das erste
+     * Ziel. Saganabyss war damit unerreichbar, obwohl beide Wege im Paket
+     * stehen und die Tausch-Station beide anbietet.
+     *
+     * Ein Tausch ist keine Wahl. Also entwickelt sich hier nichts, und die
+     * Station uebernimmt — dort zeigt der Spieler auf ein Ziel.
+     */
+    const id = grant(ash.id, 'zwiemon')
+    const r = await accept(await offer(id))
+
+    expect(r.status).toBe(200)
+    expect(r.body.evolved).toEqual([])
+    expect(speciesOf(id)).toBe('zwiemon')
+  })
+
+  it('laesst dafuer die Station beide Ziele anbieten', async () => {
+    const id = grant(ash.id, 'zwiemon')
+    const station = await h.get('/api/trade-station', ash.token)
+    const zeilen = station.body.rows.filter((z: { creatureId: string }) => z.creatureId === id)
+
+    expect(zeilen).toHaveLength(2)
+    expect(zeilen.map((z: { targetSpeciesId?: string; targetName: string }) => z.targetName).sort())
+      .toEqual(['Zwiemon-links', 'Zwiemon-rechts'])
+  })
+
   it('entwickelt beide Seiten eines Ringtauschs', async () => {
     const mine = grant(ash.id, 'tauschmon')
     const hers = grant(misty.id, 'tauschmon')
