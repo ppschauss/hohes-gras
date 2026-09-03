@@ -1,5 +1,5 @@
 import { GameError, STATS, type Trainer } from '@game/shared'
-import { addEvs, computeStats, grantXpTo, IV_MAX, xpForLevel } from '@game/engine'
+import { addEvs, computeStats, grantXpTo, IV_CAPS_PER_CREATURE, IV_MAX, xpForLevel } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import * as creatures from '../repos/creatures.js'
@@ -102,9 +102,27 @@ export function useItem(
         if (c.ivs[wert] >= IV_MAX) {
           throw new GameError('invalid_state', { reason: 'already_perfect', stat: wert }, 409)
         }
+        /*
+         * Zwei je Pokemon, nicht sechs.
+         *
+         * Ohne diese Grenze setzten sechs Kronkorken alle sechs Werte auf das
+         * Maximum — die Zucht war damit keine Abkuerzung wert, sondern
+         * ueberfluessig. Zwei retten die beiden schwaechsten Werte; fuer die
+         * uebrigen vier muss weiterhin gezuechtet werden.
+         */
+        if (c.ivCaps >= IV_CAPS_PER_CREATURE) {
+          throw new GameError(
+            'invalid_state',
+            { reason: 'iv_cap_limit', used: c.ivCaps, max: IV_CAPS_PER_CREATURE },
+            409,
+          )
+        }
         creatures.setIvs(ctx.db, c.id, { ...c.ivs, [wert]: IV_MAX })
+        creatures.bumpIvCaps(ctx.db, c.id)
         inventory.consume(ctx.db, trainer.id, itemId, 1)
-        logEvent(ctx.db, trainer.id, 'item.used', { itemId, creatureId, kind: 'iv', stat: wert })
+        logEvent(ctx.db, trainer.id, 'item.used', {
+          itemId, creatureId, kind: 'iv', stat: wert, capsUsed: c.ivCaps + 1,
+        })
         return { kind: 'iv' as const, itemName: name, creatureName, stat: wert, statValue: IV_MAX }
       }
 

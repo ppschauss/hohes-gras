@@ -3,6 +3,19 @@ import type { SpeciesDef } from '@game/content'
 import type { Rng } from './rng.js'
 
 export const IV_MAX = 31
+
+/**
+ * Wie viele Kronkorken ein Pokemon annimmt.
+ *
+ * Ohne Grenze setzten sechs Stueck alle sechs Werte auf 31 — die Zucht war
+ * damit nicht mehr der Weg zu guten Veranlagungen, sondern eine Abkuerzung,
+ * die man auch ueberspringen konnte. Zwei retten die beiden schwaechsten
+ * Werte; die uebrigen vier muss weiterhin die Zucht liefern.
+ *
+ * Zwei und nicht drei: bei drei waere die Haelfte gekauft, und "die Haelfte"
+ * ist keine Nachhilfe mehr.
+ */
+export const IV_CAPS_PER_CREATURE = 2
 export const EV_MAX_PER_STAT = 252
 export const EV_MAX_TOTAL = 510
 

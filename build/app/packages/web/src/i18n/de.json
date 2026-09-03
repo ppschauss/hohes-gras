@@ -467,6 +467,7 @@
   "error.already_ordered": "Für dieses Angebot läuft schon eine Bestellung von dir.",
   "error.already_owned": "Das Design gehört dir schon.",
   "error.already_perfect": "Dieser Wert ist schon auf dem Höchstwert.",
+  "error.iv_cap_limit": "Dieses Pokémon hat schon zwei Kronkorken bekommen — mehr nimmt es nicht an.",
   "error.already_ready": "Das ist schon fertig.",
   "error.already_resolved": "Darüber wurde schon entschieden.",
   "error.already_running": "Das läuft schon.",

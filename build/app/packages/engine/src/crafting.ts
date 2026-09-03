@@ -340,7 +340,7 @@ export const RECIPES: Recipe[] = [
       { itemId: 'fertiliser-3', quantity: 1 },
       { itemId: 'star-piece', quantity: 12 },
     ],
-    goldCost: 45000,
+    goldCost: 100000,
     requiresBuilding: { buildingId: 'lab', level: 4 },
   },
   {

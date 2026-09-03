@@ -9,7 +9,7 @@ interface CreatureRow {
   xp: number; level: number; nature: string
   iv_hp: number; iv_atk: number; iv_def: number; iv_spa: number; iv_spd: number; iv_spe: number
   ev_hp: number; ev_atk: number; ev_def: number; ev_spa: number; ev_spd: number; ev_spe: number
-  friendship: number; energy: number; hp_current: number; shiny: number
+  friendship: number; energy: number; hp_current: number; shiny: number; iv_caps: number
   moves: string; held_item: string | null
   caught_at: number; caught_area_id: string | null; team_slot: number | null
 }
@@ -25,6 +25,7 @@ const toCreature = (r: CreatureRow): OwnedCreature => ({
   ivs: { hp: r.iv_hp, atk: r.iv_atk, def: r.iv_def, spa: r.iv_spa, spd: r.iv_spd, spe: r.iv_spe },
   evs: { hp: r.ev_hp, atk: r.ev_atk, def: r.ev_def, spa: r.ev_spa, spd: r.ev_spd, spe: r.ev_spe },
   friendship: r.friendship,
+  ivCaps: r.iv_caps ?? 0,
   energy: r.energy,
   hpCurrent: r.hp_current,
   shiny: r.shiny === 1,
@@ -216,6 +217,11 @@ export function setIvs(db: Db, creatureId: string, ivs: StatBlock): void {
   db.prepare(
     'UPDATE creatures SET iv_hp = ?, iv_atk = ?, iv_def = ?, iv_spa = ?, iv_spd = ?, iv_spe = ? WHERE id = ?',
   ).run(ivs.hp, ivs.atk, ivs.def, ivs.spa, ivs.spd, ivs.spe, creatureId)
+}
+
+/** Einen verbrauchten Kronkorken vermerken. */
+export function bumpIvCaps(db: Db, creatureId: string): void {
+  db.prepare('UPDATE creatures SET iv_caps = iv_caps + 1 WHERE id = ?').run(creatureId)
 }
 
 export function setEvs(db: Db, creatureId: string, evs: StatBlock): void {

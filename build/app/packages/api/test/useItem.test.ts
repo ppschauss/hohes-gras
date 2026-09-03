@@ -133,6 +133,51 @@ describe('Vitamine, Kronkorken und Sonderbonbon', () => {
       .get(trainerId, 'bottle-cap') as { q: number }).q).toBe(1)
   })
 
+  it('nimmt hoechstens zwei Kronkorken je Pokemon an', async () => {
+    /*
+     * Der eigentliche Grund fuer die Grenze: ohne sie setzten sechs
+     * Kronkorken alle sechs Werte auf 31, und die Zucht war nicht mehr der
+     * Weg zu guten Veranlagungen, sondern ein Umweg.
+     */
+    h.ctx.db.prepare('UPDATE creatures SET iv_hp = 2, iv_atk = 3, iv_def = 4 WHERE id = ?').run(starterId)
+    gib('bottle-cap', 3)
+
+    for (const wert of ['hp', 'atk']) {
+      h.resetRateLimits()
+      const r = await h.post('/api/items/use', { itemId: 'bottle-cap', creatureId: starterId, stat: wert }, token)
+      expect(r.status).toBe(200)
+    }
+    expect(feld('iv_hp')).toBe(31)
+    expect(feld('iv_atk')).toBe(31)
+
+    h.resetRateLimits()
+    const dritter = await h.post('/api/items/use',
+      { itemId: 'bottle-cap', creatureId: starterId, stat: 'def' }, token)
+
+    expect(dritter.status).toBe(409)
+    expect(dritter.body.detail).toMatchObject({ reason: 'iv_cap_limit', used: 2, max: 2 })
+    // Der dritte Wert bleibt, wie er war, und der Gegenstand bleibt im Beutel.
+    expect(feld('iv_def')).toBe(4)
+    expect((h.ctx.db.prepare('SELECT quantity AS q FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, 'bottle-cap') as { q: number }).q).toBe(1)
+  })
+
+  it('zaehlt nur wirklich verbrauchte Kronkorken', async () => {
+    // Ein Fehlgriff auf einen schon perfekten Wert darf keinen der zwei
+    // Plaetze kosten — sonst bestraft die Grenze das Verklicken doppelt.
+    h.ctx.db.prepare('UPDATE creatures SET iv_def = 31, iv_hp = 5 WHERE id = ?').run(starterId)
+    gib('bottle-cap', 2)
+
+    h.resetRateLimits()
+    await h.post('/api/items/use', { itemId: 'bottle-cap', creatureId: starterId, stat: 'def' }, token)
+    expect(feld('iv_caps')).toBe(0)
+
+    h.resetRateLimits()
+    const r = await h.post('/api/items/use', { itemId: 'bottle-cap', creatureId: starterId, stat: 'hp' }, token)
+    expect(r.status).toBe(200)
+    expect(feld('iv_caps')).toBe(1)
+  })
+
   it('hebt das Sonderbonbon um genau ein Level', async () => {
     /*
      * Es gab fuenfzig Erfahrungspunkte. Bei Level 39 kostet ein Aufstieg

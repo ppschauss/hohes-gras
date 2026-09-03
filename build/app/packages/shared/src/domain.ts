@@ -50,6 +50,13 @@ export const OwnedCreatureSchema = z.object({
   heldItem: z.string().nullable(),
   caughtAt: z.number().int(),
   caughtAreaId: z.string().nullable(),
+  /**
+   * Wie viele Kronkorken dieses Pokemon schon bekommen hat.
+   *
+   * Steht am Pokemon und nicht im Protokoll, weil es eine Regel ist und
+   * keine Aufzeichnung. Der Vorgabewert haelt alle Bestandsdaten gueltig.
+   */
+  ivCaps: z.number().int().min(0).default(0),
   /** null = in a box, 0..4 = slot in the active garden team */
   teamSlot: z.number().int().min(0).max(4).nullable(),
 })

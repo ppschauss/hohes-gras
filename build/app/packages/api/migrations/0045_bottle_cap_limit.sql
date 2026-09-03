@@ -1,0 +1,11 @@
+-- Wie viele Kronkorken ein Pokemon schon bekommen hat.
+--
+-- Der Kronkorken setzte einen Wert auf das Maximum, beliebig oft — sechs
+-- Stueck ergaben ein rundum perfektes Pokemon und machten die Zucht damit
+-- nicht einfacher, sondern ueberfluessig. Zwei je Pokemon retten die zwei
+-- schwaechsten Werte; die uebrigen vier muss weiterhin die Zucht liefern.
+--
+-- Die Zahl steht an der Kreatur und nicht im Ereignisprotokoll: das Protokoll
+-- ist eine Aufzeichnung, keine Regel. Wer es kuerzt, duerfte sonst wieder von
+-- vorn anfangen.
+ALTER TABLE creatures ADD COLUMN iv_caps INTEGER NOT NULL DEFAULT 0;
