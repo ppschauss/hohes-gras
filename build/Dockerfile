@@ -50,6 +50,11 @@ COPY --from=build /src/packages/api/migrations ./packages/api/migrations
 COPY --from=build /src/packages/api/public    ./packages/api/public
 COPY --from=build /src/packages/api/package.json ./packages/api/
 
+# Die selbst gezeichneten Bilder. Sie gehoeren zum Programm, nicht zu den
+# Daten: `data/` ist pro Instanz und nicht im Git, diese hier sind ueberall
+# gleich und muessen mit jedem Image mitkommen.
+COPY --from=build /src/assets ./assets
+
 USER poke
 EXPOSE 3010
 

@@ -79,11 +79,21 @@ export async function buildServer(ctx: AppContext): Promise<FastifyInstance> {
   registerProgressionRoutes(app, ctx)
   registerAccountRoutes(app, ctx)
 
-  // Locally mirrored sprites and backgrounds. Immutable filenames, so a long
-  // cache is safe and keeps the Cloudflare edge doing the work.
-  if (existsSync(ctx.config.mediaDir)) {
+  /*
+   * Bilder aus zwei Quellen, in dieser Reihenfolge durchsucht.
+   *
+   * Zuerst `data/media` — dort spiegelt der Importer die Sprites hin, und wer
+   * ein Bild ersetzen will, legt es dorthin. Danach die im Image
+   * mitgelieferten Zeichnungen: die entstehen in keinem Importer neu, also
+   * haette eine frisch aufgesetzte Instanz sie sonst nicht.
+   *
+   * Unveraenderliche Dateinamen, darum die lange Cache-Dauer — das laesst die
+   * Auslieferung am Rand des Netzes und nicht hier passieren.
+   */
+  const bilderorte = [ctx.config.mediaDir, ctx.config.assetsDir].filter((d) => existsSync(d))
+  if (bilderorte.length > 0) {
     await app.register(fastifyStatic, {
-      root: ctx.config.mediaDir,
+      root: bilderorte,
       prefix: '/media/',
       decorateReply: false,
       maxAge: '365d',

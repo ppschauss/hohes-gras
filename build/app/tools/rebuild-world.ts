@@ -45,6 +45,13 @@ const DATA_DIR = resolve(arg('--data', join(PROJEKT, 'data')))
 const PACK = arg('--pack', 'kanto')
 const OUT = join(DATA_DIR, 'packs', PACK)
 const MEDIA_DIR = join(DATA_DIR, 'media')
+/**
+ * Die mitgelieferten Zeichnungen — dieselbe zweite Quelle, aus der auch der
+ * Server ausliefert. Ohne sie faende dieses Werkzeug die eigenen Icons nicht
+ * mehr, seit sie aus `data/` ins Repo gezogen sind, und schriebe wieder
+ * `.png` in den Katalog.
+ */
+const ASSETS_MEDIA_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'media')
 
 const log = (msg: string) => console.log(`  ${msg}`)
 
@@ -363,8 +370,8 @@ async function main(): Promise<void> {
    */
   let svgIcons = 0
   for (const item of byId.values()) {
-    const svg = join(MEDIA_DIR, 'items', `${item.id}.svg`)
-    if (existsSync(svg)) { item.icon = `/media/items/${item.id}.svg`; svgIcons++ }
+    const orte = [MEDIA_DIR, ASSETS_MEDIA_DIR].map((d) => join(d, 'items', `${item.id}.svg`))
+    if (orte.some(existsSync)) { item.icon = `/media/items/${item.id}.svg`; svgIcons++ }
   }
   if (svgIcons) log(`${svgIcons} Vektor-Icons verknuepft`)
 

@@ -1,4 +1,15 @@
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { z } from 'zod'
+
+/**
+ * Wo die mitgelieferten Bilder liegen.
+ *
+ * Von `packages/api/dist` aus drei Ebenen hoch: im Image ist das `/app/assets`,
+ * in der Entwicklung `build/app/assets`. Beide Male derselbe Weg, damit der
+ * Ordner nicht per Umgebungsvariable gesetzt werden muss.
+ */
+const ASSETS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'assets', 'media')
 
 /** Fail fast on a bad environment: a server that boots with a missing bot
  *  token only to break on the first message is worse than one that refuses. */
@@ -48,6 +59,15 @@ export type Config = z.infer<typeof EnvSchema> & {
   BOT_USERNAME?: string
   packsDir: string
   mediaDir: string
+  /**
+   * Die mitgelieferten, selbst gezeichneten Bilder.
+   *
+   * `mediaDir` liegt unter `data/` und ist bewusst nicht im Git: dort landet,
+   * was der Importer spiegelt. Die eigenen Zeichnungen erzeugt kein Importer
+   * nach, also kaeme eine frische Instanz ohne sie aus — sie reisen deshalb
+   * im Image mit und werden hinter `mediaDir` durchsucht.
+   */
+  assetsDir: string
   backupsDir: string
   dbPath: string
   devAuthBypass: boolean
@@ -74,6 +94,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     hubEnabled: Boolean(c.HUB_URL && c.HUB_INSTANCE_ID && (c.HUB_SECRET || c.HUB_JOIN_SECRET)),
     packsDir: `${c.DATA_DIR}/packs`,
     mediaDir: `${c.DATA_DIR}/media`,
+    assetsDir: ASSETS_DIR,
     backupsDir: `${c.DATA_DIR}/backups`,
     dbPath: `${c.DATA_DIR}/game.db`,
     devAuthBypass,
