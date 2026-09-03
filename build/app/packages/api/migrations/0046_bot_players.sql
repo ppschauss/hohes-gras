@@ -1,0 +1,13 @@
+-- Trainer, die der Server selbst spielt.
+--
+-- Sie sind vollwertige Trainer: eigene Pokemon, eigenes Gold, eigener Platz
+-- in der Rangliste, eigene Angebote auf dem Markt. Der einzige Unterschied
+-- ist, wer die Knoepfe drueckt — eine getaktete Aufgabe statt eines Menschen
+-- mit Telegram.
+--
+-- Die Spalte braucht es trotzdem, und zwar an drei Stellen: die Erinnerungen
+-- duerfen nicht an erfundene Telegram-Kennungen zu schicken versuchen, die
+-- Taktsperre gegen zu schnelles Klicken zielt auf Menschen und wuerde einen
+-- Bot in derselben Schleife sofort bremsen, und die Rangliste soll ehrlich
+-- sein: wer gegen einen Bot verliert, soll das sehen koennen.
+ALTER TABLE trainers ADD COLUMN is_bot INTEGER NOT NULL DEFAULT 0;

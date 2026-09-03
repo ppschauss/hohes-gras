@@ -87,6 +87,8 @@ export const TrainerSchema = z.object({
   themeId: z.string(),
   themeMode: z.enum(['auto', 'day', 'night']),
   isAdmin: z.boolean(),
+  /** Vom Server gespielt, nicht von einem Menschen. */
+  isBot: z.boolean().default(false),
   isBanned: z.boolean(),
   privacy: z.object({
     hideFromLeaderboard: z.boolean(),

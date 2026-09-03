@@ -188,7 +188,12 @@ function ListingRow({ listing, busy, actionLabel, onAction }: {
       <div className="listing__foot">
         <span className="listing__meta">
           <span className="listing__price num">🪙 {number(listing.price)}</span>
-          {!listing.isOwn && <span className="listing__seller">{t('market.by', { name: listing.sellerName })}</span>}
+          {!listing.isOwn && (
+            <span className="listing__seller">
+              {t('market.by', { name: listing.sellerName })}
+              {listing.sellerIsBot && <span className="tag tag--bot">{t('rank.bot')}</span>}
+            </span>
+          )}
           {listing.note && <span className="listing__note">„{listing.note}"</span>}
         </span>
         <button type="button" className="btn btn--primary btn--sm" disabled={busy} onClick={onAction}>

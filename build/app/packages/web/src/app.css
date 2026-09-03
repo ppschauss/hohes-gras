@@ -253,6 +253,15 @@
   color: var(--ink-faint);
 }
 .tag--soon { color: var(--warn); border-color: color-mix(in oklab, var(--warn) 40%, var(--edge)); }
+/* Vom Server gespielt. Zurueckhaltend: das Kennzeichen soll den Namen
+   einordnen, nicht mit ihm um Aufmerksamkeit streiten. */
+.tag--bot {
+  margin-left: var(--s2);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: calc(var(--t-xs) * 0.85);
+}
 .tag--count {
   background: var(--accent); border-color: transparent;
   color: var(--accent-ink); min-width: 20px; text-align: center;

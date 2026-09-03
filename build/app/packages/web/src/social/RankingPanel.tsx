@@ -70,7 +70,10 @@ export function RankingPanel() {
                   <li key={row.trainerId} className={`ranking__row${row.isSelf ? ' ranking__row--self' : ''}`}>
                     <span className="ranking__place num">{row.rank}</span>
                     <span className="ranking__text">
-                      <span className="ranking__name">{row.displayName}</span>
+                      <span className="ranking__name">
+                        {row.displayName}
+                        {row.isBot && <span className="tag tag--bot">{t('rank.bot')}</span>}
+                      </span>
                       <span className="ranking__meta num">
                         🏅{row.badges} · 📖{row.dexCaught} · ⚔️{row.battlesWon}
                         {row.shinies > 0 && ` · ✨${row.shinies}`}

@@ -143,7 +143,9 @@ export function dueReminders(ctx: AppContext): Reminder[] {
     .prepare(
       `SELECT id, telegram_id AS telegramId, display_name AS displayName,
               last_seen_at AS lastSeenAt, reminders
-       FROM trainers WHERE is_banned = 0 AND reminders = 1`,
+       -- Bots bleiben draussen: eine erfundene Telegram-Kennung laesst jeden Versuch
+       -- scheitern, und der Fehlschlag wuerde taeglich neu protokolliert.
+       FROM trainers WHERE is_banned = 0 AND reminders = 1 AND is_bot = 0`,
     )
     .all() as Array<{ id: string; telegramId: string; displayName: string; lastSeenAt: number; reminders: number }>
 

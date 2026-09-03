@@ -38,6 +38,18 @@ export function assertPace(
   bucket: PacingBucket,
   now = Date.now(),
 ): void {
+  /*
+   * Bots sind von der Taktsperre ausgenommen.
+   *
+   * Sie misst, ob zwischen zwei Handlungen genug Zeit liegt, damit ein Mensch
+   * sie ausgeloest haben koennte — gegen Skripte, die fuer einen Spieler
+   * klicken. Ein Trainer, den der Server selbst spielt, faellt nicht unter
+   * diesen Verdacht, und seine Bremse ist eine andere: die getaktete Aufgabe
+   * laeuft alle zwanzig Minuten, und mehr Energie als nachwaechst hat auch er
+   * nicht.
+   */
+  if (trainer.isBot) return
+
   // Die Pflegestation hebt das Fenster; alles andere bleibt.
   const rules = bucket === 'care'
     ? carePacingWith(bonuses(ctx, trainer.id).careLimitBonus)

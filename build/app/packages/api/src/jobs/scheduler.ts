@@ -14,6 +14,7 @@ import {
   refreshRelease, releaseInfo,
 } from '../services/hub.js'
 import { settle as settleHubMarket } from '../services/hubMarket.js'
+import { tick as botTick } from '../services/botPlayer.js'
 
 export interface Job {
   name: string
@@ -39,6 +40,27 @@ export function setReminderSender(sender: ReminderSender | null): void {
 /** Housekeeping that must happen whether or not anyone is playing. Later phases
  *  append jobs here (finishing expeditions, hatching eggs, season rollover). */
 export const JOBS: Job[] = [
+  {
+    /*
+     * Die Bots spielen.
+     *
+     * Zwanzig Minuten sind mit Bedacht gewaehlt: haeufiger braechte nichts,
+     * weil die Energie nicht schneller nachwaechst, und seltener liesse die
+     * Rangliste ueber Stunden stillstehen. Der erste Durchlauf legt die
+     * Konten an, jeder weitere findet sie vor.
+     */
+    name: 'bot-players',
+    everyMs: 20 * 60_000,
+    run: (ctx) => {
+      const berichte = botTick(ctx)
+      const getan = berichte.filter((b) => b.erkundet + b.gefangen + b.gepflegt + b.angeboten > 0)
+      if (getan.length) {
+        console.log('[job] Bots: ' + getan
+          .map((b) => `${b.name} ${b.erkundet}x erkundet, ${b.gefangen} gefangen, ${b.gepflegt} gepflegt`)
+          .join(' | '))
+      }
+    },
+  },
   {
     name: 'purge-sessions',
     everyMs: 15 * 60_000,

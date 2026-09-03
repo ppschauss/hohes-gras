@@ -231,6 +231,8 @@ export function declineTrade(db: Db, id: string, now = Date.now()): boolean {
 export interface LeaderboardRow {
   trainerId: string
   displayName: string
+  /** 1, wenn der Server diesen Trainer spielt. */
+  isBot: number
   dexCaught: number
   badges: number
   battlesWon: number
@@ -283,7 +285,7 @@ export function refreshStats(db: Db, trainerId: string, now = Date.now()): void 
 export function leaderboard(db: Db, limit = 50): LeaderboardRow[] {
   return db
     .prepare(
-      `SELECT s.trainer_id AS trainerId, t.display_name AS displayName,
+      `SELECT s.trainer_id AS trainerId, t.display_name AS displayName, t.is_bot AS isBot,
               s.dex_caught AS dexCaught, s.badges, s.battles_won AS battlesWon,
               s.shinies, s.highest_level AS highestLevel, s.team_power AS teamPower, s.score
        FROM leaderboard_stats s

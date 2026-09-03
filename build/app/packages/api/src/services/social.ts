@@ -217,6 +217,7 @@ export function listingView(ctx: AppContext, viewer: Trainer, listing: social.Li
     note: listing.note,
     createdAt: listing.createdAt,
     sellerName: seller?.displayName ?? '?',
+    sellerIsBot: seller?.isBot ?? false,
     isOwn: listing.sellerId === viewer.id,
     creature: c ? creatureView(ctx.registry, c, viewer.locale, worldClock().timeOfDay) : null,
   }
@@ -466,7 +467,7 @@ export function leaderboardView(ctx: AppContext, trainer: Trainer) {
   const globalId = hub.linkedId(ctx, trainer.id)
   const global = hub.cachedLeaderboard(ctx)
   return {
-    rows: rows.map((r, i) => ({ ...r, rank: i + 1, isSelf: r.trainerId === trainer.id })),
+    rows: rows.map((r, i) => ({ ...r, isBot: r.isBot === 1, rank: i + 1, isSelf: r.trainerId === trainer.id })),
     ownRank: trainer.privacy.hideFromLeaderboard ? null : social.rankOf(ctx.db, trainer.id),
     hidden: trainer.privacy.hideFromLeaderboard,
     global: global?.map((r, i) => ({ ...r, rank: i + 1, isSelf: r.trainerId === globalId })) ?? null,

@@ -1211,6 +1211,7 @@
   "rank.empty": "Noch keine Einträge.",
   "rank.globalEmpty": "Der Verbund hat noch keine Einträge.",
   "rank.hidden": "Du bist ausgeblendet.",
+  "rank.bot": "Bot",
   "rank.instance": "von {name}",
   "rank.scope.global": "Verbund",
   "rank.scope.local": "Diese Runde",

@@ -1087,6 +1087,7 @@ export interface MarketListingView {
   note: string
   createdAt: number
   sellerName: string
+  sellerIsBot: boolean
   isOwn: boolean
   creature: CreatureLike | null
 }
@@ -1137,6 +1138,8 @@ export interface LeaderboardView {
     teamPower: number
     score: number
     isSelf: boolean
+    /** Vom Server gespielt. Die Liste sagt es dazu, statt es zu verschweigen. */
+    isBot: boolean
   }>
   ownRank: number | null
   hidden: boolean

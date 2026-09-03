@@ -9,7 +9,7 @@ interface TrainerRow {
   energy: number; energy_updated_at: number; active_team_id: string | null
   level_scaling: number; energy_cap_steps: number
   theme_id: string; theme_mode: string
-  is_admin: number; is_banned: number
+  is_admin: number; is_banned: number; is_bot: number
   hide_leaderboard: number; friends_only: number; allow_requests: number; reminders: number
 }
 
@@ -34,6 +34,7 @@ const toTrainer = (r: TrainerRow): Trainer => ({
   themeId: r.theme_id,
   themeMode: (['auto', 'day', 'night'].includes(r.theme_mode) ? r.theme_mode : 'auto') as 'auto' | 'day' | 'night',
   isAdmin: r.is_admin === 1,
+  isBot: r.is_bot === 1,
   isBanned: r.is_banned === 1,
   privacy: {
     hideFromLeaderboard: r.hide_leaderboard === 1,
