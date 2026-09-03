@@ -27,6 +27,8 @@ export interface Acquisition {
   ref: string
   amount: number
   detail: string | null
+  /** Gesetzt, sobald diese Zuwendung zurueckgenommen wurde. */
+  undoneAt: number | null
 }
 
 /** Einen Beleg schreiben. Wird aus den drei Engstellen gerufen, nicht von Hand. */
@@ -76,8 +78,12 @@ export function find(db: Db, f: Filter, limit = 5000): Acquisition[] {
   if (f.trainerId) { wo.push('trainer_id = ?'); werte.push(f.trainerId) }
   if (f.kind) { wo.push('kind = ?'); werte.push(f.kind) }
 
+  // Schon Zurueckgenommenes taucht nicht wieder auf: ein zweiter Lauf
+  // derselben Zeile zoege bei Gold und Gegenstaenden ein zweites Mal ab.
+  wo.push('undone_at IS NULL')
+
   const rows = db.prepare(
-    `SELECT id, trainer_id, at, release_sha, source, kind, ref, amount, detail
+    `SELECT id, trainer_id, at, release_sha, source, kind, ref, amount, detail, undone_at
        FROM acquisitions
       ${wo.length ? `WHERE ${wo.join(' AND ')}` : ''}
       ORDER BY at ASC, id ASC
@@ -94,10 +100,16 @@ export function find(db: Db, f: Filter, limit = 5000): Acquisition[] {
     ref: r.ref as string,
     amount: r.amount as number,
     detail: (r.detail as string | null) ?? null,
+    undoneAt: (r.undone_at as number | null) ?? null,
   }))
 }
 
 /** Welche Quellen es ueberhaupt gibt — damit man nicht raten muss. */
+/** Einen Beleg als zurueckgenommen vermerken. */
+export function markUndone(db: Db, id: number, now = Date.now()): void {
+  db.prepare('UPDATE acquisitions SET undone_at = ? WHERE id = ? AND undone_at IS NULL').run(now, id)
+}
+
 export function sources(db: Db): Array<{ source: string; kind: string; n: number; first: number; last: number }> {
   return db.prepare(
     `SELECT source, kind, COUNT(*) AS n, MIN(at) AS first, MAX(at) AS last

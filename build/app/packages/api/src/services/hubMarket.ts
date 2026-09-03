@@ -6,6 +6,7 @@ import * as inventory from '../repos/inventory.js'
 import * as social from '../repos/social.js'
 import * as teamsRepo from '../repos/teams.js'
 import * as orders from '../repos/hubOrders.js'
+import { computeStats } from '@game/engine'
 import { von } from './ledger.js'
 import { boxLimit } from './safari.js'
 import { MARKET_FEE } from './social.js'
@@ -99,9 +100,27 @@ export async function buyRemote(ctx: AppContext, trainer: Trainer, listingId: st
     logEvent(ctx.db, trainer.id, 'hub.market.ordered', { listingId, orderId: id, price: angebot.price })
     return { orderId: id, price: angebot.price }
   } catch (err) {
-    // Nicht zustande gekommen: das Gold gehoert sofort zurueck. Nur wenn auch
-    // das scheitert, bleibt die Zeile stehen — der Abgleich findet sie.
-    erstatten(ctx, vorlaeufig, 'bestellung_gescheitert')
+    /*
+     * Nur erstatten, wenn feststeht, dass nichts entstanden ist.
+     *
+     * Der Verbund hat geantwortet und abgelehnt — dann gibt es keinen Vorgang,
+     * und das Gold gehoert sofort zurueck. Kam dagegen *keine* Antwort, kann
+     * die Bestellung sehr wohl angelegt worden und nur die Antwort verloren
+     * gegangen sein. Wer dann erstattet, macht aus einem loesbaren Zustand
+     * einen endgueltigen: die Zeile stuende auf `refunded`, der Abgleich
+     * fasst sie nicht mehr an, und das Pokemon laege fuer immer in der
+     * Treuhand.
+     *
+     * Also bleibt sie auf `paid`. Die `paid`-Schleife im Abgleich sucht beim
+     * naechsten Lauf nach einem passenden Vorgang und erstattet genau dann,
+     * wenn es wirklich keinen gibt.
+     */
+    const grund = (err as { detail?: { reason?: string } }).detail?.reason
+    if (grund === 'hub_unreachable') {
+      console.warn('[hub] Kauf ohne Antwort — die Zeile bleibt offen, der Abgleich klaert sie.')
+      throw err
+    }
+    erstatten(ctx, vorlaeufig, 'bestellung_abgelehnt')
     throw err
   }
 }
@@ -175,6 +194,20 @@ export async function settle(ctx: AppContext): Promise<number> {
       orders.setStatus(ctx.db, o.id, 'done')
       getan++
     }
+    /*
+     * Abgebrochen, obwohl wir schon ausgelagert hatten.
+     *
+     * Das schmale Fenster: der Verbund laesst einen Vorgang nach zwei Stunden
+     * verfallen, und der Abbruch faellt zwischen unser Entnehmen und die
+     * Uebergabe. Ohne diesen Zweig ist das Pokemon aus unserer Datenbank
+     * geloescht, liegt nur noch als Text in der eigenen Bestellzeile, und der
+     * Kaeufer bekommt sein Gold zurueck — es waere weg.
+     *
+     * Genau dafuer steht es in `payload`: wir legen es zurueck.
+     */
+    else if (o.status === 'aborted' && lokal?.role === 'seller' && lokal.status === 'holding') {
+      if (zurueckholen(ctx, lokal)) getan++
+    }
   }
   void meine
   return getan
@@ -234,6 +267,45 @@ async function ausliefern(ctx: AppContext, o: HubOrder): Promise<boolean> {
   return uebergeben(ctx, o.id, payload)
 }
 
+/** Volle Kraftpunkte fuer ein hereinkommendes Pokemon. */
+function vollHp(ctx: AppContext, pass: Reisepass): number {
+  return computeStats(
+    ctx.registry.species(pass.speciesId), pass.level, pass.ivs as never,
+    { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 } as never, pass.nature as never,
+  ).hp
+}
+
+/**
+ * Ein ausgelagertes Pokemon zurueck in die eigene Datenbank holen.
+ *
+ * Der Rueckweg zu `ausliefern`. Die Auszahlung wird mitgenommen — der Verkauf
+ * hat nicht stattgefunden, also gehoert das Gold nicht dem Verkaeufer. Ist es
+ * inzwischen ausgegeben, bleibt der Rest stehen: das Pokemon zurueckzugeben
+ * ist wichtiger, als eine Schuld einzutreiben.
+ */
+function zurueckholen(ctx: AppContext, lokal: orders.LocalOrder): boolean {
+  if (!lokal.payload) return false
+  let pass: Reisepass
+  try { pass = JSON.parse(lokal.payload) as Reisepass } catch { return false }
+  if (!ctx.registry.trySpecies(pass.speciesId)) return false
+
+  const auszahlung = Math.max(1, Math.round(lokal.price * (1 - MARKET_FEE)))
+  tx(ctx.db, () => {
+    creatures.insertCreature(ctx.db, {
+      ownerId: lokal.trainerId,
+      speciesId: pass.speciesId, level: pass.level, xp: pass.xp, nature: pass.nature,
+      ivs: pass.ivs, friendship: pass.friendship, hpCurrent: vollHp(ctx, pass),
+      shiny: pass.shiny, moves: pass.moves, caughtAreaId: null, teamSlot: null,
+    } as Parameters<typeof creatures.insertCreature>[1], von(ctx, 'hub.market.returned'))
+    const gold = inventory.goldOf(ctx.db, lokal.trainerId)
+    if (gold > 0) inventory.spendGold(ctx.db, lokal.trainerId, Math.min(gold, auszahlung))
+    orders.setStatus(ctx.db, lokal.id, 'done', 'zurueckgeholt')
+  })
+  logEvent(ctx.db, lokal.trainerId, 'hub.market.returned', { orderId: lokal.id, speciesId: pass.speciesId })
+  console.warn(`[hub] Vorgang ${lokal.id} abgebrochen — Pokemon zurueckgelegt.`)
+  return true
+}
+
 /** Das Verwahrte an den Verbund geben. Scheitert es, bleibt es liegen. */
 async function uebergeben(ctx: AppContext, orderId: string, payload: string): Promise<boolean> {
   if (!payload) return false
@@ -274,7 +346,15 @@ async function abholen(ctx: AppContext, o: HubOrder, lokal: orders.LocalOrder): 
       nature: pass.nature,
       ivs: pass.ivs,
       friendship: pass.friendship,
-      hpCurrent: Number.MAX_SAFE_INTEGER,
+      /*
+       * Volle Kraftpunkte, aber die eigenen.
+       *
+       * Hier stand `MAX_SAFE_INTEGER` als "voll heilen". Die Anzeige klemmt
+       * das beim Lesen, die Arena rechnet es aber roh mit: ihr Gesundheits-
+       * anteil des Teams wurde damit astronomisch. Alle elf anderen Wege in
+       * diese Funktion uebergeben den echten Wert.
+       */
+      hpCurrent: vollHp(ctx, pass),
       shiny: pass.shiny,
       moves: pass.moves,
       // Kein Fundort: gefangen wurde es woanders, und eine erfundene Route

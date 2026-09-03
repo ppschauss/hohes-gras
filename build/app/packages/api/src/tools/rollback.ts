@@ -134,6 +134,19 @@ export function zuruecknehmen(db: Db, treffer: Acquisition[]): Bericht {
 
   db.transaction(() => {
     for (const a of treffer) {
+      /*
+       * Schon zurueckgenommen? Dann nichts.
+       *
+       * Die Suche blendet solche Zeilen aus, aber der Aufrufer kann eine
+       * aeltere Liste in der Hand haben — und bei Gold und Gegenstaenden
+       * rechnet die Ruecknahme gegen den *aktuellen* Bestand, zoege also ein
+       * zweites Mal ab. Die Pruefung gehoert deshalb hierher, nicht nur in
+       * die Abfrage.
+       */
+      const stand = db.prepare('SELECT undone_at AS u FROM acquisitions WHERE id = ?')
+        .get(a.id) as { u: number | null } | undefined
+      if (!stand || stand.u !== null) continue
+
       if (a.kind === 'creature') {
         const zeile = db.prepare('SELECT owner_id FROM creatures WHERE id = ?')
           .get(a.ref) as { owner_id: string } | undefined
@@ -173,12 +186,15 @@ export function zuruecknehmen(db: Db, treffer: Acquisition[]): Bericht {
         }
       }
       /*
-       * Der Beleg bleibt stehen.
+       * Der Beleg bleibt stehen, bekommt aber einen Vermerk.
        *
-       * Er ist die Begruendung fuer das, was gerade passiert ist — ihn zu
-       * loeschen hiesse, die Spur des Eingriffs zu verwischen. Eine zweite
-       * Ruecknahme faellt oben von selbst auf: dann ist nichts mehr da.
+       * Loeschen hiesse, die Spur des Eingriffs zu verwischen. Hier stand, eine
+       * zweite Ruecknahme falle von selbst auf — das galt nur fuer Kreaturen,
+       * deren Zeile danach weg ist. Bei Gold und Gegenstaenden wird gegen den
+       * *aktuellen* Bestand gerechnet, und ein zweiter Lauf zog dieselbe Summe
+       * noch einmal ab, diesmal aus rechtmaessig Verdientem.
        */
+      acquisitions.markUndone(db, a.id)
     }
   })()
 

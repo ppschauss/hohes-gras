@@ -96,6 +96,30 @@ describe('Ruecknahme', () => {
     expect(h.ctx.db.prepare('SELECT id FROM creatures WHERE id = ?').get(starter.ref)).toBeDefined()
   })
 
+  it('nimmt dieselbe Zuwendung kein zweites Mal zurueck', async () => {
+    /*
+     * Der gefaehrlichste Fall des Werkzeugs. Bei einer Kreatur faellt eine
+     * zweite Ruecknahme auf — die Zeile ist weg. Bei Gold und Gegenstaenden
+     * wird gegen den *aktuellen* Bestand gerechnet: derselbe Lauf zog dieselbe
+     * Summe noch einmal ab, diesmal aus rechtmaessig Verdientem.
+     */
+    h.resetRateLimits()
+    await h.post('/api/shop/buy', { itemId: 'poke-ball', quantity: 5 }, token)
+    const baelle = () => (h.ctx.db.prepare('SELECT quantity AS q FROM inventory WHERE trainer_id = ? AND item_id = ?')
+      .get(trainerId, 'poke-ball') as { q: number } | undefined)?.q ?? 0
+
+    const treffer = acquisitions.find(h.ctx.db, { trainerId, source: 'shop.buy' })
+    zuruecknehmen(h.ctx.db, treffer)
+    const nachErstem = baelle()
+
+    // Zweiter Lauf: derselbe Filter findet die Zeile gar nicht mehr.
+    expect(acquisitions.find(h.ctx.db, { trainerId, source: 'shop.buy' })).toEqual([])
+    // Und selbst mit der alten Liste in der Hand passiert nichts mehr.
+    const zweiter = zuruecknehmen(h.ctx.db, treffer)
+    expect(zweiter.erledigt).toBe(0)
+    expect(baelle()).toBe(nachErstem)
+  })
+
   it('meldet ein Pokemon, das es nicht mehr gibt', () => {
     const starter = acquisitions.find(h.ctx.db, { trainerId, source: 'starter' })[0]!
     h.ctx.db.prepare('DELETE FROM creatures WHERE id = ?').run(starter.ref)

@@ -5,6 +5,42 @@ cd "$(dirname "$0")"
 
 IMAGE=telegram-pokemon:latest
 NAME=telegram-pokemon
+
+# Eine konsistente Sicherung anlegen.
+#
+# `cp` auf eine laufende Datenbank ist keine Sicherung. Die Datenbank laeuft im
+# WAL-Modus: die zuletzt bestaetigten Transaktionen stehen in game.db-wal und
+# noch nicht in game.db. Eine blanke Kopie enthaelt sie deshalb nicht — und das
+# sind genau die Aenderungen, wegen derer man sichert.
+#
+# Laeuft der Container, macht SQLite die Sicherung selbst: `backup()` haelt
+# waehrenddessen einen stimmigen Stand fest, auch wenn nebenher geschrieben
+# wird. Laeuft er nicht, schreibt niemand — dann genuegt eine Kopie, aber die
+# beiden Begleitdateien gehoeren dazu.
+#
+#   $1  Zweck, taucht im Dateinamen auf (manual, vor-update, vor-rollback)
+#   Gibt den Pfad der Sicherung auf stdout aus.
+sichern() {
+  mkdir -p ./data/backups
+  local ts name ziel
+  ts=$(date +%Y%m%d-%H%M%S)
+  name="game-$1-${ts}.db"
+  ziel="./data/backups/${name}"
+
+  if docker ps --format '{{.Names}}' | grep -qx "$NAME"; then
+    docker exec "$NAME" node -e "
+      const Database = require('better-sqlite3');
+      new Database('/data/game.db').backup('/data/backups/' + process.argv[1])
+        .then(() => process.exit(0))
+        .catch((e) => { console.error(String(e)); process.exit(1); });
+    " "$name" >/dev/null || { echo "Sicherung fehlgeschlagen." >&2; return 1; }
+  else
+    cp ./data/game.db "$ziel"
+    [ -f ./data/game.db-wal ] && cp ./data/game.db-wal "${ziel}-wal"
+    [ -f ./data/game.db-shm ] && cp ./data/game.db-shm "${ziel}-shm"
+  fi
+  echo "$ziel"
+}
 PORT=3010
 
 case "$1" in
@@ -67,9 +103,8 @@ case "$1" in
     fi
 
     echo "== Sicherung"
-    ts=$(date +%Y%m%d-%H%M%S)
-    cp ./data/game.db "./data/backups/game-vor-update-${ts}.db"
-    echo "   ./data/backups/game-vor-update-${ts}.db"
+    gesichert=$(sichern vor-update) || exit 1
+    echo "   $gesichert"
 
     echo "== Holen"
     git pull --ff-only || { echo "git pull fehlgeschlagen — nichts veraendert." >&2; exit 1; }
@@ -100,8 +135,13 @@ case "$1" in
     else
       echo "== Fehlgeschlagen — zurueck auf $vorher" >&2
       git reset --hard "$vorher" >/dev/null
+      # Erst die Datenbank, dann starten. Umgekehrt schriebe man in eine
+      # geoeffnete Datei hinein, waehrend der frisch gestartete Container
+      # bereits darauf arbeitet.
+      docker rm -f "$NAME" >/dev/null 2>&1 || true
+      rm -f ./data/game.db-wal ./data/game.db-shm
+      cp "$gesichert" ./data/game.db
       "$0" rebuild
-      cp "./data/backups/game-vor-update-${ts}.db" ./data/game.db
       echo "   Alter Stand wiederhergestellt, Datenbank zurueckgespielt." >&2
       exit 1
     fi
@@ -127,9 +167,7 @@ case "$1" in
     ;;
 
   backup)
-    ts=$(date +%Y%m%d-%H%M%S)
-    cp ./data/game.db "./data/backups/game-manual-${ts}.db"
-    echo "Sicherung: ./data/backups/game-manual-${ts}.db"
+    echo "Sicherung: $(sichern manual)"
     ;;
   rollback)
     # Zuwendungen sichten und zuruecknehmen.
@@ -141,15 +179,13 @@ case "$1" in
     shift
     for a in "$@"; do
       if [ "$a" = "--wirklich" ]; then
-        ts=$(date +%Y%m%d-%H%M%S)
-        cp ./data/game.db "./data/backups/game-vor-rollback-${ts}.db"
-        echo "Sicherung: ./data/backups/game-vor-rollback-${ts}.db"
+        echo "Sicherung: $(sichern vor-rollback)"
       fi
     done
     docker exec "$NAME" node packages/api/dist/tools/rollback.js "$@"
     ;;
   *)
-    echo "Nutzung: $0 {build|up|rebuild|down|restart|logs|health|shell|backup|rollback}"
+    echo "Nutzung: $0 {build|up|rebuild|down|restart|logs|health|shell|backup|update|watch|rollback}"
     echo ""
     echo "  rollback --quellen                 zeigt, welche Quellen es gibt"
     echo "  rollback --stand <sha> [--quelle x]  Vorschau: was kam unter diesem Stand"
