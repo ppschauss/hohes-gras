@@ -25,29 +25,36 @@ export const PLOT_PHASES = 4
 
 /** Obergrenze für Gegenstände je Beet. */
 /*
- * Wie viel in ein Beet passt — bemessen an dem, was die Baeume darueber
- * brauchen.
+ * Wie viel in ein Beet passt.
  *
- * Die groesste Beerenforderung der Pharmazie-Rezepte ist ein Duenger II mit
- * zwoelf Sprenkelbeeren; die Kette zu einem Erbgut-Serum verlangt ueber alle
- * Stufen rund hundert. Vierzig je Beet heisst: **ein** Beet deckt jedes
- * einzelne Rezept in einem Durchgang, und **vier** Beete tragen in einer
- * Runde die Beerenseite eines Serums. Das ist die Absicht — die Kette soll
- * an Sternenstaub und Zeit haengen, nicht daran, dass der Acker zu klein ist.
+ * Die Zahl ist zweimal gewachsen, und beide Male aus demselben Grund: was
+ * darueber haengt, wurde groesser. Dreissig galt, als nur Fangbeeren in der
+ * Erde lagen; vierzig, als die Pharmazie dazukam. Hundert gilt jetzt, weil
+ * die Kette zum Kronkorken sechs Beerensorten nebeneinander verlangt und ein
+ * Beet je Sorte eine ganze Runde tragen soll — nicht nur einen Ansatz.
  *
- * Dreissig stand hier, als es nur um Fangbeeren ging.
+ * Das ist die Absicht hinter allen drei Zahlen: die Kette soll an
+ * Sternenstaub und Zeit haengen, nicht daran, dass der Acker zu klein ist.
+ * Nach oben bleibt sie trotzdem begrenzt — ein Beet ist ein Beet, kein Lager.
  */
-export const PLOT_MAX_ITEMS = 40
+export const PLOT_MAX_ITEMS = 100
 
 /**
- * Gold ist streng gedeckelt — und zwar zweifach.
+ * Gold ist gedeckelt — und zwar zweifach.
  *
- * Der Ertrag ist ein Vielfaches des Einsatzes. Ohne Grenze wäre das Beet die
- * einzige Einnahmequelle, die noch zählt, und jede andere Beschäftigung im
- * Spiel wäre daneben Zeitverschwendung. Deshalb: 500 Gold, und das höchstens
- * einmal am Tag. Höchstens 500 Gold Gewinn je 24 Stunden.
+ * Der Ertrag ist ein Vielfaches des Einsatzes. Ohne Grenze waere das Beet die
+ * einzige Einnahmequelle, die noch zaehlt, und jede andere Beschaeftigung im
+ * Spiel waere daneben Zeitverschwendung. Die Tagessperre bleibt deshalb
+ * bestehen: einmal je 24 Stunden, mehr nicht.
+ *
+ * 500 stand hier und ergab hoechstens 500 Gold Gewinn am Tag — neben einem
+ * Ligatag mit ueber siebzehntausend war das keine Entscheidung, sondern eine
+ * Randnotiz. 3333 macht daraus eine: von Hand gepflegt sind es 3333 Gewinn,
+ * mit Pfleger und Duenger III bis zu 9166. Der obere Wert kostet allerdings
+ * einen Duenger III, der dann keiner Beere zugutekommt — und genau das soll
+ * die Ueberlegung sein, die man vor dem Vergraben anstellt.
  */
-export const PLOT_MAX_GOLD = 500
+export const PLOT_MAX_GOLD = 3333
 export const GOLD_PLANT_COOLDOWN_MS = 24 * 3_600_000
 
 /** Wann wieder Gold vergraben werden darf. `null` heißt: sofort. */

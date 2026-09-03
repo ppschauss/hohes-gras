@@ -116,29 +116,34 @@ describe('harvestAmount', () => {
 })
 
 describe('Obergrenzen', () => {
-  it('deckelt den Goldgewinn auf einen Einsatz je Tag', () => {
-    // Einmal je 24 Stunden, hoechstens 500 Gold, hoechstens verdoppelt: mehr
-    // als 500 Gold Gewinn am Tag kann das Beet nicht abwerfen. Das ist die
-    // Zahl, an der sich entscheidet, ob es die Wirtschaft sprengt.
-    const maxProfitPerDay = PLOT_MAX_GOLD * (100 / 100)
-    expect(maxProfitPerDay).toBe(500)
+  it('haelt den Goldgewinn unter einem Ligatag', () => {
+    /*
+     * Die Tagessperre ist die eigentliche Grenze, nicht der Einsatz. Was das
+     * Beet hoechstens abwirft, entscheidet sich am besten Bonus, den es gibt:
+     * Pfleger und Duenger III, zusammen +275 %.
+     *
+     * Der Vergleichswert ist gemessen und nicht geschaetzt — ein Ligatag hat
+     * 17546 Gold gebracht. Solange ein Beettag darunter bleibt, ist das
+     * Vergraben eine Einnahmequelle neben anderen und nicht die eine, die
+     * alle anderen ueberfluessig macht.
+     */
+    const besterBonus = plotBonus({ phasesDone: 0, tenderLevel: 50, fertiliserPercent: 200 })
+    const gewinnProTag = harvestAmount(PLOT_MAX_GOLD, besterBonus) - PLOT_MAX_GOLD
+    expect(gewinnProTag).toBeLessThan(17_546)
     expect(GOLD_PLANT_COOLDOWN_MS).toBe(24 * 3_600_000)
   })
 
   it('haelt die Gegenstandsmenge an dem, was die Rezepte fordern', () => {
     /*
-     * Hier stand eine runde Obergrenze von dreissig — aus der Zeit, als nur
-     * Fangbeeren in der Erde lagen. Seit die Pharmazie daran haengt, ist die
-     * Zahl kein Gefuehl mehr, sondern eine Ableitung: die groesste einzelne
-     * Beerenforderung ist ein Duenger II mit zwoelf Sprenkelbeeren, die ganze
-     * Kette zu einem Erbgut-Serum verlangt rund hundert. Vierzig heisst: ein
-     * Beet deckt jedes Rezept, vier Beete tragen eine Serum-Runde.
+     * Die Zahl ist eine Ableitung, kein Gefuehl. Ein Beet je Beerensorte soll
+     * eine ganze Runde tragen: der Kronkorken verlangt vier Beeren je Sorte,
+     * ein Vitamin acht — und wer beides will, pflanzt einmal statt dreimal.
      *
-     * Nach oben bleibt sie begrenzt — ein Beet soll ein Beet sein und kein
-     * Lager.
+     * Nach oben bleibt sie begrenzt: ein Beet ist ein Beet, kein Lager.
      */
-    expect(PLOT_MAX_ITEMS).toBe(40)
-    expect(PLOT_MAX_ITEMS * 4).toBeGreaterThanOrEqual(100)
+    expect(PLOT_MAX_ITEMS).toBe(100)
+    const proSorte = 4 + 8
+    expect(PLOT_MAX_ITEMS).toBeGreaterThanOrEqual(proSorte)
   })
 })
 
