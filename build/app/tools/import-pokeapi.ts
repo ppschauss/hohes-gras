@@ -10,7 +10,8 @@
  * Pack liegt in data/ und gehört bewusst nicht ins Repository.
  */
 import { mkdir, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { PokeApi } from './pokeapi-client.ts'
 import { importTypes } from './import-types.ts'
 import { importSpecies } from './import-species.ts'
@@ -28,7 +29,18 @@ const argValue = (flag: string, fallback: string): string => {
   return i >= 0 && args[i + 1] ? args[i + 1]! : fallback
 }
 
-const DATA_DIR = resolve(argValue('--data', '/mnt/cache/appdata/telegram-pokemon/data'))
+/**
+ * Der Datenordner der Installation.
+ *
+ * Hergeleitet aus dem Ort dieser Datei — `build/app/tools/` liegt zwei Ebenen
+ * unter dem Projektordner, und `data/` liegt daneben. Hier stand ein fester
+ * Pfad auf den Rechner, auf dem das Projekt entstanden ist; jede zweite
+ * Installation haette damit stillschweigend woandershin geschrieben und der
+ * Container haette hinterher kein Pack gefunden. `--data` sticht weiterhin.
+ */
+const PROJEKT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
+
+const DATA_DIR = resolve(argValue('--data', join(PROJEKT, 'data')))
 const PACK_ID = argValue('--pack', 'kanto')
 const DEX_RANGE = argValue('--dex', '1-151')
 const OUT_DIR = resolve(argValue('--out', join(DATA_DIR, 'packs', PACK_ID)))

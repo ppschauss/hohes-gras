@@ -21,18 +21,23 @@ Energie — und die füllt sich, auch wenn du nicht da bist.
 
 ## Schnellstart
 
+**Das Content-Pack kommt zuerst.** Ohne Pack startet der Container nicht — er
+bricht beim Laden ab und läuft in eine Neustart-Schleife, und `health` scheitert
+an einer Adresse, die nie antwortet. Der Bereich muss zu den drei Regionen
+passen; ein kleinerer Lauf überschreibt das Pack und nimmt Regionen mit:
+
+```bash
+cd build/app && npm ci && npm run import:full     # Dex 1–386, alle drei Regionen
+cd ../..
+```
+
+Dann erst starten:
+
 ```bash
 cp secrets.env.example secrets.env && chmod 600 secrets.env
 $EDITOR secrets.env          # BOT_TOKEN von @BotFather, SESSION_SECRET
 ./manage.sh rebuild
 ./manage.sh health
-```
-
-Content-Pack einmalig importieren — der Bereich muss zu den drei Regionen
-passen, ein kleinerer Lauf überschreibt das Pack und nimmt Regionen mit:
-
-```bash
-cd build/app && npm ci && npm run import:full     # Dex 1–386, alle drei Regionen
 ```
 
 Ausführlich in **[docs/BETRIEB.md](docs/BETRIEB.md)**, öffentlich erreichbar

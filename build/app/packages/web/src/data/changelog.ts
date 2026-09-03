@@ -19,6 +19,27 @@ export interface ChangeEntry {
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    date: '2026-09-03',
+    title: 'Zucht, Beete, Vitamine — und viel Aufgeräumtes',
+    items: [
+      'Zucht: ein Ei erbt jetzt drei bis fünf Werte statt immer drei. Mit drei festen Plätzen war ein makelloses Pokémon praktisch unerreichbar — die übrigen drei würfeln neu, und dass alle drei die 31 treffen, ist einmal in gut 30.000 Fällen.',
+      'Die sechs Vitamine: KP-Plus, Protein, Eisen, Kalzium, Zink und Carbon. Jedes hebt seinen eigenen Wert um 32 Fleißpunkte — genau ein Trainingslauf, nur sofort. Das Fleißpunkte-System war vollständig gebaut und wurde nie benutzt: 48 Stunden Training je Pokémon war der einzige Weg.',
+      'Der Kronkorken hebt eine Veranlagung auf den Höchstwert. Zusammen mit der Zucht ist ein makelloses Pokémon damit erreichbar — vorher war beides für sich unmöglich.',
+      'Sonderbonbon hebt jetzt um genau ein Level. Es gab 50 EP; bei Level 39 kostet ein Aufstieg 4.681. Es tat ein Achtzigstel dessen, was sein Name verspricht.',
+      'Dünger in drei Stufen: 50, 100 und 200 % — kürzere Wachszeit und größere Ernte zugleich. Die Grundstufe gibt es im Laden, zehn Stück für 50.000 Gold; die beiden höheren nur über Forschung, Ernte und Sternenstaub.',
+      'Beete tragen nur noch Beeren und Gold. Keine Werkstoffe mehr, und ausdrücklich keine Sagenbeere — sie ist der einzige Hebel gegen ein Legendäres.',
+      'Der Laden hat Reiter je Art, wie der Beutel.',
+      'Perlu konnte nur zu Aalabyss werden, obwohl die Tausch-Station beide Wege anzeigt. Ein Tausch entwickelt bei zwei möglichen Zielen jetzt gar nicht — die Station übernimmt, dort wählst du.',
+      'Sieben eigene Züge prallten an der Puppe des Gegners ab, obwohl sie ihn nie berührt hätten: Wasserring, Magnetflug, Verwurzler, Wunschtraum, Zielschuss, Umwandlung und Teleport.',
+      'Schlafrede konnte nie wirken — der Schlaf brach sie ab, bevor sie gewählt war.',
+      'Puppe, Verwirrung und Verwandlung überlebten Wechsel und Abgang. Ein Beleber holte den alten Kampfzustand zurück, eine Stafette schenkte die Puppe.',
+      'Ausdauer meldete „Die Konzentration steigt", der Magiemantel „Gegen schnelle Angriffe abgeschirmt". Metronom und Groll schrieben englische Attackennamen ins Protokoll.',
+      'Auf schmalen Telefonen rissen acht Stellen die Seite seitwärts auf, sobald ein Name lang war. Dazu das Design-Raster und das Trainercode-Feld in Versalien.',
+      'Für Betreiber: eine neue Installation meldet sich mit einem Beitrittsschlüssel selbst beim Verbund an. Vertrauensstufen sind jetzt echt — sehen und melden darf jeder, handeln erst nach Freischaltung.',
+      'Für Betreiber: die Sicherung war keine. `cp` auf eine laufende WAL-Datenbank lässt die letzten bestätigten Transaktionen weg — jetzt echte Online-Sicherung.',
+    ],
+  },
+  {
     date: '2026-08-31',
     title: 'Verbund, Kampfzone und viele gemeldete Fehler',
     items: [

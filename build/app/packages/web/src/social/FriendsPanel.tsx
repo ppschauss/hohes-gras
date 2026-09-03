@@ -63,7 +63,7 @@ export function FriendsPanel() {
       </section>
 
       <div className="addRow">
-        <input className="field field--inline" value={code} maxLength={9}
+        <input className="field field--inline field--text" value={code} maxLength={9}
           onChange={(e) => setCode(e.target.value)}
           placeholder={t('friends.addPlaceholder')}
           autoCapitalize="characters" autoCorrect="off" spellCheck={false} />

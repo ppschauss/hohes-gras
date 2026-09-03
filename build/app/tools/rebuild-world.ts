@@ -15,7 +15,8 @@
  */
 import { existsSync } from 'node:fs'
 import { readFile, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { LOGIN_REWARDS, RECIPES } from '../packages/engine/dist/index.js'
 import { AUTHORED, lureItems, soulItems, SVG_ICONS } from './curated-items.ts'
 import { EVENT_SPECIES } from './curated-event.ts'
@@ -29,7 +30,18 @@ const arg = (flag: string, fallback: string): string => {
   const i = args.indexOf(flag)
   return i >= 0 && args[i + 1] ? args[i + 1]! : fallback
 }
-const DATA_DIR = resolve(arg('--data', '/mnt/cache/appdata/telegram-pokemon/data'))
+/**
+ * Der Datenordner der Installation.
+ *
+ * Hergeleitet aus dem Ort dieser Datei — `build/app/tools/` liegt zwei Ebenen
+ * unter dem Projektordner, und `data/` liegt daneben. Hier stand ein fester
+ * Pfad auf den Rechner, auf dem das Projekt entstanden ist; jede zweite
+ * Installation haette damit stillschweigend woandershin geschrieben und der
+ * Container haette hinterher kein Pack gefunden. `--data` sticht weiterhin.
+ */
+const PROJEKT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
+
+const DATA_DIR = resolve(arg('--data', join(PROJEKT, 'data')))
 const PACK = arg('--pack', 'kanto')
 const OUT = join(DATA_DIR, 'packs', PACK)
 const MEDIA_DIR = join(DATA_DIR, 'media')

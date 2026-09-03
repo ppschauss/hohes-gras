@@ -21,7 +21,8 @@ import {
   EXPEDITION_ENERGY, type CareCreature,
 } from '../packages/engine/dist/index.js'
 import { NATURES } from '../packages/shared/dist/index.js'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const args = process.argv.slice(2)
 const arg = (flag: string, fallback: string): string => {
@@ -31,7 +32,9 @@ const arg = (flag: string, fallback: string): string => {
 
 const DAYS = Number(arg('--days', '1000'))
 const TRAINERS = Number(arg('--trainers', '50'))
-const DATA_DIR = resolve(arg('--data', '/mnt/cache/appdata/telegram-pokemon/data'))
+/** Wie in den beiden Importern: aus dem Ort dieser Datei statt fest verdrahtet. */
+const PROJEKT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
+const DATA_DIR = resolve(arg('--data', join(PROJEKT, 'data')))
 const PACK = arg('--pack', 'kanto')
 
 /**

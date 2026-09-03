@@ -6,7 +6,12 @@ Appdata-Ordner je Dienst.
 
 ## Erste Einrichtung
 
+**Das Content-Pack kommt vor dem ersten Start.** Ohne Pack bricht der
+Container beim Laden ab und läuft in eine Neustart-Schleife.
+
 ```bash
+cd build/app && npm ci && npm run import:full     # Dex 1–386, dauert Minuten
+cd ../..
 cp secrets.env.example secrets.env
 chmod 600 secrets.env
 $EDITOR secrets.env            # BOT_TOKEN und SESSION_SECRET eintragen
@@ -19,11 +24,8 @@ $EDITOR secrets.env            # BOT_TOKEN und SESSION_SECRET eintragen
 head -c 48 /dev/urandom | base64 | tr -d '\n/+=' | head -c 64
 ```
 
-Content-Pack einmalig importieren (braucht Netz, dauert Minuten):
-
-```bash
-cd build/app && npm ci && npm run import:full     # Dex 1–386, alle drei Regionen
-```
+Der Importer schreibt in den `data/`-Ordner **neben** dem Projekt; er leitet
+ihn aus seinem eigenen Ort ab. Ein anderer Ort geht mit `-- --data <pfad>`.
 
 ## Tägliche Handgriffe
 
@@ -124,7 +126,7 @@ cd build/app
 npm test                                  # Engine + API, 965 Tests
 npx tsc --noEmit -p packages/api
 npm run build -w @game/web                # deckt die Mini-App ab; `tsc -b` tut es nicht
-cd .. && python3 tools/i18n-check.py      # keine fehlenden Übersetzungen
+cd ../.. && python3 tools/i18n-check.py   # keine fehlenden Übersetzungen
 npm run simulate -- --days 400            # Balancing-Kurven
 ```
 
@@ -166,7 +168,13 @@ Bleibt es still, ist der Verbund nicht erreichbar — das ist kein Fehler des
 Spiels, und es bricht auch nichts. `[hub] ... nicht erreichbar` im Log sagt,
 woran es lag.
 
-**Ausschalten** heißt: die drei Werte wieder leeren und neu starten. Die
+**Ausschalten** heißt: die drei Werte wieder leeren und `./manage.sh up` — aus
+demselben Grund wie oben, `restart` liest die Datei nicht neu.
+
+⚠️ Die Tabelle `hub_orders` dabei **nicht** löschen. Darin steht laufendes
+Treuhand-Geschäft: `paid` heißt „das Gold des Käufers ist schon weg", `holding`
+heißt „das Pokémon ist hier entfernt und liegt in dieser Zeile". Wer sie räumt,
+vernichtet beides. Die
 Tabellen `hub_links` und `hub_cache` können bleiben oder gelöscht werden; das
 Spiel hängt an keiner von beiden.
 
@@ -228,7 +236,7 @@ Zuletzt geprüft am 31.08.2026, gegen die laufende Installation.
 | Admin-Wege | Alle fünf prüfen über `requireAdmin` im Dienst |
 | `initData` | HMAC-SHA256, zeitkonstanter Vergleich, 24-h-Fenster, 18 Tests |
 | Sitzungen | 32 Zufallsbytes, nur gehasht gespeichert (HMAC) |
-| Verbund | Alle sechs Endpunkte ohne Berechtigung: 401 |
+| Verbund | Jeder signaturpflichtige Endpunkt ohne gültige Signatur: 401. Die vier Sonderwege (`POST /instances`, `/instances/trust`, `PUT /release` per Admin-Geheimnis, `/instances/join` per Beitrittsschlüssel) mit falschem Schlüssel: 401. Eine Instanz auf Stufe `read` auf jedem Handelsweg: 403. |
 | Geheimnisse | Weder in Antworten noch in Protokollen |
 | XSS | Kein `dangerouslySetInnerHTML`, kein `eval` |
 | Container | Läuft als `poke` (uid 1001), nicht als root |
