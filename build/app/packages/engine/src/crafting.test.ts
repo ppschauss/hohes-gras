@@ -59,4 +59,56 @@ describe('canCraft — Forschung', () => {
       .map((r) => r.researchTier ?? 1).sort()
     expect(stufen).toEqual([1, 2, 3])
   })
+
+  it('bindet alle sechs Fleissbeeren an ihre eigene Forschung', () => {
+    const beeren = RECIPES.filter((r) => r.research === 'res-ev-berries')
+    expect(beeren).toHaveLength(6)
+    for (const r of beeren) {
+      expect(canCraft(r, vollerBeutel(r.id), 999_999, LABOR, new Map()))
+        .toMatchObject({ ok: false, reason: 'missing_research' })
+      expect(canCraft(r, vollerBeutel(r.id), 999_999, LABOR, new Map([['res-ev-berries', 1]])))
+        .toEqual({ ok: true })
+    }
+  })
+})
+
+describe('Die Kette von der Beere zum Kronkorken', () => {
+  const EV_BEEREN = ['pomeg-berry', 'kelpsy-berry', 'qualot-berry', 'hondew-berry', 'apicot-berry', 'tamato-berry']
+
+  it('gibt jeder Fleissbeere ein eigenes Rezept mit eigenem Ergebnis', () => {
+    const ausgaben = RECIPES.filter((r) => r.research === 'res-ev-berries').map((r) => r.output.itemId)
+    expect([...ausgaben].sort()).toEqual([...EV_BEEREN].sort())
+  })
+
+  /*
+   * Der Punkt der ganzen Umstellung: vorher zogen die Vitamine beliebige
+   * Beeren aus dem Laden. Damit war die Kette an dieser Stelle offen — man
+   * konnte sie mit Gold abkuerzen, ohne je ein Beet bestellt zu haben.
+   */
+  it('laesst jedes Vitamin genau seine eigene Fleissbeere verlangen', () => {
+    const paare: Array<[string, string]> = [
+      ['craft-hp-up', 'pomeg-berry'], ['craft-protein', 'kelpsy-berry'],
+      ['craft-iron', 'qualot-berry'], ['craft-calcium', 'hondew-berry'],
+      ['craft-zinc', 'apicot-berry'], ['craft-carbos', 'tamato-berry'],
+    ]
+    for (const [rezept, beere] of paare) {
+      const zutaten = findRecipe(rezept)!.inputs.map((i) => i.itemId)
+      expect(zutaten).toContain(beere)
+      // Und keine andere Fleissbeere, sonst waere die Zuordnung Zufall.
+      expect(zutaten.filter((z) => EV_BEEREN.includes(z))).toEqual([beere])
+    }
+  })
+
+  it('verlangt fuer den Kronkorken alle sechs Sorten, nicht eine in Menge', () => {
+    const zutaten = findRecipe('craft-bottle-cap')!.inputs
+    const beeren = zutaten.filter((i) => EV_BEEREN.includes(i.itemId))
+    expect(beeren.map((b) => b.itemId).sort()).toEqual([...EV_BEEREN].sort())
+    expect(new Set(beeren.map((b) => b.quantity)).size).toBe(1)
+  })
+
+  it('haelt die Reihenfolge der Laborstufen ein: Beere vor Vitamin vor Kronkorken', () => {
+    const stufe = (id: string) => findRecipe(id)!.requiresBuilding!.level
+    expect(stufe('craft-pomeg-berry')).toBeLessThan(stufe('craft-hp-up'))
+    expect(stufe('craft-hp-up')).toBeLessThan(stufe('craft-bottle-cap'))
+  })
 })

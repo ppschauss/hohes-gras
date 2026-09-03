@@ -55,6 +55,7 @@ const ZUORDNUNG: Record<string, ResearchCenter> = {
 
   'res-find': 'field',
   'res-fertiliser': 'field',
+  'res-ev-berries': 'field',
   'res-detector': 'field',
   'res-expedition': 'field',
 

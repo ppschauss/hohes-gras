@@ -172,11 +172,84 @@ export const RECIPES: Recipe[] = [
    * Training in der Flasche. Teurer, aber sofort und ohne das Pokemon drei
    * Stunden zu binden.
    */
+  /*
+   * Die sechs Fleissbeeren.
+   *
+   * Zwei Stueck je Ansatz, und das ist Absicht: es reicht zum Anpflanzen,
+   * nicht zum Verbrauchen. Wer Fleisspunkte will, zieht sie im Beet nach —
+   * das Labor liefert nur die Aussaat.
+   */
+  {
+    id: 'craft-pomeg-berry', research: 'res-ev-berries',
+    output: { itemId: 'pomeg-berry', quantity: 2 },
+    inputs: [
+      { itemId: 'oran-berry', quantity: 10 },
+      { itemId: 'soul-normal', quantity: 2 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 1800,
+    requiresBuilding: { buildingId: 'lab', level: 2 },
+  },
+  {
+    id: 'craft-kelpsy-berry', research: 'res-ev-berries',
+    output: { itemId: 'kelpsy-berry', quantity: 2 },
+    inputs: [
+      { itemId: 'razz-berry', quantity: 10 },
+      { itemId: 'soul-fighting', quantity: 2 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 1800,
+    requiresBuilding: { buildingId: 'lab', level: 2 },
+  },
+  {
+    id: 'craft-qualot-berry', research: 'res-ev-berries',
+    output: { itemId: 'qualot-berry', quantity: 2 },
+    inputs: [
+      { itemId: 'nanab-berry', quantity: 10 },
+      { itemId: 'iron-shard', quantity: 2 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 1800,
+    requiresBuilding: { buildingId: 'lab', level: 2 },
+  },
+  {
+    id: 'craft-hondew-berry', research: 'res-ev-berries',
+    output: { itemId: 'hondew-berry', quantity: 2 },
+    inputs: [
+      { itemId: 'pinap-berry', quantity: 10 },
+      { itemId: 'soul-psychic', quantity: 2 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 1800,
+    requiresBuilding: { buildingId: 'lab', level: 2 },
+  },
+  {
+    id: 'craft-apicot-berry', research: 'res-ev-berries',
+    output: { itemId: 'apicot-berry', quantity: 2 },
+    inputs: [
+      { itemId: 'nanab-berry', quantity: 10 },
+      { itemId: 'soul-fairy', quantity: 2 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 1800,
+    requiresBuilding: { buildingId: 'lab', level: 2 },
+  },
+  {
+    id: 'craft-tamato-berry', research: 'res-ev-berries',
+    output: { itemId: 'tamato-berry', quantity: 2 },
+    inputs: [
+      { itemId: 'pinap-berry', quantity: 10 },
+      { itemId: 'soul-flying', quantity: 2 },
+      { itemId: 'star-piece', quantity: 1 },
+    ],
+    goldCost: 1800,
+    requiresBuilding: { buildingId: 'lab', level: 2 },
+  },
   {
     id: 'craft-hp-up', research: 'res-vitamins',
     output: { itemId: 'hp-up', quantity: 1 },
     inputs: [
-      { itemId: 'oran-berry', quantity: 14 },
+      { itemId: 'pomeg-berry', quantity: 8 },
       { itemId: 'soul-normal', quantity: 3 },
       { itemId: 'star-piece', quantity: 1 },
     ],
@@ -187,7 +260,7 @@ export const RECIPES: Recipe[] = [
     id: 'craft-protein', research: 'res-vitamins',
     output: { itemId: 'protein', quantity: 1 },
     inputs: [
-      { itemId: 'razz-berry', quantity: 14 },
+      { itemId: 'kelpsy-berry', quantity: 8 },
       { itemId: 'soul-fighting', quantity: 3 },
       { itemId: 'star-piece', quantity: 1 },
     ],
@@ -198,7 +271,7 @@ export const RECIPES: Recipe[] = [
     id: 'craft-iron', research: 'res-vitamins',
     output: { itemId: 'iron', quantity: 1 },
     inputs: [
-      { itemId: 'nanab-berry', quantity: 14 },
+      { itemId: 'qualot-berry', quantity: 8 },
       { itemId: 'iron-shard', quantity: 3 },
       { itemId: 'star-piece', quantity: 1 },
     ],
@@ -209,7 +282,7 @@ export const RECIPES: Recipe[] = [
     id: 'craft-calcium', research: 'res-vitamins',
     output: { itemId: 'calcium', quantity: 1 },
     inputs: [
-      { itemId: 'pinap-berry', quantity: 14 },
+      { itemId: 'hondew-berry', quantity: 8 },
       { itemId: 'soul-psychic', quantity: 3 },
       { itemId: 'star-piece', quantity: 1 },
     ],
@@ -220,7 +293,7 @@ export const RECIPES: Recipe[] = [
     id: 'craft-zinc', research: 'res-vitamins',
     output: { itemId: 'zinc', quantity: 1 },
     inputs: [
-      { itemId: 'nanab-berry', quantity: 14 },
+      { itemId: 'apicot-berry', quantity: 8 },
       { itemId: 'soul-water', quantity: 3 },
       { itemId: 'star-piece', quantity: 1 },
     ],
@@ -231,7 +304,7 @@ export const RECIPES: Recipe[] = [
     id: 'craft-carbos', research: 'res-vitamins',
     output: { itemId: 'carbos', quantity: 1 },
     inputs: [
-      { itemId: 'pinap-berry', quantity: 14 },
+      { itemId: 'tamato-berry', quantity: 8 },
       { itemId: 'silk-thread', quantity: 3 },
       { itemId: 'star-piece', quantity: 1 },
     ],
@@ -249,9 +322,21 @@ export const RECIPES: Recipe[] = [
   {
     id: 'craft-bottle-cap', research: 'res-bottle-cap',
     output: { itemId: 'bottle-cap', quantity: 1 },
+    /*
+     * Alle sechs Fleissbeeren, nicht eine davon in Menge.
+     *
+     * Eine einzelne Sorte waere eine Zahl, die man hochzieht; sechs Sorten
+     * sind sechs Beete, die man ueber Tage nebeneinander betreibt. Der
+     * Unterschied ist das, was den Gegenstand zum Abschluss der Kette macht
+     * und nicht zum naechsten Posten auf einer Einkaufsliste.
+     */
     inputs: [
-      { itemId: 'protein', quantity: 2 },
-      { itemId: 'carbos', quantity: 2 },
+      { itemId: 'pomeg-berry', quantity: 4 },
+      { itemId: 'kelpsy-berry', quantity: 4 },
+      { itemId: 'qualot-berry', quantity: 4 },
+      { itemId: 'hondew-berry', quantity: 4 },
+      { itemId: 'apicot-berry', quantity: 4 },
+      { itemId: 'tamato-berry', quantity: 4 },
       { itemId: 'fertiliser-3', quantity: 1 },
       { itemId: 'star-piece', quantity: 12 },
     ],

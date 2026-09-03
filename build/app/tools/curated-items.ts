@@ -56,6 +56,8 @@ export const SVG_ICONS = new Set([
   // Ersatzsymbol — die gezeichneten Bilder liegen als SVG vor.
   'hp-up', 'protein', 'iron', 'calcium', 'zinc', 'carbos',
   'bottle-cap', 'fertiliser-1', 'fertiliser-2', 'fertiliser-3',
+  // Die sechs Fleissbeeren.
+  'pomeg-berry', 'kelpsy-berry', 'qualot-berry', 'hondew-berry', 'apicot-berry', 'tamato-berry',
 ])
 
 export const AUTHORED: Authored[] = [
@@ -258,6 +260,38 @@ export const AUTHORED: Authored[] = [
    */
   { id: 'bottle-cap', category: 'medicine', price: null, sellPrice: null, params: { ivPerfect: true },
     name: 'Kronkorken', description: 'Bringt eine Veranlagung auf den Höchstwert. Du wählst, welche.' },
+  /*
+   * Die sechs Fleissbeeren.
+   *
+   * Eine je Wert, und das ist der Punkt: eine einzelne Allzweckbeere mit
+   * Wertwahl gab es hier schon einmal, und sie machte die ganze Kette zu
+   * einem einzigen Knopf. Sechs verschiedene Beeren heissen sechs
+   * verschiedene Anbauten — und der Kronkorken verlangt am Ende alle sechs.
+   *
+   * Vier Fleisspunkte je Beere gegen 32 je Vitamin: die Beere ist der
+   * langsame Weg, den man nebenbei im Beet geht, das Vitamin der schnelle,
+   * den man im Labor bezahlt. Beide aus derselben Ernte — wer Vitamine baut,
+   * hat weniger fuer den Kronkorken. Das soll wehtun.
+   *
+   * Nicht kaeuflich: die erste Beere kommt aus dem Labor, jede weitere aus
+   * dem Beet. Ein Laden, der sie fuehrt, haette die Beete ueberfluessig
+   * gemacht.
+   */
+  { id: 'pomeg-berry', category: 'berry', price: null, sellPrice: 140, params: { evPoints: 4, evStat: 'hp' },
+    name: 'Granatbeere', description: 'Hebt KP beim Fressen ein wenig. Waechst im Beet nach.' },
+  { id: 'kelpsy-berry', category: 'berry', price: null, sellPrice: 140, params: { evPoints: 4, evStat: 'atk' },
+    name: 'Tsitrubeere', description: 'Hebt Angriff beim Fressen ein wenig. Waechst im Beet nach.' },
+  { id: 'qualot-berry', category: 'berry', price: null, sellPrice: 140, params: { evPoints: 4, evStat: 'def' },
+    name: 'Maronbeere', description: 'Hebt Verteidigung beim Fressen ein wenig. Waechst im Beet nach.' },
+  { id: 'hondew-berry', category: 'berry', price: null, sellPrice: 140, params: { evPoints: 4, evStat: 'spa' },
+    name: 'Pilzbeere', description: 'Hebt Spezial-Angriff beim Fressen ein wenig. Waechst im Beet nach.' },
+  /* Die Sinelbeere waere hier die Vorlage — den Namen traegt im Pack aber
+   * schon `oran-berry`. Die Elukisbeere haengt ohnehin an der
+   * Spezial-Verteidigung, also passt sie und ist frei. */
+  { id: 'apicot-berry', category: 'berry', price: null, sellPrice: 140, params: { evPoints: 4, evStat: 'spd' },
+    name: 'Elukisbeere', description: 'Hebt Spezial-Verteidigung beim Fressen ein wenig. Waechst im Beet nach.' },
+  { id: 'tamato-berry', category: 'berry', price: null, sellPrice: 140, params: { evPoints: 4, evStat: 'spe' },
+    name: 'Wasmelbeere', description: 'Hebt Initiative beim Fressen ein wenig. Waechst im Beet nach.' },
   { id: 'oran-berry',  category: 'berry', price: 50,  sellPrice: 25,  params: { careValue: 1, friendship: 3 },
     description: 'Lieblingssnack im Garten. Gibt Freundschaft und etwas Energie.' },
 

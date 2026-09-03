@@ -134,6 +134,20 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
     xpPerHour: 220,
   },
   {
+    /*
+     * Die Fleissbeeren stehen vor den Vitaminen — Labor 2 statt 3.
+     *
+     * Sie sind die Ernte, aus der beides entsteht: das Vitamin im Labor und
+     * der Kronkorken am Ende. Wer sie nicht anbaut, kommt an keinem der
+     * beiden vorbei, und genau darum ist das hier die erste Stufe der Kette
+     * und nicht eine Abzweigung daneben.
+     */
+    id: 'res-ev-berries', kind: 'recipe', tiers: 1, lab: 2, unlocks: null,
+    step: 0, hours: 4, gold: 2500,
+    inputs: [{ itemId: 'oran-berry', quantity: 20 }, { itemId: 'star-piece', quantity: 3 }],
+    xpPerHour: 200,
+  },
+  {
     id: 'res-vitamins', kind: 'recipe', tiers: 1, lab: 3, unlocks: null,
     step: 0, hours: 10, gold: 9000,
     inputs: [{ itemId: 'golden-razz', quantity: 4 }, { itemId: 'star-piece', quantity: 6 }],

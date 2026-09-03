@@ -76,12 +76,12 @@ export function useItem(
     const p = item.params
 
     /*
-     * Fleissbeere und Erbgut-Serum: beide brauchen einen Wert.
+     * Alles, was ein Pokemon dauerhaft aendert: Fleissbeeren, Vitamine,
+     * Kronkorken.
      *
-     * Sie stehen hier und nicht bei den Traenken, weil sie das Pokemon
-     * dauerhaft aendern statt es zu versorgen. Und beide verlangen, dass der
-     * Spieler sagt, *welchen* Wert — ein Mittel, das selbst waehlt, waere bei
-     * einem Gegenstand dieses Preises eine Zumutung.
+     * Sie stehen hier und nicht bei den Traenken, weil sie den Wert selbst
+     * verschieben statt das Pokemon zu versorgen. Den Wert bringen bis auf
+     * den Kronkorken alle selbst mit — nur er laesst die Wahl.
      */
     if (p.evPoints !== undefined || p.ivPerfect === true) {
       /*
