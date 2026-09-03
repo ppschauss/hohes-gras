@@ -1093,7 +1093,7 @@
   "plots.chooseItem": "Was vergraben?",
   "plots.cost": "{n} Energie",
   "plots.empty": "Beet {n} liegt brach",
-  "plots.explain.body": "Was du vergräbst, kommt nach {time} vermehrt zurück: +50 % ganz von allein, bis +100 % wenn du jätest und wässerst. Ein abgestelltes Pflanzen-Pokémon macht das für dich — sein Level bestimmt, wie gut.",
+  "plots.explain.body": "Was du vergräbst, kommt nach {time} vermehrt zurück: +50 % ganz von allein, bis +100 % wenn du jätest und wässerst. Ein abgestelltes Pflanzen-Pokémon macht das für dich — sein Level bestimmt, wie gut. Dünger legt noch einmal 50, 100 oder 200 % obendrauf und verkürzt die Wartezeit im selben Maß.",
   "plots.explain.title": "Wie das Beet arbeitet",
   "plots.eyebrow": "Eingraben & ernten",
   "plots.fertiliser": "Dünger",

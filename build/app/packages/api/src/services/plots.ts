@@ -118,7 +118,15 @@ export function state(ctx: AppContext, trainer: Trainer, now = Date.now()): Plot
   const plantable: Plantable[] = Object.entries(bag)
     .flatMap(([itemId, have]) => {
       const item = ctx.registry.tryItem(itemId)
-      if (!item || !PLANTABLE.has(item.category) || have <= 0) return []
+      /*
+       * Dieselbe Bedingung wie beim Pflanzen, und das ist der Punkt.
+       *
+       * Die Sperre stand nur im `plant`, nicht in dieser Liste: die Auswahl
+       * bot die Sagenbeere weiter an, und wer sie waehlte, bekam eine Absage
+       * statt gar keine Wahl. Eine Liste, die mehr zeigt, als der Knopf
+       * annimmt, ist schlimmer als eine kurze.
+       */
+      if (!item || !PLANTABLE.has(item.category) || UNPLANTABLE_ITEMS.has(itemId) || have <= 0) return []
       return [{
         itemId,
         name: ctx.registry.localized(item.name, trainer.locale),

@@ -338,6 +338,19 @@ describe('Dünger', () => {
 })
 
 describe('Was sich nicht mehr eingraben laesst', () => {
+  it('bietet die Sagenbeere gar nicht erst an', async () => {
+    /*
+     * Die Sperre stand nur im Pflanzen, nicht in der Liste: die Auswahl bot
+     * sie weiter an, und wer sie waehlte, bekam eine Absage statt gar keine
+     * Wahl. Genau so gemeldet, mit einem Bildschirmfoto der Auswahl.
+     */
+    h.ctx.db.prepare('INSERT OR REPLACE INTO inventory (trainer_id, item_id, quantity) VALUES (?, ?, 9)')
+      .run(trainerId, 'legendary-berry')
+    const r = await h.get('/api/plots', token)
+    expect((r.body.plantable as Array<{ itemId: string }>).map((p) => p.itemId))
+      .not.toContain('legendary-berry')
+  })
+
   it('keine Sagenbeere', async () => {
     /*
      * Sie faellt nur bei Ueberfaellen und ist der einzige Hebel gegen ein
