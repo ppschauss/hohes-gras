@@ -20,6 +20,17 @@ export interface HubConfig {
   idSalt: string
   /** Wer neue Instanzen anmelden darf. */
   adminSecret: string
+  /**
+   * Wer sich selbst anmelden darf.
+   *
+   * Getrennt vom Admin-Geheimnis, und das ist der ganze Punkt: das Admin-
+   * Geheimnis oeffnet zwei Tueren, denn mit ihm setzt man auch den Stand, auf
+   * den sich alle Instanzen aktualisieren sollen. Wer nur beitreten will, soll
+   * nicht nebenbei alle anderen zum Update draengen koennen.
+   *
+   * Leer heisst: keine Selbstanmeldung. Dann bleibt es beim Admin-Weg.
+   */
+  joinSecret?: string
   now?: () => number
 }
 
@@ -39,6 +50,8 @@ export interface HubRequest {
   auth?: SignedRequest
   /** Nur für die Anmeldung neuer Instanzen. */
   adminSecret?: string
+  /** Nur fuer die Selbstanmeldung. */
+  joinSecret?: string
 }
 
 export interface HubResponse {
@@ -117,6 +130,55 @@ export function createHub(config: HubConfig) {
       return { status: 200, body: { id, secret } }
     }
 
+    /*
+     * Selbstanmeldung.
+     *
+     * Dieselbe Wirkung wie oben, ein anderer Schluessel — und ausdruecklich
+     * einer, den man weitergeben kann. Wer eine Instanz aufsetzt, traegt das
+     * Beitrittsgeheimnis in seine Konfiguration ein; beim ersten Lauf holt
+     * sich die Instanz ihre Kennung selbst. Niemand muss mehr ein Geheimnis
+     * durch einen Chat schicken.
+     *
+     * Sie beginnt auf `read`. Das ist die Bedingung, unter der das ueberhaupt
+     * vertretbar ist: sehen und sich zeigen darf jeder, der das Beitritts-
+     * geheimnis hat; handeln erst, wenn der Betreiber es freischaltet.
+     */
+    if (req.method === 'POST' && req.path === '/instances/join') {
+      if (!config.joinSecret) return bad(404, 'not_found')
+      if (req.joinSecret !== config.joinSecret) return bad(401, 'unauthorized')
+      const { id, name } = body as { id?: string; name?: string }
+      if (!id || !/^[a-z0-9-]{3,32}$/.test(id)) return bad(400, 'validation_failed', { field: 'id' })
+      /*
+       * Eine vergebene Kennung wird nicht ueberschrieben.
+       *
+       * Sonst koennte jeder mit dem Beitrittsgeheimnis eine fremde Instanz
+       * uebernehmen, indem er ihre Kennung neu anmeldet — und deren Trainer
+       * gleich mit. Der Anfragende bekommt einen klaren Fehler und muss sich
+       * einen anderen Namen suchen oder den Betreiber fragen.
+       */
+      if (await store.getInstance(id)) return bad(409, 'invalid_state', { reason: 'id_taken' })
+
+      const secret = [...crypto.getRandomValues(new Uint8Array(32))]
+        .map((b) => b.toString(16).padStart(2, '0')).join('')
+      await store.putInstance({
+        id, name: (name ?? id).slice(0, 40), secret, createdAt: now(),
+        trust: 'read', blockedAt: null,
+      })
+      return { status: 200, body: { id, secret, trust: 'read' } }
+    }
+
+    /* Freischalten — nur der Betreiber, und nur mit dem Admin-Geheimnis. */
+    if (req.method === 'POST' && req.path === '/instances/trust') {
+      if (req.adminSecret !== config.adminSecret) return bad(401, 'unauthorized')
+      const { id, trust } = body as { id?: string; trust?: string }
+      if (!id) return bad(400, 'validation_failed', { field: 'id' })
+      if (trust !== 'read' && trust !== 'trade') return bad(400, 'validation_failed', { field: 'trust' })
+      const inst = await store.getInstance(id)
+      if (!inst) return bad(404, 'not_found', { id })
+      await store.putInstance({ ...inst, trust })
+      return { status: 200, body: { id, trust } }
+    }
+
     /* -------------------------------------------- Version setzen (Admin) */
     if (req.method === 'PUT' && req.path === '/release') {
       if (req.adminSecret !== config.adminSecret) return bad(401, 'unauthorized')
@@ -135,6 +197,29 @@ export function createHub(config: HubConfig) {
 
     const check = await verify(instance.secret, req.auth, req.method, req.path, raw, now())
     if (!check.ok) return bad(401, 'unauthorized', { reason: check.reason })
+
+    /*
+     * Was eine Instanz auf der Lesestufe nicht darf.
+     *
+     * Bis hierher war `trust` ein Feld, das gesetzt und nie gelesen wurde —
+     * die Doku versprach eine Sicherung, die es nicht gab. Solange man eine
+     * Instanz nur von Hand anlegen konnte, war der Befehl selbst die
+     * Schranke. Mit der Selbstanmeldung faellt die weg, also muss die
+     * Sicherung echt werden.
+     *
+     * Die Grenze verlaeuft dort, wo Werte den Besitzer wechseln. Sehen,
+     * gesehen werden und reden ist harmlos: eine neue Instanz soll sich beim
+     * ersten Start vollstaendig anfuehlen. Anbieten und handeln bewegt
+     * dagegen Pokemon und Gold zwischen Datenbanken, denen der Betreiber
+     * vertrauen muss — und ob er das tut, entscheidet er selbst.
+     */
+    const HANDEL = new Set([
+      '/market/buy', '/market/orders', '/market/deliver', '/market/collect', '/market/abort',
+    ])
+    const bietet = req.method === 'PUT' && req.path === '/market'
+    if (instance.trust !== 'trade' && (bietet || HANDEL.has(req.path))) {
+      return bad(403, 'forbidden', { reason: 'trust_read_only', trust: instance.trust })
+    }
 
     /* ------------------------------------------------------ Trainer melden */
     if (req.method === 'POST' && req.path === '/trainers') {

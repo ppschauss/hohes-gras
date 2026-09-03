@@ -1,7 +1,13 @@
 # Verbund — mehrere Instanzen, eine Spielerwelt
 
-**Stand: Entwurf.** Nichts davon ist gebaut. Dieses Dokument beschreibt, was
-gebaut werden soll, warum es so geschnitten ist und was bewusst *nicht* geht.
+**Stand: Schritt 1 bis 7 laufen** — Identitäten, Profile, Rangliste, Chat,
+Freunde über Instanzgrenzen, der Aushang und die Treuhand für Käufe. Was davon
+wo liegt, steht weiter unten unter „Stand".
+
+Der Rest dieses Dokuments ist gemischt: Entwurf und Gebautes stehen
+nebeneinander. Wo ein Abschnitt etwas beschreibt, das es **nicht** gibt, steht
+das ausdrücklich am Anfang des Abschnitts. Ohne diese Markierung gilt: es ist
+gebaut.
 
 ## Das Ziel
 
@@ -40,13 +46,20 @@ läuft.
 
 | Tabelle | Inhalt | Art |
 |---|---|---|
-| `instances` | Kennung, öffentlicher Schlüssel, Anzeigename | Stammdaten |
-| `trainers` | globale Id, Telegram-Id, Anzeigename, Heimat-Instanz | Stammdaten |
+| `instances` | Kennung, geteiltes Geheimnis, Anzeigename, Vertrauensstufe | Stammdaten |
+| `trainers` | globale Id, Anzeigename, Heimat-Instanz, Trainer-Code | Stammdaten |
 | `profiles` | Schnappschuss: Orden, Dex, Siege, Wertung | wird überschrieben |
-| `friendships` | zwei globale Ids | anhängend |
-| `messages` | Chat: Kanal, Absender, Text, Zeit | anhängend |
-| `listings` | Marktangebot: Verkäufer, Beschreibung, Preis, Zustand | anhängend + Zustand |
-| `escrow` | Treuhand-Marke: Inhalt, Empfänger, eingelöst? | anhängend + einmalig |
+| `friends` | zwei globale Ids | anhängend |
+| `friend_requests` | offene Anfragen zwischen zwei Ids | anhängend |
+| `chat` | Kanal, Absender, Text, Zeit | anhängend |
+| `market` | Aushang je Instanz: Abschrift, keine Kreatur | wird ersetzt |
+| `market_orders` | Treuhand: Zustand eines Kaufs, verwahrtes Pokémon | Vorgang |
+| `releases` | der Stand, auf den sich alle aktualisieren sollen | wird überschrieben |
+
+Zwei Dinge daran sind bewusst so: Das Geheimnis einer Instanz ist ein
+**geteiltes** (HMAC), kein öffentlicher Schlüssel — die Namen in dieser Tabelle
+sagten lange etwas anderes. Und die **Telegram-Id geht nicht hoch**; die globale
+Id ist ihr Hashwert mit einem Salz, das nur der Verbund kennt.
 
 Die **Telegram-Id ist der Anker**. Sie ist bereits die Identität in jeder
 Instanz, sie ist global eindeutig, und sie kostet keinen neuen Anmeldeweg. Die
@@ -108,6 +121,21 @@ Das entscheidende Prinzip: **die Kreatur ist immer an genau einem Ort** — in
 einer Instanz oder in einer Marke, nie in beiden und nie in keinem.
 
 ## Gegen gefälschte Kreaturen
+
+> **Nichts aus diesem Kapitel ist gebaut.** Es beschreibt fünf Ebenen; im Code
+> existiert davon keine einzige. Der Verbund prüft an einem hereingereichten
+> Pokémon heute nur, dass es eine Zeichenkette unterhalb der Längengrenze ist —
+> `store.ts` sagt es offen: „was darin steht, geht ihn nichts an".
+>
+> Die **einzige** heute wirksame Sicherung ist die Vertrauensstufe: eine Instanz
+> darf erst handeln, wenn der Betreiber sie freischaltet (siehe „Was die Stufen
+> wirklich bedeuten"). Das ist eine Entscheidung über Menschen, keine Prüfung
+> über Daten. Wer eine fremde Instanz zum Handel zulässt, vertraut ihrem
+> Betreiber — und sonst nichts.
+>
+> Diese Markierung stand hier lange nicht, während die Treuhand bereits lief.
+> Wer nach diesem Kapitel entschieden hat, ob er jemanden handeln lässt, hat
+> sich auf vier Ebenen verlassen, die es nicht gibt.
 
 Eine selbst gehostete Instanz kann lügen. Sie kann Kreaturen mit makellosen
 Werten erfinden, Gold aus dem Nichts schöpfen und beides in den Verbund
@@ -209,9 +237,19 @@ nach oben.
 
 ## Automatische Aktualisierung
 
-Ein Push auf `main` veröffentlicht eine `version.json` mit Commit und Prüfsumme.
-Jede Instanz sieht stündlich nach, zieht bei Bedarf `git pull` und
-`./manage.sh rebuild`.
+> Der ursprüngliche Entwurf sah einen Automatismus vor: eine `version.json` aus
+> einem Git-Haken, und jede Instanz zieht selbsttätig. Gebaut wurde bewusst
+> etwas anderes — der Absatz unten beschreibt den **gebauten** Weg.
+
+Der Stand wird von Hand gesetzt (`PUT /release` mit dem Admin-Geheimnis); es
+gibt keine `version.json` und keinen Git-Haken. Jede Instanz fragt alle zehn
+Minuten nach und benachrichtigt ihren Betreiber **einmal je Stand** über
+Telegram. Gezogen wird nichts von selbst: der Betreiber drückt in der App
+einen Knopf, die Instanz legt daraufhin nur eine Marke in `data/` ab, und
+`./manage.sh watch` auf dem Wirt tut die eigentliche Arbeit.
+
+Das ist Absicht. Ein Container, der sich selbst neu bauen darf, braucht den
+Docker-Socket — und damit Zugriff auf alles, was auf der Maschine läuft.
 
 **Der Rückfall ist der wichtige Teil.** Nach dem Neustart prüft die Instanz
 ihre eigene Gesundheit; scheitert das, springt sie auf den vorherigen Commit
@@ -239,7 +277,7 @@ zwei Instanzen hin, bevor echte Kreaturen die Grenze überqueren.
 
 ---
 
-## Stand: Schritt 1 und 2 sind gebaut
+## Stand: Schritt 1 bis 7 sind gebaut
 
 Was es gibt, und wo es liegt:
 
@@ -333,8 +371,75 @@ curl -X POST "$HUB_URL/instances" -H 'content-type: application/json' \
 ```
 
 Sie starten auf der Stufe `read` — lesen und die eigenen Trainer melden, aber
-nicht handeln. Handel wird freigeschaltet, nicht mitgeliefert (siehe
-„Vertrauensstufen").
+nicht handeln. Handel wird freigeschaltet, nicht mitgeliefert:
+
+```bash
+curl -X POST "$HUB_URL/instances/trust" -H 'content-type: application/json' \
+     -H "x-hub-admin: $HUB_ADMIN_SECRET" \
+     -d '{"id":"zweite-huette","trust":"trade"}'
+```
+
+### Selbstanmeldung
+
+Der Weg oben verlangt, dass jemand mit dem Admin-Geheimnis für jede neue
+Installation einen Befehl tippt — und danach das Instanz-Geheimnis sicher
+weitergibt. Das ist umständlich und war der Grund, warum eine zweite Instanz
+tagelang stumm blieb: sie war schlicht nie angemeldet worden.
+
+Mit einem **Beitrittsschlüssel** meldet sich eine Installation selbst an. Er
+liegt als `JOIN_SECRET` beim Verbund und darf genau eines: eine Instanz
+anlegen. Das ist bewusst nicht das Admin-Geheimnis — mit dem setzt man auch
+den Stand, auf den sich alle Instanzen aktualisieren sollen, und wer nur
+beitreten will, soll niemanden zum Update drängen können.
+
+```bash
+npx wrangler secret put JOIN_SECRET -c worker/wrangler.toml
+```
+
+Danach trägt die neue Installation drei Werte in ihre `secrets.env`:
+
+```
+HUB_URL=...
+HUB_INSTANCE_ID=zweite-huette
+HUB_JOIN_SECRET=...
+```
+
+und startet mit `./manage.sh up`. Beim ersten Verbundlauf holt sie sich ihr
+Geheimnis und legt es in ihrer **eigenen Datenbank** ab — der Container kann
+`secrets.env` nicht schreiben, sie wird per `--env-file` übergeben und nicht
+eingehängt. Im Log steht dann:
+
+```
+[hub] Beigetreten als "zweite-huette" auf Stufe read. Handel muss der Betreiber des Verbunds freischalten.
+```
+
+`HUB_SECRET` hat weiterhin Vorrang: eine bestehende Installation ändert sich
+nicht.
+
+Zwei Ausgänge werden ausdrücklich gemeldet und **nicht wiederholt**, weil sie
+sich nicht von selbst lösen — eine bereits vergebene Kennung und ein falscher
+Beitrittsschlüssel. Beides steht mit der Abhilfe im Log. Eine verlorene
+Datenbank fällt in den ersten Fall: die Kennung ist dann beim Verbund noch
+vergeben und muss dort gelöscht werden, oder die Installation nimmt eine neue.
+
+### Was die Stufen wirklich bedeuten
+
+`trust` war lange ein Feld, das gesetzt und nie gelesen wurde — die Sicherung
+stand nur hier im Text. Solange man eine Instanz nur von Hand anlegen konnte,
+war der Befehl selbst die Schranke. Mit der Selbstanmeldung fällt die weg,
+also wird die Stufe jetzt geprüft:
+
+| | `read` | `trade` |
+|---|---|---|
+| Trainer melden, Profile, Rangliste | ja | ja |
+| Chat, Freunde über Instanzgrenzen | ja | ja |
+| Fremde Angebote **ansehen** | ja | ja |
+| Eigene Angebote **aushängen** | nein | ja |
+| Kaufen, liefern, abholen (Treuhand) | nein | ja |
+
+Die Grenze verläuft dort, wo Werte den Besitzer wechseln. Sehen, gesehen
+werden und reden bewegt nichts, was jemandem gehört; anbieten und handeln
+schon.
 
 ### Was beim ersten Ausrollen im Weg stand
 

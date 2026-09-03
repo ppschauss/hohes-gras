@@ -27,6 +27,18 @@ const EnvSchema = z.object({
   HUB_URL: z.string().default(''),
   HUB_INSTANCE_ID: z.string().default(''),
   HUB_SECRET: z.string().default(''),
+  /*
+   * Der Beitrittsschluessel.
+   *
+   * Alternative zu `HUB_SECRET`: wer ihn hat, dessen Instanz meldet sich beim
+   * ersten Verbundlauf selbst an und legt das erhaltene Geheimnis in ihrer
+   * eigenen Datenbank ab. Der Container kann `secrets.env` nicht schreiben —
+   * sie wird per `--env-file` uebergeben, nicht eingehaengt —, also ist die
+   * Datenbank der einzige Ort, an dem das Geheimnis einen Neustart ueberlebt.
+   *
+   * `HUB_SECRET` hat Vorrang. Eine bestehende Installation aendert sich nicht.
+   */
+  HUB_JOIN_SECRET: z.string().default(''),
   /** Der Git-Stand, mit dem dieses Image gebaut wurde. Setzt das Dockerfile. */
   GIT_SHA: z.string().default('unbekannt'),
 })
@@ -57,7 +69,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   }
   return {
     ...c,
-    hubEnabled: Boolean(c.HUB_URL && c.HUB_INSTANCE_ID && c.HUB_SECRET),
+    // Ein Beitrittsschluessel genuegt: das eigentliche Geheimnis holt sich die
+    // Instanz dann selbst.
+    hubEnabled: Boolean(c.HUB_URL && c.HUB_INSTANCE_ID && (c.HUB_SECRET || c.HUB_JOIN_SECRET)),
     packsDir: `${c.DATA_DIR}/packs`,
     mediaDir: `${c.DATA_DIR}/media`,
     backupsDir: `${c.DATA_DIR}/backups`,

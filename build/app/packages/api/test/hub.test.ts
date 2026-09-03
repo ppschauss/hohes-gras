@@ -5,6 +5,7 @@ import {
   pushProfiles, refreshLeaderboard, refreshMarket,
 } from '../src/services/hub.js'
 import { buyRemote, settle } from '../src/services/hubMarket.js'
+import { joinIfNeeded } from '../src/services/hub.js'
 import * as acquisitions from '../src/repos/acquisitions.js'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
@@ -22,7 +23,12 @@ import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 let h: TestApp
 let ash: { token: string; id: string }
 let hub: ReturnType<typeof createHub>
+let store: ReturnType<typeof memoryStore>
 let refused = false
+
+/** Eine Instanz zum Handel freischalten — neu angemeldete duerfen nur lesen. */
+const freischalten = (id: string) =>
+  hub({ method: 'POST', path: '/instances/trust', body: { id, trust: 'trade' }, adminSecret: 'admin' })
 
 const HUB = {
   HUB_URL: 'https://verbund.example/',
@@ -32,8 +38,8 @@ const HUB = {
 
 beforeEach(async () => {
   refused = false
-  const store = memoryStore()
-  hub = createHub({ store, idSalt: 'salz', adminSecret: 'admin' })
+  store = memoryStore()
+  hub = createHub({ store, idSalt: 'salz', adminSecret: 'admin', joinSecret: 'beitritt' })
   const reg = await hub({ method: 'POST', path: '/instances', body: { id: 'heim' }, adminSecret: 'admin' })
   HUB.HUB_SECRET = (reg.body as { secret: string }).secret
 
@@ -48,6 +54,18 @@ beforeEach(async () => {
      */
     if (init.method === 'GET' && init.body != null) {
       throw new TypeError('Request with GET/HEAD method cannot have body.')
+    }
+    const kopf = init.headers as Record<string, string>
+    // Der Beitritt ist der einzige Weg ohne Signatur — er traegt stattdessen
+    // das Beitrittsgeheimnis.
+    if (kopf['x-hub-join']) {
+      const res = await hub({
+        method: init.method as string,
+        path: new URL(url).pathname,
+        body: JSON.parse((init.body as string) || '{}'),
+        joinSecret: kopf['x-hub-join'],
+      })
+      return { ok: res.status < 400, status: res.status, json: async () => res.body } as Response
     }
     const res = await hub({
       method: init.method as string,
@@ -76,6 +94,78 @@ const setStats = (trainerId: string, stats: Record<string, number>) => {
      ON CONFLICT(trainer_id) DO UPDATE SET ${cols.map((c) => `${c} = excluded.${c}`).join(', ')}`,
   ).run(trainerId, ...cols.map((c) => stats[c]), Date.now())
 }
+
+describe('Selbstanmeldung der Instanz', () => {
+  /**
+   * Eine Instanz, die nur einen Beitrittsschluessel hat und noch kein
+   * Geheimnis. Genau der Zustand einer frischen Installation.
+   */
+  const frisch = async (id = 'neuling', joinSecret = 'beitritt') => {
+    const app = await makeTestApp({
+      HUB_URL: HUB.HUB_URL, HUB_INSTANCE_ID: id, HUB_SECRET: '', HUB_JOIN_SECRET: joinSecret,
+    })
+    return app
+  }
+
+  it('holt sich beim ersten Lauf ihr Geheimnis und legt es ab', async () => {
+    const app = await frisch()
+    try {
+      expect(app.ctx.config.hubEnabled).toBe(true)
+      expect(await joinIfNeeded(app.ctx)).toBe('joined')
+
+      const abgelegt = app.ctx.db.prepare("SELECT payload FROM hub_cache WHERE key = 'instance_secret'")
+        .get() as { payload: string }
+      expect(abgelegt.payload).toMatch(/^[0-9a-f]{64}$/)
+      // Und der Verbund kennt sie jetzt — auf der Lesestufe.
+      expect((await store.getInstance('neuling'))!.trust).toBe('read')
+
+      // Ein zweiter Lauf meldet sich nicht erneut an.
+      expect(await joinIfNeeded(app.ctx)).toBe('ready')
+    } finally { await app.close() }
+  })
+
+  it('kann danach signiert sprechen', async () => {
+    const app = await frisch('spricht')
+    try {
+      await joinIfNeeded(app.ctx)
+      // linkNew signiert — es geht nur, wenn das geholte Geheimnis wirklich passt.
+      const r = await app.post('/api/auth/session', { initData: signInitData({ id: 77, first_name: 'Neu' }) })
+      expect(r.status).toBe(200)
+      expect(await linkNew(app.ctx)).toBe(1)
+    } finally { await app.close() }
+  })
+
+  it('gibt bei vergebener Kennung auf, statt es ewig zu versuchen', async () => {
+    // 'heim' gibt es schon — die Instanz aus dem Hauptaufbau.
+    const app = await frisch('heim')
+    try {
+      expect(await joinIfNeeded(app.ctx)).toBe('blocked')
+      // Der Fehlschlag ist vermerkt; ein zweiter Lauf fragt gar nicht mehr.
+      expect(await joinIfNeeded(app.ctx)).toBe('blocked')
+      // Und das Geheimnis der bestehenden Instanz ist unberuehrt.
+      expect((await store.getInstance('heim'))!.secret).toBe(HUB.HUB_SECRET)
+    } finally { await app.close() }
+  })
+
+  it('gibt auch bei falschem Beitrittsschluessel auf', async () => {
+    const app = await frisch('falschling', 'stimmt-nicht')
+    try {
+      expect(await joinIfNeeded(app.ctx)).toBe('blocked')
+      expect(await store.getInstance('falschling')).toBeNull()
+    } finally { await app.close() }
+  })
+
+  it('versucht es nach einem Netzfehler erneut', async () => {
+    const app = await frisch('wackelig')
+    try {
+      refused = true
+      expect(await joinIfNeeded(app.ctx)).toBe('waiting')
+      refused = false
+      // Kein Vermerk gesetzt — der naechste Lauf darf wieder.
+      expect(await joinIfNeeded(app.ctx)).toBe('joined')
+    } finally { await app.close() }
+  })
+})
 
 describe('Treuhand: kaufen und verkaufen ueber Instanzgrenzen', () => {
   /**
@@ -115,6 +205,9 @@ describe('Treuhand: kaufen und verkaufen ueber Instanzgrenzen', () => {
   beforeEach(async () => {
     const r = await hub({ method: 'POST', path: '/instances', body: { id: 'fremd' }, adminSecret: 'admin' })
     fremdSecret = (r.body as { secret: string }).secret
+    // Handel ist eine Vertrauenssache: beide Seiten muessen freigeschaltet sein.
+    await freischalten('heim')
+    await freischalten('fremd')
     await h.post('/api/starter', { speciesId: 'testmon' }, ash.token)
     h.ctx.db.prepare('UPDATE trainers SET gold = 5000 WHERE id = ?').run(ash.id)
     await linkNew(h.ctx)

@@ -14,6 +14,8 @@ export interface Env {
   ID_SALT: string
   /** Wer neue Instanzen anmelden darf. */
   ADMIN_SECRET: string
+  /** Wer sich selbst anmelden darf. Leer heisst: niemand, nur der Admin-Weg. */
+  JOIN_SECRET?: string
 }
 
 export default {
@@ -23,6 +25,7 @@ export default {
       store: d1Store(env.DB),
       idSalt: env.ID_SALT,
       adminSecret: env.ADMIN_SECRET,
+      joinSecret: env.JOIN_SECRET,
     })
 
     // Der Rumpf wird mitsigniert, also muss er unverändert durch — geparst
@@ -46,6 +49,7 @@ export default {
       rawBody: raw || '{}',
       auth: instanceId && signature ? { instanceId, timestamp, signature } : undefined,
       adminSecret: req.headers.get('x-hub-admin') ?? undefined,
+      joinSecret: req.headers.get('x-hub-join') ?? undefined,
     })
     return json(res.status, res.body)
   },

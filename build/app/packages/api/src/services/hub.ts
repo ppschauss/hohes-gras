@@ -73,17 +73,36 @@ export function assertGetHasNoBody(method: string, path: string, raw: string): v
 }
 
 /** Eine signierte Anfrage an den Verbund. Wirft nie — der Aufrufer bekommt null. */
+/**
+ * Das Geheimnis, mit dem diese Instanz signiert.
+ *
+ * Aus der Umgebung, wenn eines gesetzt ist — bestehende Installationen sollen
+ * sich nicht anders verhalten als vorher. Sonst das selbst geholte aus der
+ * Datenbank. Beides leer heisst: wir sind noch nicht angemeldet, und der
+ * naechste Verbundlauf holt es.
+ */
+export function instanceSecret(ctx: AppContext): string {
+  if (ctx.config.HUB_SECRET) return ctx.config.HUB_SECRET
+  const row = ctx.db.prepare('SELECT payload FROM hub_cache WHERE key = ?')
+    .get('instance_secret') as { payload: string } | undefined
+  return row?.payload ?? ''
+}
+
 export async function call(
   ctx: AppContext, method: 'GET' | 'POST' | 'PUT', path: string, body: unknown = {},
 ): Promise<unknown | null> {
   if (!enabled(ctx)) return null
+  const geheim = instanceSecret(ctx)
+  // Noch keine Kennung: der Beitritt laeuft im eigenen Schritt, und bis er
+  // durch ist, waere jede signierte Anfrage nur ein 401 im Log.
+  if (!geheim) return null
   const raw = JSON.stringify(body ?? {})
 
   assertGetHasNoBody(method, path, raw)
 
   const timestamp = Date.now()
   try {
-    const signature = await sign(ctx.config.HUB_SECRET, method, path, timestamp, raw)
+    const signature = await sign(geheim, method, path, timestamp, raw)
     const res = await fetch(`${ctx.config.HUB_URL.replace(/\/$/, '')}${path}`, {
       method,
       headers: {
@@ -128,13 +147,15 @@ export async function callOrThrow(
   ctx: AppContext, method: 'GET' | 'POST' | 'PUT', path: string, body: unknown = {},
 ): Promise<Record<string, unknown>> {
   if (!enabled(ctx)) throw new GameError('invalid_state', { reason: 'no_hub' }, 409)
+  const geheim = instanceSecret(ctx)
+  if (!geheim) throw new GameError('invalid_state', { reason: 'hub_not_joined' }, 409)
   const raw = JSON.stringify(body ?? {})
   assertGetHasNoBody(method, path, raw)
   const timestamp = Date.now()
 
   let res: Response
   try {
-    const signature = await sign(ctx.config.HUB_SECRET, method, path, timestamp, raw)
+    const signature = await sign(geheim, method, path, timestamp, raw)
     res = await fetch(`${ctx.config.HUB_URL.replace(/\/$/, '')}${path}`, {
       method,
       headers: {
@@ -356,6 +377,94 @@ export async function refreshMarket(ctx: AppContext): Promise<number> {
  * Angemeldet wird im Hintergrund, nicht beim Einloggen: ein langsamer Verbund
  * darf niemanden am Spielen hindern, und es eilt nicht.
  */
+/**
+ * Sich beim Verbund anmelden, falls noch nicht geschehen.
+ *
+ * Laeuft am Anfang jedes Verbundlaufs und tut in aller Regel nichts. Der Weg
+ * gibt es nur fuer Installationen, die mit einem Beitrittsschluessel statt
+ * eines fertigen Geheimnisses aufgesetzt wurden.
+ *
+ * Zwei Ausgaenge muessen ausdruecklich behandelt werden, sonst wird aus einem
+ * loesbaren Problem ein stummes:
+ *
+ *   Die Kennung ist vergeben. Dann gehoert sie jemand anderem — oder uns
+ *   selbst, aus einem frueheren Leben, dessen Datenbank verlorenging. Beides
+ *   loest sich nicht von allein, also wird es einmal deutlich gemeldet und
+ *   danach nicht mehr versucht. Ein Beitritt, der es jede Minute erneut
+ *   probiert, fuellt das Protokoll und behebt nichts.
+ *
+ *   Der Verbund antwortet nicht. Das ist voruebergehend, also wird es beim
+ *   naechsten Lauf wieder versucht — ohne Vermerk.
+ */
+export async function joinIfNeeded(ctx: AppContext): Promise<'joined' | 'ready' | 'blocked' | 'waiting'> {
+  if (!enabled(ctx)) return 'ready'
+  if (instanceSecret(ctx)) return 'ready'
+  if (!ctx.config.HUB_JOIN_SECRET) return 'ready'
+
+  const gescheitert = ctx.db.prepare('SELECT payload FROM hub_cache WHERE key = ?')
+    .get('join_failed') as { payload: string } | undefined
+  if (gescheitert) return 'blocked'
+
+  const raw = JSON.stringify({ id: ctx.config.HUB_INSTANCE_ID, name: ctx.config.HUB_INSTANCE_ID })
+  let res: Response
+  try {
+    res = await fetch(`${ctx.config.HUB_URL.replace(/\/$/, '')}/instances/join`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-hub-join': ctx.config.HUB_JOIN_SECRET },
+      body: raw,
+      signal: AbortSignal.timeout(8_000),
+    })
+  } catch (err) {
+    console.warn(`[hub] Beitritt nicht moeglich: ${(err as Error).message}`)
+    return 'waiting'
+  }
+
+  if (res.status === 409) {
+    merkeGescheitert(ctx, 'id_taken')
+    console.error(
+      `[hub] Beitritt abgelehnt: die Kennung "${ctx.config.HUB_INSTANCE_ID}" ist bereits vergeben.\n`
+      + '      Entweder gehoert sie einer anderen Installation — dann waehle in secrets.env\n'
+      + '      eine andere HUB_INSTANCE_ID — oder es ist diese hier nach einem Datenverlust.\n'
+      + '      Dann muss der Betreiber des Verbunds die alte Kennung dort loeschen.\n'
+      + '      Es wird nicht erneut versucht, bis der Container neu gestartet wird.',
+    )
+    return 'blocked'
+  }
+  if (res.status === 401) {
+    merkeGescheitert(ctx, 'bad_join_secret')
+    console.error('[hub] Beitritt abgelehnt: HUB_JOIN_SECRET stimmt nicht. Es wird nicht erneut versucht.')
+    return 'blocked'
+  }
+  if (!res.ok) {
+    console.warn(`[hub] Beitritt → ${res.status}, wird beim naechsten Lauf erneut versucht`)
+    return 'waiting'
+  }
+
+  const body = await res.json() as { secret?: string; trust?: string }
+  if (!body.secret) {
+    console.warn('[hub] Beitritt ohne Geheimnis beantwortet — wird erneut versucht')
+    return 'waiting'
+  }
+  ctx.db.prepare(
+    `INSERT INTO hub_cache (key, payload, fetched_at) VALUES ('instance_secret', ?, ?)
+     ON CONFLICT(key) DO UPDATE SET payload = excluded.payload, fetched_at = excluded.fetched_at`,
+  ).run(body.secret, Date.now())
+  logEvent(ctx.db, null, 'hub.joined', { instanceId: ctx.config.HUB_INSTANCE_ID, trust: body.trust ?? 'read' })
+  console.log(
+    `[hub] Beigetreten als "${ctx.config.HUB_INSTANCE_ID}" auf Stufe ${body.trust ?? 'read'}.`
+    + ' Handel muss der Betreiber des Verbunds freischalten.',
+  )
+  return 'joined'
+}
+
+/** Ein Fehlschlag, der sich nicht von selbst loest — einmal merken, nicht wiederholen. */
+function merkeGescheitert(ctx: AppContext, grund: string): void {
+  ctx.db.prepare(
+    `INSERT INTO hub_cache (key, payload, fetched_at) VALUES ('join_failed', ?, ?)
+     ON CONFLICT(key) DO UPDATE SET payload = excluded.payload, fetched_at = excluded.fetched_at`,
+  ).run(grund, Date.now())
+}
+
 export async function linkNew(ctx: AppContext, limit = 20): Promise<number> {
   if (!enabled(ctx)) return 0
   const rows = ctx.db.prepare(

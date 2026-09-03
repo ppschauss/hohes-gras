@@ -10,7 +10,7 @@ import { purgeOldCounters } from '../repos/counters.js'
 import { purgeStalePulses } from '../repos/pulse.js'
 import { abandonStale } from '../repos/battles.js'
 import {
-  linkNew, pushCodes, pushMarket, pushProfiles, refreshLeaderboard, refreshMarket,
+  joinIfNeeded, linkNew, pushCodes, pushMarket, pushProfiles, refreshLeaderboard, refreshMarket,
   refreshRelease, releaseInfo,
 } from '../services/hub.js'
 import { settle as settleHubMarket } from '../services/hubMarket.js'
@@ -135,6 +135,14 @@ export const JOBS: Job[] = [
     everyMs: 10 * 60_000,
     run: async (ctx) => {
       if (!ctx.config.hubEnabled) return
+      /*
+       * Zuerst die eigene Anmeldung.
+       *
+       * Ohne Kennung ist jede weitere Anfrage ein 401. `joinIfNeeded` tut in
+       * aller Regel nichts — nur eine Installation, die mit einem
+       * Beitrittsschluessel aufgesetzt wurde, holt hier ihr Geheimnis.
+       */
+      if (await joinIfNeeded(ctx) === 'blocked') return
       const linked = await linkNew(ctx)
       // Codes von frueher angemeldeten Trainern nachreichen.
       const codes = await pushCodes(ctx)
@@ -166,8 +174,16 @@ export const JOBS: Job[] = [
             .get() as { tg: string } | undefined
           if (admin) {
             const text = `Neuer Stand verfügbar: \`${info.latest}\`${info.notes ? `\n${info.notes}` : ''}`
-              + '\n\nDu läufst auf `' + info.current + '`. In der App unter *Fortschritt → Daten* '
-              + 'steht ein Knopf zum Aktualisieren.'
+              /*
+               * Der Weg muss stimmen, sonst sucht der Betreiber vergeblich.
+               * Der Bereich hiess einmal "Designs" und lag unter Fortschritt;
+               * er heisst jetzt "Einstellungen" und steht fuer sich. Genau
+               * dieser Umzug wurde damals gemeldet — die Nachricht hier ist
+               * ihm nicht gefolgt und schickte seitdem an einen Reiter, den
+               * es nicht mehr gibt.
+               */
+              + '\n\nDu läufst auf `' + info.current + '`. In der App unter '
+              + '*Einstellungen → Konto & Daten* steht ein Knopf zum Aktualisieren.'
             await sendReminder(admin.tg, text, 'progress').catch(() => { /* Chat blockiert */ })
             ctx.db.prepare(
               `INSERT INTO hub_cache (key, payload, fetched_at) VALUES ('release_notified', ?, ?)

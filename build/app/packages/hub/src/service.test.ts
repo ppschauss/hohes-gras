@@ -15,6 +15,7 @@ let hub: ReturnType<typeof createHub>
 let secret: string
 
 const ADMIN = 'admin-geheim'
+const BEITRITT = 'beitritt-geheim'
 const NOW = 1_800_000_000_000
 
 const call = async (req: Omit<HubRequest, 'auth'> & { signed?: boolean }) => {
@@ -31,9 +32,13 @@ const call = async (req: Omit<HubRequest, 'auth'> & { signed?: boolean }) => {
   })
 }
 
+/** Eine Instanz zum Handel freischalten. Neu angemeldete duerfen nur lesen. */
+const freischalten = (id: string) =>
+  hub({ method: 'POST', path: '/instances/trust', body: { id, trust: 'trade' }, adminSecret: ADMIN })
+
 beforeEach(async () => {
   store = memoryStore()
-  hub = createHub({ store, idSalt: 'salz', adminSecret: ADMIN, now: () => NOW })
+  hub = createHub({ store, idSalt: 'salz', adminSecret: ADMIN, joinSecret: BEITRITT, now: () => NOW })
   const r = await hub({ method: 'POST', path: '/instances', body: { id: 'heim', name: 'Zuhause' }, adminSecret: ADMIN })
   secret = (r.body as { secret: string }).secret
 })
@@ -271,7 +276,97 @@ describe('Chat', () => {
   })
 })
 
+describe('Selbstanmeldung und Vertrauensstufen', () => {
+  const beitreten = (id: string, joinSecret = BEITRITT) =>
+    hub({ method: 'POST', path: '/instances/join', body: { id, name: 'Neu' }, joinSecret })
+
+  it('legt eine Instanz an und gibt ihr Geheimnis genau einmal heraus', async () => {
+    const r = await beitreten('neuling')
+    expect(r.status).toBe(200)
+    const body = r.body as { id: string; secret: string; trust: string }
+    expect(body.id).toBe('neuling')
+    expect(body.secret).toMatch(/^[0-9a-f]{64}$/)
+    // Auf der Lesestufe — das ist die Bedingung, unter der Selbstanmeldung
+    // ueberhaupt vertretbar ist.
+    expect(body.trust).toBe('read')
+  })
+
+  it('braucht das Beitrittsgeheimnis', async () => {
+    expect((await beitreten('neuling', 'falsch')).status).toBe(401)
+    expect((await hub({ method: 'POST', path: '/instances/join', body: { id: 'neuling' } })).status).toBe(401)
+  })
+
+  it('uebernimmt keine fremde Kennung', async () => {
+    /*
+     * Der gefaehrlichste Fall. Ohne diese Sperre koennte jeder mit dem
+     * Beitrittsgeheimnis eine bestehende Instanz uebernehmen, indem er ihre
+     * Kennung neu anmeldet — und bekaeme deren Trainer gleich mit.
+     */
+    const r = await beitreten('heim')
+    expect(r.status).toBe(409)
+    // Und das alte Geheimnis gilt weiter.
+    expect((await store.getInstance('heim'))!.secret).toBe(secret)
+  })
+
+  it('bietet den Beitritt gar nicht an, wenn kein Geheimnis gesetzt ist', async () => {
+    const ohne = createHub({ store, idSalt: 'salz', adminSecret: ADMIN, now: () => NOW })
+    const r = await ohne({ method: 'POST', path: '/instances/join', body: { id: 'x' }, joinSecret: 'egal' })
+    expect(r.status).toBe(404)
+  })
+
+  it('laesst eine Instanz auf Lesestufe sehen und sich zeigen', async () => {
+    /*
+     * Eine frisch beigetretene Instanz soll sich vollstaendig anfuehlen.
+     * Trainer melden, Rangliste, Chat, fremde Angebote ansehen — alles das
+     * bewegt nichts, was jemandem gehoert.
+     */
+    const r = await beitreten('leser')
+    const s2 = (r.body as { secret: string }).secret
+    const alsLeser = async (method: string, path: string, body: unknown = {}) => hub({
+      method, path, body,
+      auth: { instanceId: 'leser', timestamp: NOW, signature: await sign(s2, method, path, NOW, JSON.stringify(body)) },
+    })
+    expect((await alsLeser('POST', '/trainers', { telegramId: '1', displayName: 'A' })).status).toBe(200)
+    expect((await alsLeser('GET', '/leaderboard')).status).toBe(200)
+    expect((await alsLeser('GET', '/market')).status).toBe(200)
+    expect((await alsLeser('POST', '/chat', { trainerId: 'x', text: 'hallo' })).status).not.toBe(403)
+  })
+
+  it('laesst sie nicht handeln, bevor sie freigeschaltet ist', async () => {
+    const r = await beitreten('haendler')
+    const s2 = (r.body as { secret: string }).secret
+    const alsNeu = async (method: string, path: string, body: unknown = {}) => hub({
+      method, path, body,
+      auth: { instanceId: 'haendler', timestamp: NOW, signature: await sign(s2, method, path, NOW, JSON.stringify(body)) },
+    })
+    for (const [m, pfad] of [['PUT', '/market'], ['POST', '/market/buy'], ['GET', '/market/orders'],
+                             ['POST', '/market/deliver'], ['POST', '/market/collect'], ['POST', '/market/abort']] as const) {
+      const res = await alsNeu(m, pfad, m === 'PUT' ? { listings: [] } : {})
+      expect(res.status, `${m} ${pfad}`).toBe(403)
+    }
+
+    // Nach der Freischaltung geht es.
+    expect((await freischalten('haendler')).status).toBe(200)
+    expect((await alsNeu('GET', '/market/orders')).status).toBe(200)
+  })
+
+  it('laesst nur den Betreiber freischalten', async () => {
+    await beitreten('fremdling')
+    const r = await hub({ method: 'POST', path: '/instances/trust', body: { id: 'fremdling', trust: 'trade' }, adminSecret: 'falsch' })
+    expect(r.status).toBe(401)
+    expect((await store.getInstance('fremdling'))!.trust).toBe('read')
+  })
+
+  it('kennt nur die beiden Stufen', async () => {
+    await beitreten('stufe')
+    const r = await hub({ method: 'POST', path: '/instances/trust', body: { id: 'stufe', trust: 'alles' }, adminSecret: ADMIN })
+    expect(r.status).toBe(400)
+  })
+})
+
 describe('Aushang des Verbunds', () => {
+  beforeEach(async () => { await freischalten('heim') })
+
   const angebot = (id: string, extra: Record<string, unknown> = {}) => ({
     id, trainerId: 'g-1', sellerName: 'Ash', price: 5000, note: 'guenstig',
     speciesName: 'Bisasam', level: 30, shiny: false, ivPercent: 70,
@@ -373,6 +468,8 @@ describe('Treuhand: kaufen ueber Instanzgrenzen', () => {
   beforeEach(async () => {
     const r = await hub({ method: 'POST', path: '/instances', body: { id: 'fremd', name: 'Woanders' }, adminSecret: ADMIN })
     fremdSecret = (r.body as { secret: string }).secret
+    await freischalten('heim')
+    await freischalten('fremd')
     // 'heim' bietet an, 'fremd' kauft.
     await call({ method: 'PUT', path: '/market', body: { listings: [angebot] } })
   })
