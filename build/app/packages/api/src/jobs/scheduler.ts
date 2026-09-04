@@ -53,10 +53,10 @@ export const JOBS: Job[] = [
     everyMs: 20 * 60_000,
     run: (ctx) => {
       const berichte = botTick(ctx)
-      const getan = berichte.filter((b) => b.erkundet + b.gefangen + b.gepflegt + b.angeboten > 0)
+      const getan = berichte.filter((b) => b.erkundet + b.gefangen + b.gepflegt + b.angeboten + b.verwertet > 0)
       if (getan.length) {
         console.log('[job] Bots: ' + getan
-          .map((b) => `${b.name} ${b.erkundet}x erkundet, ${b.gefangen} gefangen, ${b.gepflegt} gepflegt`)
+          .map((b) => `${b.name} ${b.erkundet}x erkundet, ${b.gefangen} gefangen, ${b.gepflegt} gepflegt, ${b.verwertet} verwertet`)
           .join(' | '))
       }
     },

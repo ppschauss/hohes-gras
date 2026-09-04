@@ -103,6 +103,67 @@ describe('Bot-Spieler handeln', () => {
   })
 })
 
+describe('Die Box eines Bots', () => {
+  /*
+   * Gemessen, bevor es diese Grenze gab: die drei Bots fingen rund
+   * sechshundert Pokemon am Tag, und nach siebzehn Stunden gehoerte ihnen ein
+   * Drittel aller Pokemon in der Datenbank. Bei neunhundert Plaetzen waeren
+   * sie nach fuenf Wochen voll gewesen und danach stehengeblieben.
+   */
+  it('verwertet Ueberzaehliges und bleibt in der Naehe des Ziels', () => {
+    const bot = ensureBots(h.ctx, festerWuerfel([0.37]))[0]!
+    const art = h.ctx.registry.manifest.starterSpeciesIds[0]!
+    const setzen = h.ctx.db.prepare(
+      `INSERT INTO creatures (id, owner_id, species_id, nickname, level, xp, nature,
+         iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, ev_hp, ev_atk, ev_def, ev_spa, ev_spd, ev_spe,
+         friendship, energy, hp_current, shiny, moves, held_item, caught_at, caught_area_id, team_slot)
+       VALUES (?, ?, ?, NULL, ?, 0, 'hardy', 5,5,5,5,5,5, 0,0,0,0,0,0, 50, 100, 20, 0, '[]', NULL, ?, NULL, NULL)`,
+    )
+    for (let i = 0; i < 80; i++) {
+      setzen.run(crypto.randomUUID(), bot.id, art, 3 + (i % 20), Date.now())
+    }
+    const vorher = h.ctx.db.prepare('SELECT COUNT(*) c FROM creatures WHERE owner_id = ?')
+      .get(bot.id) as { c: number }
+    expect(vorher.c).toBeGreaterThan(80)
+
+    // Mehrere Zuege: es wird bewusst langsam abgebaut, nicht in einem Schlag.
+    for (let i = 0; i < 12; i++) spieleZug(h.ctx, bot, BOTS[0]!, 0, festerWuerfel([0.99]))
+
+    const box = h.ctx.db.prepare('SELECT COUNT(*) c FROM creatures WHERE owner_id = ? AND team_slot IS NULL')
+      .get(bot.id) as { c: number }
+    expect(box.c).toBeLessThanOrEqual(50)
+  })
+
+  it('verwertet nie, was gerade zum Verkauf steht', () => {
+    const bot = ensureBots(h.ctx, festerWuerfel([0.37]))[0]!
+    const art = h.ctx.registry.manifest.starterSpeciesIds[0]!
+    const setzen = h.ctx.db.prepare(
+      `INSERT INTO creatures (id, owner_id, species_id, nickname, level, xp, nature,
+         iv_hp, iv_atk, iv_def, iv_spa, iv_spd, iv_spe, ev_hp, ev_atk, ev_def, ev_spa, ev_spd, ev_spe,
+         friendship, energy, hp_current, shiny, moves, held_item, caught_at, caught_area_id, team_slot)
+       VALUES (?, ?, ?, NULL, 2, 0, 'hardy', 5,5,5,5,5,5, 0,0,0,0,0,0, 50, 100, 20, 0, '[]', NULL, ?, NULL, NULL)`,
+    )
+    const ids: string[] = []
+    for (let i = 0; i < 80; i++) {
+      const id = crypto.randomUUID()
+      ids.push(id)
+      setzen.run(id, bot.id, art, Date.now())
+    }
+    // Das schwaechste anbieten — genau das, was sonst zuerst verwertet wuerde.
+    const angeboten = ids[0]!
+    h.ctx.db.prepare(
+      `INSERT INTO market_listings (id, seller_id, creature_id, price, note, created_at)
+       VALUES (?, ?, ?, 500, '', ?)`,
+    ).run(crypto.randomUUID(), bot.id, angeboten, Date.now())
+
+    for (let i = 0; i < 12; i++) spieleZug(h.ctx, bot, BOTS[0]!, 0, festerWuerfel([0.99]))
+
+    const lebt = h.ctx.db.prepare('SELECT COUNT(*) c FROM creatures WHERE id = ?')
+      .get(angeboten) as { c: number }
+    expect(lebt.c).toBe(1)
+  })
+})
+
 describe('Was Bots nicht ausloesen duerfen', () => {
   /*
    * Die Taktsperre misst, ob zwischen zwei Handlungen genug Zeit fuer einen

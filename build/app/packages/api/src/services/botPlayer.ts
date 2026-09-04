@@ -29,6 +29,7 @@ import { von } from './ledger.js'
 import { chooseStarter, performCare, startRegions, starterSpeciesFor } from './garden.js'
 import { explore, throwBall } from './safari.js'
 import { createListing } from './social.js'
+import { salvage } from './souls.js'
 import * as social from '../repos/social.js'
 
 /** Wie ein Bot spielt. Die Unterschiede sind klein, aber sie reichen, damit
@@ -215,6 +216,50 @@ function biete(ctx: AppContext, bot: Trainer, profil: BotProfil, rng: Wuerfel): 
   versuche('markt', () => createListing(ctx, bot, kandidat.id, preis, ''))
 }
 
+/**
+ * Wie viele Pokemon ein Bot in der Box behaelt.
+ *
+ * Ohne Obergrenze waechst die Box eines Bots um rund sechshundert Pokemon am
+ * Tag — gemessen, nicht geschaetzt: nach siebzehn Stunden gehoerten den drei
+ * Bots ein Drittel aller Pokemon in der Datenbank. Bei neunhundert Plaetzen
+ * waeren sie nach fuenf Wochen voll und wuerden danach nur noch danebenstehen.
+ *
+ * Fuenfzig ist reichlich fuer alles, was ein Bot mit seiner Box anfaengt: das
+ * Team ist davon unberuehrt, und angeboten wird ab acht.
+ */
+const BOX_ZIEL = 50
+
+/** Wie viele je Durchlauf hoechstens verwertet werden. Langsam, damit die Box
+ *  sich einpendelt statt in einem Schlag zusammenzufallen. */
+const VERWERTEN_JE_ZUG = 10
+
+/**
+ * Ueberzaehlige Pokemon verwerten.
+ *
+ * Das ist keine Aufraeumroutine, sondern das, was ein Spieler an dieser Stelle
+ * tut: aus dem, was man nicht braucht, werden Seelenfragmente. Verwertet wird
+ * von unten — die schwaechsten zuerst —, und nie etwas, das gerade zum Verkauf
+ * steht: ein Angebot ohne Pokemon dahinter waere eine Leiche im Markt.
+ */
+function entruempele(ctx: AppContext, bot: Trainer): number {
+  const box = creatures.boxOf(ctx.db, bot.id, 1000, 0)
+  if (box.length <= BOX_ZIEL) return 0
+
+  const angeboten = new Set(
+    social.listingsOfSeller(ctx.db, bot.id).filter(offenesAngebot).map((l) => l.creatureId),
+  )
+  const weg = box
+    .filter((c) => !angeboten.has(c.id))
+    .sort((a, b) => a.level - b.level)
+    .slice(0, Math.min(VERWERTEN_JE_ZUG, box.length - BOX_ZIEL))
+
+  let n = 0
+  for (const c of weg) {
+    if (versuche('verwerten', () => salvage(ctx, bot, c.id))) n++
+  }
+  return n
+}
+
 /** Was ein Durchlauf getan hat — fuer das Protokoll und die Tests. */
 export interface BotBericht {
   name: string
@@ -222,6 +267,7 @@ export interface BotBericht {
   gefangen: number
   gepflegt: number
   angeboten: number
+  verwertet: number
 }
 
 /**
@@ -234,7 +280,7 @@ export interface BotBericht {
 export function spieleZug(
   ctx: AppContext, bot: Trainer, profil: BotProfil, handlungen = 6, rng: Wuerfel = Math.random,
 ): BotBericht {
-  const bericht: BotBericht = { name: profil.name, erkundet: 0, gefangen: 0, gepflegt: 0, angeboten: 0 }
+  const bericht: BotBericht = { name: profil.name, erkundet: 0, gefangen: 0, gepflegt: 0, angeboten: 0, verwertet: 0 }
   kaufeBaelle(ctx, bot)
 
   for (let i = 0; i < handlungen; i++) {
@@ -271,6 +317,9 @@ export function spieleZug(
   const vorher = social.listingsOfSeller(ctx.db, bot.id).filter(offenesAngebot).length
   biete(ctx, bot, profil, rng)
   bericht.angeboten = social.listingsOfSeller(ctx.db, bot.id).filter(offenesAngebot).length - vorher
+  // Erst anbieten, dann verwerten: sonst landet im Ofen, was gerade noch
+  // haette verkauft werden koennen.
+  bericht.verwertet = entruempele(ctx, bot)
   return bericht
 }
 
