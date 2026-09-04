@@ -158,6 +158,7 @@
   "battle.title": "Kampf",
   "battle.turn": "Runde {n}",
   "battle.vs": "gegen {name}",
+  "battle.vs.wave": "Welle {n} · {name}",
   "battle.wins": "{n}× besiegt",
   "battle.won": "Sieg!",
   "boarding.atCap": "schon an der Reisegrenze",

@@ -25,13 +25,22 @@ export function toFighter(
   displayName: string,
   ppOf: (moveId: string) => number,
   status: Status = 'none',
+  /**
+   * Hoechstlevel fuer diesen Kampf. Ohne Angabe zaehlt das eigene.
+   *
+   * Gedeckelt wird nicht nur die Zahl, sondern auch die Werte, die daraus
+   * folgen — sonst stuende ueber dem Kopf fuenfzig und darunter schluege ein
+   * Hundertster zu. Die Kampfzone ist der einzige Ort, der das nutzt.
+   */
+  levelCap?: number,
 ): Fighter {
-  const stats = computeStats(species, c.level, c.ivs, c.evs, c.nature)
+  const level = levelCap === undefined ? c.level : Math.min(c.level, levelCap)
+  const stats = computeStats(species, level, c.ivs, c.evs, c.nature)
   return {
     id: c.id,
     speciesId: c.speciesId,
     name: c.nickname ?? displayName,
-    level: c.level,
+    level,
     types: [...species.types],
     nature: c.nature,
     ivs: c.ivs,

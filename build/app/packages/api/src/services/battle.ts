@@ -394,6 +394,14 @@ export function beginBattle(
      * falsch — zu hart fuer die einen, wirkungslos fuer die anderen.
      */
     onEyeLevel?: boolean
+    /**
+     * Hoechstlevel fuer beide Seiten.
+     *
+     * Die Kampfzone setzt es auf fuenfzig: dort soll nicht entscheiden, wer
+     * das hoechststufige Pokemon mitbringt, sondern wer die bessere
+     * Mannschaft hat.
+     */
+    levelCap?: number
   } = {},
 ): BattleView {
   {
@@ -423,7 +431,7 @@ export function beginBattle(
     const ppOf = (id: string) => ctx.registry.tryMove(id)?.pp ?? 10
     const playerParty = antreten.map((c) => {
       const species = ctx.registry.species(c.speciesId)
-      return toFighter(c, species, ctx.registry.localized(species.name, trainer.locale), ppOf)
+      return toFighter(c, species, ctx.registry.localized(species.name, trainer.locale), ppOf, 'none', opts.levelCap)
     })
 
     // Der Gegner steigt mit, wenn das eigene Team ueber seinem Band liegt.

@@ -154,15 +154,35 @@ export const GAUNTLET_START_DELTA = -3
  * Die Grundwertsumme misst, was man tatsächlich spürt. Dieselbe Lehre wie in
  * der Trainingsarena, wo ein Tauros auf „leicht" neben einem Hoothoot stand.
  *
- * 0 heißt: keine Grenze. Ab Serie 50 tritt an, was die Region hergibt — wer
- * so weit kommt, hat es sich verdient.
+ * 0 heißt: keine Grenze. Ab Serie 50 tritt an, was das Spiel hergibt — wer so
+ * weit kommt, hat es sich verdient.
+ *
+ * Die Schwellen lagen zuerst bei 400/470/540. Sie sind gestiegen, weil in der
+ * Kampfzone nur noch Endstufen antreten: unter 400 Grundwerten gibt es davon
+ * je Region nur drei bis sechs, und die ersten zehn Wellen waeren dreimal
+ * dasselbe Pokemon gewesen.
  */
 export function gauntletMaxBst(streak: number): number {
-  if (streak < 10) return 400
-  if (streak < 25) return 470
-  if (streak < 50) return 540
+  if (streak < 10) return 500
+  if (streak < 25) return 560
+  if (streak < 50) return 600
   return 0
 }
+
+/**
+ * Wie hoch ein Pokemon in der Kampfzone hoechstens antritt — auf beiden
+ * Seiten.
+ *
+ * Eine Obergrenze, kein Festwert: wer im Schnitt Level 20 hat, trifft
+ * weiterhin auf ungefaehr Level 20 und nicht sofort auf fuenfzig. Nach oben
+ * ist bei fuenfzig Schluss, und genau darum geht es — gemeldet als "damit man
+ * nicht mit ner one man Army rein gehen kann und einfach alles one shottet".
+ *
+ * Fuenfzig wie in den Kampftuermen der Vorlage. Ab hier entscheidet nicht mehr
+ * das Level, sondern was daneben steht: die Grundwerte des Gegners und seine
+ * Veranlagungen, die beide mit der Serie steigen.
+ */
+export const GAUNTLET_LEVEL_CAP = 50
 
 /**
  * Wie gut die Werte des Gegners sind, 0 bis 31.
@@ -237,7 +257,25 @@ export const GAUNTLET_DROPS: Record<string, GauntletDrop[]> = {
     { itemId: 'soft-sand', from: 0, weight: 10 },
     { itemId: 'star-piece', from: 50, weight: 3 },
   ],
+  /*
+   * Die globale Zone fuehrt alles, was die drei Regionen zusammen fuehren.
+   *
+   * Sie hat die regionalen abgeloest, und die Beute muss das nachvollziehen:
+   * wer vorher fuer Seidenfaden nach Johto ging, haette sonst keinen Ort mehr
+   * dafuer. Die Gewichte bleiben gleich, es sind nur mehr Sorten im Topf —
+   * eine bestimmte faellt damit seltener, irgendeine genauso oft.
+   */
+  global: [
+    { itemId: 'iron-shard', from: 0, weight: 10 },
+    { itemId: 'soft-sand', from: 0, weight: 10 },
+    { itemId: 'silk-thread', from: 0, weight: 10 },
+    { itemId: 'dew-drop', from: 0, weight: 10 },
+    { itemId: 'star-piece', from: 50, weight: 3 },
+  ],
 }
+
+/** Die eine Kampfzone. Frueher gab es sie je Region; siehe `GAUNTLET_DROPS`. */
+export const GAUNTLET_ZONE = 'global'
 
 export const GAUNTLET_DROPS_FALLBACK: GauntletDrop[] = [
   { itemId: 'iron-shard', from: 0, weight: 10 },

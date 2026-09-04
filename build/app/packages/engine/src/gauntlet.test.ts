@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createRng } from './rng.js'
-import {
+import { GAUNTLET_LEVEL_CAP,
   dropsForRegion, gauntletGoldPerWin, gauntletIv, gauntletLevel, gauntletMaxBst,
   GAUNTLET_FULL_HEAL_EVERY, gauntletHeals,
   GAUNTLET_MILESTONES, GAUNTLET_XP_MULTIPLIER, gauntletXpMultiplier, milestoneAt, nextMilestone,
@@ -25,12 +25,19 @@ describe('Kampfzone', () => {
      * 45 statt 3. Die Grundwertsumme ist das Mass, das wirklich traegt —
      * dieselbe Lehre wie in der Arena, wo Tauros auf "leicht" antrat.
      */
-    expect(gauntletMaxBst(0)).toBe(400)
-    expect(gauntletMaxBst(9)).toBe(400)
-    expect(gauntletMaxBst(10)).toBe(470)
-    expect(gauntletMaxBst(25)).toBe(540)
-    // Rayquaza hat 680 und darf damit erst ab fuenfzig antreten.
+    /*
+     * Die Schwellen sind gestiegen, seit nur noch Endstufen antreten: unter
+     * 400 Grundwerten gibt es davon zu wenige, und die ersten Wellen waeren
+     * dreimal dasselbe Pokemon gewesen. Gemessen am laufenden Pack: 101 der
+     * 133 Endstufen liegen unter 500.
+     */
+    expect(gauntletMaxBst(0)).toBe(500)
+    expect(gauntletMaxBst(9)).toBe(500)
+    expect(gauntletMaxBst(10)).toBe(560)
+    expect(gauntletMaxBst(25)).toBe(600)
+    // Rayquaza hat 680 und darf damit weiterhin erst ab fuenfzig antreten.
     expect(gauntletMaxBst(50)).toBe(0)
+    expect(gauntletMaxBst(49)).toBeLessThan(680)
     for (let s = 1; s < 60; s++) {
       const a = gauntletMaxBst(s - 1), b = gauntletMaxBst(s)
       if (a !== 0 && b !== 0) expect(b).toBeGreaterThanOrEqual(a)
@@ -219,5 +226,21 @@ describe('Erfahrung', () => {
     // die Arena und das Kaempfen auf der Route entwerten.
     expect(GAUNTLET_XP_MULTIPLIER).toBeGreaterThan(0.5)
     expect(GAUNTLET_XP_MULTIPLIER).toBeLessThan(2)
+  })
+})
+
+describe('Die Levelgrenze der Kampfzone', () => {
+  /*
+   * Gemeldet als "damit man nicht mit ner one man Army rein gehen kann und
+   * einfach alles one shottet". Eine Obergrenze, kein Festwert — wer im
+   * Schnitt Level 20 spielt, soll nicht sofort gegen fuenfzig antreten.
+   */
+  it('deckelt nach oben, ohne nach unten anzuheben', () => {
+    expect(Math.min(80, GAUNTLET_LEVEL_CAP)).toBe(GAUNTLET_LEVEL_CAP)
+    expect(Math.min(20, GAUNTLET_LEVEL_CAP)).toBe(20)
+  })
+
+  it('liegt bei fuenfzig, wie in den Kampftuermen der Vorlage', () => {
+    expect(GAUNTLET_LEVEL_CAP).toBe(50)
   })
 })

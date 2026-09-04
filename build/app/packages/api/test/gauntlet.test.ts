@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { GAUNTLET_MILESTONES, gauntletGoldPerWin } from '@game/engine'
+import { endstufen } from '../src/services/gauntlet.js'
 import { makeTestApp, signInitData, type TestApp } from './helpers.js'
 
 /**
@@ -270,5 +271,53 @@ describe('Heilen und Beleben', () => {
     const r = await gewinneBei(5)
     expect(r.body.gauntletAdvance.streak).toBe(6)
     expect(hpOf(angeschlagen)).toBe(3)
+  })
+})
+
+describe('Wer in der Kampfzone antritt', () => {
+  /*
+   * Gemeldet als "am besten waers wenn Alle Pokemon von ihrer Hoechsten
+   * evolutions Linie ersaetzt werden wuerden und die base form man nicht
+   * antreffen koennte, damit man bspw. kein Karpador mehr antreffen kann".
+   *
+   * Die Endstufe *ersetzt* die Grundform, sie filtert sie nicht weg — sonst
+   * bliebe nur uebrig, was ohnehin schon als Endstufe spawnt, und das sind zu
+   * wenige.
+   */
+  it('ersetzt eine Grundform durch ihre Endstufe', () => {
+    // testmon entwickelt sich zu testmon-evo; genau darum geht es.
+    expect(endstufen(h.ctx, 'testmon')).toEqual(['testmon-evo'])
+    // Und wer schon am Ende steht, bleibt, wo er ist.
+    expect(endstufen(h.ctx, 'testmon-evo')).toEqual(['testmon-evo'])
+  })
+
+  it('liefert fuer jede spawnbare Art nur ausgewachsene Formen', () => {
+    const spawnbar = new Set(h.ctx.registry.allAreas.flatMap((a) => a.spawns.map((s) => s.speciesId)))
+    for (const id of spawnbar) {
+      for (const ende of endstufen(h.ctx, id)) {
+        expect(h.ctx.registry.species(ende).evolutions).toHaveLength(0)
+      }
+    }
+  })
+
+  it('kennt nur noch eine Zone, und die heisst global', async () => {
+    const d = (await h.get('/api/gauntlet', token)).body
+    expect(d.regions).toHaveLength(1)
+    expect(d.regions[0].id).toBe('global')
+    // Eine alte Regionskennung wird abgewiesen statt stillschweigend
+    // umgedeutet — sonst liefe ein Lauf unter einem Namen, den es nicht gibt.
+    const alt = await h.post('/api/gauntlet/start', { regionId: 'kanto' }, token)
+    expect(alt.status).toBe(400)
+  })
+
+  it('laesst kein Pokemon ueber der Levelgrenze antreten', async () => {
+    // Ein Team weit ueber der Grenze: ohne Deckel stuende hier 80.
+    h.ctx.db.prepare('UPDATE creatures SET level = 80 WHERE owner_id = ?').run(trainerId)
+    const zone = (await h.get('/api/gauntlet', token)).body.regions[0].id
+    const r = await h.post('/api/gauntlet/start', { regionId: zone }, token)
+
+    expect(r.status).toBe(200)
+    expect(r.body.battle.player.active.level).toBeLessThanOrEqual(50)
+    expect(r.body.battle.foe.active.level).toBeLessThanOrEqual(50)
   })
 })

@@ -1,7 +1,7 @@
 import { GameError, type Trainer } from '@game/shared'
 import { von } from './ledger.js'
 import type { TrainerDef } from '@game/content'
-import {
+import { GAUNTLET_LEVEL_CAP, GAUNTLET_ZONE,
   createRng, computeStats, gauntletGoldPerWin, gauntletIv, gauntletLevel,
   GAUNTLET_FOES_PER_FIGHT, GAUNTLET_FULL_HEAL_EVERY, GAUNTLET_MILESTONES, gauntletHeals,
   GAUNTLET_XP_MULTIPLIER, gauntletMaxBst, gauntletXpMultiplier, isLegendarySpecies,
@@ -69,7 +69,18 @@ function averageLevel(ctx: AppContext, trainerId: string): number {
  * lebt in `worldMap`; sie hier ein zweites Mal zu rechnen waere eine zweite
  * Wahrheit, die beim naechsten Content-Wechsel falsch wird.
  */
-function openRegions(ctx: AppContext, trainer: Trainer): string[] {
+/**
+ * Ob die Kampfzone offensteht.
+ *
+ * Sie war einmal je Region getrennt; seit sie global ist, gibt es nur noch
+ * eine Bedingung — irgendwo gewesen sein. Der Filter darunter bleibt deshalb
+ * derselbe, er entscheidet jetzt nur ueber ja oder nein statt ueber welche.
+ */
+function zoneOpen(ctx: AppContext, trainer: Trainer): boolean {
+  return besuchteRegionen(ctx, trainer).length > 0
+}
+
+function besuchteRegionen(ctx: AppContext, trainer: Trainer): string[] {
   const karte = worldMap(ctx, trainer)
   return karte.regions
     /*
@@ -87,14 +98,34 @@ function openRegions(ctx: AppContext, trainer: Trainer): string[] {
 }
 
 /**
- * Der nächste Gegner: ein einzelnes wildes Pokémon aus der Region.
+ * Die Endstufen einer Art.
  *
- * Gezogen wird aus den Spawn-Tabellen der Region, nicht aus allen Arten —
- * eine Kampfzone in Kanto soll sich nach Kanto anfühlen.
+ * Verzweigt sich eine Linie, zaehlen alle Enden — Evoli steuert damit jede
+ * seiner Formen bei und nicht eine ausgeloste. Die Tiefenbremse ist kein
+ * Zierrat: eine Entwicklung, die im Kreis zeigt, haengt sonst den Server auf.
  */
-function buildFoe(ctx: AppContext, trainer: Trainer, regionId: string, streak: number): TrainerDef {
-  const areas = ctx.registry.allAreas.filter((a) => a.regionId === regionId)
-  const ids = new Set(areas.flatMap((a) => a.spawns.map((sp) => sp.speciesId)))
+export function endstufen(ctx: AppContext, speciesId: string, tiefe = 0): string[] {
+  const s = ctx.registry.trySpecies(speciesId)
+  if (!s || tiefe > 5) return [speciesId]
+  const weiter = s.evolutions.map((e) => e.to).filter((id) => ctx.registry.trySpecies(id))
+  return weiter.length === 0 ? [s.id] : weiter.flatMap((id) => endstufen(ctx, id, tiefe + 1))
+}
+
+/**
+ * Der nächste Gegner: ein einzelnes wildes Pokémon, ausgewachsen.
+ *
+ * Zwei Aenderungen auf einmal, beide gemeldet. Gezogen wird aus *allen*
+ * Regionen statt aus einer — die Kampfzone soll nicht danach aussehen, wo man
+ * gerade wohnt. Und jede Art tritt in ihrer Endstufe an: kein Karpador mehr,
+ * sondern das Garados, das daraus wird.
+ *
+ * Die Endstufe ersetzt die Grundform, sie filtert sie nicht weg. Sonst waere
+ * der Topf auf die paar Arten zusammengeschrumpft, die schon als Endstufe
+ * spawnen — je Region drei bis sechs unter der damaligen Wertgrenze.
+ */
+function buildFoe(ctx: AppContext, trainer: Trainer, _zoneId: string, streak: number): TrainerDef {
+  const roh = new Set(ctx.registry.allAreas.flatMap((a) => a.spawns.map((sp) => sp.speciesId)))
+  const ids = new Set([...roh].flatMap((id) => endstufen(ctx, id)))
   /*
    * Wer antreten darf.
    *
@@ -111,15 +142,25 @@ function buildFoe(ctx: AppContext, trainer: Trainer, regionId: string, streak: n
   // Faellt eine Region durch das Raster, lieber ein zu starker Gegner als gar
   // keiner — ein Lauf, der nicht anfaengt, ist schlechter als ein harter.
   const wahl = pool.length > 0 ? pool : alle
-  if (wahl.length === 0) throw new GameError('invalid_state', { reason: 'no_species_here', regionId }, 409)
+  if (wahl.length === 0) throw new GameError('invalid_state', { reason: 'no_species_here' }, 409)
 
-  const rng = createRng(`gauntlet:${trainer.id}:${regionId}:${streak}`)
+  const rng = createRng(`gauntlet:${trainer.id}:${GAUNTLET_ZONE}:${streak}`)
   const species = rng.pick(wahl)
-  const level = gauntletLevel(averageLevel(ctx, trainer.id), streak, capOf(ctx, trainer))
+  /*
+   * Die Levelgrenze gilt fuer beide Seiten.
+   *
+   * Sonst waere sie halb: das eigene Team traete gedeckelt an, der Gegner
+   * weiterhin auf Hoehe des eigenen Durchschnitts — und wer Level 80 spielt,
+   * schickte fuenfzig gegen achtzig.
+   */
+  const level = Math.min(
+    gauntletLevel(averageLevel(ctx, trainer.id), streak, capOf(ctx, trainer)),
+    GAUNTLET_LEVEL_CAP,
+  )
   const name = ctx.registry.localized(species.name, trainer.locale)
 
   return {
-    id: `gauntlet-${regionId}-${streak}`,
+    id: `gauntlet-${GAUNTLET_ZONE}-${streak}`,
     name: { de: `Wildes ${name}` },
     title: { de: 'Kampfzone' },
     kind: 'trainer',
@@ -181,11 +222,17 @@ export function view(ctx: AppContext, trainer: Trainer) {
     }
   }
 
-  const regions = openRegions(ctx, trainer).map((id) => {
-    const region = ctx.registry.region(id)
+  /*
+   * Eine Zone statt dreier Regionen.
+   *
+   * Die Liste bleibt eine Liste — die Anzeige waehlt weiterhin aus ihr aus,
+   * und eine zweite Zone spaeter braucht damit keine Umbauten. "Global" heisst
+   * im Deutschen genauso, deshalb steht der Name hier und nicht im Katalog.
+   */
+  const regions = (zoneOpen(ctx, trainer) ? [GAUNTLET_ZONE] : []).map((id) => {
     return {
       id,
-      name: ctx.registry.localized(region.name, trainer.locale),
+      name: 'Global',
       best: bestOf(ctx, trainer.id, id),
       /*
        * Die ganze Tabelle, samt Schwelle.
@@ -224,7 +271,7 @@ export function view(ctx: AppContext, trainer: Trainer) {
     run: run
       ? {
           regionId: run.regionId,
-          regionName: ctx.registry.localized(ctx.registry.region(run.regionId).name, trainer.locale),
+          regionName: 'Global',
           streak: run.streak,
           /*
            * Was der Lauf bisher gebracht hat — waehrend er laeuft, nicht erst
@@ -247,10 +294,11 @@ export function view(ctx: AppContext, trainer: Trainer) {
 }
 
 export function start(ctx: AppContext, trainer: Trainer, regionId: string) {
-  if (!ctx.registry.allRegions.some((r) => r.id === regionId)) {
+  // Die Anzeige schickt weiterhin eine Kennung; es gibt nur noch diese eine.
+  if (regionId !== GAUNTLET_ZONE) {
     throw new GameError('validation_failed', { field: 'regionId' })
   }
-  if (!openRegions(ctx, trainer).includes(regionId)) {
+  if (!zoneOpen(ctx, trainer)) {
     throw new GameError('invalid_state', { reason: 'region_locked', regionId }, 409)
   }
   if (runOf(ctx, trainer.id)) throw new GameError('invalid_state', { reason: 'already_active' }, 409)
@@ -261,7 +309,7 @@ export function start(ctx: AppContext, trainer: Trainer, regionId: string) {
   const def = buildFoe(ctx, trainer, regionId, 0)
   const area = ctx.registry.tryArea(trainer.currentAreaId ?? '') ?? ctx.registry.allAreas[0]!
   const battle = beginBattle(ctx, trainer, def, area,
-    { exactLevels: true, storeDef: true, foeIv: gauntletIv(0), freeEnergy: true })
+    { exactLevels: true, storeDef: true, foeIv: gauntletIv(0), freeEnergy: true, levelCap: GAUNTLET_LEVEL_CAP })
 
   ctx.db.prepare(
     `INSERT INTO gauntlet_runs (trainer_id, region_id, streak, battle_id, started_at)
@@ -294,8 +342,9 @@ function summarize(ctx: AppContext, trainer: Trainer, run: Run): GauntletSummary
   try { roh = JSON.parse(run.loot) as Record<string, number> } catch { roh = {} }
   return {
     streak: run.streak,
-    best: Math.max(run.streak, bestOf(ctx, trainer.id, run.regionId)),
-    regionName: ctx.registry.localized(ctx.registry.region(run.regionId).name, trainer.locale),
+    best: Math.max(run.streak, bestOf(ctx, trainer.id, GAUNTLET_ZONE)),
+    // Die Zone ist keine Region mehr; `registry.region('global')` wirft.
+    regionName: 'Global',
     gold: run.totalGold,
     xp: run.totalXp,
     items: Object.entries(roh)
@@ -420,7 +469,7 @@ export function next(
     const def = buildFoe(ctx, trainer, run.regionId, streak)
     const area = ctx.registry.tryArea(trainer.currentAreaId ?? '') ?? ctx.registry.allAreas[0]!
     const battle = beginBattle(ctx, trainer, def, area,
-      { exactLevels: true, storeDef: true, foeIv: gauntletIv(streak), freeEnergy: true })
+      { exactLevels: true, storeDef: true, foeIv: gauntletIv(streak), freeEnergy: true, levelCap: GAUNTLET_LEVEL_CAP })
 
     ctx.db.prepare('UPDATE gauntlet_runs SET streak = ?, battle_id = ? WHERE trainer_id = ?')
       .run(streak, battle.id, trainer.id)
@@ -429,12 +478,23 @@ export function next(
   })
 }
 
-function recordBest(ctx: AppContext, trainerId: string, regionId: string, streak: number): void {
+/**
+ * Die Bestmarke festhalten.
+ *
+ * Immer unter der einen Zone, nie unter der Kennung des Laufs. Ein Lauf, der
+ * vor der Umstellung begonnen hat, traegt noch `kanto` in seiner Zeile — seine
+ * Serie soll trotzdem dort landen, wo sie danach auch abgelesen wird.
+ *
+ * Die alten Zeilen je Region bleiben unangetastet in der Tabelle stehen. Sie
+ * werden nur nicht mehr angezeigt: geloescht ist geloescht, und die Serien
+ * darin sind echt gelaufen.
+ */
+function recordBest(ctx: AppContext, trainerId: string, _regionId: string, streak: number): void {
   ctx.db.prepare(
     `INSERT INTO gauntlet_bests (trainer_id, region_id, best, updated_at) VALUES (?, ?, ?, ?)
      ON CONFLICT(trainer_id, region_id) DO UPDATE SET
        best = MAX(best, excluded.best), updated_at = excluded.updated_at`,
-  ).run(trainerId, regionId, streak, Date.now())
+  ).run(trainerId, GAUNTLET_ZONE, streak, Date.now())
 }
 
 function pay(ctx: AppContext, trainer: Trainer, regionId: string, stufe: typeof GAUNTLET_MILESTONES[number]): GauntletPayout {

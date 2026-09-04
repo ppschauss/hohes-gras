@@ -49,15 +49,26 @@ export function BattleScreen({ onBack, onArena }: { onBack: () => void; onArena:
   const [gauntletDrops, setGauntletDrops] = useState<LootItem[]>([])
   const [gauntletMilestone, setGauntletMilestone] = useState<GauntletStep | null>(null)
   const [gauntletSummary, setGauntletSummary] = useState<GauntletSummary | null>(null)
+  /*
+   * In welcher Welle man steckt.
+   *
+   * Gemeldet als "man sieht uebrigens immer noch nicht in welcher welle man
+   * in der Kampfzone ist, man muesste rausgehen und kann erst dann erneut
+   * nachschauen". Der Server schickte die Zahl bei jeder Antwort mit; nur
+   * niemand hat sie angesehen.
+   */
+  const [gauntletStreak, setGauntletStreak] = useState<number | null>(null)
 
   const apply = (view: BattleView & {
     arena?: ArenaContext | null
     arenaAdvance?: { healed: number; round: number | null }
     arenaDone?: { payout: ArenaPayout | null }
+    gauntlet?: { streak: number; regionId: string } | null
     gauntletAdvance?: { healed: number; streak: number; payout: GauntletStep | null; drops: LootItem[] }
     gauntletDone?: { streak: number; summary: GauntletSummary | null }
   }) => {
     setBattle(view)
+    if (view.gauntlet !== undefined) setGauntletStreak(view.gauntlet?.streak ?? null)
     if (view.arena !== undefined) setArena(view.arena)
     // Der Server hat schon weitergeschaltet — das Protokoll sagt es, damit der
     // Wechsel nicht wie ein Sprung wirkt.
@@ -205,7 +216,11 @@ export function BattleScreen({ onBack, onArena }: { onBack: () => void; onArena:
 
   return (
     <Screen
-      eyebrow={t('battle.vs', { name: battle.opponentName })}
+      eyebrow={gauntletStreak === null
+        ? t('battle.vs', { name: battle.opponentName })
+        // Die Welle ist die naechste, nicht die zuletzt geschaffte: `streak`
+        // zaehlt die Siege, und der Kampf davor ist Welle streak + 1.
+        : t('battle.vs.wave', { name: battle.opponentName, n: gauntletStreak + 1 })}
       title={t('battle.title')}
       onBack={battle.finished ? leave : onBack}
       aside={<span className="num">{t('battle.turn', { n: battle.turn })}</span>}
