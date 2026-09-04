@@ -65,6 +65,23 @@ export function shopState(ctx: AppContext, trainer: Trainer): ShopState {
           }
         }),
     })).filter((s) => s.items.length > 0),
+    /*
+     * Alles im Beutel, was einen Ankaufspreis traegt.
+     *
+     * Nach Erloes absteigend: wer verkauft, sucht meistens das, was am
+     * meisten bringt, und nicht den ersten Buchstaben.
+     */
+    sellable: ctx.registry.allItems
+      .filter((i) => i.sellPrice !== null && (bag[i.id] ?? 0) > 0)
+      .map((i) => ({
+        id: i.id,
+        name: ctx.registry.localized(i.name, trainer.locale),
+        category: i.category,
+        icon: i.icon,
+        owned: bag[i.id] ?? 0,
+        sellPrice: i.sellPrice!,
+      }))
+      .sort((a, b) => b.sellPrice - a.sellPrice || a.name.localeCompare(b.name)),
   }
 }
 

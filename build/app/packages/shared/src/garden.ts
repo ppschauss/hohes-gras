@@ -144,6 +144,22 @@ export const ShopStateSchema = z.object({
     title: z.string(),
     items: z.array(ShopItemSchema),
   })),
+  /**
+   * Was der Laden gerade ankauft — aus dem Beutel, nicht aus dem Sortiment.
+   *
+   * Beides auseinanderzuhalten ist noetig und nicht nur ordentlich: die
+   * Seelenfragmente stehen in keinem Abschnitt des Ladens, weil sie nicht
+   * kaeuflich sind. Wer die Verkaufsliste aus `sections` baut, kann sie
+   * deshalb nie anbieten.
+   */
+  sellable: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    category: z.string(),
+    icon: z.string(),
+    owned: z.number().int(),
+    sellPrice: z.number().int(),
+  })),
 })
 export type ShopState = z.infer<typeof ShopStateSchema>
 

@@ -7,6 +7,26 @@
 export const SOUL_PER_EGG = 15
 
 /**
+ * Was ein Seelenfragment beim Haendler bringt.
+ *
+ * Gerechnet, nicht gefuehlt, und aus echtem Spielbetrieb: aus 460 Begegnungen
+ * der Bot-Spieler wurden 425 Faenge — 1,08 Baelle je Fang, also 32 Gold —, und
+ * ein Pokemon traegt im Schnitt 1,47 Typen, laesst beim Verwerten also 1,47
+ * Fragmente zurueck. Ein Fragment kostet damit rund 22 Gold an Baellen.
+ *
+ * 25 liegt knapp darueber. Die Schleife aus Kaufen, Fangen und Verwerten wirft
+ * damit 4 Gold je Energie ab, gegen 24 beim blossen Erkunden — es lohnt sich
+ * also nie, Fragmente fuer Gold zu farmen. Und weil der Preis nicht *unter*
+ * den Ballkosten liegt, ist der Verkauf auch kein Verlustgeschaeft, das man
+ * besser meidet.
+ *
+ * Steht hier aus demselben Grund wie die Zahl darueber: der Pack-Katalog
+ * schreibt sie in jeden der achtzehn Gegenstaende, und achtzehn Stellen waeren
+ * achtzehn Wahrheiten.
+ */
+export const SOUL_SELL_PRICE = 25
+
+/**
  * Und was ein schillerndes Ei kostet.
  *
  * Fast sechsmal so viel. Das ist Absicht: bei 1:512 im Freien entspricht ein

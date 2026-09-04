@@ -10,6 +10,16 @@ import { ItemIcon } from '../ui/ItemIcon'
 
 const QUANTITIES = [1, 5, 10]
 
+/*
+ * Der Verkaufsreiter steht neben den Warenarten, nicht darunter.
+ *
+ * Kaufen und Verkaufen sind derselbe Gang zum selben Tresen; ein eigener
+ * Bildschirm dafuer waere ein Weg mehr fuer dieselbe Sache. Der Schluessel
+ * kann mit keiner Warenart kollidieren, weil Warenarten keine Doppelpunkte
+ * enthalten.
+ */
+const VERKAUF = 'tab:verkauf'
+
 interface Props {
   onBack: () => void
   activeBackground: string
@@ -37,8 +47,15 @@ export function ShopScreen({ onBack, activeBackground, onBackgroundChanged }: Pr
    * wirklich fuehrt — ein leerer Abschnitt bekommt keinen.
    */
   const abschnitte = shop.data?.sections ?? []
-  const aktiv = abschnitte.some((a) => a.category === tab) ? tab : abschnitte[0]?.category ?? null
+  const ankauf = shop.data?.sellable ?? []
+  const gueltig = tab === VERKAUF ? ankauf.length > 0 : abschnitte.some((a) => a.category === tab)
+  const aktiv = gueltig ? tab : abschnitte[0]?.category ?? null
   const sichtbar = abschnitte.filter((a) => a.category === aktiv)
+
+  const sell = (itemId: string, menge: number) => {
+    haptic.tap()
+    void action.run(() => api.sell(itemId, menge), (state) => { shop.set(state); haptic.success() })
+  }
 
   const equip = (item: ShopItem) => {
     haptic.tap()
@@ -64,6 +81,14 @@ export function ShopScreen({ onBack, activeBackground, onBackgroundChanged }: Pr
                 <span className="tabsScroll__count num">{a.items.length}</span>
               </button>
             ))}
+            {ankauf.length > 0 && (
+              <button type="button" role="tab" aria-selected={aktiv === VERKAUF}
+                className="tabsScroll__btn"
+                onClick={() => { haptic.select(); setTab(VERKAUF) }}>
+                {t('shop.sell.tab')}
+                <span className="tabsScroll__count num">{ankauf.length}</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -81,7 +106,36 @@ export function ShopScreen({ onBack, activeBackground, onBackgroundChanged }: Pr
           ))}
         </div>
 
-        {shop.loading && !shop.data
+        {aktiv === VERKAUF ? (
+          <section className="section">
+            <h2>{t('shop.sell.title')}</h2>
+            {/* Dasselbe Muster wie bei den Beeten: ein Kasten, der erklaert,
+                bevor die Liste anfaengt. */}
+            <div className="explain"><p>{t('shop.sell.hint')}</p></div>
+            <div className="stack">
+              {ankauf.map((item) => {
+                // Nie mehr anbieten, als im Beutel liegt: sonst steht auf dem
+                // Knopf ein Erloes, den der Server danach ablehnt.
+                const menge = Math.min(quantity, item.owned)
+                return (
+                  <article key={item.id} className="shopRow">
+                    <ItemIcon src={item.icon} category={item.category} />
+                    <div className="shopRow__text">
+                      <span className="shopRow__name">{item.name}</span>
+                      <span className="shopRow__owned">{t('shop.owned', { n: item.owned })}</span>
+                    </div>
+                    <div className="shopRow__buy">
+                      <button type="button" className="btn btn--ghost btn--sm" disabled={action.busy}
+                        onClick={() => sell(item.id, menge)}>
+                        {t('shop.sell.price', { n: item.sellPrice * menge, menge })}
+                      </button>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+          </section>
+        ) : shop.loading && !shop.data
           ? [0, 1, 2].map((i) => <div key={i} className="skeleton skeleton--row" />)
           : sichtbar.map((section) => (
               <section key={section.category} className="section">

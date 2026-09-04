@@ -138,8 +138,8 @@ function writeMinimalPack(dataDir: string): void {
     { id: 'rocket-bait', name: { de: 'Störsender' }, description: { de: 'Ruft die Bande.' }, category: 'key', price: 10000, sellPrice: 500, icon: '/media/bait.png', params: { rocketCharges: 5 } },
     { id: 'metal-detector', name: { de: 'Metalldetektor' }, description: { de: 'Piept über Schrott.' }, category: 'key', price: 500, sellPrice: 50, icon: '/media/detector.svg', params: { detectorCharges: 10 } },
     { id: 'soul-shiny', name: { de: 'Schillerndes Seelenfragment' }, description: { de: 'Saisonlohn.' }, category: 'material', price: null, sellPrice: null, icon: '/media/shiny.svg', params: { shinySoul: true } },
-    { id: 'soul-normal', name: { de: 'Seelenfragment (Normal)' }, description: { de: 'Rest.' }, category: 'material', price: null, sellPrice: null, icon: '/media/soul.svg', params: { soulType: 'normal' } },
-    { id: 'soul-grass', name: { de: 'Seelenfragment (Pflanze)' }, description: { de: 'Rest.' }, category: 'material', price: null, sellPrice: null, icon: '/media/soul.svg', params: { soulType: 'grass' } },
+    { id: 'soul-normal', name: { de: 'Seelenfragment (Normal)' }, description: { de: 'Rest.' }, category: 'material', price: null, sellPrice: 25, icon: '/media/soul.svg', params: { soulType: 'normal' } },
+    { id: 'soul-grass', name: { de: 'Seelenfragment (Pflanze)' }, description: { de: 'Rest.' }, category: 'material', price: null, sellPrice: 25, icon: '/media/soul.svg', params: { soulType: 'grass' } },
     // Prueflduft: kein Typ, dafuer eine Zusage. Beides zusammen gibt es nicht.
     { id: 'lure-legendary', name: { de: 'Legendärer Lockduft' }, description: { de: 'Zieht ein Legendäres an.' }, category: 'lure', price: null, sellPrice: null, icon: '/media/lure2.svg', params: { legendaryLure: true, packSize: 1 } },
     { id: 'lure-grass', name: { de: 'Lockduft-Pflanze' }, description: { de: 'Lockt Pflanzen an.' }, category: 'lure', price: 50, sellPrice: 10, icon: '/media/lure.png', params: { lureType: 'grass', packSize: 5 } },

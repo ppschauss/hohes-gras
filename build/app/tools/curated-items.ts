@@ -141,7 +141,7 @@ export const AUTHORED: Authored[] = [
      * verkäuflich — und deshalb reichen fünf, wo es von den gewöhnlichen
      * Fragmenten fünfundachtzig braucht.
      */
-    id: 'soul-shiny', category: 'material', price: null, sellPrice: null,
+    id: 'soul-shiny', category: 'material', price: null, sellPrice: 1500,
     name: 'Schillerndes Seelenfragment',
     description: 'Belohnung der letzten Saisonstufe. '
       + `${SHINY_SOUL_PER_EGG} davon werden zu einem schillernden Ei — der Typ ist frei wählbar.`,
@@ -239,17 +239,17 @@ export const AUTHORED: Authored[] = [
    * damit "ein Training in der Flasche": teurer, aber sofort und ohne das
    * Pokemon drei Stunden zu binden. Acht Flaschen fuellen einen Wert.
    */
-  { id: 'hp-up',   category: 'medicine', price: null, sellPrice: null, params: { evPoints: 32, evStat: 'hp' },
+  { id: 'hp-up',   category: 'medicine', price: null, sellPrice: 900, params: { evPoints: 32, evStat: 'hp' },
     name: 'KP-Plus', description: 'Hebt die Kraftpunkte eines Pokémon dauerhaft.' },
-  { id: 'protein', category: 'medicine', price: null, sellPrice: null, params: { evPoints: 32, evStat: 'atk' },
+  { id: 'protein', category: 'medicine', price: null, sellPrice: 900, params: { evPoints: 32, evStat: 'atk' },
     name: 'Protein', description: 'Hebt den Angriff eines Pokémon dauerhaft.' },
-  { id: 'iron',    category: 'medicine', price: null, sellPrice: null, params: { evPoints: 32, evStat: 'def' },
+  { id: 'iron',    category: 'medicine', price: null, sellPrice: 900, params: { evPoints: 32, evStat: 'def' },
     name: 'Eisen', description: 'Hebt die Verteidigung eines Pokémon dauerhaft.' },
-  { id: 'calcium', category: 'medicine', price: null, sellPrice: null, params: { evPoints: 32, evStat: 'spa' },
+  { id: 'calcium', category: 'medicine', price: null, sellPrice: 900, params: { evPoints: 32, evStat: 'spa' },
     name: 'Kalzium', description: 'Hebt den Spezial-Angriff eines Pokémon dauerhaft.' },
-  { id: 'zinc',    category: 'medicine', price: null, sellPrice: null, params: { evPoints: 32, evStat: 'spd' },
+  { id: 'zinc',    category: 'medicine', price: null, sellPrice: 900, params: { evPoints: 32, evStat: 'spd' },
     name: 'Zink', description: 'Hebt die Spezial-Verteidigung eines Pokémon dauerhaft.' },
-  { id: 'carbos',  category: 'medicine', price: null, sellPrice: null, params: { evPoints: 32, evStat: 'spe' },
+  { id: 'carbos',  category: 'medicine', price: null, sellPrice: 900, params: { evPoints: 32, evStat: 'spe' },
     name: 'Carbon', description: 'Hebt die Initiative eines Pokémon dauerhaft.' },
   /*
    * Der Kronkorken.
@@ -258,7 +258,7 @@ export const AUTHORED: Authored[] = [
    * dort tatsaechlich den Wert aus. Die Abfrage bleibt deshalb, aber nur noch
    * fuer diesen einen Gegenstand.
    */
-  { id: 'bottle-cap', category: 'medicine', price: null, sellPrice: null, params: { ivPerfect: true },
+  { id: 'bottle-cap', category: 'medicine', price: null, sellPrice: 12000, params: { ivPerfect: true },
     name: 'Kronkorken', description: 'Bringt eine Veranlagung auf den Höchstwert. Du wählst, welche.' },
   /*
    * Die sechs Fleissbeeren.
@@ -391,16 +391,25 @@ export function lureItems(types: Array<{ id: string; name: { de: string } }>): I
 
 /* Die Zahl kommt aus der Engine — der Text im Pack und die Spielregel duerfen
    nicht auseinanderlaufen. */
-import { SHINY_SOUL_PER_EGG, SOUL_PER_EGG, SOUL_PER_SHINY_EGG } from '../packages/engine/dist/index.js'
-export { SHINY_SOUL_PER_EGG, SOUL_PER_EGG, SOUL_PER_SHINY_EGG }
+import { SHINY_SOUL_PER_EGG, SOUL_PER_EGG, SOUL_PER_SHINY_EGG, SOUL_SELL_PRICE } from '../packages/engine/dist/index.js'
+export { SHINY_SOUL_PER_EGG, SOUL_PER_EGG, SOUL_PER_SHINY_EGG, SOUL_SELL_PRICE }
 
 /**
  * Ein Seelenfragment je Typ.
  *
- * Nicht käuflich und nicht verkäuflich: es entsteht nur beim Verwerten eines
- * Pokémon und geht nur in ein Ei. Eine Währung, die man weder kaufen noch zu
- * Gold machen kann, bleibt das, was sie sein soll — ein Tauschmittel zwischen
- * dem, was man nicht braucht, und dem, was man sucht.
+ * Nicht käuflich, aber verkäuflich — und das war zuerst anders.
+ *
+ * Hier stand, eine Währung, die man weder kaufen noch zu Gold machen kann,
+ * bleibe das, was sie sein soll. Das Argument trägt beim Kaufen und fällt beim
+ * Verkaufen: wer über Wochen vor allem Käfer-Pokémon verwertet, sitzt auf
+ * Fragmenten, aus denen nie ein Ei wird, und hat keinen Weg, sie loszuwerden.
+ *
+ * 25 Gold ist gerechnet, nicht geschätzt. Aus echtem Spielbetrieb gemessen:
+ * 1,08 Bälle je Fang (32 Gold) und 1,47 Fragmente je Verwertung — ein Fragment
+ * kostet also rund 22 Gold an Bällen. Bei 25 wirft die Schleife aus Ball, Fang
+ * und Verwerten 4 Gold je Energie ab, gegen 24 beim bloßen Erkunden. Damit
+ * lohnt es sich nie, Fragmente für Gold zu farmen, und der Überschuss ist
+ * trotzdem etwas wert.
  */
 export function soulItems(types: Array<{ id: string; name: { de: string } }>): ItemOut[] {
   return types.map((t) => ({
@@ -412,7 +421,7 @@ export function soulItems(types: Array<{ id: string; name: { de: string } }>): I
     },
     category: 'material',
     price: null,
-    sellPrice: null,
+    sellPrice: SOUL_SELL_PRICE,
     stackable: true,
     icon: `/media/items/soul-${t.id}.svg`,
     params: { soulType: t.id },
