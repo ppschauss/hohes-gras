@@ -229,9 +229,15 @@ function biete(ctx: AppContext, bot: Trainer, profil: BotProfil, rng: Wuerfel): 
  */
 const BOX_ZIEL = 50
 
-/** Wie viele je Durchlauf hoechstens verwertet werden. Langsam, damit die Box
- *  sich einpendelt statt in einem Schlag zusammenzufallen. */
-const VERWERTEN_JE_ZUG = 10
+/**
+ * Wie viele je Durchlauf hoechstens verwertet werden.
+ *
+ * Muss ueber dem liegen, was ein Durchlauf faengt — sonst waechst die Box
+ * trotz Verwertens weiter, nur langsamer. Bei acht Handlungen und rund neun
+ * von zehn erfolgreichen Wuerfen sind das hoechstens acht Faenge; zwoelf
+ * halten dagegen und bauen den Rest noch ab.
+ */
+const VERWERTEN_JE_ZUG = 12
 
 /**
  * Ueberzaehlige Pokemon verwerten.

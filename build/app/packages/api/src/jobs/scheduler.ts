@@ -44,15 +44,22 @@ export const JOBS: Job[] = [
     /*
      * Die Bots spielen.
      *
-     * Zwanzig Minuten sind mit Bedacht gewaehlt: haeufiger braechte nichts,
-     * weil die Energie nicht schneller nachwaechst, und seltener liesse die
-     * Rangliste ueber Stunden stillstehen. Der erste Durchlauf legt die
-     * Konten an, jeder weitere findet sie vor.
+     * Zehn Minuten, acht Handlungen — das sind 48 Handlungen je Stunde und
+     * Bot. Die Annahme dahinter war zuerst falsch: "haeufiger braechte
+     * nichts, weil die Energie nicht schneller nachwaechst" stimmte nicht.
+     * Gemessen wuchsen 120 Energie je Stunde nach, verbraucht wurden 18 —
+     * die Bots standen also die meiste Zeit mit vollem Vorrat herum.
+     *
+     * Nicht weiter hoch, obwohl der Vorrat es hergaebe: bei voller Ausschoepfung
+     * faenge jeder Bot ueber zweitausend Pokemon am Tag, und das
+     * Ereignisprotokoll wird nirgends gekuerzt.
+     *
+     * Der erste Durchlauf legt die Konten an, jeder weitere findet sie vor.
      */
     name: 'bot-players',
-    everyMs: 20 * 60_000,
+    everyMs: 10 * 60_000,
     run: (ctx) => {
-      const berichte = botTick(ctx)
+      const berichte = botTick(ctx, 8)
       const getan = berichte.filter((b) => b.erkundet + b.gefangen + b.gepflegt + b.angeboten + b.verwertet > 0)
       if (getan.length) {
         console.log('[job] Bots: ' + getan
