@@ -19,7 +19,18 @@ const format = (n: number): string => new Intl.NumberFormat('de-DE').format(n)
 export function PlotsScreen({ onBack }: { onBack: () => void }) {
   const plots = useAsync(() => api.plots(), [])
   const action = useAction()
-  const [harvest, setHarvest] = useState<{ name: string; staked: number; received: number; bonus: number } | null>(null)
+  /*
+   * Was zuletzt geerntet wurde — und womit das Beet dafuer bestellt war.
+   *
+   * Die drei letzten Felder sind nicht fuer die Meldung da, sondern fuer den
+   * Knopf darunter: gemeldet als "ist bissel nervig die Beeren immer wieder
+   * reinzulegen mit der anzahl an beeren". Wer gerade zwanzig Sprossbeeren
+   * geerntet hat, will meistens wieder zwanzig Sprossbeeren pflanzen.
+   */
+  const [harvest, setHarvest] = useState<{
+    name: string; staked: number; received: number; bonus: number
+    slot: number; kind: 'item' | 'gold'; itemId: string | null; fertiliserId: string | null
+  } | null>(null)
   const [, tick] = useState(0)
 
   useEffect(() => {
@@ -41,14 +52,57 @@ export function PlotsScreen({ onBack }: { onBack: () => void }) {
       <main className="content">
         {action.error && <p className="notice" role="alert">{errorText(action.error, action.detail)}</p>}
 
-        {harvest && (
-          <p className="notice notice--ok" role="status">
-            {t('plots.harvested', {
-              name: harvest.name, staked: format(harvest.staked),
-              received: format(harvest.received), bonus: harvest.bonus,
-            })}
-          </p>
-        )}
+        {harvest && (() => {
+          /*
+           * Nochmal anpflanzen — aber nur, wenn es auch aufgeht.
+           *
+           * Der Vorrat entscheidet: bei Gold das Gold, sonst die Beeren im
+           * Beutel. Ein Knopf, der eine Menge verspricht, die der Server
+           * danach ablehnt, waere schlimmer als gar keiner. Das Beet muss
+           * ausserdem noch frei sein — geerntet heisst leer, aber wer in der
+           * Zwischenzeit selbst gepflanzt hat, soll das nicht ueberschrieben
+           * bekommen.
+           */
+          const vorrat = harvest.kind === 'gold'
+            ? (d?.gold ?? 0)
+            : (d?.plantable.find((x) => x.itemId === harvest.itemId)?.have ?? 0)
+          // Leer heisst: keine Einlage drin — dieselbe Bedingung, nach der die
+          // Karte zwischen bestelltem und freiem Beet unterscheidet.
+          const beet = d?.plots.find((x) => x.slot === harvest.slot)
+          const nochmal = vorrat >= harvest.staked && beet !== undefined && !beet.stake
+          // Den Duenger nur uebernehmen, wenn noch einer da ist.
+          const duenger = harvest.fertiliserId
+            && (d?.fertilisers.find((f) => f.itemId === harvest.fertiliserId)?.owned ?? 0) > 0
+            ? harvest.fertiliserId
+            : null
+
+          return (
+            <p className="notice notice--ok" role="status">
+              {t('plots.harvested', {
+                name: harvest.name, staked: format(harvest.staked),
+                received: format(harvest.received), bonus: harvest.bonus,
+              })}
+              {nochmal && (
+                <button type="button" className="btn btn--ghost btn--sm notice__action"
+                  disabled={action.busy}
+                  onClick={() => {
+                    haptic.tap()
+                    void action.run(
+                      () => api.plant({
+                        slot: harvest.slot, kind: harvest.kind,
+                        itemId: harvest.itemId ?? undefined,
+                        amount: harvest.staked,
+                        fertiliserId: duenger,
+                      }),
+                      (next) => { plots.set(next); setHarvest(null); haptic.success() },
+                    )
+                  }}>
+                  {t('plots.replant', { n: format(harvest.staked), name: harvest.name })}
+                </button>
+              )}
+            </p>
+          )
+        })()}
 
         <section className="explain">
           <h3>{t('plots.explain.title')}</h3>
@@ -74,7 +128,10 @@ export function PlotsScreen({ onBack }: { onBack: () => void }) {
                 haptic.tap()
                 void action.run(() => api.harvestPlot(plot.slot), (res) => {
                   plots.set(res.state)
-                  setHarvest({ name: res.name, staked: res.staked, received: res.received, bonus: res.bonusPercent })
+                  setHarvest({
+                    name: res.name, staked: res.staked, received: res.received, bonus: res.bonusPercent,
+                    slot: plot.slot, kind: res.kind, itemId: res.itemId, fertiliserId: res.fertiliserId,
+                  })
                   haptic.success()
                 })
               }}

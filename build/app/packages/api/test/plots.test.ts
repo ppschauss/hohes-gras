@@ -417,3 +417,46 @@ describe('Beetweiterung', () => {
     expect(r.body.detail?.max).toBe(5)
   })
 })
+
+describe('Wiederanpflanzen', () => {
+  /*
+   * Der Knopf "Nochmal 20x Sprossbeere" kann nur uebernehmen, was die Ernte
+   * ihm mitgibt. Gemeldet als "ist bissel nervig die Beeren immer wieder
+   * reinzulegen mit der anzahl an beeren" — ohne diese Felder in der Antwort
+   * muesste die Oberflaeche raten, womit das Beet bestellt war.
+   */
+  it('meldet zurueck, womit das Beet bestellt war', async () => {
+    h.ctx.db.prepare(
+      `INSERT INTO inventory (trainer_id, item_id, quantity) VALUES (?, 'oran-berry', 50), (?, 'fertiliser-1', 2)
+       ON CONFLICT(trainer_id, item_id) DO UPDATE SET quantity = quantity + excluded.quantity`,
+    ).run(trainerId, trainerId)
+
+    const gepflanzt = await h.post('/api/plots/plant',
+      { slot: 0, kind: 'item', itemId: 'oran-berry', amount: 12, fertiliserId: 'fertiliser-1' }, token)
+    expect(gepflanzt.status).toBe(200)
+
+    ageplot(0, PLOT_GROWTH_MS * 2)
+    const ernte = await h.post('/api/plots/harvest', { slot: 0 }, token)
+
+    expect(ernte.status).toBe(200)
+    expect(ernte.body).toMatchObject({
+      kind: 'item', itemId: 'oran-berry', staked: 12, fertiliserId: 'fertiliser-1',
+    })
+  })
+
+  it('laesst sich mit denselben Angaben sofort erneut bestellen', async () => {
+    h.ctx.db.prepare(
+      `INSERT INTO inventory (trainer_id, item_id, quantity) VALUES (?, 'oran-berry', 50)
+       ON CONFLICT(trainer_id, item_id) DO UPDATE SET quantity = quantity + excluded.quantity`,
+    ).run(trainerId)
+
+    await h.post('/api/plots/plant', { slot: 1, kind: 'item', itemId: 'oran-berry', amount: 10 }, token)
+    ageplot(1, PLOT_GROWTH_MS * 2)
+    const ernte = await h.post('/api/plots/harvest', { slot: 1 }, token)
+
+    const nochmal = await h.post('/api/plots/plant',
+      { slot: 1, kind: ernte.body.kind, itemId: ernte.body.itemId, amount: ernte.body.staked }, token)
+    expect(nochmal.status).toBe(200)
+    expect(nochmal.body.plots[1].stake).toMatchObject({ itemId: 'oran-berry', amount: 10 })
+  })
+})

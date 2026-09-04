@@ -1680,6 +1680,10 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .field--text { text-transform: none; letter-spacing: normal; }
 
 .notice--ok {
+
+/* Ein Knopf in der Meldung selbst — die Meldung ist ein <p>, deshalb muss er
+   sich einen eigenen Abstand nehmen und darf nicht in der Zeile kleben. */
+.notice__action { display: block; margin-top: var(--s2); }
   background: color-mix(in oklab, var(--ok) 16%, var(--surface));
   border-color: color-mix(in oklab, var(--ok) 42%, var(--edge));
 }

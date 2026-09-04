@@ -152,14 +152,15 @@ export const api = {
     request<ThemesState>('/api/themes/mode', { method: 'POST', body: JSON.stringify({ mode }) }),
 
   plots: () => request<PlotsState>('/api/plots'),
-  plant: (body: { slot: number; kind: 'item' | 'gold'; itemId?: string; amount: number; tenderId?: string | null }) =>
+  plant: (body: { slot: number; kind: 'item' | 'gold'; itemId?: string; amount: number; tenderId?: string | null; fertiliserId?: string | null }) =>
     request<PlotsState>('/api/plots/plant', { method: 'POST', body: JSON.stringify(body) }),
   tendPlot: (slot: number) =>
     request<{ kind: 'weed' | 'water'; phasesDone: number; bonusPercent: number; state: PlotsState }>(
       '/api/plots/tend', { method: 'POST', body: JSON.stringify({ slot }) }),
   harvestPlot: (slot: number) =>
     request<{
-      kind: 'item' | 'gold'; itemId: string | null; name: string; icon: string
+      kind: 'item' | 'gold'; itemId: string | null; fertiliserId: string | null
+      name: string; icon: string
       staked: number; received: number; bonusPercent: number; state: PlotsState
     }>('/api/plots/harvest', { method: 'POST', body: JSON.stringify({ slot }) }),
   setPlotTender: (slot: number, tenderId: string | null) =>

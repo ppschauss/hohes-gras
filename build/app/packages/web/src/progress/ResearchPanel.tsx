@@ -46,7 +46,16 @@ export function ResearchPanel() {
   const [filter, setFilter] = useState<Filter>('open')
 
   const d = research.data
-  const candidates = [...(garden.data?.team ?? []), ...(box.data?.creatures ?? [])]
+  /*
+   * Team zuerst, dann die Box nach Level absteigend.
+   *
+   * Vorher standen beide Listen einfach hintereinander, und die Box kam in
+   * ihrer eigenen Reihenfolge. Wer ein starkes Pokemon suchte, scrollte.
+   */
+  const candidates = [
+    ...(garden.data?.team ?? []),
+    ...[...(box.data?.creatures ?? [])].sort((a, b) => b.level - a.level),
+  ]
 
   const reload = () => { research.reload(); box.reload(); garden.reload() }
 
@@ -96,17 +105,30 @@ export function ResearchPanel() {
         <section className="section">
           <h2>{t('research.pickCreature')}</h2>
           <p className="center__body">{t('research.pickHint')}</p>
-          <div className="switchList">
-            {candidates.map((c) => (
-              <button key={c.id} type="button" className="switchRow" disabled={action.busy}
-                onClick={() => begin(c.id)}>
-                <img src={c.sprite} alt="" width={40} height={40} />
-                <span className="switchRow__text">
-                  <span className="switchRow__name">{c.displayName}</span>
-                  <span className="switchRow__hp num">{t('creature.level', { n: c.level })}</span>
-                </span>
-              </button>
-            ))}
+          {/*
+            * Eine Auswahlliste statt einer Knopfliste.
+            *
+            * Gemeldet mit dem Wunsch, es moege sein "wie bei den Pokebeeten".
+            * Der Grund dahinter ist die Boxgroesse: Team und Box zusammen sind
+            * schnell dreistellig, und dann ist die Knopfliste eine Rollstrecke.
+            * Das Beet loest dasselbe Problem seit jeher mit einem <select>, und
+            * das bringt auf dem Telefon die eigene Suche des Systems mit.
+            */}
+          <div className="plot__tenderPick">
+            <select
+              className="field field--inline field--text"
+              defaultValue=""
+              disabled={action.busy}
+              onChange={(e) => e.target.value && begin(e.target.value)}
+              aria-label={t('research.pickCreature')}
+            >
+              <option value="">—</option>
+              {candidates.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.displayName} · Lv {c.level}
+                </option>
+              ))}
+            </select>
           </div>
           <button type="button" className="btn btn--ghost btn--block" onClick={() => setPicking(null)}>
             {t('app.back')}

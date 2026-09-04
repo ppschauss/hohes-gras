@@ -413,6 +413,8 @@ export function harvest(ctx: AppContext, trainer: Trainer, slot: number, now = D
     return {
       kind: row.stakeKind,
       itemId: row.itemId,
+      /** Womit gedueng wurde — damit das Wiederanpflanzen es uebernehmen kann. */
+      fertiliserId: row.fertiliserId,
       name: view.stake!.name,
       icon: view.stake!.icon,
       staked: row.amount,
