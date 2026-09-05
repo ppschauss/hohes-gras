@@ -1,4 +1,4 @@
-import { GameError, STATS, type Trainer } from '@game/shared'
+import { GameError, NATURES, STATS, type Trainer } from '@game/shared'
 import { addEvs, computeStats, grantXpTo, IV_CAPS_PER_CREATURE, IV_MAX, xpForLevel } from '@game/engine'
 import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
@@ -20,7 +20,7 @@ import { useJammer } from './safari.js'
  * Absage — ein Lockduft etwa gehört in die Safari, nicht in den Beutel.
  */
 
-export type UseKind = 'heal' | 'revive' | 'cure' | 'xp' | 'jammer' | 'ev' | 'iv'
+export type UseKind = 'heal' | 'revive' | 'cure' | 'xp' | 'jammer' | 'ev' | 'iv' | 'nature'
 
 export interface UseResult {
   kind: UseKind
@@ -30,9 +30,11 @@ export interface UseResult {
   xpGained?: number
   leveledUp?: boolean
   charges?: number
-  /** Bei Fleissbeere und Erbgut-Serum: welcher Wert, und wie er jetzt steht. */
+  /** Bei Vitaminen und Kronkorken: welcher Wert, und wie er jetzt steht. */
   stat?: string
   statValue?: number
+  /** Bei einer Minze: das Wesen, das jetzt gilt. */
+  nature?: string
 }
 
 export function useItem(
@@ -54,7 +56,9 @@ export function useItem(
   if (item.category === 'lure') {
     throw new GameError('invalid_state', { reason: 'use_in_safari', itemId }, 409)
   }
-  if (item.category !== 'medicine' && item.category !== 'xp') {
+  // Minzen gehoeren dazu: sie wirken auf ein Pokemon, wie Medizin auch, nur
+  // auf sein Wesen statt auf seine Punkte.
+  if (item.category !== 'medicine' && item.category !== 'xp' && item.category !== 'mint') {
     throw new GameError('invalid_state', { reason: 'not_usable', itemId }, 409)
   }
 
@@ -83,6 +87,28 @@ export function useItem(
      * verschieben statt das Pokemon zu versorgen. Den Wert bringen bis auf
      * den Kronkorken alle selbst mit — nur er laesst die Wahl.
      */
+    /*
+     * Minzen: das Wesen aendern, ohne neu zu zuechten.
+     *
+     * Sie stehen vor den Fleisspunkten, weil sie mit denen nichts zu tun
+     * haben — eine Minze verschiebt keine Punkte, sondern den Faktor, mit dem
+     * sie am Ende multipliziert werden.
+     */
+    if (typeof p.nature === 'string') {
+      const wesen = p.nature as (typeof NATURES)[number]
+      if (!NATURES.includes(wesen)) throw new GameError('validation_failed', { field: 'nature' })
+      // Dieselbe Natur noch einmal waere ein verlorener Gegenstand fuer nichts.
+      if (c.nature === wesen) {
+        throw new GameError('invalid_state', { reason: 'nature_unchanged', nature: wesen }, 409)
+      }
+      creatures.setNature(ctx.db, c.id, wesen)
+      inventory.consume(ctx.db, trainer.id, itemId, 1)
+      logEvent(ctx.db, trainer.id, 'item.used', {
+        itemId, creatureId, kind: 'nature', from: c.nature, to: wesen,
+      })
+      return { kind: 'nature' as const, itemName: name, creatureName, nature: wesen }
+    }
+
     if (p.evPoints !== undefined || p.ivPerfect === true) {
       /*
        * Ein Vitamin bringt seinen Wert selbst mit.

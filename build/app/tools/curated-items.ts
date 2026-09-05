@@ -392,6 +392,7 @@ export function lureItems(types: Array<{ id: string; name: { de: string } }>): I
 /* Die Zahl kommt aus der Engine — der Text im Pack und die Spielregel duerfen
    nicht auseinanderlaufen. */
 import { SHINY_SOUL_PER_EGG, SOUL_PER_EGG, SOUL_PER_SHINY_EGG, SOUL_SELL_PRICE } from '../packages/engine/dist/index.js'
+import { NATURE_EFFECTS } from '../packages/engine/dist/index.js'
 export { SHINY_SOUL_PER_EGG, SOUL_PER_EGG, SOUL_PER_SHINY_EGG, SOUL_SELL_PRICE }
 
 /**
@@ -411,6 +412,71 @@ export { SHINY_SOUL_PER_EGG, SOUL_PER_EGG, SOUL_PER_SHINY_EGG, SOUL_SELL_PRICE }
  * lohnt es sich nie, Fragmente für Gold zu farmen, und der Überschuss ist
  * trotzdem etwas wert.
  */
+/**
+ * Die deutschen Naturnamen.
+ *
+ * Sie stehen auch im Sprachkatalog unter `nature.<id>`, und beide muessen
+ * dasselbe sagen: eine "Hart-Minze", die eine Natur namens "Adamant" setzt,
+ * waere eine Falle. `tools/i18n-check.py` haelt die beiden Listen zusammen.
+ */
+const NATUR_NAMEN: Record<string, string> = {
+  lonely: 'Solo', adamant: 'Hart', naughty: 'Frech', brave: 'Mutig',
+  bold: 'Kühn', impish: 'Pfiffig', lax: 'Lasch', relaxed: 'Locker',
+  modest: 'Mäßig', mild: 'Mild', rash: 'Hitzig', quiet: 'Ruhig',
+  calm: 'Still', gentle: 'Zart', careful: 'Sacht', sassy: 'Forsch',
+  timid: 'Scheu', hasty: 'Hastig', jolly: 'Froh', naive: 'Naiv',
+}
+
+const WERT_NAMEN: Record<string, string> = {
+  atk: 'Angriff', def: 'Verteidigung',
+  spa: 'Spezial-Angriff', spd: 'Spezial-Verteidigung', spe: 'Initiative',
+}
+
+/** Was eine Minze kostet. Siehe die Herleitung bei `mintItems`. */
+export const MINT_PRICE = 20000
+
+/**
+ * Die zwanzig Minzen — eine je Natur, die etwas bewirkt.
+ *
+ * Die fuenf neutralen Naturen bekommen keine: eine Minze, die nichts
+ * verschiebt, waere ein Knopf ohne Wirkung. Erzeugt wird die Liste aus
+ * `NATURE_EFFECTS` und nicht abgetippt — sonst stuende irgendwann auf einer
+ * Minze etwas anderes, als sie tut.
+ *
+ * Nicht herstellbar, sondern kaeuflich, und trotzdem hinter Forschung: zwanzig
+ * Rezepte haetten die Werkstatt zugeschuettet, und eine Minze *ist* kein
+ * Handwerk — sie ist eine Abkuerzung, die man bezahlt. 20.000 Gold, weil sie
+ * genau das erspart, was sonst eine ganze Zuchtrunde kostet: ein Pokemon mit
+ * fertigen Veranlagungen und Fleisspunkten auf die richtige Natur zu bringen,
+ * ohne von vorn anzufangen.
+ */
+export function mintItems(): ItemOut[] {
+  const heraus: ItemOut[] = []
+  for (const [natur, wirkung] of Object.entries(NATURE_EFFECTS)) {
+    if (!wirkung) continue
+    const [hoch, runter] = wirkung
+    const name = NATUR_NAMEN[natur]
+    if (!name) throw new Error(`Kein deutscher Name fuer die Natur "${natur}"`)
+    heraus.push({
+      id: `mint-${natur}`,
+      name: { de: `${name}-Minze` },
+      description: {
+        de: `Ändert das Wesen dauerhaft auf ${name}: `
+          + `steigert ${WERT_NAMEN[hoch]}, senkt ${WERT_NAMEN[runter]}.`,
+      },
+      category: 'mint',
+      price: MINT_PRICE,
+      sellPrice: Math.round(MINT_PRICE / 4),
+      stackable: true,
+      // Ein Bild je gesteigertem Wert, nicht je Minze: zwanzig fast gleiche
+      // Zeichnungen haetten niemandem geholfen, die Farbe sagt das Wesentliche.
+      icon: `/media/items/mint-${hoch}.svg`,
+      params: { nature: natur, requiresResearch: 'res-mints', targetSingle: true },
+    })
+  }
+  return heraus
+}
+
 export function soulItems(types: Array<{ id: string; name: { de: string } }>): ItemOut[] {
   return types.map((t) => ({
     id: `soul-${t.id}`,

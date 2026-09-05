@@ -137,6 +137,9 @@ function writeMinimalPack(dataDir: string): void {
     // Lockduft als Packung: der Preis gilt fuer fuenf Anwendungen.
     { id: 'rocket-bait', name: { de: 'Störsender' }, description: { de: 'Ruft die Bande.' }, category: 'key', price: 10000, sellPrice: 500, icon: '/media/bait.png', params: { rocketCharges: 5 } },
     { id: 'metal-detector', name: { de: 'Metalldetektor' }, description: { de: 'Piept über Schrott.' }, category: 'key', price: 500, sellPrice: 50, icon: '/media/detector.svg', params: { detectorCharges: 10 } },
+    // Zwei Minzen: eine gesperrte Ware und ihre Wirkung reichen zum Pruefen.
+    { id: 'mint-adamant', name: { de: 'Hart-Minze' }, description: { de: 'Wesen.' }, category: 'mint', price: 20000, sellPrice: 5000, icon: '/media/mint.svg', params: { nature: 'adamant', requiresResearch: 'res-mints', targetSingle: true } },
+    { id: 'mint-timid', name: { de: 'Scheu-Minze' }, description: { de: 'Wesen.' }, category: 'mint', price: 20000, sellPrice: 5000, icon: '/media/mint.svg', params: { nature: 'timid', requiresResearch: 'res-mints', targetSingle: true } },
     { id: 'soul-shiny', name: { de: 'Schillerndes Seelenfragment' }, description: { de: 'Saisonlohn.' }, category: 'material', price: null, sellPrice: null, icon: '/media/shiny.svg', params: { shinySoul: true } },
     { id: 'soul-normal', name: { de: 'Seelenfragment (Normal)' }, description: { de: 'Rest.' }, category: 'material', price: null, sellPrice: 25, icon: '/media/soul.svg', params: { soulType: 'normal' } },
     { id: 'soul-grass', name: { de: 'Seelenfragment (Pflanze)' }, description: { de: 'Rest.' }, category: 'material', price: null, sellPrice: 25, icon: '/media/soul.svg', params: { soulType: 'grass' } },

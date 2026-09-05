@@ -219,6 +219,11 @@ export function setIvs(db: Db, creatureId: string, ivs: StatBlock): void {
   ).run(ivs.hp, ivs.atk, ivs.def, ivs.spa, ivs.spd, ivs.spe, creatureId)
 }
 
+/** Das Wesen aendern — was eine Minze tut. */
+export function setNature(db: Db, creatureId: string, nature: string): void {
+  db.prepare('UPDATE creatures SET nature = ? WHERE id = ?').run(nature, creatureId)
+}
+
 /** Einen verbrauchten Kronkorken vermerken. */
 export function bumpIvCaps(db: Db, creatureId: string): void {
   db.prepare('UPDATE creatures SET iv_caps = iv_caps + 1 WHERE id = ?').run(creatureId)

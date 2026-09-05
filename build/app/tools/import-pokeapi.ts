@@ -114,6 +114,7 @@ async function main(): Promise<void> {
     // Ein Lockduft und ein Seelenfragment je Typ — aus den Typen des Packs.
     ...lureItems(types),
     ...soulItems(types),
+    ...mintItems(),
   ]
 
   step('Sprites spiegeln')

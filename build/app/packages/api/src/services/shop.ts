@@ -4,6 +4,7 @@ import type { AppContext } from '../context.js'
 import { tx } from '../db/index.js'
 import * as inventory from '../repos/inventory.js'
 import { logEvent } from '../repos/events.js'
+import { unlockedRecipes } from './research.js'
 
 /** Only these categories are sold. Materials and key items exist but are found,
  *  not bought — otherwise expeditions lose their point. */
@@ -11,6 +12,7 @@ const SECTIONS: Array<{ category: string; title: string }> = [
   { category: 'ball', title: 'shop.section.balls' },
   { category: 'berry', title: 'shop.section.berries' },
   { category: 'medicine', title: 'shop.section.medicine' },
+  { category: 'mint', title: 'shop.section.mints' },
   { category: 'xp', title: 'shop.section.xp' },
   { category: 'stone', title: 'shop.section.stones' },
   { category: 'lure', title: 'shop.section.lures' },
@@ -39,6 +41,19 @@ const ONE_TIME_CATEGORIES = new Set(['background'])
 export function shopState(ctx: AppContext, trainer: Trainer): ShopState {
   const bag = inventory.bagOf(ctx.db, trainer.id)
   const gold = inventory.goldOf(ctx.db, trainer.id)
+  /*
+   * Was der Laden nur nach einer Forschung fuehrt.
+   *
+   * Eine allgemeine Regel und kein Sonderfall fuer Minzen: ein Gegenstand
+   * traegt `requiresResearch` in seinen Angaben, und das Regal richtet sich
+   * danach. Ohne sie muesste jede kuenftige Ware ihre eigene Ausnahme
+   * bekommen.
+   */
+  const erforscht = unlockedRecipes(ctx, trainer.id)
+  const freigeschaltet = (i: { params: Record<string, unknown> }): boolean => {
+    const noetig = i.params.requiresResearch
+    return typeof noetig !== 'string' || erforscht.has(noetig)
+  }
 
   return {
     gold,
@@ -46,7 +61,7 @@ export function shopState(ctx: AppContext, trainer: Trainer): ShopState {
       category: section.category,
       title: section.title,
       items: ctx.registry.allItems
-        .filter((i) => i.category === section.category && i.price !== null)
+        .filter((i) => i.category === section.category && i.price !== null && freigeschaltet(i))
         .sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
         .map((i) => {
           const owned = bag[i.id] ?? 0
@@ -86,6 +101,18 @@ export function shopState(ctx: AppContext, trainer: Trainer): ShopState {
 }
 
 export function buy(ctx: AppContext, trainer: Trainer, itemId: string, quantity: number): void {
+  /*
+   * Die Sperre gilt auch hier und nicht nur im Regal.
+   *
+   * Das Regal ist eine Anzeige; wer die Kennung kennt, koennte sonst
+   * vorbeikaufen. Dieselbe Pruefung, dieselbe Antwort.
+   */
+  {
+    const noetig = ctx.registry.tryItem(itemId)?.params.requiresResearch
+    if (typeof noetig === 'string' && !unlockedRecipes(ctx, trainer.id).has(noetig)) {
+      throw new GameError('invalid_state', { reason: 'missing_research', projectId: noetig }, 409)
+    }
+  }
   const item = ctx.registry.tryItem(itemId)
   if (!item || item.price === null) throw new GameError('not_found', { itemId }, 404)
 

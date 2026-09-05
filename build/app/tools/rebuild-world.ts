@@ -357,7 +357,7 @@ async function main(): Promise<void> {
   }
   // Lockduefte folgen den Typen des Packs; ein neuer Typ bringt seinen mit.
   const types = JSON.parse(await readFile(join(OUT, 'types.json'), 'utf8')) as Array<{ id: string; name: { de: string } }>
-  for (const extra of [...lureItems(types), ...soulItems(types)]) {
+  for (const extra of [...lureItems(types), ...soulItems(types), ...mintItems()]) {
     const before = byId.get(extra.id)
     if (!before) added++
     byId.set(extra.id, { ...before, ...extra })

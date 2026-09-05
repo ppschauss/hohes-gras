@@ -167,6 +167,20 @@ export const RESEARCH_PROJECTS: ResearchProject[] = [
     xpPerHour: 200,
   },
   {
+    /*
+     * Minzen.
+     *
+     * Sie schaltet kein Rezept frei, sondern das Regal im Laden: zwanzig
+     * Rezepte haetten die Werkstatt zugeschuettet, und eine Minze ist auch
+     * kein Handwerk. Die Forschung steht trotzdem davor, weil ein Wesen zu
+     * aendern in dieselbe Familie gehoert wie Vitamine und Kronkorken.
+     */
+    id: 'res-mints', kind: 'recipe', tiers: 1, lab: 3, unlocks: null,
+    step: 0, hours: 8, gold: 7000,
+    inputs: [{ itemId: 'pinap-berry', quantity: 20 }, { itemId: 'star-piece', quantity: 4 }],
+    xpPerHour: 240,
+  },
+  {
     id: 'res-vitamins', kind: 'recipe', tiers: 1, lab: 3, unlocks: null,
     step: 0, hours: 10, gold: 9000,
     inputs: [{ itemId: 'golden-razz', quantity: 4 }, { itemId: 'star-piece', quantity: 6 }],

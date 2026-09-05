@@ -20,7 +20,7 @@ export const EV_MAX_PER_STAT = 252
 export const EV_MAX_TOTAL = 510
 
 /** nature -> [raised, lowered]. Neutral natures map to null. */
-const NATURE_EFFECTS: Record<Nature, readonly [Exclude<StatKey, 'hp'>, Exclude<StatKey, 'hp'>] | null> = {
+export const NATURE_EFFECTS: Record<Nature, readonly [Exclude<StatKey, 'hp'>, Exclude<StatKey, 'hp'>] | null> = {
   hardy: null, docile: null, serious: null, bashful: null, quirky: null,
   lonely: ['atk', 'def'], brave: ['atk', 'spe'], adamant: ['atk', 'spa'], naughty: ['atk', 'spd'],
   bold: ['def', 'atk'], relaxed: ['def', 'spe'], impish: ['def', 'spa'], lax: ['def', 'spd'],
